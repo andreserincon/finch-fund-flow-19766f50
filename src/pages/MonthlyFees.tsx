@@ -28,7 +28,7 @@ import {
 } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
-import { format, startOfMonth, isFuture, startOfDay } from 'date-fns';
+import { format, startOfMonth, isFuture, startOfDay, parseISO } from 'date-fns';
 import { CalendarIcon, PlusCircle, Pencil, Clock } from 'lucide-react';
 import { FEE_TYPE_LABELS, FeeType } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
@@ -132,7 +132,7 @@ export default function MonthlyFees() {
                 </TableRow>
               ) : (
                 sortedMonths.map((month) => {
-                  const monthDate = new Date(month);
+                  const monthDate = parseISO(month);
                   const isUpcoming = isFuture(startOfDay(monthDate));
                   return (
                     <TableRow key={month}>
