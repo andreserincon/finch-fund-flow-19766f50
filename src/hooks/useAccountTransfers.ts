@@ -48,6 +48,36 @@ export function useAccountTransfers() {
     },
   });
 
+  const updateTransfer = useMutation({
+    mutationFn: async (transfer: {
+      id: string;
+      transfer_date: string;
+      amount: number;
+      from_account: AccountType;
+      to_account: AccountType;
+      notes?: string | null;
+    }) => {
+      const { id, ...updateData } = transfer;
+      const { data, error } = await supabase
+        .from('account_transfers')
+        .update(updateData)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['account_transfers'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard_stats'] });
+      toast.success('Transfer updated successfully');
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to update transfer: ${error.message}`);
+    },
+  });
+
   const deleteTransfer = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from('account_transfers').delete().eq('id', id);
@@ -68,6 +98,7 @@ export function useAccountTransfers() {
     isLoading: transfersQuery.isLoading,
     error: transfersQuery.error,
     addTransfer,
+    updateTransfer,
     deleteTransfer,
   };
 }
