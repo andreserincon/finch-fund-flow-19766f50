@@ -248,20 +248,26 @@ export function useLoans() {
         .order('payment_date', { ascending: false })
         .order('created_at', { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
 
       if (paymentFetchError) throw paymentFetchError;
       if (!lastPayment) throw new Error('No payment record found to revert');
 
-      // Delete the associated transaction if exists
-      if (lastPayment.transaction_id) {
-        const { error: transactionError } = await supabase
-          .from('transactions')
-          .delete()
-          .eq('id', lastPayment.transaction_id);
+      // Calculate new amount_paid
+      const newAmountPaid = Math.max(0, loan.amount_paid - lastPayment.amount);
 
-        if (transactionError) throw transactionError;
-      }
+      // First, update the loan to clear foreign key references and revert status
+      const { error: loanUpdateError } = await supabase
+        .from('loans')
+        .update({
+          status: 'active' as LoanStatus,
+          paid_date: null,
+          amount_paid: newAmountPaid,
+          repayment_transaction_id: null,
+        })
+        .eq('id', loanId);
+
+      if (loanUpdateError) throw loanUpdateError;
 
       // Delete the payment record
       const { error: paymentDeleteError } = await supabase
@@ -271,23 +277,24 @@ export function useLoans() {
 
       if (paymentDeleteError) throw paymentDeleteError;
 
-      // Calculate new amount_paid
-      const newAmountPaid = Math.max(0, loan.amount_paid - lastPayment.amount);
+      // Now delete the associated transaction (after FK reference is cleared)
+      if (lastPayment.transaction_id) {
+        const { error: transactionError } = await supabase
+          .from('transactions')
+          .delete()
+          .eq('id', lastPayment.transaction_id);
 
-      // Update the loan status back to active
-      const { data: updatedLoan, error: updateError } = await supabase
+        if (transactionError) throw transactionError;
+      }
+
+      // Fetch and return updated loan
+      const { data: updatedLoan, error: fetchError } = await supabase
         .from('loans')
-        .update({
-          status: 'active' as LoanStatus,
-          paid_date: null,
-          amount_paid: newAmountPaid,
-          repayment_transaction_id: null,
-        })
-        .eq('id', loanId)
         .select('*, member:members(id, full_name)')
+        .eq('id', loanId)
         .single();
 
-      if (updateError) throw updateError;
+      if (fetchError) throw fetchError;
       return updatedLoan;
     },
     onSuccess: () => {
