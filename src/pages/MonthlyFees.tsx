@@ -303,6 +303,7 @@ function AddMonthlyFeeDialog({
                   mode="single"
                   selected={selectedDate}
                   onSelect={(date) => date && setSelectedDate(startOfMonth(date))}
+                  disabled={(date) => date.getDate() !== 1}
                   initialFocus
                   className="p-3 pointer-events-auto"
                 />
