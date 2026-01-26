@@ -59,8 +59,8 @@ export default {
       logTransaction: 'Registrar Transacción',
       bankMainAccount: 'Cuenta Bancaria Principal',
       primaryBankBalance: 'Saldo bancario principal',
-      greatLodgeAccount: 'Cuenta Gran Logia',
-      lodgeBalance: 'Saldo de logia',
+      greatLodgeAccount: 'Cuenta GL',
+      lodgeBalance: 'Saldo GL',
       totalARSBalance: 'Saldo Total ARS',
       bankLodgeCombined: 'Banco + Logia combinado',
       savingsAccount: 'Cuenta de Ahorros',
@@ -134,7 +134,7 @@ export default {
     // Accounts
     accounts: {
       bank: 'Cuenta Bancaria Principal',
-      greatLodge: 'Cuenta Gran Logia',
+      greatLodge: 'Cuenta GL',
       savings: 'Cuenta de Ahorros (USD)',
       allAccounts: 'Todas las Cuentas',
     },
