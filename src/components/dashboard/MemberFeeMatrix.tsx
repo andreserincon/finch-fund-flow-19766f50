@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { format, subMonths, addMonths, startOfMonth, isBefore, isAfter, parseISO } from 'date-fns';
 import { useMembers } from '@/hooks/useMembers';
 import { useMonthlyFees } from '@/hooks/useMonthlyFees';
@@ -12,11 +12,14 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 
 type PaymentStatus = 'paid' | 'overdue' | 'current_unpaid' | 'future' | 'not_member';
 
 export function MemberFeeMatrix() {
+  const [showAllMembers, setShowAllMembers] = useState(false);
   const { memberBalances, isLoading: membersLoading } = useMembers();
   const { monthlyFees, isLoading: feesLoading } = useMonthlyFees();
   const { getFeeTypeForMonth: getHistoricalFeeType, isLoading: historyLoading } = useMemberFeeTypeHistory();
@@ -133,6 +136,47 @@ export function MemberFeeMatrix() {
     }
   };
 
+  // Helper to check if member has unpaid/overdue status
+  const memberHasUnpaidOrOverdue = (member: typeof memberBalances[0]) => {
+    return months.some((month) => {
+      const { status } = getMemberMonthStatus(
+        member,
+        month.date,
+        month.key,
+        month.isCurrent,
+        month.isFuture
+      );
+      return status === 'current_unpaid' || status === 'overdue';
+    });
+  };
+
+  // Filter and sort members based on toggle state
+  const displayedMembers = useMemo(() => {
+    let filtered = memberBalances.filter((m) => {
+      if (!m.is_active) return false;
+      if (!showAllMembers) {
+        return memberHasUnpaidOrOverdue(m);
+      }
+      return true;
+    });
+
+    // Sort: members with unpaid/overdue first (by balance desc), then paid members (by balance desc)
+    return filtered.sort((a, b) => {
+      const aHasUnpaid = memberHasUnpaidOrOverdue(a);
+      const bHasUnpaid = memberHasUnpaidOrOverdue(b);
+      
+      // If both have same unpaid status, sort by current_balance descending
+      if (aHasUnpaid === bHasUnpaid) {
+        return (b.current_balance ?? 0) - (a.current_balance ?? 0);
+      }
+      
+      // Members with unpaid/overdue come first
+      return aHasUnpaid ? -1 : 1;
+    });
+  }, [memberBalances, showAllMembers, months]);
+
+  const paidMembersCount = memberBalances.filter(m => m.is_active && !memberHasUnpaidOrOverdue(m)).length;
+
   if (isLoading) {
     return (
       <Card>
@@ -143,30 +187,27 @@ export function MemberFeeMatrix() {
     );
   }
 
-  // Filter to only show members with current unpaid or overdue months
-  const activeMembers = memberBalances.filter((m) => {
-    if (!m.is_active) return false;
-    
-    // Check if member has any current_unpaid or overdue status across the months
-    return months.some((month) => {
-      const { status } = getMemberMonthStatus(
-        m,
-        month.date,
-        month.key,
-        month.isCurrent,
-        month.isFuture
-      );
-      return status === 'current_unpaid' || status === 'overdue';
-    });
-  });
-
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="text-lg md:text-xl">Monthly Fee Status</CardTitle>
-        <CardDescription className="text-xs md:text-sm">
-          Payment status for each member across months
-        </CardDescription>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <CardTitle className="text-lg md:text-xl">Monthly Fee Status</CardTitle>
+            <CardDescription className="text-xs md:text-sm">
+              Payment status for each member across months
+            </CardDescription>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="show-all-members"
+              checked={showAllMembers}
+              onCheckedChange={setShowAllMembers}
+            />
+            <Label htmlFor="show-all-members" className="text-xs md:text-sm cursor-pointer">
+              Show paid members ({paidMembersCount})
+            </Label>
+          </div>
+        </div>
       </CardHeader>
       <CardContent className="p-3 md:p-6">
         <div className="overflow-x-auto -mx-3 md:mx-0">
@@ -192,14 +233,14 @@ export function MemberFeeMatrix() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {activeMembers.length === 0 ? (
+              {displayedMembers.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                    No active members
+                    {showAllMembers ? 'No active members' : 'All members are up to date!'}
                   </TableCell>
                 </TableRow>
               ) : (
-                activeMembers.map((member) => (
+                displayedMembers.map((member) => (
                   <TableRow key={member.member_id}>
                     <TableCell className="sticky left-0 bg-card z-10 font-medium">
                       {member.full_name}
