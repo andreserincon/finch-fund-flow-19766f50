@@ -55,20 +55,19 @@ export default function Dashboard() {
     return sum + (t.transaction_type === 'income' ? t.amount : -t.amount);
   }, 0);
 
+  const activeMembersCount = memberBalances.filter(m => m.is_active).length;
+
+  const membersUnpaid = memberBalances.filter(m => {
+    if (!m.is_active) return false;
+    return m.total_paid < m.total_fees_owed;
+  }).length;
+
   const membersOverdue = memberBalances.filter(m => {
     if (!m.is_active) return false;
     const amountOwed = m.total_fees_owed - m.total_paid;
     const monthlyFeeRate = currentMonthFees[m.fee_type] || 0;
     const hasUnpaidEvents = (memberEventDebts[m.member_id] || 0) > 0;
     return amountOwed > monthlyFeeRate || hasUnpaidEvents;
-  }).length;
-
-  const membersUpToDate = memberBalances.filter(m => {
-    if (!m.is_active) return false;
-    const amountOwed = m.total_fees_owed - m.total_paid;
-    const monthlyFeeRate = currentMonthFees[m.fee_type] || 0;
-    const hasUnpaidEvents = (memberEventDebts[m.member_id] || 0) > 0;
-    return amountOwed <= monthlyFeeRate && !hasUnpaidEvents;
   }).length;
 
   const thisMonth = new Date();
@@ -133,7 +132,7 @@ export default function Dashboard() {
       </div>
 
       {/* Key Metrics */}
-      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 grid-cols-2 lg:grid-cols-5">
         <StatCard
           title="Total Balance"
           value={formatCurrency(totalBalance)}
@@ -156,11 +155,18 @@ export default function Dashboard() {
           variant="danger"
         />
         <StatCard
+          title="Members Unpaid"
+          value={membersUnpaid}
+          subtitle={`of ${activeMembersCount} active members`}
+          icon={<Users className="h-8 w-8 text-warning/20" />}
+          variant={membersUnpaid > 0 ? 'warning' : 'success'}
+        />
+        <StatCard
           title="Members Overdue"
           value={membersOverdue}
-          subtitle={`of ${memberBalances.filter(m => m.is_active).length} active members`}
-          icon={<AlertTriangle className="h-8 w-8 text-warning/20" />}
-          variant={membersOverdue > 0 ? 'warning' : 'success'}
+          subtitle={`owe > 1 monthly fee`}
+          icon={<AlertTriangle className="h-8 w-8 text-overdue/20" />}
+          variant={membersOverdue > 0 ? 'danger' : 'success'}
         />
       </div>
 
