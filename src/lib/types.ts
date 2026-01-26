@@ -58,6 +58,7 @@ export interface Loan {
   id: string;
   member_id: string;
   amount: number;
+  amount_paid: number;
   account: AccountType;
   status: LoanStatus;
   loan_date: string;

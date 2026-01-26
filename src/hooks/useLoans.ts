@@ -73,6 +73,75 @@ export function useLoans() {
     },
   });
 
+  const addLoanPayment = useMutation({
+    mutationFn: async ({ 
+      loanId, 
+      paymentAmount, 
+      paymentDate 
+    }: { 
+      loanId: string; 
+      paymentAmount: number; 
+      paymentDate: string;
+    }) => {
+      // Get the loan details first
+      const { data: loan, error: loanFetchError } = await supabase
+        .from('loans')
+        .select('*')
+        .eq('id', loanId)
+        .single();
+
+      if (loanFetchError) throw loanFetchError;
+      if (!loan) throw new Error('Loan not found');
+
+      const remainingDue = loan.amount - loan.amount_paid;
+      if (paymentAmount > remainingDue) {
+        throw new Error(`Payment amount cannot exceed remaining balance of ${remainingDue}`);
+      }
+
+      // Create the repayment transaction (income)
+      const { error: transactionError } = await supabase
+        .from('transactions')
+        .insert({
+          transaction_date: paymentDate,
+          amount: paymentAmount,
+          transaction_type: 'income',
+          category: 'loan_repayment',
+          account: loan.account,
+          member_id: loan.member_id,
+          notes: loan.notes ? `Loan repayment: ${loan.notes}` : 'Loan repayment',
+        });
+
+      if (transactionError) throw transactionError;
+
+      const newAmountPaid = loan.amount_paid + paymentAmount;
+      const isFullyPaid = newAmountPaid >= loan.amount;
+
+      // Update the loan
+      const { data: updatedLoan, error: updateError } = await supabase
+        .from('loans')
+        .update({
+          amount_paid: newAmountPaid,
+          status: isFullyPaid ? ('paid' as LoanStatus) : ('active' as LoanStatus),
+          paid_date: isFullyPaid ? paymentDate : null,
+        })
+        .eq('id', loanId)
+        .select('*, member:members(id, full_name)')
+        .single();
+
+      if (updateError) throw updateError;
+      return updatedLoan;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['loans'] });
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard_stats'] });
+      toast.success('Payment recorded successfully');
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to record payment: ${error.message}`);
+    },
+  });
+
   const markLoanAsPaid = useMutation({
     mutationFn: async ({ loanId, paidDate }: { loanId: string; paidDate: string }) => {
       // Get the loan details first
@@ -85,17 +154,19 @@ export function useLoans() {
       if (loanFetchError) throw loanFetchError;
       if (!loan) throw new Error('Loan not found');
 
-      // Create the repayment transaction (income)
+      const remainingDue = loan.amount - loan.amount_paid;
+
+      // Create the repayment transaction for remaining amount (income)
       const { data: transaction, error: transactionError } = await supabase
         .from('transactions')
         .insert({
           transaction_date: paidDate,
-          amount: loan.amount,
+          amount: remainingDue,
           transaction_type: 'income',
           category: 'loan_repayment',
           account: loan.account,
           member_id: loan.member_id,
-          notes: loan.notes ? `Loan repayment: ${loan.notes}` : 'Loan repayment',
+          notes: loan.notes ? `Loan repayment (full): ${loan.notes}` : 'Loan repayment (full)',
         })
         .select()
         .single();
@@ -108,6 +179,7 @@ export function useLoans() {
         .update({
           status: 'paid' as LoanStatus,
           paid_date: paidDate,
+          amount_paid: loan.amount,
           repayment_transaction_id: transaction.id,
         })
         .eq('id', loanId)
@@ -121,7 +193,7 @@ export function useLoans() {
       queryClient.invalidateQueries({ queryKey: ['loans'] });
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard_stats'] });
-      toast.success('Loan marked as paid');
+      toast.success('Loan marked as fully paid');
     },
     onError: (error: Error) => {
       toast.error(`Failed to mark loan as paid: ${error.message}`);
@@ -214,6 +286,7 @@ export function useLoans() {
     isLoading: loansQuery.isLoading,
     error: loansQuery.error,
     createLoan,
+    addLoanPayment,
     markLoanAsPaid,
     cancelLoan,
     deleteLoan,

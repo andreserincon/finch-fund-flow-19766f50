@@ -133,6 +133,7 @@ export type Database = {
         Row: {
           account: Database["public"]["Enums"]["account_type"]
           amount: number
+          amount_paid: number
           created_at: string
           disbursement_transaction_id: string | null
           id: string
@@ -147,6 +148,7 @@ export type Database = {
         Insert: {
           account: Database["public"]["Enums"]["account_type"]
           amount: number
+          amount_paid?: number
           created_at?: string
           disbursement_transaction_id?: string | null
           id?: string
@@ -161,6 +163,7 @@ export type Database = {
         Update: {
           account?: Database["public"]["Enums"]["account_type"]
           amount?: number
+          amount_paid?: number
           created_at?: string
           disbursement_transaction_id?: string | null
           id?: string
