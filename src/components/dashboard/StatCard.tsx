@@ -35,17 +35,17 @@ export function StatCard({
   return (
     <div className={cn('stat-card', variantStyles[variant], className)}>
       <div className="flex items-start justify-between">
-        <div className="flex-1">
-          <p className="stat-label">{title}</p>
-          <p className={cn('stat-value mt-1', valueStyles[variant])}>
+        <div className="flex-1 min-w-0">
+          <p className="stat-label text-xs md:text-sm">{title}</p>
+          <p className={cn('stat-value mt-1 text-lg md:text-2xl truncate', valueStyles[variant])}>
             {value}
           </p>
           {subtitle && (
-            <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>
+            <p className="text-xs md:text-sm text-muted-foreground mt-1 truncate">{subtitle}</p>
           )}
         </div>
         {icon && (
-          <div className="flex-shrink-0 ml-4">
+          <div className="flex-shrink-0 ml-2 md:ml-4 hidden sm:block">
             {icon}
           </div>
         )}

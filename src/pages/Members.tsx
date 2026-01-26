@@ -82,12 +82,12 @@ export default function Members() {
   }
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-4 md:space-y-6 animate-fade-in">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Members</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-xl md:text-2xl font-bold text-foreground">Members</h1>
+          <p className="text-sm text-muted-foreground">
             {memberBalances.filter((m) => m.is_active).length} active members
           </p>
         </div>
@@ -95,8 +95,8 @@ export default function Members() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
+      <div className="flex flex-col gap-3">
+        <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search by name or phone..."
@@ -106,7 +106,7 @@ export default function Members() {
           />
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-full sm:w-[180px]">
             <SelectValue placeholder="Filter by status" />
           </SelectTrigger>
           <SelectContent>
@@ -119,8 +119,83 @@ export default function Members() {
         </Select>
       </div>
 
-      {/* Table */}
-      <div className="rounded-lg border bg-card">
+      {/* Mobile Card View */}
+      <div className="md:hidden space-y-3">
+        {filteredMembers.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground bg-card rounded-lg border">
+            No members found
+          </div>
+        ) : (
+          filteredMembers.map((member) => (
+            <div key={member.member_id} className="rounded-lg border bg-card p-4 space-y-3">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="font-semibold">{member.full_name}</p>
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                    <Phone className="h-3 w-3" />
+                    {member.phone_number}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {member.is_active ? (
+                    <MemberStatusBadge
+                      balance={member.current_balance}
+                      totalOwed={member.total_fees_owed}
+                    />
+                  ) : (
+                    <Badge variant="outline">Inactive</Badge>
+                  )}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="bg-popover">
+                      <DropdownMenuItem onClick={() => setEditMember(member)}>
+                        <Pencil className="mr-2 h-4 w-4" />
+                        Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuItem 
+                        onClick={() => setDeleteMember(member)}
+                        className="text-destructive focus:text-destructive"
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div>
+                  <p className="text-muted-foreground text-xs">Fee Type</p>
+                  <Badge variant="secondary" className="mt-1">
+                    {FEE_TYPE_LABELS[member.fee_type]}
+                  </Badge>
+                </div>
+                <div>
+                  <p className="text-muted-foreground text-xs">Joined</p>
+                  <p className="font-mono text-sm">{format(new Date(member.join_date), 'MMM d, yyyy')}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground text-xs">Balance</p>
+                  <p className={`font-mono font-semibold ${member.current_balance >= 0 ? 'amount-positive' : 'amount-negative'}`}>
+                    {formatCurrency(member.current_balance)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground text-xs">Owed</p>
+                  <p className="font-mono text-muted-foreground">{formatCurrency(member.total_fees_owed)}</p>
+                </div>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Desktop Table View */}
+      <div className="hidden md:block rounded-lg border bg-card overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>

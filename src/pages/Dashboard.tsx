@@ -112,12 +112,12 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="space-y-8 animate-fade-in">
+    <div className="space-y-6 md:space-y-8 animate-fade-in">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-xl md:text-2xl font-bold text-foreground">Dashboard</h1>
+          <p className="text-sm text-muted-foreground">
             Financial overview for {format(new Date(), 'MMMM yyyy')}
           </p>
         </div>
@@ -125,7 +125,7 @@ export default function Dashboard() {
       </div>
 
       {/* Key Metrics */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Total Balance"
           value={formatCurrency(totalBalance)}

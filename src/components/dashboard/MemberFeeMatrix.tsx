@@ -134,16 +134,17 @@ export function MemberFeeMatrix() {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Monthly Fee Status</CardTitle>
-        <CardDescription>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-lg md:text-xl">Monthly Fee Status</CardTitle>
+        <CardDescription className="text-xs md:text-sm">
           Payment status for each member across months
         </CardDescription>
       </CardHeader>
-      <CardContent>
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
+      <CardContent className="p-3 md:p-6">
+        <div className="overflow-x-auto -mx-3 md:mx-0">
+          <div className="min-w-[600px] px-3 md:px-0">
+            <Table>
+              <TableHeader>
               <TableRow>
                 <TableHead className="sticky left-0 bg-card z-10">Member</TableHead>
                 {months.map((month) => (
@@ -210,9 +211,10 @@ export function MemberFeeMatrix() {
                 ))
               )}
             </TableBody>
-          </Table>
+            </Table>
+          </div>
         </div>
-        <div className="flex gap-4 mt-4 text-xs">
+        <div className="flex flex-wrap gap-3 md:gap-4 mt-4 text-xs">
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded bg-success/20 border border-success/30" />
             <span>Paid</span>
