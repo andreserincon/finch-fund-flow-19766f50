@@ -10,13 +10,12 @@ import { FeeTypeHistoryDialog } from '@/components/forms/FeeTypeHistoryDialog';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import {
   Table,
   TableBody,
@@ -31,15 +30,24 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Search, Phone, MoreHorizontal, Pencil, Trash2, History } from 'lucide-react';
+import { Search, Phone, MoreHorizontal, Pencil, Trash2, Filter, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { FEE_TYPE_LABELS, MemberBalance } from '@/lib/types';
+
+const STATUS_OPTIONS = [
+  { value: 'active', label: 'Active' },
+  { value: 'inactive', label: 'Inactive' },
+  { value: 'ahead', label: 'Ahead' },
+  { value: 'up_to_date', label: 'Up to Date' },
+  { value: 'unpaid', label: 'Unpaid' },
+  { value: 'overdue', label: 'Overdue' },
+] as const;
 
 export default function Members() {
   const { memberBalances, isLoading } = useMembers();
   const { currentMonthFees, isLoading: feesLoading } = useMonthlyFees();
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
   const [editMember, setEditMember] = useState<MemberBalance | null>(null);
   const [deleteMember, setDeleteMember] = useState<MemberBalance | null>(null);
 
@@ -113,18 +121,39 @@ export default function Members() {
     return <span className={`status-badge ${c.className}`}>{c.label}</span>;
   };
 
+  const toggleStatus = (status: string) => {
+    setSelectedStatuses(prev => 
+      prev.includes(status) 
+        ? prev.filter(s => s !== status)
+        : [...prev, status]
+    );
+  };
+
+  const clearFilters = () => {
+    setSelectedStatuses([]);
+  };
+
   const filteredMembers = memberBalances.filter((member) => {
     const matchesSearch =
       member.full_name.toLowerCase().includes(search.toLowerCase()) ||
       member.phone_number.includes(search);
 
+    // If no filters selected, show all
+    if (selectedStatuses.length === 0) {
+      return matchesSearch;
+    }
+
     const status = getPaymentStatus(member);
-    const matchesStatus =
-      statusFilter === 'all' ||
-      (statusFilter === 'active' && member.is_active) ||
-      (statusFilter === 'inactive' && !member.is_active) ||
-      (statusFilter === 'overdue' && status === 'overdue' && member.is_active) ||
-      (statusFilter === 'up_to_date' && status === 'up_to_date' && member.is_active);
+    const isActive = member.is_active;
+    
+    // Check if member matches any selected filter
+    const matchesStatus = selectedStatuses.some(filter => {
+      if (filter === 'active') return isActive;
+      if (filter === 'inactive') return !isActive;
+      // Payment status filters only apply to active members
+      if (!isActive) return false;
+      return status === filter;
+    });
 
     return matchesSearch && matchesStatus;
   });
@@ -151,8 +180,8 @@ export default function Members() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col gap-3">
-        <div className="relative">
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search by name or phone..."
@@ -161,18 +190,49 @@ export default function Members() {
             className="pl-9"
           />
         </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-full sm:w-[180px]">
-            <SelectValue placeholder="Filter by status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Members</SelectItem>
-            <SelectItem value="active">Active</SelectItem>
-            <SelectItem value="inactive">Inactive</SelectItem>
-            <SelectItem value="up_to_date">Up to Date</SelectItem>
-            <SelectItem value="overdue">Overdue</SelectItem>
-          </SelectContent>
-        </Select>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" className="w-full sm:w-auto justify-start">
+              <Filter className="mr-2 h-4 w-4" />
+              Status
+              {selectedStatuses.length > 0 && (
+                <Badge variant="secondary" className="ml-2 px-1.5 py-0.5 text-xs">
+                  {selectedStatuses.length}
+                </Badge>
+              )}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-56 p-3" align="start">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm font-medium">Filter by Status</span>
+              {selectedStatuses.length > 0 && (
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={clearFilters}
+                  className="h-6 px-2 text-xs"
+                >
+                  Clear
+                  <X className="ml-1 h-3 w-3" />
+                </Button>
+              )}
+            </div>
+            <div className="space-y-2">
+              {STATUS_OPTIONS.map((option) => (
+                <label
+                  key={option.value}
+                  className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 p-1.5 rounded-md -mx-1.5"
+                >
+                  <Checkbox
+                    checked={selectedStatuses.includes(option.value)}
+                    onCheckedChange={() => toggleStatus(option.value)}
+                  />
+                  <span className="text-sm">{option.label}</span>
+                </label>
+              ))}
+            </div>
+          </PopoverContent>
+        </Popover>
       </div>
 
       {/* Mobile Card View */}
