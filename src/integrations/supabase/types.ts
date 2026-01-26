@@ -404,13 +404,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "profiles_id_fkey"
-            columns: ["id"]
-            isOneToOne: true
-            referencedRelation: "users_with_roles"
-            referencedColumns: ["user_id"]
-          },
-          {
             foreignKeyName: "profiles_member_id_fkey"
             columns: ["member_id"]
             isOneToOne: false
@@ -499,15 +492,7 @@ export type Database = {
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "user_roles_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users_with_roles"
-            referencedColumns: ["user_id"]
-          },
-        ]
+        Relationships: []
       }
     }
     Views: {
@@ -527,31 +512,6 @@ export type Database = {
         }
         Relationships: []
       }
-      users_with_roles: {
-        Row: {
-          email: string | null
-          member_id: string | null
-          role: Database["public"]["Enums"]["app_role"] | null
-          role_assigned_at: string | null
-          user_id: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "profiles_member_id_fkey"
-            columns: ["member_id"]
-            isOneToOne: false
-            referencedRelation: "member_balances"
-            referencedColumns: ["member_id"]
-          },
-          {
-            foreignKeyName: "profiles_member_id_fkey"
-            columns: ["member_id"]
-            isOneToOne: false
-            referencedRelation: "members"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
     }
     Functions: {
       can_view: { Args: { _user_id: string }; Returns: boolean }
@@ -560,6 +520,16 @@ export type Database = {
         Returns: Database["public"]["Enums"]["fee_type"]
       }
       get_user_member_id: { Args: { _user_id: string }; Returns: string }
+      get_users_with_roles: {
+        Args: never
+        Returns: {
+          email: string
+          member_id: string
+          role: Database["public"]["Enums"]["app_role"]
+          role_assigned_at: string
+          user_id: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

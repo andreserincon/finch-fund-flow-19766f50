@@ -7,7 +7,8 @@ import {
   Wallet,
   Settings,
   ArrowLeftRight,
-  HandCoins
+  HandCoins,
+  UserCog
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { NavLink } from '@/components/NavLink';
@@ -46,6 +47,7 @@ export function AppSidebar() {
   const settingsItems = [
     { title: t('nav.monthlyFees'), url: '/monthly-fees', icon: Settings },
     { title: t('nav.events'), url: '/expense-categories', icon: Wallet },
+    { title: t('nav.userManagement'), url: '/user-management', icon: UserCog },
   ];
 
   const handleSignOut = async () => {
