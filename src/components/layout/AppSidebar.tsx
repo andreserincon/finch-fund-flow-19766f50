@@ -36,6 +36,7 @@ const actionItems = [
 
 const settingsItems = [
   { title: 'Monthly Fees', url: '/monthly-fees', icon: Settings },
+  { title: 'Expense Categories', url: '/expense-categories', icon: Wallet },
 ];
 
 export function AppSidebar() {
