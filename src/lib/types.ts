@@ -1,6 +1,7 @@
 export type FeeType = 'standard' | 'solidarity';
 export type TransactionType = 'income' | 'expense';
 export type AccountType = 'bank' | 'great_lodge' | 'savings';
+export type LoanStatus = 'active' | 'paid' | 'cancelled';
 export type TransactionCategory = 
   | 'monthly_fee'
   | 'extraordinary_income'
@@ -10,7 +11,9 @@ export type TransactionCategory =
   | 'parent_organization_fee'
   | 'other_expense'
   | 'other_income'
-  | 'event_payment';
+  | 'event_payment'
+  | 'loan_disbursement'
+  | 'loan_repayment';
 
 export type PaymentStatus = 'up_to_date' | 'ahead' | 'overdue';
 
@@ -49,6 +52,22 @@ export interface AccountTransfer {
   notes: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface Loan {
+  id: string;
+  member_id: string;
+  amount: number;
+  account: AccountType;
+  status: LoanStatus;
+  loan_date: string;
+  paid_date: string | null;
+  notes: string | null;
+  disbursement_transaction_id: string | null;
+  repayment_transaction_id: string | null;
+  created_at: string;
+  updated_at: string;
+  member?: Member;
 }
 
 export interface MemberBalance {
@@ -102,6 +121,8 @@ export const CATEGORY_LABELS: Record<TransactionCategory, string> = {
   other_expense: 'Other Expense',
   other_income: 'Other Income',
   event_payment: 'Event Payment',
+  loan_disbursement: 'Loan Disbursement',
+  loan_repayment: 'Loan Repayment',
 };
 
 export const FEE_TYPE_LABELS: Record<FeeType, string> = {
@@ -113,4 +134,10 @@ export const ACCOUNT_LABELS: Record<AccountType, string> = {
   bank: 'Bank Main Account',
   great_lodge: 'Great Lodge Account',
   savings: 'Savings Account (USD)',
+};
+
+export const LOAN_STATUS_LABELS: Record<LoanStatus, string> = {
+  active: 'Active',
+  paid: 'Paid',
+  cancelled: 'Cancelled',
 };
