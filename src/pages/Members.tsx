@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useMembers } from '@/hooks/useMembers';
+import { useMonthlyFees } from '@/hooks/useMonthlyFees';
 import { AddMemberForm } from '@/components/forms/AddMemberForm';
 import { EditMemberForm } from '@/components/forms/EditMemberForm';
 import { DeleteMemberDialog } from '@/components/forms/DeleteMemberDialog';
@@ -34,6 +35,7 @@ import { FEE_TYPE_LABELS, MemberBalance } from '@/lib/types';
 
 export default function Members() {
   const { memberBalances, isLoading } = useMembers();
+  const { currentMonthFees, isLoading: feesLoading } = useMonthlyFees();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [editMember, setEditMember] = useState<MemberBalance | null>(null);
@@ -44,6 +46,10 @@ export default function Members() {
       style: 'currency',
       currency: 'EUR',
     }).format(amount);
+  };
+
+  const getMonthlyFeeForMember = (feeType: 'standard' | 'solidarity') => {
+    return currentMonthFees[feeType] ?? 0;
   };
 
   const getPaymentStatus = (balance: number, owed: number) => {
@@ -67,7 +73,7 @@ export default function Members() {
     return matchesSearch && matchesStatus;
   });
 
-  if (isLoading) {
+  if (isLoading || feesLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-pulse text-muted-foreground">Loading...</div>
@@ -153,7 +159,7 @@ export default function Members() {
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right font-mono">
-                    {formatCurrency(member.monthly_fee_amount)}
+                    {formatCurrency(getMonthlyFeeForMember(member.fee_type))}
                   </TableCell>
                   <TableCell className="text-right font-mono">
                     <span

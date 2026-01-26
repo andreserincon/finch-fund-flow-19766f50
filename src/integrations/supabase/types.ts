@@ -50,6 +50,33 @@ export type Database = {
         }
         Relationships: []
       }
+      monthly_fees: {
+        Row: {
+          amount: number
+          created_at: string
+          fee_type: Database["public"]["Enums"]["fee_type"]
+          id: string
+          updated_at: string
+          year_month: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          fee_type: Database["public"]["Enums"]["fee_type"]
+          id?: string
+          updated_at?: string
+          year_month: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          fee_type?: Database["public"]["Enums"]["fee_type"]
+          id?: string
+          updated_at?: string
+          year_month?: string
+        }
+        Relationships: []
+      }
       organization_settings: {
         Row: {
           description: string | null
