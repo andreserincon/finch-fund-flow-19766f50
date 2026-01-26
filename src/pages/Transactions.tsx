@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useTransactions } from '@/hooks/useTransactions';
-import { AddTransactionForm } from '@/components/forms/AddTransactionForm';
 import { EditTransactionDialog } from '@/components/forms/EditTransactionDialog';
 import { DeleteTransactionDialog } from '@/components/forms/DeleteTransactionDialog';
 import { Input } from '@/components/ui/input';
@@ -42,9 +41,9 @@ export default function Transactions() {
   const [deletingTransaction, setDeletingTransaction] = useState<Transaction | null>(null);
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('es-AR', {
       style: 'currency',
-      currency: 'EUR',
+      currency: 'ARS',
     }).format(amount);
   };
 
@@ -82,14 +81,11 @@ export default function Transactions() {
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Transactions</h1>
-          <p className="text-muted-foreground">
-            {transactions.length} total transactions
-          </p>
-        </div>
-        <AddTransactionForm />
+      <div>
+        <h1 className="text-2xl font-bold text-foreground">Transactions</h1>
+        <p className="text-muted-foreground">
+          {transactions.length} total transactions
+        </p>
       </div>
 
       {/* Summary Cards */}
