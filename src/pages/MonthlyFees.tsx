@@ -28,9 +28,10 @@ import {
 } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
-import { format, startOfMonth } from 'date-fns';
-import { CalendarIcon, PlusCircle, Pencil } from 'lucide-react';
+import { format, startOfMonth, isFuture, startOfDay } from 'date-fns';
+import { CalendarIcon, PlusCircle, Pencil, Clock } from 'lucide-react';
 import { FEE_TYPE_LABELS, FeeType } from '@/lib/types';
+import { Badge } from '@/components/ui/badge';
 
 export default function MonthlyFees() {
   const { monthlyFees, isLoading, upsertMonthlyFee } = useMonthlyFees();
@@ -129,33 +130,45 @@ export default function MonthlyFees() {
                   </TableCell>
                 </TableRow>
               ) : (
-                sortedMonths.map((month) => (
-                  <TableRow key={month}>
-                    <TableCell className="font-medium">
-                      {format(new Date(month), 'MMMM yyyy')}
-                    </TableCell>
-                    <TableCell className="text-right font-mono">
-                      {formatCurrency(feesByMonth[month].standard)}
-                    </TableCell>
-                    <TableCell className="text-right font-mono">
-                      {formatCurrency(feesByMonth[month].solidarity)}
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          const fee = monthlyFees.find(
-                            (f) => f.year_month === month && f.fee_type === 'standard'
-                          );
-                          if (fee) setEditFee(fee);
-                        }}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
+                sortedMonths.map((month) => {
+                  const monthDate = new Date(month);
+                  const isUpcoming = isFuture(startOfDay(monthDate));
+                  return (
+                    <TableRow key={month}>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                          {format(monthDate, 'MMMM yyyy')}
+                          {isUpcoming && (
+                            <Badge variant="outline" className="text-xs">
+                              <Clock className="mr-1 h-3 w-3" />
+                              Upcoming
+                            </Badge>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right font-mono">
+                        {formatCurrency(feesByMonth[month].standard)}
+                      </TableCell>
+                      <TableCell className="text-right font-mono">
+                        {formatCurrency(feesByMonth[month].solidarity)}
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            const fee = monthlyFees.find(
+                              (f) => f.year_month === month && f.fee_type === 'standard'
+                            );
+                            if (fee) setEditFee(fee);
+                          }}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               )}
             </TableBody>
           </Table>
