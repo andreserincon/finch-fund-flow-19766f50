@@ -51,9 +51,9 @@ export default function MonthlyFees() {
   const sortedMonths = Object.keys(feesByMonth).sort((a, b) => b.localeCompare(a));
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('es-AR', {
       style: 'currency',
-      currency: 'EUR',
+      currency: 'ARS',
     }).format(amount);
   };
 
@@ -203,9 +203,9 @@ function CurrentMonthFeeCard({
   const currentFee = fees[currentMonth]?.[feeType] ?? 0;
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('es-AR', {
       style: 'currency',
-      currency: 'EUR',
+      currency: 'ARS',
     }).format(amount);
   };
 
