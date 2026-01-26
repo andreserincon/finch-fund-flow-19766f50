@@ -173,6 +173,10 @@
     @apply bg-overdue/10 text-overdue;
   }
 
+  .status-unpaid {
+    @apply bg-warning/10 text-warning;
+  }
+
   .amount-positive {
     @apply text-success font-semibold;
   }
