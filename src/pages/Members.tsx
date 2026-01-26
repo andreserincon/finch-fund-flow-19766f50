@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useMembers } from '@/hooks/useMembers';
 import { AddMemberForm } from '@/components/forms/AddMemberForm';
+import { EditMemberForm } from '@/components/forms/EditMemberForm';
+import { DeleteMemberDialog } from '@/components/forms/DeleteMemberDialog';
 import { MemberStatusBadge } from '@/components/dashboard/MemberStatusBadge';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -20,14 +22,22 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Search, Phone } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Search, Phone, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
-import { FEE_TYPE_LABELS } from '@/lib/types';
+import { FEE_TYPE_LABELS, MemberBalance } from '@/lib/types';
 
 export default function Members() {
   const { memberBalances, isLoading } = useMembers();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [editMember, setEditMember] = useState<MemberBalance | null>(null);
+  const [deleteMember, setDeleteMember] = useState<MemberBalance | null>(null);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -115,12 +125,13 @@ export default function Members() {
               <TableHead className="text-right">Owed</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Joined</TableHead>
+              <TableHead className="w-[50px]"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredMembers.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                   No members found
                 </TableCell>
               </TableRow>
@@ -171,12 +182,47 @@ export default function Members() {
                   <TableCell className="text-muted-foreground">
                     {format(new Date(member.join_date), 'MMM d, yyyy')}
                   </TableCell>
+                  <TableCell>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <MoreHorizontal className="h-4 w-4" />
+                          <span className="sr-only">Open menu</span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="bg-popover">
+                        <DropdownMenuItem onClick={() => setEditMember(member)}>
+                          <Pencil className="mr-2 h-4 w-4" />
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={() => setDeleteMember(member)}
+                          className="text-destructive focus:text-destructive"
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
                 </TableRow>
               ))
             )}
           </TableBody>
         </Table>
       </div>
+
+      <EditMemberForm
+        member={editMember}
+        open={!!editMember}
+        onOpenChange={(open) => !open && setEditMember(null)}
+      />
+
+      <DeleteMemberDialog
+        member={deleteMember}
+        open={!!deleteMember}
+        onOpenChange={(open) => !open && setDeleteMember(null)}
+      />
     </div>
   );
 }
