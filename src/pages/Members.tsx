@@ -375,9 +375,11 @@ export default function Members() {
                 </Button>
               </TableHead>
               <TableHead className="text-right">Monthly Fee</TableHead>
+              <TableHead className="text-right">Monthly Balance</TableHead>
+              <TableHead className="text-right">Events Balance</TableHead>
               <TableHead className="text-right">
                 <Button variant="ghost" size="sm" className="-mr-3 h-8" onClick={() => handleSort('balance')}>
-                  Balance
+                  Overall Balance
                   {getSortIcon('balance')}
                 </Button>
               </TableHead>
@@ -399,7 +401,7 @@ export default function Members() {
           <TableBody>
             {filteredMembers.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
                   No members found
                 </TableCell>
               </TableRow>
@@ -422,6 +424,28 @@ export default function Members() {
                   </TableCell>
                   <TableCell className="text-right font-mono">
                     {formatCurrency(getMonthlyFeeForMember(member.fee_type))}
+                  </TableCell>
+                  <TableCell className="text-right font-mono">
+                    <span
+                      className={
+                        member.current_balance >= 0
+                          ? 'amount-positive'
+                          : 'amount-negative'
+                      }
+                    >
+                      {formatCurrency(member.current_balance)}
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-right font-mono">
+                    <span
+                      className={
+                        -getEventDebt(member.member_id) >= 0
+                          ? 'amount-positive'
+                          : 'amount-negative'
+                      }
+                    >
+                      {formatCurrency(-getEventDebt(member.member_id))}
+                    </span>
                   </TableCell>
                   <TableCell className="text-right font-mono">
                     <span
