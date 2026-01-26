@@ -307,7 +307,6 @@ export type Database = {
         | "parent_organization_fee"
         | "other_expense"
         | "other_income"
-        | "event_payment"
       transaction_type: "income" | "expense"
     }
     CompositeTypes: {
@@ -446,7 +445,6 @@ export const Constants = {
         "parent_organization_fee",
         "other_expense",
         "other_income",
-        "event_payment",
       ],
       transaction_type: ["income", "expense"],
     },
