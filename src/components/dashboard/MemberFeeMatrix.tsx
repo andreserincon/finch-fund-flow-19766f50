@@ -1,7 +1,8 @@
 import { useMemo } from 'react';
-import { format, subMonths, addMonths, startOfMonth, isBefore, isAfter, isSameMonth, parseISO } from 'date-fns';
+import { format, subMonths, addMonths, startOfMonth, isBefore, isAfter, parseISO } from 'date-fns';
 import { useMembers } from '@/hooks/useMembers';
 import { useMonthlyFees } from '@/hooks/useMonthlyFees';
+import { useMemberFeeTypeHistory } from '@/hooks/useMemberFeeTypeHistory';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Table,
@@ -18,8 +19,9 @@ type PaymentStatus = 'paid' | 'overdue' | 'current_unpaid' | 'future' | 'not_mem
 export function MemberFeeMatrix() {
   const { memberBalances, isLoading: membersLoading } = useMembers();
   const { monthlyFees, isLoading: feesLoading } = useMonthlyFees();
+  const { getFeeTypeForMonth: getHistoricalFeeType, isLoading: historyLoading } = useMemberFeeTypeHistory();
 
-  const isLoading = membersLoading || feesLoading;
+  const isLoading = membersLoading || feesLoading || historyLoading;
 
   // Generate array of 7 months: 3 past, current, 3 future
   const months = useMemo(() => {
@@ -48,6 +50,12 @@ export function MemberFeeMatrix() {
     return fee?.amount ?? 0;
   };
 
+  // Get the fee type for a member at a specific month (uses history for non-retroactive changes)
+  const getMemberFeeTypeForMonth = (memberId: string, monthKey: string, currentFeeType: 'standard' | 'solidarity'): 'standard' | 'solidarity' => {
+    const historicalFeeType = getHistoricalFeeType(memberId, monthKey);
+    return historicalFeeType ?? currentFeeType;
+  };
+
   // Calculate payment status for each member/month
   const getMemberMonthStatus = (
     member: typeof memberBalances[0],
@@ -58,7 +66,10 @@ export function MemberFeeMatrix() {
   ): { status: PaymentStatus; amount: number } => {
     const joinDate = parseISO(member.join_date);
     const monthStart = startOfMonth(monthDate);
-    const feeAmount = getFeeForMonth(monthKey, member.fee_type);
+    
+    // Get the fee type that was active for this member during this month
+    const effectiveFeeType = getMemberFeeTypeForMonth(member.member_id, monthKey, member.fee_type);
+    const feeAmount = getFeeForMonth(monthKey, effectiveFeeType);
 
     // Member wasn't a member yet in this month
     if (isAfter(startOfMonth(joinDate), monthStart)) {
@@ -73,7 +84,9 @@ export function MemberFeeMatrix() {
       if (isAfter(startOfMonth(parseISO(m.key)), monthStart)) break;
       if (isBefore(startOfMonth(parseISO(m.key)), memberJoinMonth)) continue;
       
-      cumulativeOwed += getFeeForMonth(m.key, member.fee_type);
+      // Use historical fee type for each month
+      const monthFeeType = getMemberFeeTypeForMonth(member.member_id, m.key, member.fee_type);
+      cumulativeOwed += getFeeForMonth(m.key, monthFeeType);
     }
 
     // If total paid covers cumulative owed, this month is paid (even if future)
