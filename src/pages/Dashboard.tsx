@@ -152,8 +152,8 @@ export default function Dashboard() {
         <AddTransactionForm triggerLabel="Log Transaction" />
       </div>
 
-      {/* Key Metrics */}
-      <div className="grid gap-3 grid-cols-2 lg:grid-cols-5">
+      {/* Key Metrics - Row 1 */}
+      <div className="grid gap-3 grid-cols-2 lg:grid-cols-3">
         <StatCard
           title="Bank Main Account"
           value={formatCurrency(bankBalance)}
@@ -175,6 +175,10 @@ export default function Dashboard() {
           icon={<Wallet className="h-8 w-8 text-primary/20" />}
           variant={totalARSBalance >= 0 ? 'success' : 'danger'}
         />
+      </div>
+
+      {/* Key Metrics - Row 2 */}
+      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Savings Account"
           value={formatCurrency(savingsBalance, 'USD')}
@@ -189,10 +193,6 @@ export default function Dashboard() {
           icon={<TrendingUp className="h-8 w-8 text-success/20" />}
           variant={monthlyIncome - monthlyExpenses >= 0 ? 'success' : 'danger'}
         />
-      </div>
-
-      {/* Member Metrics */}
-      <div className="grid gap-3 grid-cols-2">
         <StatCard
           title="Members Unpaid"
           value={membersUnpaid}
