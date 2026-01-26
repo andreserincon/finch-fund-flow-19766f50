@@ -29,13 +29,14 @@ import {
 import { Search, TrendingUp, TrendingDown, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { CATEGORY_LABELS, Transaction } from '@/lib/types';
+import { CATEGORY_LABELS, ACCOUNT_LABELS, Transaction } from '@/lib/types';
 
 export default function Transactions() {
   const { transactions, isLoading } = useTransactions();
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [accountFilter, setAccountFilter] = useState<string>('all');
   
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [deletingTransaction, setDeletingTransaction] = useState<Transaction | null>(null);
@@ -59,7 +60,10 @@ export default function Transactions() {
     const matchesCategory =
       categoryFilter === 'all' || transaction.category === categoryFilter;
 
-    return matchesSearch && matchesType && matchesCategory;
+    const matchesAccount =
+      accountFilter === 'all' || transaction.account === accountFilter;
+
+    return matchesSearch && matchesType && matchesCategory && matchesAccount;
   });
 
   const totalIncome = filteredTransactions
@@ -149,6 +153,19 @@ export default function Transactions() {
               ))}
             </SelectContent>
           </Select>
+          <Select value={accountFilter} onValueChange={setAccountFilter}>
+            <SelectTrigger className="flex-1 sm:w-[180px] sm:flex-none">
+              <SelectValue placeholder="Account" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Accounts</SelectItem>
+              {Object.entries(ACCOUNT_LABELS).map(([value, label]) => (
+                <SelectItem key={value} value={value}>
+                  {label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
@@ -175,6 +192,7 @@ export default function Transactions() {
                   </Badge>
                   <p className="text-xs text-muted-foreground">
                     {format(new Date(transaction.transaction_date), 'MMM d, yyyy')}
+                    {' • '}{ACCOUNT_LABELS[transaction.account] || 'Bank Main Account'}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -226,6 +244,7 @@ export default function Transactions() {
           <TableHeader>
             <TableRow>
               <TableHead>Date</TableHead>
+              <TableHead>Account</TableHead>
               <TableHead>Category</TableHead>
               <TableHead>Member</TableHead>
               <TableHead>Notes</TableHead>
@@ -236,7 +255,7 @@ export default function Transactions() {
           <TableBody>
             {filteredTransactions.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                   No transactions found
                 </TableCell>
               </TableRow>
@@ -245,6 +264,11 @@ export default function Transactions() {
                 <TableRow key={transaction.id}>
                   <TableCell className="font-medium">
                     {format(new Date(transaction.transaction_date), 'MMM d, yyyy')}
+                  </TableCell>
+                  <TableCell>
+                    <span className="text-xs text-muted-foreground">
+                      {ACCOUNT_LABELS[transaction.account] || 'Bank Main Account'}
+                    </span>
                   </TableCell>
                   <TableCell>
                     <Badge
