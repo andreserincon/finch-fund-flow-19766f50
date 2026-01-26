@@ -1,11 +1,19 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { format, parseISO } from 'date-fns';
+import { CalendarIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { Calendar } from '@/components/ui/calendar';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import {
   Select,
   SelectContent,
@@ -23,6 +31,7 @@ import {
 } from '@/components/ui/dialog';
 import { useMembers } from '@/hooks/useMembers';
 import { FeeType, FEE_TYPE_LABELS, MemberBalance } from '@/lib/types';
+import { cn } from '@/lib/utils';
 
 const memberSchema = z.object({
   full_name: z.string().min(1, 'Name is required').max(100),
@@ -30,6 +39,7 @@ const memberSchema = z.object({
   monthly_fee_amount: z.number().min(0, 'Fee must be positive'),
   fee_type: z.enum(['standard', 'solidarity']),
   is_active: z.boolean(),
+  join_date: z.string().min(1, 'Join date is required'),
 });
 
 type MemberFormData = z.infer<typeof memberSchema>;
@@ -42,6 +52,7 @@ interface EditMemberFormProps {
 
 export function EditMemberForm({ member, open, onOpenChange }: EditMemberFormProps) {
   const { updateMember } = useMembers();
+  const [joinDate, setJoinDate] = useState<Date | undefined>();
 
   const {
     register,
@@ -59,12 +70,15 @@ export function EditMemberForm({ member, open, onOpenChange }: EditMemberFormPro
 
   useEffect(() => {
     if (member) {
+      const parsedDate = parseISO(member.join_date);
+      setJoinDate(parsedDate);
       reset({
         full_name: member.full_name,
         phone_number: member.phone_number,
         monthly_fee_amount: member.monthly_fee_amount,
         fee_type: member.fee_type,
         is_active: member.is_active,
+        join_date: member.join_date,
       });
     }
   }, [member, reset]);
@@ -79,8 +93,16 @@ export function EditMemberForm({ member, open, onOpenChange }: EditMemberFormPro
       monthly_fee_amount: data.monthly_fee_amount,
       fee_type: data.fee_type,
       is_active: data.is_active,
+      join_date: data.join_date,
     });
     onOpenChange(false);
+  };
+
+  const handleDateSelect = (date: Date | undefined) => {
+    if (date) {
+      setJoinDate(date);
+      setValue('join_date', format(date, 'yyyy-MM-dd'));
+    }
   };
 
   return (
@@ -150,6 +172,36 @@ export function EditMemberForm({ member, open, onOpenChange }: EditMemberFormPro
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Join Date</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-full justify-start text-left font-normal",
+                    !joinDate && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {joinDate ? format(joinDate, 'PPP') : <span>Pick a date</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={joinDate}
+                  onSelect={handleDateSelect}
+                  initialFocus
+                  className="p-3 pointer-events-auto"
+                />
+              </PopoverContent>
+            </Popover>
+            {errors.join_date && (
+              <p className="text-sm text-destructive">{errors.join_date.message}</p>
+            )}
           </div>
 
           <div className="flex items-center justify-between">
