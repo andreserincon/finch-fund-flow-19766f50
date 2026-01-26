@@ -14,6 +14,58 @@ export type Database = {
   }
   public: {
     Tables: {
+      event_member_payments: {
+        Row: {
+          amount_owed: number
+          amount_paid: number
+          created_at: string
+          event_id: string
+          id: string
+          member_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount_owed: number
+          amount_paid?: number
+          created_at?: string
+          event_id: string
+          id?: string
+          member_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount_owed?: number
+          amount_paid?: number
+          created_at?: string
+          event_id?: string
+          id?: string
+          member_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_member_payments_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "extraordinary_expenses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_member_payments_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "member_balances"
+            referencedColumns: ["member_id"]
+          },
+          {
+            foreignKeyName: "event_member_payments_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       extraordinary_expenses: {
         Row: {
           created_at: string
@@ -235,6 +287,7 @@ export type Database = {
           months_since_join: number | null
           phone_number: string | null
           total_fees_owed: number | null
+          total_paid: number | null
         }
         Relationships: []
       }
