@@ -113,11 +113,19 @@ export default function Members() {
     return getEventPaid(memberId) - getEventOwed(memberId);
   };
 
+  // Get monthly-only payments (total_paid minus event payments)
+  const getMonthlyPaid = (member: MemberBalance) => {
+    return member.total_paid - getEventPaid(member.member_id);
+  };
+
+  // Get monthly balance (monthly paid - monthly owed)
+  const getMonthlyBalance = (member: MemberBalance) => {
+    return getMonthlyPaid(member) - getMonthlyOwed(member);
+  };
+
   // Calculate overall balance (monthly + events)
   const getOverallBalance = (member: MemberBalance) => {
-    const monthlyOwed = getMonthlyOwed(member);
-    const eventOwed = getEventOwed(member.member_id);
-    return member.total_paid - monthlyOwed - eventOwed;
+    return getMonthlyBalance(member) + getEventsBalance(member.member_id);
   };
 
   // Determine payment status based on overall balance
@@ -444,12 +452,12 @@ export default function Members() {
                   <TableCell className="text-right font-mono">
                     <span
                       className={
-                        (member.total_paid - getMonthlyOwed(member)) >= 0
+                        getMonthlyBalance(member) >= 0
                           ? 'amount-positive'
                           : 'amount-negative'
                       }
                     >
-                      {formatCurrency(member.total_paid - getMonthlyOwed(member))}
+                      {formatCurrency(getMonthlyBalance(member))}
                     </span>
                   </TableCell>
                   <TableCell className="text-right font-mono">
