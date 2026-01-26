@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { MemberStatusBadge } from '@/components/dashboard/MemberStatusBadge';
+import { MemberFeeMatrix } from '@/components/dashboard/MemberFeeMatrix';
 import { AddTransactionForm } from '@/components/forms/AddTransactionForm';
 import { 
   Wallet, 
@@ -242,6 +243,9 @@ export default function Dashboard() {
           )}
         </div>
       </div>
+
+      {/* Member Fee Matrix */}
+      <MemberFeeMatrix />
     </div>
   );
 }
