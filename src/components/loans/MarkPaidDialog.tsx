@@ -38,13 +38,15 @@ export function MarkPaidDialog({ loan, open, onOpenChange }: MarkPaidDialogProps
     }
   };
 
+  const remainingDue = loan.amount - loan.amount_paid;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[400px]">
         <DialogHeader>
-          <DialogTitle>Mark Loan as Paid</DialogTitle>
+          <DialogTitle>Mark Loan as Fully Paid</DialogTitle>
           <DialogDescription>
-            The repayment amount will be added to the account balance.
+            This will record a payment of {formatCurrency(remainingDue, currency)} to fully pay off the loan.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -53,9 +55,22 @@ export function MarkPaidDialog({ loan, open, onOpenChange }: MarkPaidDialogProps
             <p className="text-sm text-muted-foreground">
               {ACCOUNT_LABELS[loan.account]} • {format(new Date(loan.loan_date), 'MMM d, yyyy')}
             </p>
-            <p className="text-lg font-mono font-semibold mt-2">
-              {formatCurrency(loan.amount, currency)}
-            </p>
+            <div className="grid grid-cols-2 gap-3 mt-3">
+              <div>
+                <p className="text-xs text-muted-foreground">Total Loan</p>
+                <p className="font-mono font-semibold">{formatCurrency(loan.amount, currency)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Already Paid</p>
+                <p className="font-mono font-semibold text-success">{formatCurrency(loan.amount_paid, currency)}</p>
+              </div>
+            </div>
+            <div className="mt-3 pt-3 border-t">
+              <p className="text-xs text-muted-foreground">Remaining to Pay</p>
+              <p className="text-lg font-mono font-bold text-warning">
+                {formatCurrency(remainingDue, currency)}
+              </p>
+            </div>
           </div>
 
           <div className="space-y-2">

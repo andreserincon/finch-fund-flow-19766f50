@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useLoans } from '@/hooks/useLoans';
-import { useMembers } from '@/hooks/useMembers';
 import { AddLoanDialog } from '@/components/loans/AddLoanDialog';
 import { MarkPaidDialog } from '@/components/loans/MarkPaidDialog';
 import { DeleteLoanDialog } from '@/components/loans/DeleteLoanDialog';
+import { AddPaymentDialog } from '@/components/loans/AddPaymentDialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
 import {
   Table,
   TableBody,
@@ -27,7 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { MoreHorizontal, Plus, CheckCircle, XCircle, Trash2 } from 'lucide-react';
+import { MoreHorizontal, Plus, CheckCircle, XCircle, Trash2, DollarSign } from 'lucide-react';
 import { format } from 'date-fns';
 import { Loan, ACCOUNT_LABELS, LOAN_STATUS_LABELS, LoanStatus } from '@/lib/types';
 import { formatCurrency, getCurrencyForAccount, cn } from '@/lib/utils';
@@ -38,20 +39,24 @@ export default function Loans() {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [markingPaidLoan, setMarkingPaidLoan] = useState<Loan | null>(null);
   const [deletingLoan, setDeletingLoan] = useState<Loan | null>(null);
+  const [addingPaymentLoan, setAddingPaymentLoan] = useState<Loan | null>(null);
 
   const filteredLoans = loans.filter((loan) => {
     if (statusFilter === 'all') return true;
     return loan.status === statusFilter;
   });
 
-  // Calculate totals
-  const activeLoansARS = loans
-    .filter((l) => l.status === 'active' && l.account !== 'savings')
-    .reduce((sum, l) => sum + l.amount, 0);
+  // Calculate totals for active loans
+  const activeLoansARS = loans.filter((l) => l.status === 'active' && l.account !== 'savings');
+  const activeLoansUSD = loans.filter((l) => l.status === 'active' && l.account === 'savings');
 
-  const activeLoansUSD = loans
-    .filter((l) => l.status === 'active' && l.account === 'savings')
-    .reduce((sum, l) => sum + l.amount, 0);
+  const totalDueARS = activeLoansARS.reduce((sum, l) => sum + l.amount, 0);
+  const totalPaidARS = activeLoansARS.reduce((sum, l) => sum + l.amount_paid, 0);
+  const remainingDueARS = totalDueARS - totalPaidARS;
+
+  const totalDueUSD = activeLoansUSD.reduce((sum, l) => sum + l.amount, 0);
+  const totalPaidUSD = activeLoansUSD.reduce((sum, l) => sum + l.amount_paid, 0);
+  const remainingDueUSD = totalDueUSD - totalPaidUSD;
 
   const getStatusBadge = (status: LoanStatus) => {
     const variants: Record<LoanStatus, string> = {
@@ -91,18 +96,50 @@ export default function Loans() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid gap-3 grid-cols-2">
-        <div className="stat-card">
-          <p className="text-sm text-muted-foreground">Active Loans (ARS)</p>
-          <p className="text-2xl font-bold text-warning">
-            {formatCurrency(activeLoansARS, 'ARS')}
-          </p>
+      <div className="grid gap-3 grid-cols-1 md:grid-cols-2">
+        <div className="stat-card space-y-3">
+          <div className="flex justify-between items-start">
+            <p className="text-sm text-muted-foreground">Active Loans (ARS)</p>
+            <Badge variant="outline" className="text-xs">
+              {activeLoansARS.length} loans
+            </Badge>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <p className="text-xs text-muted-foreground">Total Due</p>
+              <p className="text-lg font-bold font-mono">{formatCurrency(totalDueARS, 'ARS')}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Paid</p>
+              <p className="text-lg font-bold font-mono text-success">{formatCurrency(totalPaidARS, 'ARS')}</p>
+            </div>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Remaining</p>
+            <p className="text-xl font-bold font-mono text-warning">{formatCurrency(remainingDueARS, 'ARS')}</p>
+          </div>
         </div>
-        <div className="stat-card">
-          <p className="text-sm text-muted-foreground">Active Loans (USD)</p>
-          <p className="text-2xl font-bold text-warning">
-            {formatCurrency(activeLoansUSD, 'USD')}
-          </p>
+        <div className="stat-card space-y-3">
+          <div className="flex justify-between items-start">
+            <p className="text-sm text-muted-foreground">Active Loans (USD)</p>
+            <Badge variant="outline" className="text-xs">
+              {activeLoansUSD.length} loans
+            </Badge>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <p className="text-xs text-muted-foreground">Total Due</p>
+              <p className="text-lg font-bold font-mono">{formatCurrency(totalDueUSD, 'USD')}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Paid</p>
+              <p className="text-lg font-bold font-mono text-success">{formatCurrency(totalPaidUSD, 'USD')}</p>
+            </div>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Remaining</p>
+            <p className="text-xl font-bold font-mono text-warning">{formatCurrency(remainingDueUSD, 'USD')}</p>
+          </div>
         </div>
       </div>
 
@@ -130,6 +167,8 @@ export default function Loans() {
         ) : (
           filteredLoans.map((loan) => {
             const currency = getCurrencyForAccount(loan.account);
+            const remainingDue = loan.amount - loan.amount_paid;
+            const paidPercentage = (loan.amount_paid / loan.amount) * 100;
             return (
               <div key={loan.id} className="rounded-lg border bg-card p-4 space-y-3">
                 <div className="flex items-start justify-between">
@@ -151,9 +190,13 @@ export default function Loans() {
                       <DropdownMenuContent align="end" className="bg-popover">
                         {loan.status === 'active' && (
                           <>
+                            <DropdownMenuItem onClick={() => setAddingPaymentLoan(loan)}>
+                              <DollarSign className="mr-2 h-4 w-4" />
+                              Add Payment
+                            </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => setMarkingPaidLoan(loan)}>
                               <CheckCircle className="mr-2 h-4 w-4" />
-                              Mark as Paid
+                              Mark as Fully Paid
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => cancelLoan.mutate(loan.id)}
@@ -175,10 +218,32 @@ export default function Loans() {
                     </DropdownMenu>
                   </div>
                 </div>
+                
+                {/* Payment Progress */}
+                {loan.status === 'active' && (
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted-foreground">
+                        Paid: {formatCurrency(loan.amount_paid, currency)}
+                      </span>
+                      <span className="font-medium">{paidPercentage.toFixed(0)}%</span>
+                    </div>
+                    <Progress value={paidPercentage} className="h-1.5" />
+                  </div>
+                )}
+
                 <div className="flex items-center justify-between">
-                  <span className="font-mono text-lg font-semibold">
-                    {formatCurrency(loan.amount, currency)}
-                  </span>
+                  <div className="space-y-0.5">
+                    <p className="text-xs text-muted-foreground">
+                      {loan.status === 'active' ? 'Remaining Due' : 'Total'}
+                    </p>
+                    <span className={cn(
+                      "font-mono text-lg font-semibold",
+                      loan.status === 'active' && remainingDue > 0 && "text-warning"
+                    )}>
+                      {formatCurrency(loan.status === 'active' ? remainingDue : loan.amount, currency)}
+                    </span>
+                  </div>
                   {loan.paid_date && (
                     <span className="text-xs text-muted-foreground">
                       Paid: {format(new Date(loan.paid_date), 'MMM d, yyyy')}
@@ -202,9 +267,10 @@ export default function Loans() {
               <TableHead>Date</TableHead>
               <TableHead>Member</TableHead>
               <TableHead>Account</TableHead>
-              <TableHead>Amount</TableHead>
+              <TableHead>Total</TableHead>
+              <TableHead>Paid</TableHead>
+              <TableHead>Due</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Paid Date</TableHead>
               <TableHead>Notes</TableHead>
               <TableHead className="w-[50px]"></TableHead>
             </TableRow>
@@ -212,13 +278,15 @@ export default function Loans() {
           <TableBody>
             {filteredLoans.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                   No loans found
                 </TableCell>
               </TableRow>
             ) : (
               filteredLoans.map((loan) => {
                 const currency = getCurrencyForAccount(loan.account);
+                const remainingDue = loan.amount - loan.amount_paid;
+                const paidPercentage = (loan.amount_paid / loan.amount) * 100;
                 return (
                   <TableRow key={loan.id}>
                     <TableCell className="font-medium">
@@ -230,15 +298,21 @@ export default function Loans() {
                         {ACCOUNT_LABELS[loan.account]}
                       </span>
                     </TableCell>
-                    <TableCell className="font-mono font-semibold">
+                    <TableCell className="font-mono">
                       {formatCurrency(loan.amount, currency)}
                     </TableCell>
-                    <TableCell>{getStatusBadge(loan.status)}</TableCell>
-                    <TableCell>
-                      {loan.paid_date
-                        ? format(new Date(loan.paid_date), 'MMM d, yyyy')
-                        : '—'}
+                    <TableCell className="font-mono text-success">
+                      {formatCurrency(loan.amount_paid, currency)}
+                      {loan.status === 'active' && (
+                        <span className="text-xs text-muted-foreground ml-1">
+                          ({paidPercentage.toFixed(0)}%)
+                        </span>
+                      )}
                     </TableCell>
+                    <TableCell className={cn("font-mono font-semibold", loan.status === 'active' && remainingDue > 0 && "text-warning")}>
+                      {formatCurrency(remainingDue, currency)}
+                    </TableCell>
+                    <TableCell>{getStatusBadge(loan.status)}</TableCell>
                     <TableCell className="max-w-[150px] truncate text-muted-foreground">
                       {loan.notes || '—'}
                     </TableCell>
@@ -253,9 +327,13 @@ export default function Loans() {
                         <DropdownMenuContent align="end" className="bg-popover">
                           {loan.status === 'active' && (
                             <>
+                              <DropdownMenuItem onClick={() => setAddingPaymentLoan(loan)}>
+                                <DollarSign className="mr-2 h-4 w-4" />
+                                Add Payment
+                              </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => setMarkingPaidLoan(loan)}>
                                 <CheckCircle className="mr-2 h-4 w-4" />
-                                Mark as Paid
+                                Mark as Fully Paid
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 onClick={() => cancelLoan.mutate(loan.id)}
@@ -300,6 +378,14 @@ export default function Loans() {
           loan={deletingLoan}
           open={!!deletingLoan}
           onOpenChange={(open) => !open && setDeletingLoan(null)}
+        />
+      )}
+
+      {addingPaymentLoan && (
+        <AddPaymentDialog
+          loan={addingPaymentLoan}
+          open={!!addingPaymentLoan}
+          onOpenChange={(open) => !open && setAddingPaymentLoan(null)}
         />
       )}
     </div>
