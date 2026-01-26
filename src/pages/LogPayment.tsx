@@ -29,6 +29,7 @@ const paymentSchema = z.object({
     'donation',
     'reimbursement',
     'other_income',
+    'event_payment',
   ]),
   member_id: z.string().optional(),
   notes: z.string().max(500).optional(),
@@ -42,6 +43,7 @@ const incomeCategories: TransactionCategory[] = [
   'donation',
   'reimbursement',
   'other_income',
+  'event_payment',
 ];
 
 export default function LogPayment() {
@@ -150,7 +152,7 @@ export default function LogPayment() {
               </Select>
             </div>
 
-            {category === 'monthly_fee' && (
+            {(category === 'monthly_fee' || category === 'event_payment') && (
               <div className="space-y-2">
                 <Label>Member</Label>
                 <Select

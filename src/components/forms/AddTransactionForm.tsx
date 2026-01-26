@@ -40,6 +40,7 @@ const transactionSchema = z.object({
     'parent_organization_fee',
     'other_expense',
     'other_income',
+    'event_payment',
   ]),
   member_id: z.string().optional(),
   notes: z.string().max(500).optional(),
@@ -66,6 +67,7 @@ export function AddTransactionForm({
     'donation',
     'reimbursement',
     'other_income',
+    'event_payment',
   ];
 
   const expenseCategories: TransactionCategory[] = [
@@ -192,7 +194,7 @@ export function AddTransactionForm({
             </div>
           </div>
 
-          {category === 'monthly_fee' && (
+          {(category === 'monthly_fee' || category === 'event_payment') && (
             <div className="space-y-2">
               <Label>Member</Label>
               <Select

@@ -8,7 +8,8 @@ export type TransactionCategory =
   | 'event_expense'
   | 'parent_organization_fee'
   | 'other_expense'
-  | 'other_income';
+  | 'other_income'
+  | 'event_payment';
 
 export type PaymentStatus = 'up_to_date' | 'ahead' | 'overdue';
 
@@ -87,6 +88,7 @@ export const CATEGORY_LABELS: Record<TransactionCategory, string> = {
   parent_organization_fee: 'Parent Organization Fee',
   other_expense: 'Other Expense',
   other_income: 'Other Income',
+  event_payment: 'Event Payment',
 };
 
 export const FEE_TYPE_LABELS: Record<FeeType, string> = {
