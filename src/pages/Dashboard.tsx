@@ -6,6 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { MemberStatusBadge } from '@/components/dashboard/MemberStatusBadge';
 import { MemberFeeMatrix } from '@/components/dashboard/MemberFeeMatrix';
+import { InsightsAgent } from '@/components/dashboard/InsightsAgent';
 import { useAccountTransfers } from '@/hooks/useAccountTransfers';
 import { useLoans } from '@/hooks/useLoans';
 import { AddTransactionForm } from '@/components/forms/AddTransactionForm';
@@ -149,6 +150,27 @@ export default function Dashboard() {
     );
   }
 
+  // Prepare context for insights agent
+  const insightsContext = {
+    bankBalance,
+    greatLodgeBalance,
+    savingsBalance,
+    totalARSBalance,
+    monthlyIncome,
+    monthlyExpenses,
+    activeMembersCount,
+    membersUnpaid,
+    membersOverdue,
+    totalLoansDueARS,
+    totalLoansDueUSD,
+    recentTransactions: recentTransactions.map(t => ({
+      category: CATEGORY_LABELS[t.category],
+      amount: t.amount,
+      transaction_type: t.transaction_type,
+      transaction_date: t.transaction_date,
+    })),
+  };
+
   return (
     <div className="space-y-6 md:space-y-8 animate-fade-in">
       {/* Header */}
@@ -161,6 +183,9 @@ export default function Dashboard() {
         </div>
         <AddTransactionForm triggerLabel="Log Transaction" />
       </div>
+
+      {/* Insights Agent */}
+      <InsightsAgent context={insightsContext} />
 
       {/* Key Metrics - Row 1 */}
       <div className="grid gap-3 grid-cols-2 lg:grid-cols-3">
