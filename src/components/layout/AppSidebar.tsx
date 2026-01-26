@@ -9,6 +9,7 @@ import {
   ArrowLeftRight,
   HandCoins
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { NavLink } from '@/components/NavLink';
 import {
   Sidebar,
@@ -25,26 +26,27 @@ import {
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 
-const mainNavItems = [
-  { title: 'Dashboard', url: '/', icon: LayoutDashboard },
-  { title: 'Members', url: '/members', icon: Users },
-  { title: 'Transactions', url: '/transactions', icon: Receipt },
-  { title: 'Loans', url: '/loans', icon: HandCoins },
-];
-
-const actionItems = [
-  { title: 'Log Payment', url: '/log-payment', icon: PlusCircle },
-  { title: 'Log Expense', url: '/log-expense', icon: Wallet },
-  { title: 'Transfer Funds', url: '/account-transfer', icon: ArrowLeftRight },
-];
-
-const settingsItems = [
-  { title: 'Monthly Fees', url: '/monthly-fees', icon: Settings },
-  { title: 'Events', url: '/expense-categories', icon: Wallet },
-];
-
 export function AppSidebar() {
   const { signOut, user } = useAuth();
+  const { t } = useTranslation();
+
+  const mainNavItems = [
+    { title: t('nav.dashboard'), url: '/', icon: LayoutDashboard },
+    { title: t('nav.members'), url: '/members', icon: Users },
+    { title: t('nav.transactions'), url: '/transactions', icon: Receipt },
+    { title: t('nav.loans'), url: '/loans', icon: HandCoins },
+  ];
+
+  const actionItems = [
+    { title: t('nav.logPayment'), url: '/log-payment', icon: PlusCircle },
+    { title: t('nav.logExpense'), url: '/log-expense', icon: Wallet },
+    { title: t('nav.transferFunds'), url: '/account-transfer', icon: ArrowLeftRight },
+  ];
+
+  const settingsItems = [
+    { title: t('nav.monthlyFees'), url: '/monthly-fees', icon: Settings },
+    { title: t('nav.events'), url: '/expense-categories', icon: Wallet },
+  ];
 
   const handleSignOut = async () => {
     await signOut();
@@ -58,8 +60,8 @@ export function AppSidebar() {
             <Wallet className="h-5 w-5 text-primary-foreground" />
           </div>
           <div>
-            <h1 className="text-lg font-semibold text-sidebar-foreground">Treasury</h1>
-            <p className="text-xs text-sidebar-foreground/60">Management System</p>
+            <h1 className="text-lg font-semibold text-sidebar-foreground">{t('nav.treasury')}</h1>
+            <p className="text-xs text-sidebar-foreground/60">{t('nav.managementSystem')}</p>
           </div>
         </div>
       </SidebarHeader>
@@ -67,12 +69,12 @@ export function AppSidebar() {
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel className="text-sidebar-foreground/50 text-xs uppercase tracking-wider px-3">
-            Overview
+            {t('nav.overview')}
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {mainNavItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
+                <SidebarMenuItem key={item.url}>
                   <SidebarMenuButton asChild>
                     <NavLink 
                       to={item.url} 
@@ -92,12 +94,12 @@ export function AppSidebar() {
 
         <SidebarGroup>
           <SidebarGroupLabel className="text-sidebar-foreground/50 text-xs uppercase tracking-wider px-3">
-            Quick Actions
+            {t('nav.quickActions')}
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {actionItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
+                <SidebarMenuItem key={item.url}>
                   <SidebarMenuButton asChild>
                     <NavLink 
                       to={item.url} 
@@ -116,12 +118,12 @@ export function AppSidebar() {
 
         <SidebarGroup>
           <SidebarGroupLabel className="text-sidebar-foreground/50 text-xs uppercase tracking-wider px-3">
-            Settings
+            {t('nav.settings')}
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {settingsItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
+                <SidebarMenuItem key={item.url}>
                   <SidebarMenuButton asChild>
                     <NavLink 
                       to={item.url} 
@@ -145,7 +147,7 @@ export function AppSidebar() {
             <p className="text-sm font-medium text-sidebar-foreground truncate">
               {user?.email}
             </p>
-            <p className="text-xs text-sidebar-foreground/60">Treasurer</p>
+            <p className="text-xs text-sidebar-foreground/60">{t('nav.treasurer')}</p>
           </div>
           <Button
             variant="ghost"

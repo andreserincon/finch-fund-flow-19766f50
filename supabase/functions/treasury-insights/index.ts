@@ -11,7 +11,7 @@ serve(async (req) => {
   }
 
   try {
-    const { question, context } = await req.json();
+    const { question, context, language = 'Spanish' } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
     if (!LOVABLE_API_KEY) {
@@ -19,6 +19,7 @@ serve(async (req) => {
     }
 
     const systemPrompt = `You are a helpful treasury insights assistant for a lodge/organization. You analyze financial data and provide actionable insights.
+IMPORTANT: Always respond in ${language}.
 
 You have access to the following treasury data:
 ${JSON.stringify(context, null, 2)}
@@ -31,7 +32,8 @@ Your role is to:
 - Summarize key metrics when asked
 
 Keep responses concise and actionable. Use currency formatting appropriate for the data (ARS for bank/lodge accounts, USD for savings).
-When mentioning specific numbers, always format them as currency.`;
+When mentioning specific numbers, always format them as currency.
+Remember: Always respond in ${language}.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",

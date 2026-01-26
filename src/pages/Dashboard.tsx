@@ -1,10 +1,10 @@
+import { useTranslation } from 'react-i18next';
 import { useMembers } from '@/hooks/useMembers';
 import { useTransactions } from '@/hooks/useTransactions';
 import { useMonthlyFees } from '@/hooks/useMonthlyFees';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { StatCard } from '@/components/dashboard/StatCard';
-import { MemberStatusBadge } from '@/components/dashboard/MemberStatusBadge';
 import { MemberFeeMatrix } from '@/components/dashboard/MemberFeeMatrix';
 import { InsightsAgent } from '@/components/dashboard/InsightsAgent';
 import { useAccountTransfers } from '@/hooks/useAccountTransfers';
@@ -15,24 +15,28 @@ import {
   Users, 
   AlertTriangle,
   TrendingUp,
-  TrendingDown,
   ArrowRight,
   Building,
   Landmark,
   HandCoins
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { es, enUS } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { CATEGORY_LABELS } from '@/lib/types';
 
 export default function Dashboard() {
+  const { t, i18n } = useTranslation();
   const { memberBalances, isLoading: membersLoading } = useMembers();
   const { transactions, isLoading: transactionsLoading } = useTransactions();
   const { currentMonthFees, isLoading: feesLoading } = useMonthlyFees();
   const { transfers, isLoading: transfersLoading } = useAccountTransfers();
   const { loans, isLoading: loansLoading } = useLoans();
+  
+  const dateLocale = i18n.language === 'es' ? es : enUS;
+
   // Query unpaid event amounts per member
   const { data: memberEventDebts = {} } = useQuery({
     queryKey: ['member-event-debts'],
@@ -145,7 +149,7 @@ export default function Dashboard() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-pulse text-muted-foreground">Loading...</div>
+        <div className="animate-pulse text-muted-foreground">{t('common.loading')}</div>
       </div>
     );
   }
@@ -176,12 +180,12 @@ export default function Dashboard() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-xl md:text-2xl font-bold text-foreground">Dashboard</h1>
+          <h1 className="text-xl md:text-2xl font-bold text-foreground">{t('dashboard.title')}</h1>
           <p className="text-sm text-muted-foreground">
-            Financial overview for {format(new Date(), 'MMMM yyyy')}
+            {t('dashboard.financialOverview', { month: format(new Date(), 'MMMM yyyy', { locale: dateLocale }) })}
           </p>
         </div>
-        <AddTransactionForm triggerLabel="Log Transaction" />
+        <AddTransactionForm triggerLabel={t('dashboard.logTransaction')} />
       </div>
 
       {/* Insights Agent */}
@@ -190,23 +194,23 @@ export default function Dashboard() {
       {/* Key Metrics - Row 1 */}
       <div className="grid gap-3 grid-cols-2 lg:grid-cols-3">
         <StatCard
-          title="Bank Main Account"
+          title={t('dashboard.bankMainAccount')}
           value={formatCurrency(bankBalance)}
-          subtitle="Primary bank balance"
+          subtitle={t('dashboard.primaryBankBalance')}
           icon={<Landmark className="h-8 w-8 text-primary/20" />}
           variant={bankBalance >= 0 ? 'success' : 'danger'}
         />
         <StatCard
-          title="Great Lodge Account"
+          title={t('dashboard.greatLodgeAccount')}
           value={formatCurrency(greatLodgeBalance)}
-          subtitle="Lodge balance"
+          subtitle={t('dashboard.lodgeBalance')}
           icon={<Building className="h-8 w-8 text-primary/20" />}
           variant={greatLodgeBalance >= 0 ? 'success' : 'danger'}
         />
         <StatCard
-          title="Total ARS Balance"
+          title={t('dashboard.totalARSBalance')}
           value={formatCurrency(totalARSBalance)}
-          subtitle="Bank + Lodge combined"
+          subtitle={t('dashboard.bankLodgeCombined')}
           icon={<Wallet className="h-8 w-8 text-primary/20" />}
           variant={totalARSBalance >= 0 ? 'success' : 'danger'}
         />
@@ -215,21 +219,21 @@ export default function Dashboard() {
       {/* Key Metrics - Row 2 */}
       <div className="grid gap-3 grid-cols-2 lg:grid-cols-3">
         <StatCard
-          title="Savings Account"
+          title={t('dashboard.savingsAccount')}
           value={formatCurrency(savingsBalance, 'USD')}
-          subtitle="USD savings"
+          subtitle={t('dashboard.usdSavings')}
           icon={<Wallet className="h-8 w-8 text-success/20" />}
           variant={savingsBalance >= 0 ? 'success' : 'danger'}
         />
         <StatCard
-          title="Loans Due (USD)"
+          title={t('dashboard.loansDueUSD')}
           value={formatCurrency(totalLoansDueUSD, 'USD')}
-          subtitle={`${loansUSD.length} active loan${loansUSD.length !== 1 ? 's' : ''}`}
+          subtitle={t('dashboard.activeLoans', { count: loansUSD.length })}
           icon={<HandCoins className="h-8 w-8 text-warning/20" />}
           variant={totalLoansDueUSD > 0 ? 'warning' : 'success'}
         />
         <StatCard
-          title="Monthly Flow"
+          title={t('dashboard.monthlyFlow')}
           value={formatCurrency(monthlyIncome - monthlyExpenses)}
           subtitle={`+${formatCurrency(monthlyIncome)} / -${formatCurrency(monthlyExpenses)}`}
           icon={<TrendingUp className="h-8 w-8 text-success/20" />}
@@ -240,16 +244,16 @@ export default function Dashboard() {
       {/* Key Metrics - Row 3 */}
       <div className="grid gap-3 grid-cols-2">
         <StatCard
-          title="Members Unpaid"
+          title={t('dashboard.membersUnpaid')}
           value={membersUnpaid}
-          subtitle={`of ${activeMembersCount} active members`}
+          subtitle={t('dashboard.ofActiveMembers', { count: activeMembersCount })}
           icon={<Users className="h-8 w-8 text-warning/20" />}
           variant={membersUnpaid > 0 ? 'warning' : 'success'}
         />
         <StatCard
-          title="Members Overdue"
+          title={t('dashboard.membersOverdue')}
           value={membersOverdue}
-          subtitle={`owe > 1 monthly fee`}
+          subtitle={t('dashboard.oweMoreThanOne')}
           icon={<AlertTriangle className="h-8 w-8 text-overdue/20" />}
           variant={membersOverdue > 0 ? 'danger' : 'success'}
         />
@@ -260,16 +264,16 @@ export default function Dashboard() {
         {/* Recent Transactions */}
         <div className="stat-card">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="section-header mb-0">Recent Transactions</h2>
+            <h2 className="section-header mb-0">{t('dashboard.recentTransactions')}</h2>
             <Link to="/transactions">
               <Button variant="ghost" size="sm">
-                View all <ArrowRight className="ml-1 h-4 w-4" />
+                {t('common.viewAll')} <ArrowRight className="ml-1 h-4 w-4" />
               </Button>
             </Link>
           </div>
           {recentTransactions.length === 0 ? (
             <p className="text-muted-foreground text-center py-8">
-              No transactions yet
+              {t('dashboard.noTransactionsYet')}
             </p>
           ) : (
             <div className="space-y-3">
@@ -283,7 +287,7 @@ export default function Dashboard() {
                       {CATEGORY_LABELS[transaction.category]}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {format(new Date(transaction.transaction_date), 'MMM d, yyyy')}
+                      {format(new Date(transaction.transaction_date), 'MMM d, yyyy', { locale: dateLocale })}
                       {transaction.member && ` • ${transaction.member.full_name}`}
                     </p>
                   </div>
@@ -307,17 +311,17 @@ export default function Dashboard() {
         {/* Overdue Members */}
         <div className="stat-card">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="section-header mb-0">Members Requiring Attention</h2>
+            <h2 className="section-header mb-0">{t('dashboard.membersRequiringAttention')}</h2>
             <Link to="/members">
               <Button variant="ghost" size="sm">
-                View all <ArrowRight className="ml-1 h-4 w-4" />
+                {t('common.viewAll')} <ArrowRight className="ml-1 h-4 w-4" />
               </Button>
             </Link>
           </div>
           {overdueMembers.length === 0 ? (
             <div className="text-center py-8">
               <Users className="h-12 w-12 text-success/30 mx-auto mb-2" />
-              <p className="text-muted-foreground">All members are up to date!</p>
+              <p className="text-muted-foreground">{t('dashboard.allMembersUpToDate')}</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -338,17 +342,17 @@ export default function Dashboard() {
                       <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs">
                         {isMonthlyOverdue && (
                           <span className="text-destructive">
-                            Fees: {formatCurrency(monthlyDebt)}
+                            {t('dashboard.fees')}: {formatCurrency(monthlyDebt)}
                           </span>
                         )}
                         {hasEventDebt && (
                           <span className="text-warning">
-                            Events: {formatCurrency(eventDebt)}
+                            {t('dashboard.event')}: {formatCurrency(eventDebt)}
                           </span>
                         )}
                         {!isMonthlyOverdue && !hasEventDebt && monthlyDebt > 0 && (
                           <span className="text-muted-foreground">
-                            Owes {formatCurrency(monthlyDebt)}
+                            {t('dashboard.owes')} {formatCurrency(monthlyDebt)}
                           </span>
                         )}
                       </div>
@@ -356,12 +360,12 @@ export default function Dashboard() {
                     <div className="flex gap-1 flex-shrink-0">
                       {isMonthlyOverdue && (
                         <span className="text-[10px] px-1.5 py-0.5 rounded bg-destructive/10 text-destructive font-medium">
-                          Fees
+                          {t('dashboard.fees')}
                         </span>
                       )}
                       {hasEventDebt && (
                         <span className="text-[10px] px-1.5 py-0.5 rounded bg-warning/10 text-warning font-medium">
-                          Event
+                          {t('dashboard.event')}
                         </span>
                       )}
                     </div>
