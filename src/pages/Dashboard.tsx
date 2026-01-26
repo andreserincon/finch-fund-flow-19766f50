@@ -1,11 +1,13 @@
 import { useMembers } from '@/hooks/useMembers';
 import { useTransactions } from '@/hooks/useTransactions';
+import { useMonthlyFees } from '@/hooks/useMonthlyFees';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { MemberStatusBadge } from '@/components/dashboard/MemberStatusBadge';
 import { AddTransactionForm } from '@/components/forms/AddTransactionForm';
 import { 
   Wallet, 
-  Building2, 
   Users, 
   AlertTriangle,
   TrendingUp,
@@ -21,8 +23,31 @@ import { CATEGORY_LABELS } from '@/lib/types';
 export default function Dashboard() {
   const { memberBalances, isLoading: membersLoading } = useMembers();
   const { transactions, isLoading: transactionsLoading } = useTransactions();
+  const { currentMonthFees, isLoading: feesLoading } = useMonthlyFees();
 
-  const isLoading = membersLoading || transactionsLoading;
+  // Query unpaid event amounts per member
+  const { data: memberEventDebts = {} } = useQuery({
+    queryKey: ['member-event-debts'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('event_member_payments')
+        .select('member_id, amount_owed, amount_paid');
+      
+      if (error) throw error;
+      
+      // Aggregate unpaid event amounts per member
+      const debts: Record<string, number> = {};
+      data?.forEach((payment) => {
+        const unpaid = payment.amount_owed - payment.amount_paid;
+        if (unpaid > 0) {
+          debts[payment.member_id] = (debts[payment.member_id] || 0) + unpaid;
+        }
+      });
+      return debts;
+    },
+  });
+
+  const isLoading = membersLoading || transactionsLoading || feesLoading;
 
   // Calculate stats
   const totalBalance = transactions.reduce((sum, t) => {
@@ -49,8 +74,25 @@ export default function Dashboard() {
     .reduce((sum, t) => sum + t.amount, 0);
 
   const recentTransactions = transactions.slice(0, 5);
+  
+  // Filter members: owe more than 1 monthly fee OR have unpaid events
   const overdueMembers = memberBalances
-    .filter(m => m.current_balance < m.total_fees_owed && m.is_active)
+    .filter(m => {
+      if (!m.is_active) return false;
+      
+      const amountOwed = m.total_fees_owed - m.total_paid;
+      const monthlyFeeRate = currentMonthFees[m.fee_type] || 0;
+      const hasUnpaidEvents = (memberEventDebts[m.member_id] || 0) > 0;
+      
+      // Show if they owe more than 1 monthly fee OR have unpaid events
+      return amountOwed > monthlyFeeRate || hasUnpaidEvents;
+    })
+    .sort((a, b) => {
+      // Sort by amount owed descending
+      const aOwed = a.total_fees_owed - a.total_paid;
+      const bOwed = b.total_fees_owed - b.total_paid;
+      return bOwed - aOwed;
+    })
     .slice(0, 5);
 
   const formatCurrency = (amount: number) => {
