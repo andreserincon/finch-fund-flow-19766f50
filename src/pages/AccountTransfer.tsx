@@ -15,10 +15,12 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useAccountTransfers } from '@/hooks/useAccountTransfers';
+import { TransferList } from '@/components/transfers/TransferList';
 import { AccountType, ACCOUNT_LABELS } from '@/lib/types';
 import { formatCurrency, getCurrencyForAccount } from '@/lib/utils';
-import { ArrowLeft, ArrowLeftRight, ArrowRight } from 'lucide-react';
+import { ArrowLeft, ArrowLeftRight, ArrowRight, Plus, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useState } from 'react';
 
 const transferSchema = z.object({
   transfer_date: z.string().min(1, 'Date is required'),
@@ -37,12 +39,14 @@ type TransferFormData = z.infer<typeof transferSchema>;
 export default function AccountTransfer() {
   const navigate = useNavigate();
   const { addTransfer } = useAccountTransfers();
+  const [showForm, setShowForm] = useState(false);
 
   const {
     register,
     handleSubmit,
     setValue,
     watch,
+    reset,
     formState: { errors, isSubmitting },
   } = useForm<TransferFormData>({
     resolver: zodResolver(transferSchema),
@@ -88,7 +92,17 @@ export default function AccountTransfer() {
       to_account: data.to_account,
       notes: notes || null,
     });
-    navigate('/');
+    
+    // Reset form and hide it
+    reset({
+      transfer_date: new Date().toISOString().split('T')[0],
+      from_account: 'bank',
+      to_account: 'great_lodge',
+      source_amount: 0,
+      destination_amount: 0,
+      notes: '',
+    });
+    setShowForm(false);
   };
 
   // Sync amounts when not cross-currency
@@ -108,184 +122,219 @@ export default function AccountTransfer() {
     }
   };
 
+  const handleCancel = () => {
+    reset({
+      transfer_date: new Date().toISOString().split('T')[0],
+      from_account: 'bank',
+      to_account: 'great_lodge',
+      source_amount: 0,
+      destination_amount: 0,
+      notes: '',
+    });
+    setShowForm(false);
+  };
+
   return (
-    <div className="max-w-2xl mx-auto space-y-6 animate-fade-in">
-      <div className="flex items-center gap-4">
-        <Link to="/">
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-        </Link>
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Transfer Funds</h1>
-          <p className="text-muted-foreground">Move money between accounts</p>
+    <div className="max-w-4xl mx-auto space-y-6 animate-fade-in">
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <Link to="/">
+            <Button variant="ghost" size="icon">
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Transfer Funds</h1>
+            <p className="text-muted-foreground">Move money between accounts</p>
+          </div>
         </div>
+        {!showForm && (
+          <Button onClick={() => setShowForm(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            New Transfer
+          </Button>
+        )}
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <ArrowLeftRight className="h-5 w-5 text-primary" />
-            Account Transfer
-          </CardTitle>
-          <CardDescription>
-            Transfer funds between accounts
-            {isCrossCurrencyTransfer && (
-              <span className="block mt-1 text-warning">
-                Currency conversion required: {fromCurrency} → {toCurrency}
-              </span>
-            )}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>From Account</Label>
-                <Select
-                  value={fromAccount}
-                  onValueChange={(value: AccountType) => {
-                    setValue('from_account', value);
-                    // Reset amounts when accounts change
-                    if (!isCrossCurrencyTransfer) {
-                      setValue('destination_amount', sourceAmount);
-                    }
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(['bank', 'great_lodge', 'savings'] as AccountType[]).map((acc) => (
-                      <SelectItem key={acc} value={acc}>
-                        {ACCOUNT_LABELS[acc]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+      {showForm && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <ArrowLeftRight className="h-5 w-5 text-primary" />
+                  New Transfer
+                </CardTitle>
+                <CardDescription>
+                  Transfer funds between accounts
+                  {isCrossCurrencyTransfer && (
+                    <span className="block mt-1 text-warning">
+                      Currency conversion required: {fromCurrency} → {toCurrency}
+                    </span>
+                  )}
+                </CardDescription>
               </div>
-
-              <div className="space-y-2">
-                <Label>To Account</Label>
-                <Select
-                  value={toAccount}
-                  onValueChange={(value: AccountType) => {
-                    setValue('to_account', value);
-                    // Reset amounts when accounts change
-                    if (!isCrossCurrencyTransfer) {
-                      setValue('destination_amount', sourceAmount);
-                    }
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(['bank', 'great_lodge', 'savings'] as AccountType[]).map((acc) => (
-                      <SelectItem key={acc} value={acc}>
-                        {ACCOUNT_LABELS[acc]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors.to_account && (
-                  <p className="text-sm text-destructive">{errors.to_account.message}</p>
-                )}
-              </div>
+              <Button variant="ghost" size="icon" onClick={handleCancel}>
+                <X className="h-4 w-4" />
+              </Button>
             </div>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>From Account</Label>
+                  <Select
+                    value={fromAccount}
+                    onValueChange={(value: AccountType) => {
+                      setValue('from_account', value);
+                      // Reset amounts when accounts change
+                      if (!isCrossCurrencyTransfer) {
+                        setValue('destination_amount', sourceAmount);
+                      }
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(['bank', 'great_lodge', 'savings'] as AccountType[]).map((acc) => (
+                        <SelectItem key={acc} value={acc}>
+                          {ACCOUNT_LABELS[acc]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="transfer_date">Date</Label>
-              <Input
-                id="transfer_date"
-                type="date"
-                {...register('transfer_date')}
-              />
-              {errors.transfer_date && (
-                <p className="text-sm text-destructive">{errors.transfer_date.message}</p>
-              )}
-            </div>
-
-            {isCrossCurrencyTransfer ? (
-              <div className="space-y-4">
-                <div className="p-4 rounded-lg bg-muted/50 border border-border">
-                  <p className="text-sm font-medium mb-3">Currency Conversion</p>
-                  <div className="grid grid-cols-[1fr,auto,1fr] gap-3 items-end">
-                    <div className="space-y-2">
-                      <Label htmlFor="source_amount">Amount ({fromCurrency})</Label>
-                      <Input
-                        id="source_amount"
-                        type="number"
-                        step="0.01"
-                        value={sourceAmount || ''}
-                        onChange={handleSourceAmountChange}
-                        placeholder="0.00"
-                      />
-                    </div>
-                    <ArrowRight className="h-5 w-5 text-muted-foreground mb-2" />
-                    <div className="space-y-2">
-                      <Label htmlFor="destination_amount">Amount ({toCurrency})</Label>
-                      <Input
-                        id="destination_amount"
-                        type="number"
-                        step="0.01"
-                        value={destinationAmount || ''}
-                        onChange={handleDestinationAmountChange}
-                        placeholder="0.00"
-                      />
-                    </div>
-                  </div>
-                  {impliedRate && impliedRate > 0 && (
-                    <p className="text-xs text-muted-foreground mt-2">
-                      Implied rate: 1 USD = {impliedRate.toFixed(2)} ARS
-                    </p>
+                <div className="space-y-2">
+                  <Label>To Account</Label>
+                  <Select
+                    value={toAccount}
+                    onValueChange={(value: AccountType) => {
+                      setValue('to_account', value);
+                      // Reset amounts when accounts change
+                      if (!isCrossCurrencyTransfer) {
+                        setValue('destination_amount', sourceAmount);
+                      }
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(['bank', 'great_lodge', 'savings'] as AccountType[]).map((acc) => (
+                        <SelectItem key={acc} value={acc}>
+                          {ACCOUNT_LABELS[acc]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.to_account && (
+                    <p className="text-sm text-destructive">{errors.to_account.message}</p>
                   )}
                 </div>
-                {(errors.source_amount || errors.destination_amount) && (
-                  <p className="text-sm text-destructive">Both amounts are required</p>
-                )}
               </div>
-            ) : (
+
               <div className="space-y-2">
-                <Label htmlFor="source_amount">Amount ({fromCurrency})</Label>
+                <Label htmlFor="transfer_date">Date</Label>
                 <Input
-                  id="source_amount"
-                  type="number"
-                  step="0.01"
-                  value={sourceAmount || ''}
-                  onChange={handleSourceAmountChange}
-                  placeholder="0.00"
+                  id="transfer_date"
+                  type="date"
+                  {...register('transfer_date')}
                 />
-                {errors.source_amount && (
-                  <p className="text-sm text-destructive">{errors.source_amount.message}</p>
+                {errors.transfer_date && (
+                  <p className="text-sm text-destructive">{errors.transfer_date.message}</p>
                 )}
               </div>
-            )}
 
-            <div className="space-y-2">
-              <Label htmlFor="notes">Notes (Optional)</Label>
-              <Textarea
-                id="notes"
-                {...register('notes')}
-                placeholder="Reason for transfer..."
-                rows={3}
-              />
-              {errors.notes && (
-                <p className="text-sm text-destructive">{errors.notes.message}</p>
+              {isCrossCurrencyTransfer ? (
+                <div className="space-y-4">
+                  <div className="p-4 rounded-lg bg-muted/50 border border-border">
+                    <p className="text-sm font-medium mb-3">Currency Conversion</p>
+                    <div className="grid grid-cols-[1fr,auto,1fr] gap-3 items-end">
+                      <div className="space-y-2">
+                        <Label htmlFor="source_amount">Amount ({fromCurrency})</Label>
+                        <Input
+                          id="source_amount"
+                          type="number"
+                          step="0.01"
+                          value={sourceAmount || ''}
+                          onChange={handleSourceAmountChange}
+                          placeholder="0.00"
+                        />
+                      </div>
+                      <ArrowRight className="h-5 w-5 text-muted-foreground mb-2" />
+                      <div className="space-y-2">
+                        <Label htmlFor="destination_amount">Amount ({toCurrency})</Label>
+                        <Input
+                          id="destination_amount"
+                          type="number"
+                          step="0.01"
+                          value={destinationAmount || ''}
+                          onChange={handleDestinationAmountChange}
+                          placeholder="0.00"
+                        />
+                      </div>
+                    </div>
+                    {impliedRate && impliedRate > 0 && (
+                      <p className="text-xs text-muted-foreground mt-2">
+                        Implied rate: 1 USD = {impliedRate.toFixed(2)} ARS
+                      </p>
+                    )}
+                  </div>
+                  {(errors.source_amount || errors.destination_amount) && (
+                    <p className="text-sm text-destructive">Both amounts are required</p>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Label htmlFor="source_amount">Amount ({fromCurrency})</Label>
+                  <Input
+                    id="source_amount"
+                    type="number"
+                    step="0.01"
+                    value={sourceAmount || ''}
+                    onChange={handleSourceAmountChange}
+                    placeholder="0.00"
+                  />
+                  {errors.source_amount && (
+                    <p className="text-sm text-destructive">{errors.source_amount.message}</p>
+                  )}
+                </div>
               )}
-            </div>
 
-            <div className="flex gap-3 pt-4">
-              <Button type="button" variant="outline" onClick={() => navigate('/')}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isSubmitting} className="flex-1">
-                {isSubmitting ? 'Processing...' : 'Complete Transfer'}
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+              <div className="space-y-2">
+                <Label htmlFor="notes">Notes (Optional)</Label>
+                <Textarea
+                  id="notes"
+                  {...register('notes')}
+                  placeholder="Reason for transfer..."
+                  rows={3}
+                />
+                {errors.notes && (
+                  <p className="text-sm text-destructive">{errors.notes.message}</p>
+                )}
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <Button type="button" variant="outline" onClick={handleCancel}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isSubmitting} className="flex-1">
+                  {isSubmitting ? 'Processing...' : 'Complete Transfer'}
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Transfer History */}
+      <div className="space-y-4">
+        <h2 className="text-lg font-semibold">Transfer History</h2>
+        <TransferList />
+      </div>
     </div>
   );
 }
