@@ -4,12 +4,14 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Wallet, AlertCircle } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Wallet, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const authSchema = z.object({
@@ -17,7 +19,12 @@ const authSchema = z.object({
   password: z.string().min(6, 'Password must be at least 6 characters'),
 });
 
+const resetSchema = z.object({
+  email: z.string().email('Please enter a valid email'),
+});
+
 type AuthFormData = z.infer<typeof authSchema>;
+type ResetFormData = z.infer<typeof resetSchema>;
 
 export default function Auth() {
   const navigate = useNavigate();
@@ -25,6 +32,10 @@ export default function Auth() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('login');
+  const [resetDialogOpen, setResetDialogOpen] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetSuccess, setResetSuccess] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
 
   const {
     register,
@@ -33,6 +44,15 @@ export default function Auth() {
     reset,
   } = useForm<AuthFormData>({
     resolver: zodResolver(authSchema),
+  });
+
+  const {
+    register: registerReset,
+    handleSubmit: handleSubmitReset,
+    formState: { errors: resetErrors },
+    reset: resetResetForm,
+  } = useForm<ResetFormData>({
+    resolver: zodResolver(resetSchema),
   });
 
   const handleAuth = async (data: AuthFormData, isSignUp: boolean) => {
@@ -61,6 +81,41 @@ export default function Auth() {
       setError('An unexpected error occurred. Please try again.');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handlePasswordReset = async (data: ResetFormData) => {
+    setResetLoading(true);
+    setResetError(null);
+    setResetSuccess(false);
+
+    try {
+      const redirectUrl = `${window.location.origin}/auth`;
+      
+      const { error } = await supabase.functions.invoke('reset-password', {
+        body: { email: data.email, redirectUrl }
+      });
+
+      if (error) {
+        setResetError(error.message || 'Failed to send reset email. Please try again.');
+        return;
+      }
+
+      setResetSuccess(true);
+      resetResetForm();
+    } catch (err) {
+      setResetError('An unexpected error occurred. Please try again.');
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
+  const handleResetDialogChange = (open: boolean) => {
+    setResetDialogOpen(open);
+    if (!open) {
+      setResetError(null);
+      setResetSuccess(false);
+      resetResetForm();
     }
   };
 
@@ -127,6 +182,57 @@ export default function Auth() {
                   <Button type="submit" className="w-full" disabled={isLoading}>
                     {isLoading ? 'Signing in...' : 'Sign In'}
                   </Button>
+
+                  <Dialog open={resetDialogOpen} onOpenChange={handleResetDialogChange}>
+                    <DialogTrigger asChild>
+                      <Button variant="link" type="button" className="w-full text-sm text-muted-foreground">
+                        Forgot your password?
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-md">
+                      <DialogHeader>
+                        <DialogTitle>Reset Password</DialogTitle>
+                        <DialogDescription>
+                          Enter your email address and we'll send you a link to reset your password.
+                        </DialogDescription>
+                      </DialogHeader>
+                      
+                      {resetSuccess ? (
+                        <Alert className="border-primary/50 bg-primary/10">
+                          <CheckCircle2 className="h-4 w-4 text-primary" />
+                          <AlertDescription className="text-primary">
+                            Password reset email sent! Check your inbox.
+                          </AlertDescription>
+                        </Alert>
+                      ) : (
+                        <form onSubmit={handleSubmitReset(handlePasswordReset)} className="space-y-4">
+                          {resetError && (
+                            <Alert variant="destructive">
+                              <AlertCircle className="h-4 w-4" />
+                              <AlertDescription>{resetError}</AlertDescription>
+                            </Alert>
+                          )}
+                          
+                          <div className="space-y-2">
+                            <Label htmlFor="reset-email">Email</Label>
+                            <Input
+                              id="reset-email"
+                              type="email"
+                              placeholder="your@email.com"
+                              {...registerReset('email')}
+                            />
+                            {resetErrors.email && (
+                              <p className="text-sm text-destructive">{resetErrors.email.message}</p>
+                            )}
+                          </div>
+                          
+                          <Button type="submit" className="w-full" disabled={resetLoading}>
+                            {resetLoading ? 'Sending...' : 'Send Reset Email'}
+                          </Button>
+                        </form>
+                      )}
+                    </DialogContent>
+                  </Dialog>
                 </form>
               </TabsContent>
 
