@@ -364,7 +364,7 @@ function EditMonthlyFeeDialog({
         <DialogHeader>
           <DialogTitle>Edit Monthly Fees</DialogTitle>
           <DialogDescription>
-            Update fees for {format(new Date(fee.year_month), 'MMMM yyyy')}
+            Update fees for {format(parseISO(fee.year_month), 'MMMM yyyy')}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
