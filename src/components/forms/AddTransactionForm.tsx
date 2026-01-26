@@ -24,7 +24,7 @@ import {
 } from '@/components/ui/dialog';
 import { useTransactions } from '@/hooks/useTransactions';
 import { useMembers } from '@/hooks/useMembers';
-import { TransactionType, TransactionCategory, CATEGORY_LABELS } from '@/lib/types';
+import { TransactionType, TransactionCategory, CATEGORY_LABELS, AccountType, ACCOUNT_LABELS } from '@/lib/types';
 import { PlusCircle } from 'lucide-react';
 
 const transactionSchema = z.object({
@@ -42,6 +42,7 @@ const transactionSchema = z.object({
     'other_income',
     'event_payment',
   ]),
+  account: z.enum(['bank', 'great_lodge']),
   member_id: z.string().optional(),
   notes: z.string().max(500).optional(),
 });
@@ -88,11 +89,13 @@ export function AddTransactionForm({
       transaction_type: defaultType,
       category: defaultType === 'income' ? 'monthly_fee' : 'event_expense',
       transaction_date: new Date().toISOString().split('T')[0],
+      account: 'bank',
     },
   });
 
   const transactionType = watch('transaction_type');
   const category = watch('category');
+  const selectedAccount = watch('account');
 
   const availableCategories = transactionType === 'income' ? incomeCategories : expenseCategories;
 
@@ -102,6 +105,7 @@ export function AddTransactionForm({
       amount: data.amount,
       transaction_type: data.transaction_type,
       category: data.category,
+      account: data.account,
       member_id: data.member_id || null,
       notes: data.notes || null,
     });
@@ -125,6 +129,25 @@ export function AddTransactionForm({
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <div className="space-y-2">
+            <Label>Account</Label>
+            <Select
+              value={selectedAccount}
+              onValueChange={(value: AccountType) => setValue('account', value)}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {(['bank', 'great_lodge'] as AccountType[]).map((acc) => (
+                  <SelectItem key={acc} value={acc}>
+                    {ACCOUNT_LABELS[acc]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Type</Label>
