@@ -262,23 +262,53 @@ export default function Dashboard() {
             </div>
           ) : (
             <div className="space-y-3">
-              {overdueMembers.map((member) => (
-                <div
-                  key={member.member_id}
-                  className="flex items-center justify-between py-2 border-b border-border/50 last:border-0"
-                >
-                  <div className="flex-1">
-                    <p className="font-medium text-sm">{member.full_name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      Owes {formatCurrency(member.total_fees_owed - member.total_paid)}
-                    </p>
+              {overdueMembers.map((member) => {
+                const monthlyDebt = member.total_fees_owed - member.total_paid;
+                const eventDebt = memberEventDebts[member.member_id] || 0;
+                const monthlyFeeRate = currentMonthFees[member.fee_type] || 0;
+                const isMonthlyOverdue = monthlyDebt > monthlyFeeRate;
+                const hasEventDebt = eventDebt > 0;
+                
+                return (
+                  <div
+                    key={member.member_id}
+                    className="flex items-center justify-between py-2 border-b border-border/50 last:border-0"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm">{member.full_name}</p>
+                      <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs">
+                        {isMonthlyOverdue && (
+                          <span className="text-destructive">
+                            Fees: {formatCurrency(monthlyDebt)}
+                          </span>
+                        )}
+                        {hasEventDebt && (
+                          <span className="text-warning">
+                            Events: {formatCurrency(eventDebt)}
+                          </span>
+                        )}
+                        {!isMonthlyOverdue && !hasEventDebt && monthlyDebt > 0 && (
+                          <span className="text-muted-foreground">
+                            Owes {formatCurrency(monthlyDebt)}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex gap-1 flex-shrink-0">
+                      {isMonthlyOverdue && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-destructive/10 text-destructive font-medium">
+                          Fees
+                        </span>
+                      )}
+                      {hasEventDebt && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-warning/10 text-warning font-medium">
+                          Event
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <MemberStatusBadge
-                    balance={member.current_balance}
-                    totalOwed={member.total_fees_owed}
-                  />
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
