@@ -99,7 +99,7 @@ export function useLoans() {
       }
 
       // Create the repayment transaction (income)
-      const { error: transactionError } = await supabase
+      const { data: transaction, error: transactionError } = await supabase
         .from('transactions')
         .insert({
           transaction_date: paymentDate,
@@ -109,9 +109,23 @@ export function useLoans() {
           account: loan.account,
           member_id: loan.member_id,
           notes: loan.notes ? `Loan repayment: ${loan.notes}` : 'Loan repayment',
-        });
+        })
+        .select()
+        .single();
 
       if (transactionError) throw transactionError;
+
+      // Create loan payment record
+      const { error: paymentError } = await supabase
+        .from('loan_payments')
+        .insert({
+          loan_id: loanId,
+          amount: paymentAmount,
+          payment_date: paymentDate,
+          transaction_id: transaction.id,
+        });
+
+      if (paymentError) throw paymentError;
 
       const newAmountPaid = loan.amount_paid + paymentAmount;
       const isFullyPaid = newAmountPaid >= loan.amount;
@@ -172,6 +186,19 @@ export function useLoans() {
         .single();
 
       if (transactionError) throw transactionError;
+
+      // Create loan payment record for full payment
+      const { error: paymentError } = await supabase
+        .from('loan_payments')
+        .insert({
+          loan_id: loanId,
+          amount: remainingDue,
+          payment_date: paidDate,
+          transaction_id: transaction.id,
+          notes: 'Full payment',
+        });
+
+      if (paymentError) throw paymentError;
 
       // Update the loan status
       const { data: updatedLoan, error: updateError } = await supabase
