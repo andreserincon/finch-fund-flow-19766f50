@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useTransactions } from '@/hooks/useTransactions';
-import { TransactionCategory, CATEGORY_LABELS } from '@/lib/types';
+import { TransactionCategory, CATEGORY_LABELS, AccountType, ACCOUNT_LABELS } from '@/lib/types';
 import { ArrowLeft, Wallet } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -27,6 +27,7 @@ const expenseSchema = z.object({
     'parent_organization_fee',
     'other_expense',
   ]),
+  account: z.enum(['bank', 'great_lodge']),
   notes: z.string().max(500).optional(),
 });
 
@@ -53,10 +54,12 @@ export default function LogExpense() {
     defaultValues: {
       transaction_date: new Date().toISOString().split('T')[0],
       category: 'event_expense',
+      account: 'bank',
     },
   });
 
   const category = watch('category');
+  const selectedAccount = watch('account');
 
   const onSubmit = async (data: ExpenseFormData) => {
     await addTransaction.mutateAsync({
@@ -65,6 +68,7 @@ export default function LogExpense() {
       transaction_type: 'expense',
       category: data.category,
       member_id: null,
+      account: data.account,
       notes: data.notes || null,
     });
     navigate('/');
@@ -96,6 +100,25 @@ export default function LogExpense() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            <div className="space-y-2">
+              <Label>Account</Label>
+              <Select
+                value={selectedAccount}
+                onValueChange={(value: AccountType) => setValue('account', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {(['bank', 'great_lodge'] as AccountType[]).map((acc) => (
+                    <SelectItem key={acc} value={acc}>
+                      {ACCOUNT_LABELS[acc]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="transaction_date">Date</Label>

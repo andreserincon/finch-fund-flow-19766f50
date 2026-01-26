@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Transaction, TransactionType, TransactionCategory } from '@/lib/types';
+import { Transaction, TransactionType, TransactionCategory, AccountType } from '@/lib/types';
 import { toast } from 'sonner';
 
 export function useTransactions() {
@@ -31,10 +31,14 @@ export function useTransactions() {
       category: TransactionCategory;
       member_id?: string | null;
       notes?: string | null;
+      account?: AccountType;
     }) => {
       const { data, error } = await supabase
         .from('transactions')
-        .insert(transaction)
+        .insert({
+          ...transaction,
+          account: transaction.account || 'bank',
+        })
         .select()
         .single();
 

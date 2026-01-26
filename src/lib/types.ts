@@ -1,5 +1,6 @@
 export type FeeType = 'standard' | 'solidarity';
 export type TransactionType = 'income' | 'expense';
+export type AccountType = 'bank' | 'great_lodge';
 export type TransactionCategory = 
   | 'monthly_fee'
   | 'extraordinary_income'
@@ -33,9 +34,21 @@ export interface Transaction {
   category: TransactionCategory;
   member_id: string | null;
   notes: string | null;
+  account: AccountType;
   created_at: string;
   updated_at: string;
   member?: Member;
+}
+
+export interface AccountTransfer {
+  id: string;
+  transfer_date: string;
+  amount: number;
+  from_account: AccountType;
+  to_account: AccountType;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface MemberBalance {
@@ -94,4 +107,9 @@ export const CATEGORY_LABELS: Record<TransactionCategory, string> = {
 export const FEE_TYPE_LABELS: Record<FeeType, string> = {
   standard: 'Standard',
   solidarity: 'Solidarity',
+};
+
+export const ACCOUNT_LABELS: Record<AccountType, string> = {
+  bank: 'Bank Main Account',
+  great_lodge: 'Great Lodge Account',
 };

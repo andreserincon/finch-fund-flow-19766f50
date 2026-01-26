@@ -5,7 +5,8 @@ import {
   PlusCircle,
   LogOut,
   Wallet,
-  Settings
+  Settings,
+  ArrowLeftRight
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import {
@@ -32,6 +33,7 @@ const mainNavItems = [
 const actionItems = [
   { title: 'Log Payment', url: '/log-payment', icon: PlusCircle },
   { title: 'Log Expense', url: '/log-expense', icon: Wallet },
+  { title: 'Transfer Funds', url: '/account-transfer', icon: ArrowLeftRight },
 ];
 
 const settingsItems = [
