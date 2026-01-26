@@ -34,7 +34,8 @@ import {
 import { useExtraordinaryExpenses, ExtraordinaryExpense } from '@/hooks/useExtraordinaryExpenses';
 import { useEventMemberPayments } from '@/hooks/useEventMemberPayments';
 import { useMembers } from '@/hooks/useMembers';
-import { PlusCircle, Pencil, Trash2, Tag, Users, Eye } from 'lucide-react';
+import { PlusCircle, Pencil, Trash2, Tag, Users, Check, X } from 'lucide-react';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const expenseSchema = z.object({
   name: z.string().min(1, 'Name is required').max(100),
@@ -195,10 +196,50 @@ function EditExpenseDialog({ expense }: { expense: ExtraordinaryExpense }) {
 
 function ViewPaymentsDialog({ expense }: { expense: ExtraordinaryExpense }) {
   const [open, setOpen] = useState(false);
-  const { payments, isLoading, updatePayment } = useEventMemberPayments(expense.id);
+  const { payments, isLoading, updatePayment, addMemberToEvent, removeMemberFromEvent } = useEventMemberPayments(expense.id);
+  const { memberBalances } = useMembers();
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editAmount, setEditAmount] = useState<string>('');
+
+  // Get list of members already in the event
+  const memberIdsInEvent = new Set(payments.map((p: any) => p.member_id));
+  
+  // Get active members not in the event
+  const membersNotInEvent = memberBalances.filter(m => m.is_active && !memberIdsInEvent.has(m.member_id));
 
   const handleMarkPaid = async (paymentId: string, amountOwed: number) => {
     await updatePayment.mutateAsync({ id: paymentId, amount_paid: amountOwed });
+  };
+
+  const handleToggleMember = async (payment: any) => {
+    await removeMemberFromEvent.mutateAsync(payment.id);
+  };
+
+  const handleAddMember = async (memberId: string) => {
+    await addMemberToEvent.mutateAsync({
+      eventId: expense.id,
+      memberId,
+      amountOwed: expense.default_amount,
+    });
+  };
+
+  const handleStartEdit = (paymentId: string, currentAmount: number) => {
+    setEditingId(paymentId);
+    setEditAmount(currentAmount.toString());
+  };
+
+  const handleSaveEdit = async (paymentId: string) => {
+    const newAmount = parseFloat(editAmount);
+    if (!isNaN(newAmount) && newAmount >= 0) {
+      await updatePayment.mutateAsync({ id: paymentId, amount_owed: newAmount });
+    }
+    setEditingId(null);
+    setEditAmount('');
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setEditAmount('');
   };
 
   const totalOwed = payments.reduce((sum, p) => sum + Number(p.amount_owed), 0);
@@ -211,57 +252,125 @@ function ViewPaymentsDialog({ expense }: { expense: ExtraordinaryExpense }) {
           <Users className="h-4 w-4" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>{expense.name} - Member Payments</DialogTitle>
           <DialogDescription>
-            Total: ARS {totalPaid.toFixed(2)} / ARS {totalOwed.toFixed(2)} collected
+            {payments.length} members assigned • ARS {totalPaid.toFixed(2)} / ARS {totalOwed.toFixed(2)} collected
           </DialogDescription>
         </DialogHeader>
+        
         {isLoading ? (
           <div className="text-center py-4">Loading...</div>
-        ) : payments.length === 0 ? (
-          <div className="text-center py-4 text-muted-foreground">No payments assigned yet.</div>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Member</TableHead>
-                <TableHead className="text-right">Owed</TableHead>
-                <TableHead className="text-right">Paid</TableHead>
-                <TableHead className="text-center">Status</TableHead>
-                <TableHead></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {payments.map((payment: any) => {
-                const isPaid = Number(payment.amount_paid) >= Number(payment.amount_owed);
-                return (
-                  <TableRow key={payment.id}>
-                    <TableCell>{payment.member?.full_name || 'Unknown'}</TableCell>
-                    <TableCell className="text-right">ARS {Number(payment.amount_owed).toFixed(2)}</TableCell>
-                    <TableCell className="text-right">ARS {Number(payment.amount_paid).toFixed(2)}</TableCell>
-                    <TableCell className="text-center">
-                      <Badge variant={isPaid ? 'default' : 'destructive'}>
-                        {isPaid ? 'Paid' : 'Pending'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {!isPaid && (
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => handleMarkPaid(payment.id, payment.amount_owed)}
-                        >
-                          Mark Paid
-                        </Button>
-                      )}
+          <ScrollArea className="flex-1 max-h-[50vh] pr-4">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[50px]">Include</TableHead>
+                  <TableHead>Member</TableHead>
+                  <TableHead className="text-right">Fee Owed</TableHead>
+                  <TableHead className="text-right">Paid</TableHead>
+                  <TableHead className="text-center">Status</TableHead>
+                  <TableHead></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {payments.length === 0 && membersNotInEvent.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-4 text-muted-foreground">
+                      No members available.
                     </TableCell>
                   </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+                )}
+                {payments.map((payment: any) => {
+                  const isPaid = Number(payment.amount_paid) >= Number(payment.amount_owed);
+                  const isEditing = editingId === payment.id;
+                  
+                  return (
+                    <TableRow key={payment.id}>
+                      <TableCell>
+                        <Checkbox
+                          checked={true}
+                          onCheckedChange={() => handleToggleMember(payment)}
+                          disabled={isPaid}
+                        />
+                      </TableCell>
+                      <TableCell>{payment.member?.full_name || 'Unknown'}</TableCell>
+                      <TableCell className="text-right">
+                        {isEditing ? (
+                          <div className="flex items-center justify-end gap-1">
+                            <Input
+                              type="number"
+                              value={editAmount}
+                              onChange={(e) => setEditAmount(e.target.value)}
+                              className="w-24 h-8 text-right"
+                              step="0.01"
+                              autoFocus
+                            />
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleSaveEdit(payment.id)}>
+                              <Check className="h-4 w-4 text-success" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleCancelEdit}>
+                              <X className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 px-2 font-mono"
+                            onClick={() => handleStartEdit(payment.id, Number(payment.amount_owed))}
+                            disabled={isPaid}
+                          >
+                            ARS {Number(payment.amount_owed).toFixed(2)}
+                          </Button>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right font-mono">ARS {Number(payment.amount_paid).toFixed(2)}</TableCell>
+                      <TableCell className="text-center">
+                        <Badge variant={isPaid ? 'default' : 'destructive'}>
+                          {isPaid ? 'Paid' : 'Pending'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {!isPaid && (
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => handleMarkPaid(payment.id, payment.amount_owed)}
+                          >
+                            Mark Paid
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+                
+                {/* Members not yet in event */}
+                {membersNotInEvent.map((member) => (
+                  <TableRow key={member.member_id} className="opacity-60">
+                    <TableCell>
+                      <Checkbox
+                        checked={false}
+                        onCheckedChange={() => handleAddMember(member.member_id)}
+                      />
+                    </TableCell>
+                    <TableCell>{member.full_name}</TableCell>
+                    <TableCell className="text-right text-muted-foreground">
+                      ARS {expense.default_amount.toFixed(2)}
+                    </TableCell>
+                    <TableCell className="text-right text-muted-foreground">—</TableCell>
+                    <TableCell className="text-center">
+                      <Badge variant="outline">Not assigned</Badge>
+                    </TableCell>
+                    <TableCell></TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </ScrollArea>
         )}
       </DialogContent>
     </Dialog>

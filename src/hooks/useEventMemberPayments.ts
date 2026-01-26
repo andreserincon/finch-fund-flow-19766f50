@@ -73,10 +73,14 @@ export function useEventMemberPayments(eventId?: string) {
   });
 
   const updatePayment = useMutation({
-    mutationFn: async ({ id, amount_paid }: { id: string; amount_paid: number }) => {
+    mutationFn: async ({ id, amount_paid, amount_owed }: { id: string; amount_paid?: number; amount_owed?: number }) => {
+      const updateData: { amount_paid?: number; amount_owed?: number } = {};
+      if (amount_paid !== undefined) updateData.amount_paid = amount_paid;
+      if (amount_owed !== undefined) updateData.amount_owed = amount_owed;
+
       const { error } = await supabase
         .from('event_member_payments')
-        .update({ amount_paid })
+        .update(updateData)
         .eq('id', id);
 
       if (error) throw error;
@@ -84,10 +88,55 @@ export function useEventMemberPayments(eventId?: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['event-member-payments'] });
       queryClient.invalidateQueries({ queryKey: ['member-balances'] });
+      queryClient.invalidateQueries({ queryKey: ['member-event-debts'] });
       toast({ title: 'Payment updated' });
     },
     onError: (error) => {
       toast({ title: 'Failed to update payment', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const addMemberToEvent = useMutation({
+    mutationFn: async ({ eventId, memberId, amountOwed }: { eventId: string; memberId: string; amountOwed: number }) => {
+      const { error } = await supabase
+        .from('event_member_payments')
+        .insert({
+          event_id: eventId,
+          member_id: memberId,
+          amount_owed: amountOwed,
+          amount_paid: 0,
+        });
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['event-member-payments'] });
+      queryClient.invalidateQueries({ queryKey: ['member-balances'] });
+      queryClient.invalidateQueries({ queryKey: ['member-event-debts'] });
+      toast({ title: 'Member added to event' });
+    },
+    onError: (error) => {
+      toast({ title: 'Failed to add member', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const removeMemberFromEvent = useMutation({
+    mutationFn: async (paymentId: string) => {
+      const { error } = await supabase
+        .from('event_member_payments')
+        .delete()
+        .eq('id', paymentId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['event-member-payments'] });
+      queryClient.invalidateQueries({ queryKey: ['member-balances'] });
+      queryClient.invalidateQueries({ queryKey: ['member-event-debts'] });
+      toast({ title: 'Member removed from event' });
+    },
+    onError: (error) => {
+      toast({ title: 'Failed to remove member', description: error.message, variant: 'destructive' });
     },
   });
 
@@ -114,6 +163,8 @@ export function useEventMemberPayments(eventId?: string) {
     isLoading,
     createPaymentsForAllMembers,
     updatePayment,
+    addMemberToEvent,
+    removeMemberFromEvent,
     deletePaymentsForEvent,
   };
 }
