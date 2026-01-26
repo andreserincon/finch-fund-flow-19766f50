@@ -16,9 +16,13 @@ import {
 } from '@/components/ui/select';
 import { useTransactions } from '@/hooks/useTransactions';
 import { useMembers } from '@/hooks/useMembers';
+import { useExtraordinaryExpenses } from '@/hooks/useExtraordinaryExpenses';
+import { useEventMemberPayments } from '@/hooks/useEventMemberPayments';
 import { TransactionCategory, CATEGORY_LABELS } from '@/lib/types';
 import { ArrowLeft, PlusCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 const paymentSchema = z.object({
   transaction_date: z.string().min(1, 'Date is required'),
@@ -29,8 +33,10 @@ const paymentSchema = z.object({
     'donation',
     'reimbursement',
     'other_income',
+    'event_payment',
   ]),
   member_id: z.string().optional(),
+  event_id: z.string().optional(),
   notes: z.string().max(500).optional(),
 });
 
@@ -48,6 +54,10 @@ export default function LogPayment() {
   const navigate = useNavigate();
   const { addTransaction } = useTransactions();
   const { members } = useMembers();
+  const { expenses } = useExtraordinaryExpenses();
+
+  // Filter only active events
+  const activeEvents = expenses.filter(e => e.is_active);
 
   const {
     register,
@@ -64,18 +74,64 @@ export default function LogPayment() {
   });
 
   const category = watch('category');
+  const selectedEventId = watch('event_id');
+  const selectedMemberId = watch('member_id');
+
+  // Get the selected event to show its default amount
+  const selectedEvent = activeEvents.find(e => e.id === selectedEventId);
 
   const onSubmit = async (data: PaymentFormData) => {
-    await addTransaction.mutateAsync({
-      transaction_date: data.transaction_date,
-      amount: data.amount,
-      transaction_type: 'income',
-      category: data.category,
-      member_id: data.member_id || null,
-      notes: data.notes || null,
-    });
-    navigate('/');
+    try {
+      // If it's an event payment, update the event_member_payments record
+      if (data.category === 'event_payment' && data.event_id && data.member_id) {
+        // Find the event_member_payment record for this member and event
+        const { data: paymentRecord, error: fetchError } = await supabase
+          .from('event_member_payments')
+          .select('id, amount_owed')
+          .eq('event_id', data.event_id)
+          .eq('member_id', data.member_id)
+          .maybeSingle();
+
+        if (fetchError) {
+          toast.error('Failed to find event payment record');
+          return;
+        }
+
+        if (!paymentRecord) {
+          toast.error('No event fee assigned to this member for the selected event');
+          return;
+        }
+
+        // Update the event_member_payments record to mark as paid
+        const { error: updateError } = await supabase
+          .from('event_member_payments')
+          .update({ amount_paid: data.amount })
+          .eq('id', paymentRecord.id);
+
+        if (updateError) {
+          toast.error('Failed to update event payment record');
+          return;
+        }
+      }
+
+      // Log the transaction
+      await addTransaction.mutateAsync({
+        transaction_date: data.transaction_date,
+        amount: data.amount,
+        transaction_type: 'income',
+        category: data.category,
+        member_id: data.member_id || null,
+        notes: data.notes || null,
+      });
+
+      navigate('/');
+    } catch (error) {
+      console.error('Error logging payment:', error);
+    }
   };
+
+  // Determine if member selection should be shown
+  const showMemberSelect = category === 'monthly_fee' || category === 'event_payment';
 
   return (
     <div className="max-w-2xl mx-auto space-y-6 animate-fade-in">
@@ -98,7 +154,7 @@ export default function LogPayment() {
             New Income
           </CardTitle>
           <CardDescription>
-            Log a member payment, donation, or other income
+            Log a member payment, event payment, donation, or other income
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -123,7 +179,7 @@ export default function LogPayment() {
                   type="number"
                   step="0.01"
                   {...register('amount', { valueAsNumber: true })}
-                  placeholder="0.00"
+                  placeholder={selectedEvent ? selectedEvent.default_amount.toString() : '0.00'}
                 />
                 {errors.amount && (
                   <p className="text-sm text-destructive">{errors.amount.message}</p>
@@ -135,7 +191,17 @@ export default function LogPayment() {
               <Label>Category</Label>
               <Select
                 value={category}
-                onValueChange={(value: TransactionCategory) => setValue('category', value as PaymentFormData['category'])}
+                onValueChange={(value: TransactionCategory) => {
+                  setValue('category', value as PaymentFormData['category']);
+                  // Reset event_id when changing category
+                  if (value !== 'event_payment') {
+                    setValue('event_id', undefined);
+                  }
+                  // Reset member_id when switching away from member-related categories
+                  if (value !== 'monthly_fee' && value !== 'event_payment') {
+                    setValue('member_id', undefined);
+                  }
+                }}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -146,15 +212,46 @@ export default function LogPayment() {
                       {CATEGORY_LABELS[cat]}
                     </SelectItem>
                   ))}
+                  {activeEvents.length > 0 && (
+                    <SelectItem value="event_payment">
+                      Event Payment
+                    </SelectItem>
+                  )}
                 </SelectContent>
               </Select>
             </div>
 
-            {category === 'monthly_fee' && (
+            {category === 'event_payment' && activeEvents.length > 0 && (
+              <div className="space-y-2">
+                <Label>Event</Label>
+                <Select
+                  value={selectedEventId || ''}
+                  onValueChange={(value) => setValue('event_id', value || undefined)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select event..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {activeEvents.map((event) => (
+                      <SelectItem key={event.id} value={event.id}>
+                        {event.name} (€{event.default_amount.toLocaleString()})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {selectedEvent && (
+                  <p className="text-sm text-muted-foreground">
+                    Default fee: €{selectedEvent.default_amount.toLocaleString()}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {showMemberSelect && (
               <div className="space-y-2">
                 <Label>Member</Label>
                 <Select
-                  value={watch('member_id') || ''}
+                  value={selectedMemberId || ''}
                   onValueChange={(value) => setValue('member_id', value || undefined)}
                 >
                   <SelectTrigger>
@@ -188,7 +285,11 @@ export default function LogPayment() {
               <Button type="button" variant="outline" onClick={() => navigate('/')}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={isSubmitting} className="flex-1">
+              <Button 
+                type="submit" 
+                disabled={isSubmitting || (category === 'event_payment' && (!selectedEventId || !selectedMemberId))} 
+                className="flex-1"
+              >
                 {isSubmitting ? 'Recording...' : 'Record Payment'}
               </Button>
             </div>

@@ -40,6 +40,7 @@ const transactionSchema = z.object({
     'parent_organization_fee',
     'other_expense',
     'other_income',
+    'event_payment',
   ]),
   member_id: z.string().optional(),
   notes: z.string().max(500).optional(),
