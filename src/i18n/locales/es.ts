@@ -288,6 +288,23 @@ export default {
       password: 'Contraseña',
     },
 
+    // Log Expense
+    logExpense: {
+      title: 'Registrar Gasto',
+      subtitle: 'Registrar una transacción de gasto',
+      newExpense: 'Nuevo Gasto',
+      description: 'Registrar un gasto de evento, cuota de organización matriz u otro gasto',
+      account: 'Cuenta',
+      category: 'Categoría',
+      selectEvent: 'Seleccionar Evento',
+      selectEventPlaceholder: 'Seleccionar un evento...',
+      noEventsAvailable: 'No hay eventos disponibles',
+      notesPlaceholder: 'Detalles adicionales sobre este gasto...',
+      recording: 'Registrando...',
+      recordExpense: 'Registrar Gasto',
+      eventPrefix: 'Evento',
+    },
+
     // Language
     language: {
       title: 'Idioma',

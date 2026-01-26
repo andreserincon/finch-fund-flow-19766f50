@@ -288,6 +288,23 @@ export default {
       password: 'Password',
     },
 
+    // Log Expense
+    logExpense: {
+      title: 'Log Expense',
+      subtitle: 'Record an expense transaction',
+      newExpense: 'New Expense',
+      description: 'Log an event expense, parent organization fee, or other expense',
+      account: 'Account',
+      category: 'Category',
+      selectEvent: 'Select Event',
+      selectEventPlaceholder: 'Select an event...',
+      noEventsAvailable: 'No events available',
+      notesPlaceholder: 'Additional details about this expense...',
+      recording: 'Recording...',
+      recordExpense: 'Record Expense',
+      eventPrefix: 'Event',
+    },
+
     // Language
     language: {
       title: 'Language',
