@@ -143,7 +143,22 @@ export function MemberFeeMatrix() {
     );
   }
 
-  const activeMembers = memberBalances.filter((m) => m.is_active);
+  // Filter to only show members with current unpaid or overdue months
+  const activeMembers = memberBalances.filter((m) => {
+    if (!m.is_active) return false;
+    
+    // Check if member has any current_unpaid or overdue status across the months
+    return months.some((month) => {
+      const { status } = getMemberMonthStatus(
+        m,
+        month.date,
+        month.key,
+        month.isCurrent,
+        month.isFuture
+      );
+      return status === 'current_unpaid' || status === 'overdue';
+    });
+  });
 
   return (
     <Card>
