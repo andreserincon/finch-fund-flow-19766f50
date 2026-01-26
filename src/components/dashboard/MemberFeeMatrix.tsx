@@ -65,12 +65,7 @@ export function MemberFeeMatrix() {
       return { status: 'not_member', amount: 0 };
     }
 
-    // Future month - not due yet
-    if (isFuture) {
-      return { status: 'future', amount: feeAmount };
-    }
-
-    // Calculate cumulative fees owed up to this month
+    // Calculate cumulative fees owed up to and including this month
     let cumulativeOwed = 0;
     const memberJoinMonth = startOfMonth(joinDate);
     
@@ -81,11 +76,16 @@ export function MemberFeeMatrix() {
       cumulativeOwed += getFeeForMonth(m.key, member.fee_type);
     }
 
-    // If total paid covers cumulative owed, this month is paid
+    // If total paid covers cumulative owed, this month is paid (even if future)
     const isPaid = member.total_paid >= cumulativeOwed;
 
     if (isPaid) {
       return { status: 'paid', amount: feeAmount };
+    }
+
+    // Future month - not due yet but not paid in advance
+    if (isFuture) {
+      return { status: 'future', amount: feeAmount };
     }
 
     if (isCurrent) {
