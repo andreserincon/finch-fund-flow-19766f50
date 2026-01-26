@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { MainLayout } from "@/components/layout/MainLayout";
+import { InstallPrompt } from "@/components/pwa/InstallPrompt";
 import Dashboard from "./pages/Dashboard";
 import Members from "./pages/Members";
 import Transactions from "./pages/Transactions";
@@ -56,6 +57,7 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <Toaster />
     <Sonner />
+    <InstallPrompt />
     <BrowserRouter>
       <Routes>
         <Route path="/auth" element={<AuthRoute><Auth /></AuthRoute>} />
