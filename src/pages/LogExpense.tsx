@@ -133,7 +133,7 @@ export default function LogExpense() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="amount">Amount ($)</Label>
+                <Label htmlFor="amount">Amount ({selectedAccount === 'savings' ? 'USD' : 'ARS'})</Label>
                 <Input
                   id="amount"
                   type="number"

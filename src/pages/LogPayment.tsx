@@ -196,7 +196,7 @@ export default function LogPayment() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="amount">Amount ($)</Label>
+                <Label htmlFor="amount">Amount ({selectedAccount === 'savings' ? 'USD' : 'ARS'})</Label>
                 <Input
                   id="amount"
                   type="number"
@@ -257,14 +257,14 @@ export default function LogPayment() {
                   <SelectContent>
                     {activeEvents.map((event) => (
                       <SelectItem key={event.id} value={event.id}>
-                        {event.name} (${event.default_amount.toLocaleString()})
+                        {event.name} (ARS {event.default_amount.toLocaleString()})
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
                 {selectedEvent && (
                   <p className="text-sm text-muted-foreground">
-                    Default fee: ${selectedEvent.default_amount.toLocaleString()}
+                    Default fee: ARS {selectedEvent.default_amount.toLocaleString()}
                   </p>
                 )}
               </div>

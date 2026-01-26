@@ -28,8 +28,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Search, TrendingUp, TrendingDown, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
-import { cn } from '@/lib/utils';
-import { CATEGORY_LABELS, ACCOUNT_LABELS, Transaction } from '@/lib/types';
+import { cn, formatCurrency, getCurrencyForAccount } from '@/lib/utils';
+import { CATEGORY_LABELS, ACCOUNT_LABELS, Transaction, AccountType } from '@/lib/types';
 
 export default function Transactions() {
   const { transactions, isLoading } = useTransactions();
@@ -41,11 +41,8 @@ export default function Transactions() {
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [deletingTransaction, setDeletingTransaction] = useState<Transaction | null>(null);
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('es-AR', {
-      style: 'currency',
-      currency: 'ARS',
-    }).format(amount);
+  const formatTransactionCurrency = (amount: number, account: AccountType) => {
+    return formatCurrency(amount, getCurrencyForAccount(account));
   };
 
   const filteredTransactions = transactions.filter((transaction) => {
@@ -66,11 +63,23 @@ export default function Transactions() {
     return matchesSearch && matchesType && matchesCategory && matchesAccount;
   });
 
-  const totalIncome = filteredTransactions
+  // Calculate totals by currency (ARS only for now since totals would need conversion)
+  const arsTransactions = filteredTransactions.filter(t => t.account !== 'savings');
+  const usdTransactions = filteredTransactions.filter(t => t.account === 'savings');
+
+  const totalIncomeARS = arsTransactions
     .filter((t) => t.transaction_type === 'income')
     .reduce((sum, t) => sum + t.amount, 0);
 
-  const totalExpenses = filteredTransactions
+  const totalExpensesARS = arsTransactions
+    .filter((t) => t.transaction_type === 'expense')
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  const totalIncomeUSD = usdTransactions
+    .filter((t) => t.transaction_type === 'income')
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  const totalExpensesUSD = usdTransactions
     .filter((t) => t.transaction_type === 'expense')
     .reduce((sum, t) => sum + t.amount, 0);
 
@@ -93,15 +102,15 @@ export default function Transactions() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid gap-3 grid-cols-2">
+      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
         <div className="stat-card flex items-center gap-3">
           <div className="p-2 md:p-3 rounded-lg bg-success/10">
             <TrendingUp className="h-5 w-5 md:h-6 md:w-6 text-success" />
           </div>
           <div className="min-w-0">
-            <p className="text-xs md:text-sm text-muted-foreground">Total Income</p>
+            <p className="text-xs md:text-sm text-muted-foreground">Income (ARS)</p>
             <p className="text-lg md:text-2xl font-bold amount-positive truncate">
-              {formatCurrency(totalIncome)}
+              {formatCurrency(totalIncomeARS, 'ARS')}
             </p>
           </div>
         </div>
@@ -110,12 +119,38 @@ export default function Transactions() {
             <TrendingDown className="h-5 w-5 md:h-6 md:w-6 text-overdue" />
           </div>
           <div className="min-w-0">
-            <p className="text-xs md:text-sm text-muted-foreground">Total Expenses</p>
+            <p className="text-xs md:text-sm text-muted-foreground">Expenses (ARS)</p>
             <p className="text-lg md:text-2xl font-bold amount-negative truncate">
-              {formatCurrency(totalExpenses)}
+              {formatCurrency(totalExpensesARS, 'ARS')}
             </p>
           </div>
         </div>
+        {(totalIncomeUSD > 0 || totalExpensesUSD > 0) && (
+          <>
+            <div className="stat-card flex items-center gap-3">
+              <div className="p-2 md:p-3 rounded-lg bg-success/10">
+                <TrendingUp className="h-5 w-5 md:h-6 md:w-6 text-success" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs md:text-sm text-muted-foreground">Income (USD)</p>
+                <p className="text-lg md:text-2xl font-bold amount-positive truncate">
+                  {formatCurrency(totalIncomeUSD, 'USD')}
+                </p>
+              </div>
+            </div>
+            <div className="stat-card flex items-center gap-3">
+              <div className="p-2 md:p-3 rounded-lg bg-overdue/10">
+                <TrendingDown className="h-5 w-5 md:h-6 md:w-6 text-overdue" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs md:text-sm text-muted-foreground">Expenses (USD)</p>
+                <p className="text-lg md:text-2xl font-bold amount-negative truncate">
+                  {formatCurrency(totalExpensesUSD, 'USD')}
+                </p>
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Filters */}
@@ -203,7 +238,7 @@ export default function Transactions() {
                     )}
                   >
                     {transaction.transaction_type === 'income' ? '+' : '-'}
-                    {formatCurrency(transaction.amount)}
+                    {formatTransactionCurrency(transaction.amount, transaction.account)}
                   </span>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -304,7 +339,7 @@ export default function Transactions() {
                       )}
                     >
                       {transaction.transaction_type === 'income' ? '+' : '-'}
-                      {formatCurrency(transaction.amount)}
+                      {formatTransactionCurrency(transaction.amount, transaction.account)}
                     </span>
                   </TableCell>
                   <TableCell>
