@@ -96,6 +96,45 @@ export type Database = {
         }
         Relationships: []
       }
+      member_fee_type_history: {
+        Row: {
+          created_at: string
+          effective_from: string
+          fee_type: Database["public"]["Enums"]["fee_type"]
+          id: string
+          member_id: string
+        }
+        Insert: {
+          created_at?: string
+          effective_from: string
+          fee_type: Database["public"]["Enums"]["fee_type"]
+          id?: string
+          member_id: string
+        }
+        Update: {
+          created_at?: string
+          effective_from?: string
+          fee_type?: Database["public"]["Enums"]["fee_type"]
+          id?: string
+          member_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "member_fee_type_history_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "member_balances"
+            referencedColumns: ["member_id"]
+          },
+          {
+            foreignKeyName: "member_fee_type_history_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       members: {
         Row: {
           created_at: string
@@ -293,6 +332,10 @@ export type Database = {
       }
     }
     Functions: {
+      get_member_fee_type_for_month: {
+        Args: { p_member_id: string; p_month: string }
+        Returns: Database["public"]["Enums"]["fee_type"]
+      }
       get_user_member_id: { Args: { _user_id: string }; Returns: string }
       is_treasurer: { Args: { _user_id: string }; Returns: boolean }
     }
