@@ -202,9 +202,9 @@ export default function LogExpense() {
                   </SelectTrigger>
                   <SelectContent>
                     {eventsLoading ? (
-                      <SelectItem value="" disabled>{t('common.loading')}</SelectItem>
+                      <div className="py-2 px-2 text-sm text-muted-foreground">{t('common.loading')}</div>
                     ) : activeEvents.length === 0 ? (
-                      <SelectItem value="" disabled>{t('logExpense.noEventsAvailable')}</SelectItem>
+                      <div className="py-2 px-2 text-sm text-muted-foreground">{t('logExpense.noEventsAvailable')}</div>
                     ) : (
                       activeEvents.map((event) => (
                         <SelectItem key={event.id} value={event.id}>
