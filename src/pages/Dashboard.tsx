@@ -6,6 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { MemberStatusBadge } from '@/components/dashboard/MemberStatusBadge';
 import { MemberFeeMatrix } from '@/components/dashboard/MemberFeeMatrix';
+import { useAccountTransfers } from '@/hooks/useAccountTransfers';
 import { AddTransactionForm } from '@/components/forms/AddTransactionForm';
 import { 
   Wallet, 
@@ -13,7 +14,9 @@ import {
   AlertTriangle,
   TrendingUp,
   TrendingDown,
-  ArrowRight
+  ArrowRight,
+  Building,
+  Landmark
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -25,6 +28,7 @@ export default function Dashboard() {
   const { memberBalances, isLoading: membersLoading } = useMembers();
   const { transactions, isLoading: transactionsLoading } = useTransactions();
   const { currentMonthFees, isLoading: feesLoading } = useMonthlyFees();
+  const { transfers, isLoading: transfersLoading } = useAccountTransfers();
 
   // Query unpaid event amounts per member
   const { data: memberEventDebts = {} } = useQuery({
@@ -48,12 +52,23 @@ export default function Dashboard() {
     },
   });
 
-  const isLoading = membersLoading || transactionsLoading || feesLoading;
+  const isLoading = membersLoading || transactionsLoading || feesLoading || transfersLoading;
+
+  // Calculate account balances
+  const bankBalance = transactions
+    .filter(t => t.account === 'bank' || !t.account)
+    .reduce((sum, t) => sum + (t.transaction_type === 'income' ? t.amount : -t.amount), 0)
+    - transfers.filter(t => t.from_account === 'bank').reduce((sum, t) => sum + t.amount, 0)
+    + transfers.filter(t => t.to_account === 'bank').reduce((sum, t) => sum + t.amount, 0);
+
+  const greatLodgeBalance = transactions
+    .filter(t => t.account === 'great_lodge')
+    .reduce((sum, t) => sum + (t.transaction_type === 'income' ? t.amount : -t.amount), 0)
+    - transfers.filter(t => t.from_account === 'great_lodge').reduce((sum, t) => sum + t.amount, 0)
+    + transfers.filter(t => t.to_account === 'great_lodge').reduce((sum, t) => sum + t.amount, 0);
 
   // Calculate stats
-  const totalBalance = transactions.reduce((sum, t) => {
-    return sum + (t.transaction_type === 'income' ? t.amount : -t.amount);
-  }, 0);
+  const totalBalance = bankBalance + greatLodgeBalance;
 
   const activeMembersCount = memberBalances.filter(m => m.is_active).length;
 
@@ -132,7 +147,21 @@ export default function Dashboard() {
       </div>
 
       {/* Key Metrics */}
-      <div className="grid gap-3 grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          title="Bank Main Account"
+          value={formatCurrency(bankBalance)}
+          subtitle="Primary bank balance"
+          icon={<Landmark className="h-8 w-8 text-primary/20" />}
+          variant={bankBalance >= 0 ? 'success' : 'danger'}
+        />
+        <StatCard
+          title="Great Lodge Account"
+          value={formatCurrency(greatLodgeBalance)}
+          subtitle="Lodge balance"
+          icon={<Building className="h-8 w-8 text-primary/20" />}
+          variant={greatLodgeBalance >= 0 ? 'success' : 'danger'}
+        />
         <StatCard
           title="Total Balance"
           value={formatCurrency(totalBalance)}
@@ -141,19 +170,16 @@ export default function Dashboard() {
           variant={totalBalance >= 0 ? 'success' : 'danger'}
         />
         <StatCard
-          title="Monthly Income"
-          value={formatCurrency(monthlyIncome)}
-          subtitle="This month"
+          title="Monthly Flow"
+          value={formatCurrency(monthlyIncome - monthlyExpenses)}
+          subtitle={`+${formatCurrency(monthlyIncome)} / -${formatCurrency(monthlyExpenses)}`}
           icon={<TrendingUp className="h-8 w-8 text-success/20" />}
-          variant="success"
+          variant={monthlyIncome - monthlyExpenses >= 0 ? 'success' : 'danger'}
         />
-        <StatCard
-          title="Monthly Expenses"
-          value={formatCurrency(monthlyExpenses)}
-          subtitle="This month"
-          icon={<TrendingDown className="h-8 w-8 text-overdue/20" />}
-          variant="danger"
-        />
+      </div>
+
+      {/* Member Metrics */}
+      <div className="grid gap-3 grid-cols-2">
         <StatCard
           title="Members Unpaid"
           value={membersUnpaid}
