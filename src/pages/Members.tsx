@@ -30,7 +30,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Search, Phone, MoreHorizontal, Pencil, Trash2, Filter, X } from 'lucide-react';
+import { Search, Phone, MoreHorizontal, Pencil, Trash2, Filter, X, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { format } from 'date-fns';
 import { FEE_TYPE_LABELS, MemberBalance } from '@/lib/types';
 
@@ -43,11 +43,20 @@ const STATUS_OPTIONS = [
   { value: 'overdue', label: 'Overdue' },
 ] as const;
 
+type SortColumn = 'name' | 'fee_type' | 'balance' | 'status' | 'joined';
+type SortDirection = 'asc' | 'desc';
+
+interface SortConfig {
+  column: SortColumn | null;
+  direction: SortDirection;
+}
+
 export default function Members() {
   const { memberBalances, isLoading } = useMembers();
   const { currentMonthFees, isLoading: feesLoading } = useMonthlyFees();
   const [search, setSearch] = useState('');
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
+  const [sortConfig, setSortConfig] = useState<SortConfig>({ column: null, direction: 'asc' });
   const [editMember, setEditMember] = useState<MemberBalance | null>(null);
   const [deleteMember, setDeleteMember] = useState<MemberBalance | null>(null);
 
@@ -133,6 +142,22 @@ export default function Members() {
     setSelectedStatuses([]);
   };
 
+  const handleSort = (column: SortColumn) => {
+    setSortConfig(prev => ({
+      column,
+      direction: prev.column === column && prev.direction === 'asc' ? 'desc' : 'asc'
+    }));
+  };
+
+  const getSortIcon = (column: SortColumn) => {
+    if (sortConfig.column !== column) {
+      return <ArrowUpDown className="ml-1 h-4 w-4" />;
+    }
+    return sortConfig.direction === 'asc' 
+      ? <ArrowUp className="ml-1 h-4 w-4" />
+      : <ArrowDown className="ml-1 h-4 w-4" />;
+  };
+
   const filteredMembers = memberBalances.filter((member) => {
     const matchesSearch =
       member.full_name.toLowerCase().includes(search.toLowerCase()) ||
@@ -156,6 +181,31 @@ export default function Members() {
     });
 
     return matchesSearch && matchesStatus;
+  });
+
+  const sortedMembers = [...filteredMembers].sort((a, b) => {
+    if (!sortConfig.column) return 0;
+    
+    const direction = sortConfig.direction === 'asc' ? 1 : -1;
+    
+    switch (sortConfig.column) {
+      case 'name':
+        return direction * a.full_name.localeCompare(b.full_name);
+      case 'fee_type':
+        return direction * a.fee_type.localeCompare(b.fee_type);
+      case 'balance':
+        return direction * (getOverallBalance(a) - getOverallBalance(b));
+      case 'status': {
+        const statusOrder = { overdue: 0, unpaid: 1, up_to_date: 2, ahead: 3 };
+        const statusA = a.is_active ? statusOrder[getPaymentStatus(a) as keyof typeof statusOrder] : -1;
+        const statusB = b.is_active ? statusOrder[getPaymentStatus(b) as keyof typeof statusOrder] : -1;
+        return direction * (statusA - statusB);
+      }
+      case 'joined':
+        return direction * (new Date(a.join_date).getTime() - new Date(b.join_date).getTime());
+      default:
+        return 0;
+    }
   });
 
   if (isLoading || feesLoading) {
@@ -242,7 +292,7 @@ export default function Members() {
             No members found
           </div>
         ) : (
-          filteredMembers.map((member) => (
+          sortedMembers.map((member) => (
             <div key={member.member_id} className="rounded-lg border bg-card p-4 space-y-3">
               <div className="flex items-start justify-between">
                 <div>
@@ -312,12 +362,37 @@ export default function Members() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Member</TableHead>
-              <TableHead>Fee Type</TableHead>
+              <TableHead>
+                <Button variant="ghost" size="sm" className="-ml-3 h-8" onClick={() => handleSort('name')}>
+                  Member
+                  {getSortIcon('name')}
+                </Button>
+              </TableHead>
+              <TableHead>
+                <Button variant="ghost" size="sm" className="-ml-3 h-8" onClick={() => handleSort('fee_type')}>
+                  Fee Type
+                  {getSortIcon('fee_type')}
+                </Button>
+              </TableHead>
               <TableHead className="text-right">Monthly Fee</TableHead>
-              <TableHead className="text-right">Balance</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Joined</TableHead>
+              <TableHead className="text-right">
+                <Button variant="ghost" size="sm" className="-mr-3 h-8" onClick={() => handleSort('balance')}>
+                  Balance
+                  {getSortIcon('balance')}
+                </Button>
+              </TableHead>
+              <TableHead>
+                <Button variant="ghost" size="sm" className="-ml-3 h-8" onClick={() => handleSort('status')}>
+                  Status
+                  {getSortIcon('status')}
+                </Button>
+              </TableHead>
+              <TableHead>
+                <Button variant="ghost" size="sm" className="-ml-3 h-8" onClick={() => handleSort('joined')}>
+                  Joined
+                  {getSortIcon('joined')}
+                </Button>
+              </TableHead>
               <TableHead className="w-[50px]"></TableHead>
             </TableRow>
           </TableHeader>
@@ -329,7 +404,7 @@ export default function Members() {
                 </TableCell>
               </TableRow>
             ) : (
-              filteredMembers.map((member) => (
+              sortedMembers.map((member) => (
                 <TableRow key={member.member_id}>
                   <TableCell>
                     <div>
