@@ -27,7 +27,7 @@ const expenseSchema = z.object({
     'parent_organization_fee',
     'other_expense',
   ]),
-  account: z.enum(['bank', 'great_lodge']),
+  account: z.enum(['bank', 'great_lodge', 'savings']),
   notes: z.string().max(500).optional(),
 });
 
@@ -110,7 +110,7 @@ export default function LogExpense() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {(['bank', 'great_lodge'] as AccountType[]).map((acc) => (
+                  {(['bank', 'great_lodge', 'savings'] as AccountType[]).map((acc) => (
                     <SelectItem key={acc} value={acc}>
                       {ACCOUNT_LABELS[acc]}
                     </SelectItem>

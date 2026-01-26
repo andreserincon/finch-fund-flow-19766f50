@@ -67,8 +67,14 @@ export default function Dashboard() {
     - transfers.filter(t => t.from_account === 'great_lodge').reduce((sum, t) => sum + t.amount, 0)
     + transfers.filter(t => t.to_account === 'great_lodge').reduce((sum, t) => sum + t.amount, 0);
 
-  // Calculate stats
-  const totalBalance = bankBalance + greatLodgeBalance;
+  const savingsBalance = transactions
+    .filter(t => t.account === 'savings')
+    .reduce((sum, t) => sum + (t.transaction_type === 'income' ? t.amount : -t.amount), 0)
+    - transfers.filter(t => t.from_account === 'savings').reduce((sum, t) => sum + t.amount, 0)
+    + transfers.filter(t => t.to_account === 'savings').reduce((sum, t) => sum + t.amount, 0);
+
+  // Calculate stats (ARS balance excludes savings which is in USD)
+  const totalARSBalance = bankBalance + greatLodgeBalance;
 
   const activeMembersCount = memberBalances.filter(m => m.is_active).length;
 
@@ -118,10 +124,10 @@ export default function Dashboard() {
     })
     .slice(0, 5);
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('es-AR', {
+  const formatCurrency = (amount: number, currency: 'ARS' | 'USD' = 'ARS') => {
+    return new Intl.NumberFormat(currency === 'ARS' ? 'es-AR' : 'en-US', {
       style: 'currency',
-      currency: 'ARS',
+      currency: currency,
     }).format(amount);
   };
 
@@ -147,7 +153,7 @@ export default function Dashboard() {
       </div>
 
       {/* Key Metrics */}
-      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 grid-cols-2 lg:grid-cols-5">
         <StatCard
           title="Bank Main Account"
           value={formatCurrency(bankBalance)}
@@ -163,11 +169,18 @@ export default function Dashboard() {
           variant={greatLodgeBalance >= 0 ? 'success' : 'danger'}
         />
         <StatCard
-          title="Total Balance"
-          value={formatCurrency(totalBalance)}
-          subtitle="All accounts combined"
+          title="Total ARS Balance"
+          value={formatCurrency(totalARSBalance)}
+          subtitle="Bank + Lodge combined"
           icon={<Wallet className="h-8 w-8 text-primary/20" />}
-          variant={totalBalance >= 0 ? 'success' : 'danger'}
+          variant={totalARSBalance >= 0 ? 'success' : 'danger'}
+        />
+        <StatCard
+          title="Savings Account"
+          value={formatCurrency(savingsBalance, 'USD')}
+          subtitle="USD savings"
+          icon={<Wallet className="h-8 w-8 text-success/20" />}
+          variant={savingsBalance >= 0 ? 'success' : 'danger'}
         />
         <StatCard
           title="Monthly Flow"
