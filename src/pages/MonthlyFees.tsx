@@ -79,6 +79,7 @@ export default function MonthlyFees() {
           open={addDialogOpen}
           onOpenChange={setAddDialogOpen}
           onSave={upsertMonthlyFee.mutateAsync}
+          existingMonths={sortedMonths}
         />
       </div>
 
@@ -232,24 +233,28 @@ function AddMonthlyFeeDialog({
   open,
   onOpenChange,
   onSave,
+  existingMonths,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSave: (fee: { year_month: string; fee_type: FeeType; amount: number }) => Promise<unknown>;
+  existingMonths: string[];
 }) {
-  const [selectedDate, setSelectedDate] = useState<Date>(startOfMonth(new Date()));
   const [standardAmount, setStandardAmount] = useState('');
   const [solidarityAmount, setSolidarityAmount] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const currentMonth = format(startOfMonth(new Date()), 'yyyy-MM-dd');
+  const alreadyExists = existingMonths.includes(currentMonth);
+
   const handleSubmit = async () => {
+    if (alreadyExists) return;
+    
     setIsSubmitting(true);
     try {
-      const yearMonth = format(selectedDate, 'yyyy-MM-dd');
-      
       await Promise.all([
-        onSave({ year_month: yearMonth, fee_type: 'standard', amount: parseFloat(standardAmount) || 0 }),
-        onSave({ year_month: yearMonth, fee_type: 'solidarity', amount: parseFloat(solidarityAmount) || 0 }),
+        onSave({ year_month: currentMonth, fee_type: 'standard', amount: parseFloat(standardAmount) || 0 }),
+        onSave({ year_month: currentMonth, fee_type: 'solidarity', amount: parseFloat(solidarityAmount) || 0 }),
       ]);
       
       setStandardAmount('');
@@ -263,44 +268,27 @@ function AddMonthlyFeeDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
-        <Button>
+        <Button disabled={alreadyExists}>
           <PlusCircle className="mr-2 h-4 w-4" />
-          Add Monthly Fees
+          {alreadyExists ? 'Current Month Already Set' : 'Add Monthly Fees'}
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Add Monthly Fees</DialogTitle>
           <DialogDescription>
-            Set the fee amounts for a specific month
+            Set the fee amounts for {format(new Date(), 'MMMM yyyy')}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <Label>Month</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    'w-full justify-start text-left font-normal',
-                    !selectedDate && 'text-muted-foreground'
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {selectedDate ? format(selectedDate, 'MMMM yyyy') : 'Select month'}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={selectedDate}
-                  onSelect={(date) => date && setSelectedDate(startOfMonth(date))}
-                  initialFocus
-                  className={cn('p-3 pointer-events-auto')}
-                />
-              </PopoverContent>
-            </Popover>
+          <div className="rounded-md bg-muted p-3">
+            <div className="flex items-center gap-2">
+              <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+              <span className="font-medium">{format(new Date(), 'MMMM yyyy')}</span>
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Fees can only be added for the current month
+            </p>
           </div>
 
           <div className="space-y-2">
