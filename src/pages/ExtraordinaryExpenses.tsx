@@ -252,7 +252,7 @@ function ViewPaymentsDialog({ expense }: { expense: ExtraordinaryExpense }) {
           <Users className="h-4 w-4" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
+      <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>{expense.name} - Member Payments</DialogTitle>
           <DialogDescription>
@@ -263,18 +263,19 @@ function ViewPaymentsDialog({ expense }: { expense: ExtraordinaryExpense }) {
         {isLoading ? (
           <div className="text-center py-4">Loading...</div>
         ) : (
-          <ScrollArea className="flex-1 max-h-[50vh] pr-4">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[50px]">Include</TableHead>
-                  <TableHead>Member</TableHead>
-                  <TableHead className="text-right">Fee Owed</TableHead>
-                  <TableHead className="text-right">Paid</TableHead>
-                  <TableHead className="text-center">Status</TableHead>
-                  <TableHead></TableHead>
-                </TableRow>
-              </TableHeader>
+          <ScrollArea className="flex-1 h-[60vh]">
+            <div className="min-w-[600px] pr-4">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[60px]">Include</TableHead>
+                    <TableHead className="min-w-[150px]">Member</TableHead>
+                    <TableHead className="text-right min-w-[120px]">Fee Owed</TableHead>
+                    <TableHead className="text-right min-w-[100px]">Paid</TableHead>
+                    <TableHead className="text-center min-w-[80px]">Status</TableHead>
+                    <TableHead className="min-w-[100px]"></TableHead>
+                  </TableRow>
+                </TableHeader>
               <TableBody>
                 {payments.length === 0 && membersNotInEvent.length === 0 && (
                   <TableRow>
@@ -370,6 +371,7 @@ function ViewPaymentsDialog({ expense }: { expense: ExtraordinaryExpense }) {
                 ))}
               </TableBody>
             </Table>
+            </div>
           </ScrollArea>
         )}
       </DialogContent>
