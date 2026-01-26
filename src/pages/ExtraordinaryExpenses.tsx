@@ -102,7 +102,7 @@ function AddExpenseDialog() {
             <Textarea id="description" {...register('description')} placeholder="Brief description..." rows={2} />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="default_amount">Fee Per Member (€)</Label>
+            <Label htmlFor="default_amount">Fee Per Member ($)</Label>
             <Input id="default_amount" type="number" step="0.01" {...register('default_amount', { valueAsNumber: true })} />
             {errors.default_amount && <p className="text-sm text-destructive">{errors.default_amount.message}</p>}
           </div>
@@ -118,7 +118,7 @@ function AddExpenseDialog() {
                 Assign fee to all active members
               </Label>
               <p className="text-xs text-muted-foreground">
-                {activeMembersCount} active members × €{defaultAmount?.toFixed(2) || '0.00'} = €{(activeMembersCount * (defaultAmount || 0)).toFixed(2)}
+                {activeMembersCount} active members × ${defaultAmount?.toFixed(2) || '0.00'} = ${(activeMembersCount * (defaultAmount || 0)).toFixed(2)}
               </p>
             </div>
           </div>
@@ -179,7 +179,7 @@ function EditExpenseDialog({ expense }: { expense: ExtraordinaryExpense }) {
             <Textarea id="edit-description" {...register('description')} rows={2} />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="edit-default_amount">Fee Per Member (€)</Label>
+            <Label htmlFor="edit-default_amount">Fee Per Member ($)</Label>
             <Input id="edit-default_amount" type="number" step="0.01" {...register('default_amount', { valueAsNumber: true })} />
             {errors.default_amount && <p className="text-sm text-destructive">{errors.default_amount.message}</p>}
           </div>
@@ -215,7 +215,7 @@ function ViewPaymentsDialog({ expense }: { expense: ExtraordinaryExpense }) {
         <DialogHeader>
           <DialogTitle>{expense.name} - Member Payments</DialogTitle>
           <DialogDescription>
-            Total: €{totalPaid.toFixed(2)} / €{totalOwed.toFixed(2)} collected
+            Total: ${totalPaid.toFixed(2)} / ${totalOwed.toFixed(2)} collected
           </DialogDescription>
         </DialogHeader>
         {isLoading ? (
@@ -239,8 +239,8 @@ function ViewPaymentsDialog({ expense }: { expense: ExtraordinaryExpense }) {
                 return (
                   <TableRow key={payment.id}>
                     <TableCell>{payment.member?.full_name || 'Unknown'}</TableCell>
-                    <TableCell className="text-right">€{Number(payment.amount_owed).toFixed(2)}</TableCell>
-                    <TableCell className="text-right">€{Number(payment.amount_paid).toFixed(2)}</TableCell>
+                    <TableCell className="text-right">${Number(payment.amount_owed).toFixed(2)}</TableCell>
+                    <TableCell className="text-right">${Number(payment.amount_paid).toFixed(2)}</TableCell>
                     <TableCell className="text-center">
                       <Badge variant={isPaid ? 'default' : 'destructive'}>
                         {isPaid ? 'Paid' : 'Pending'}
@@ -351,7 +351,7 @@ export default function ExtraordinaryExpenses() {
                     <TableCell className="text-muted-foreground max-w-xs truncate">
                       {expense.description || '—'}
                     </TableCell>
-                    <TableCell className="text-right">€{expense.default_amount.toFixed(2)}</TableCell>
+                    <TableCell className="text-right">${expense.default_amount.toFixed(2)}</TableCell>
                     <TableCell className="text-center">
                       <Switch
                         checked={expense.is_active}

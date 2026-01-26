@@ -42,9 +42,9 @@ export default function Members() {
   const [deleteMember, setDeleteMember] = useState<MemberBalance | null>(null);
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('es-AR', {
       style: 'currency',
-      currency: 'EUR',
+      currency: 'ARS',
     }).format(amount);
   };
 
