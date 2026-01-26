@@ -50,6 +50,7 @@ export default {
       monthlyFees: 'Monthly Fees',
       events: 'Events',
       treasurer: 'Treasurer',
+      userManagement: 'User Management',
     },
 
     // Dashboard
@@ -314,6 +315,34 @@ export default {
       revertAction3: 'Set the loan status back to "Active"',
       reverting: 'Reverting...',
       loanAmount: 'Loan Amount',
+    },
+
+    // User Management
+    userManagement: {
+      title: 'User Management',
+      subtitle: 'Manage user roles and permissions',
+      usersTable: 'Registered Users',
+      usersTableDescription: 'Assign roles and permissions to each user',
+      email: 'Email',
+      currentRole: 'Current Role',
+      noRole: 'No Role',
+      noUsers: 'No registered users',
+      roleAssigned: 'Role assigned successfully',
+      roleRemoved: 'Role removed successfully',
+      roleAssignError: 'Error assigning role',
+      roleRemoveError: 'Error removing role',
+      roles: {
+        treasurer: 'Treasurer',
+        vm: 'VM',
+        member: 'Member',
+      },
+      permissions: {
+        title: 'Permissions',
+        treasurer: 'Full access: create, edit, delete',
+        vm: 'View only: read information',
+        member: 'Limited access to own data',
+        none: 'No access',
+      },
     },
   },
 };

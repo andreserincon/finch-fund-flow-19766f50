@@ -50,6 +50,7 @@ export default {
       monthlyFees: 'Cuotas Mensuales',
       events: 'Eventos',
       treasurer: 'Tesorero',
+      userManagement: 'Gestión de Usuarios',
     },
 
     // Dashboard
@@ -314,6 +315,34 @@ export default {
       revertAction3: 'Cambiará el estado del préstamo a "Activo"',
       reverting: 'Revirtiendo...',
       loanAmount: 'Monto del Préstamo',
+    },
+
+    // User Management
+    userManagement: {
+      title: 'Gestión de Usuarios',
+      subtitle: 'Administrar roles y permisos de usuarios',
+      usersTable: 'Usuarios Registrados',
+      usersTableDescription: 'Asignar roles y permisos a cada usuario',
+      email: 'Correo Electrónico',
+      currentRole: 'Rol Actual',
+      noRole: 'Sin Rol',
+      noUsers: 'No hay usuarios registrados',
+      roleAssigned: 'Rol asignado correctamente',
+      roleRemoved: 'Rol eliminado correctamente',
+      roleAssignError: 'Error al asignar rol',
+      roleRemoveError: 'Error al eliminar rol',
+      roles: {
+        treasurer: 'Tesorero',
+        vm: 'VM',
+        member: 'Miembro',
+      },
+      permissions: {
+        title: 'Permisos',
+        treasurer: 'Acceso completo: crear, editar, eliminar',
+        vm: 'Solo lectura: ver información',
+        member: 'Acceso limitado a datos propios',
+        none: 'Sin acceso',
+      },
     },
   },
 };
