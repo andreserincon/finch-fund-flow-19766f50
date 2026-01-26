@@ -41,6 +41,8 @@ const transactionSchema = z.object({
     'other_expense',
     'other_income',
     'event_payment',
+    'loan_disbursement',
+    'loan_repayment',
   ]),
   account: z.enum(['bank', 'great_lodge', 'savings']),
   member_id: z.string().optional(),

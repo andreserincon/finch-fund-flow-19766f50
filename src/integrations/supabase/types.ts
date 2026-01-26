@@ -129,6 +129,80 @@ export type Database = {
         }
         Relationships: []
       }
+      loans: {
+        Row: {
+          account: Database["public"]["Enums"]["account_type"]
+          amount: number
+          created_at: string
+          disbursement_transaction_id: string | null
+          id: string
+          loan_date: string
+          member_id: string
+          notes: string | null
+          paid_date: string | null
+          repayment_transaction_id: string | null
+          status: Database["public"]["Enums"]["loan_status"]
+          updated_at: string
+        }
+        Insert: {
+          account: Database["public"]["Enums"]["account_type"]
+          amount: number
+          created_at?: string
+          disbursement_transaction_id?: string | null
+          id?: string
+          loan_date?: string
+          member_id: string
+          notes?: string | null
+          paid_date?: string | null
+          repayment_transaction_id?: string | null
+          status?: Database["public"]["Enums"]["loan_status"]
+          updated_at?: string
+        }
+        Update: {
+          account?: Database["public"]["Enums"]["account_type"]
+          amount?: number
+          created_at?: string
+          disbursement_transaction_id?: string | null
+          id?: string
+          loan_date?: string
+          member_id?: string
+          notes?: string | null
+          paid_date?: string | null
+          repayment_transaction_id?: string | null
+          status?: Database["public"]["Enums"]["loan_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loans_disbursement_transaction_id_fkey"
+            columns: ["disbursement_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loans_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "member_balances"
+            referencedColumns: ["member_id"]
+          },
+          {
+            foreignKeyName: "loans_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loans_repayment_transaction_id_fkey"
+            columns: ["repayment_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       member_fee_type_history: {
         Row: {
           created_at: string
@@ -378,6 +452,7 @@ export type Database = {
     Enums: {
       account_type: "bank" | "great_lodge" | "savings"
       fee_type: "standard" | "solidarity"
+      loan_status: "active" | "paid" | "cancelled"
       transaction_category:
         | "monthly_fee"
         | "extraordinary_income"
@@ -388,6 +463,8 @@ export type Database = {
         | "other_expense"
         | "other_income"
         | "event_payment"
+        | "loan_disbursement"
+        | "loan_repayment"
       transaction_type: "income" | "expense"
     }
     CompositeTypes: {
@@ -518,6 +595,7 @@ export const Constants = {
     Enums: {
       account_type: ["bank", "great_lodge", "savings"],
       fee_type: ["standard", "solidarity"],
+      loan_status: ["active", "paid", "cancelled"],
       transaction_category: [
         "monthly_fee",
         "extraordinary_income",
@@ -528,6 +606,8 @@ export const Constants = {
         "other_expense",
         "other_income",
         "event_payment",
+        "loan_disbursement",
+        "loan_repayment",
       ],
       transaction_type: ["income", "expense"],
     },

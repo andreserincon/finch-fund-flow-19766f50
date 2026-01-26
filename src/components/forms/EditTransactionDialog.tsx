@@ -39,6 +39,8 @@ const transactionSchema = z.object({
     'other_expense',
     'other_income',
     'event_payment',
+    'loan_disbursement',
+    'loan_repayment',
   ]),
   member_id: z.string().optional(),
   notes: z.string().max(500).optional(),

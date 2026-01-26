@@ -6,7 +6,8 @@ import {
   LogOut,
   Wallet,
   Settings,
-  ArrowLeftRight
+  ArrowLeftRight,
+  HandCoins
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import {
@@ -28,6 +29,7 @@ const mainNavItems = [
   { title: 'Dashboard', url: '/', icon: LayoutDashboard },
   { title: 'Members', url: '/members', icon: Users },
   { title: 'Transactions', url: '/transactions', icon: Receipt },
+  { title: 'Loans', url: '/loans', icon: HandCoins },
 ];
 
 const actionItems = [

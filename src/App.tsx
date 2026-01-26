@@ -8,6 +8,7 @@ import { InstallPrompt } from "@/components/pwa/InstallPrompt";
 import Dashboard from "./pages/Dashboard";
 import Members from "./pages/Members";
 import Transactions from "./pages/Transactions";
+import Loans from "./pages/Loans";
 import LogPayment from "./pages/LogPayment";
 import LogExpense from "./pages/LogExpense";
 import MonthlyFees from "./pages/MonthlyFees";
@@ -65,6 +66,7 @@ const App = () => (
         <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         <Route path="/members" element={<ProtectedRoute><Members /></ProtectedRoute>} />
         <Route path="/transactions" element={<ProtectedRoute><Transactions /></ProtectedRoute>} />
+        <Route path="/loans" element={<ProtectedRoute><Loans /></ProtectedRoute>} />
         <Route path="/log-payment" element={<ProtectedRoute><LogPayment /></ProtectedRoute>} />
         <Route path="/log-expense" element={<ProtectedRoute><LogExpense /></ProtectedRoute>} />
         <Route path="/account-transfer" element={<ProtectedRoute><AccountTransfer /></ProtectedRoute>} />
