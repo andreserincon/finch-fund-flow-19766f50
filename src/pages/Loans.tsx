@@ -5,6 +5,7 @@ import { MarkPaidDialog } from '@/components/loans/MarkPaidDialog';
 import { DeleteLoanDialog } from '@/components/loans/DeleteLoanDialog';
 import { AddPaymentDialog } from '@/components/loans/AddPaymentDialog';
 import { PaymentHistoryDialog } from '@/components/loans/PaymentHistoryDialog';
+import { RevertPaidDialog } from '@/components/loans/RevertPaidDialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -29,7 +30,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { MoreHorizontal, Plus, CheckCircle, XCircle, Trash2, DollarSign, History } from 'lucide-react';
+import { MoreHorizontal, Plus, CheckCircle, XCircle, Trash2, DollarSign, History, Undo2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { Loan, ACCOUNT_LABELS, LOAN_STATUS_LABELS, LoanStatus } from '@/lib/types';
 import { formatCurrency, getCurrencyForAccount, cn } from '@/lib/utils';
@@ -42,6 +43,7 @@ export default function Loans() {
   const [deletingLoan, setDeletingLoan] = useState<Loan | null>(null);
   const [addingPaymentLoan, setAddingPaymentLoan] = useState<Loan | null>(null);
   const [viewingHistoryLoan, setViewingHistoryLoan] = useState<Loan | null>(null);
+  const [revertingLoan, setRevertingLoan] = useState<Loan | null>(null);
 
   const filteredLoans = loans.filter((loan) => {
     if (statusFilter === 'all') return true;
@@ -213,6 +215,18 @@ export default function Loans() {
                             </DropdownMenuItem>
                           </>
                         )}
+                        {loan.status === 'paid' && (
+                          <>
+                            <DropdownMenuItem onClick={() => setViewingHistoryLoan(loan)}>
+                              <History className="mr-2 h-4 w-4" />
+                              View History
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setRevertingLoan(loan)}>
+                              <Undo2 className="mr-2 h-4 w-4" />
+                              Revert to Active
+                            </DropdownMenuItem>
+                          </>
+                        )}
                         <DropdownMenuItem
                           onClick={() => setDeletingLoan(loan)}
                           className="text-destructive focus:text-destructive"
@@ -354,6 +368,18 @@ export default function Loans() {
                               </DropdownMenuItem>
                             </>
                           )}
+                          {loan.status === 'paid' && (
+                            <>
+                              <DropdownMenuItem onClick={() => setViewingHistoryLoan(loan)}>
+                                <History className="mr-2 h-4 w-4" />
+                                View History
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => setRevertingLoan(loan)}>
+                                <Undo2 className="mr-2 h-4 w-4" />
+                                Revert to Active
+                              </DropdownMenuItem>
+                            </>
+                          )}
                           <DropdownMenuItem
                             onClick={() => setDeletingLoan(loan)}
                             className="text-destructive focus:text-destructive"
@@ -404,6 +430,14 @@ export default function Loans() {
           loan={viewingHistoryLoan}
           open={!!viewingHistoryLoan}
           onOpenChange={(open) => !open && setViewingHistoryLoan(null)}
+        />
+      )}
+
+      {revertingLoan && (
+        <RevertPaidDialog
+          loan={revertingLoan}
+          open={!!revertingLoan}
+          onOpenChange={(open) => !open && setRevertingLoan(null)}
         />
       )}
     </div>

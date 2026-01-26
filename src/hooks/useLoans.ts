@@ -227,6 +227,81 @@ export function useLoans() {
     },
   });
 
+  const revertLoanToPending = useMutation({
+    mutationFn: async (loanId: string) => {
+      // Get the loan details
+      const { data: loan, error: loanFetchError } = await supabase
+        .from('loans')
+        .select('*')
+        .eq('id', loanId)
+        .single();
+
+      if (loanFetchError) throw loanFetchError;
+      if (!loan) throw new Error('Loan not found');
+      if (loan.status !== 'paid') throw new Error('Loan is not in paid status');
+
+      // Find the last payment (the one that marked it as fully paid)
+      const { data: lastPayment, error: paymentFetchError } = await supabase
+        .from('loan_payments')
+        .select('*')
+        .eq('loan_id', loanId)
+        .order('payment_date', { ascending: false })
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (paymentFetchError) throw paymentFetchError;
+      if (!lastPayment) throw new Error('No payment record found to revert');
+
+      // Delete the associated transaction if exists
+      if (lastPayment.transaction_id) {
+        const { error: transactionError } = await supabase
+          .from('transactions')
+          .delete()
+          .eq('id', lastPayment.transaction_id);
+
+        if (transactionError) throw transactionError;
+      }
+
+      // Delete the payment record
+      const { error: paymentDeleteError } = await supabase
+        .from('loan_payments')
+        .delete()
+        .eq('id', lastPayment.id);
+
+      if (paymentDeleteError) throw paymentDeleteError;
+
+      // Calculate new amount_paid
+      const newAmountPaid = Math.max(0, loan.amount_paid - lastPayment.amount);
+
+      // Update the loan status back to active
+      const { data: updatedLoan, error: updateError } = await supabase
+        .from('loans')
+        .update({
+          status: 'active' as LoanStatus,
+          paid_date: null,
+          amount_paid: newAmountPaid,
+          repayment_transaction_id: null,
+        })
+        .eq('id', loanId)
+        .select('*, member:members(id, full_name)')
+        .single();
+
+      if (updateError) throw updateError;
+      return updatedLoan;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['loans'] });
+      queryClient.invalidateQueries({ queryKey: ['loan-payments'] });
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard_stats'] });
+      toast.success('Loan reverted to active status');
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to revert loan: ${error.message}`);
+    },
+  });
+
   const cancelLoan = useMutation({
     mutationFn: async (loanId: string) => {
       // Get the loan details
@@ -315,6 +390,7 @@ export function useLoans() {
     createLoan,
     addLoanPayment,
     markLoanAsPaid,
+    revertLoanToPending,
     cancelLoan,
     deleteLoan,
   };
