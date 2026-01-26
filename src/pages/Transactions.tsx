@@ -1,8 +1,11 @@
 import { useState } from 'react';
 import { useTransactions } from '@/hooks/useTransactions';
 import { AddTransactionForm } from '@/components/forms/AddTransactionForm';
+import { EditTransactionDialog } from '@/components/forms/EditTransactionDialog';
+import { DeleteTransactionDialog } from '@/components/forms/DeleteTransactionDialog';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   Select,
   SelectContent,
@@ -18,16 +21,25 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Search, TrendingUp, TrendingDown } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Search, TrendingUp, TrendingDown, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { CATEGORY_LABELS, TransactionCategory } from '@/lib/types';
+import { CATEGORY_LABELS, Transaction } from '@/lib/types';
 
 export default function Transactions() {
   const { transactions, isLoading } = useTransactions();
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+  const [deletingTransaction, setDeletingTransaction] = useState<Transaction | null>(null);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -152,12 +164,13 @@ export default function Transactions() {
               <TableHead>Member</TableHead>
               <TableHead>Notes</TableHead>
               <TableHead className="text-right">Amount</TableHead>
+              <TableHead className="w-[50px]"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredTransactions.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                   No transactions found
                 </TableCell>
               </TableRow>
@@ -204,12 +217,53 @@ export default function Transactions() {
                       {formatCurrency(transaction.amount)}
                     </span>
                   </TableCell>
+                  <TableCell>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <MoreHorizontal className="h-4 w-4" />
+                          <span className="sr-only">Open menu</span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="bg-popover">
+                        <DropdownMenuItem onClick={() => setEditingTransaction(transaction)}>
+                          <Pencil className="mr-2 h-4 w-4" />
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={() => setDeletingTransaction(transaction)}
+                          className="text-destructive focus:text-destructive"
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
                 </TableRow>
               ))
             )}
           </TableBody>
         </Table>
       </div>
+
+      {/* Edit Dialog */}
+      {editingTransaction && (
+        <EditTransactionDialog
+          transaction={editingTransaction}
+          open={!!editingTransaction}
+          onOpenChange={(open) => !open && setEditingTransaction(null)}
+        />
+      )}
+
+      {/* Delete Dialog */}
+      {deletingTransaction && (
+        <DeleteTransactionDialog
+          transaction={deletingTransaction}
+          open={!!deletingTransaction}
+          onOpenChange={(open) => !open && setDeletingTransaction(null)}
+        />
+      )}
     </div>
   );
 }
