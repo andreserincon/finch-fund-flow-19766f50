@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -28,19 +29,20 @@ interface InsightsAgentProps {
   };
 }
 
-const SUGGESTED_QUESTIONS = [
-  "What's the overall financial health?",
-  "Which members need attention?",
-  "How is our monthly cash flow?",
-  "Summarize key metrics",
-];
-
 export function InsightsAgent({ context }: InsightsAgentProps) {
+  const { t, i18n } = useTranslation();
   const [question, setQuestion] = useState('');
   const [response, setResponse] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const suggestedQuestions = [
+    t('insights.financialHealth'),
+    t('insights.membersNeedAttention'),
+    t('insights.monthlyCashFlow'),
+    t('insights.summarizeMetrics'),
+  ];
 
   const askQuestion = async (q: string) => {
     if (!q.trim()) return;
@@ -57,7 +59,11 @@ export function InsightsAgent({ context }: InsightsAgentProps) {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({ question: q, context }),
+        body: JSON.stringify({ 
+          question: q, 
+          context,
+          language: i18n.language === 'es' ? 'Spanish' : 'English'
+        }),
       });
 
       if (!resp.ok) {
@@ -124,7 +130,7 @@ export function InsightsAgent({ context }: InsightsAgentProps) {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-primary" />
-            <CardTitle className="text-lg">Treasury Insights Agent</CardTitle>
+            <CardTitle className="text-lg">{t('insights.title')}</CardTitle>
           </div>
           {(response || error) && (
             <Button
@@ -138,13 +144,13 @@ export function InsightsAgent({ context }: InsightsAgentProps) {
           )}
         </div>
         <CardDescription>
-          Ask me anything about your treasury data
+          {t('insights.placeholder')}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Quick suggestion chips */}
         <div className="flex flex-wrap gap-2">
-          {SUGGESTED_QUESTIONS.map((q) => (
+          {suggestedQuestions.map((q) => (
             <Button
               key={q}
               variant="outline"
@@ -161,7 +167,7 @@ export function InsightsAgent({ context }: InsightsAgentProps) {
         {/* Input form */}
         <form onSubmit={handleSubmit} className="flex gap-2">
           <Input
-            placeholder="Ask a question about your treasury..."
+            placeholder={t('insights.placeholder')}
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
             disabled={isLoading}
@@ -189,7 +195,7 @@ export function InsightsAgent({ context }: InsightsAgentProps) {
             ) : isLoading ? (
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                <span>Analyzing your treasury data...</span>
+                <span>{t('common.loading')}</span>
               </div>
             ) : null}
           </div>
