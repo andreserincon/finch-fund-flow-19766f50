@@ -18,7 +18,7 @@ import { useTransactions } from '@/hooks/useTransactions';
 import { useMembers } from '@/hooks/useMembers';
 import { useExtraordinaryExpenses } from '@/hooks/useExtraordinaryExpenses';
 import { useEventMemberPayments } from '@/hooks/useEventMemberPayments';
-import { TransactionCategory, CATEGORY_LABELS } from '@/lib/types';
+import { TransactionCategory, CATEGORY_LABELS, AccountType, ACCOUNT_LABELS } from '@/lib/types';
 import { ArrowLeft, PlusCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -37,6 +37,7 @@ const paymentSchema = z.object({
   ]),
   member_id: z.string().optional(),
   event_id: z.string().optional(),
+  account: z.enum(['bank', 'great_lodge']),
   notes: z.string().max(500).optional(),
 });
 
@@ -70,12 +71,14 @@ export default function LogPayment() {
     defaultValues: {
       transaction_date: new Date().toISOString().split('T')[0],
       category: 'monthly_fee',
+      account: 'bank',
     },
   });
 
   const category = watch('category');
   const selectedEventId = watch('event_id');
   const selectedMemberId = watch('member_id');
+  const selectedAccount = watch('account');
 
   // Get the selected event to show its default amount
   const selectedEvent = activeEvents.find(e => e.id === selectedEventId);
@@ -121,6 +124,7 @@ export default function LogPayment() {
         transaction_type: 'income',
         category: data.category,
         member_id: data.member_id || null,
+        account: data.account,
         notes: data.notes || null,
       });
 
@@ -159,6 +163,25 @@ export default function LogPayment() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            <div className="space-y-2">
+              <Label>Account</Label>
+              <Select
+                value={selectedAccount}
+                onValueChange={(value: AccountType) => setValue('account', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {(['bank', 'great_lodge'] as AccountType[]).map((acc) => (
+                    <SelectItem key={acc} value={acc}>
+                      {ACCOUNT_LABELS[acc]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="transaction_date">Date</Label>

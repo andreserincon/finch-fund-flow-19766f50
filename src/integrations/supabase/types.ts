@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_transfers: {
+        Row: {
+          amount: number
+          created_at: string
+          from_account: Database["public"]["Enums"]["account_type"]
+          id: string
+          notes: string | null
+          to_account: Database["public"]["Enums"]["account_type"]
+          transfer_date: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          from_account: Database["public"]["Enums"]["account_type"]
+          id?: string
+          notes?: string | null
+          to_account: Database["public"]["Enums"]["account_type"]
+          transfer_date?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          from_account?: Database["public"]["Enums"]["account_type"]
+          id?: string
+          notes?: string | null
+          to_account?: Database["public"]["Enums"]["account_type"]
+          transfer_date?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       event_member_payments: {
         Row: {
           amount_owed: number
@@ -263,6 +296,7 @@ export type Database = {
       }
       transactions: {
         Row: {
+          account: Database["public"]["Enums"]["account_type"]
           amount: number
           category: Database["public"]["Enums"]["transaction_category"]
           created_at: string
@@ -274,6 +308,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          account?: Database["public"]["Enums"]["account_type"]
           amount: number
           category: Database["public"]["Enums"]["transaction_category"]
           created_at?: string
@@ -285,6 +320,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          account?: Database["public"]["Enums"]["account_type"]
           amount?: number
           category?: Database["public"]["Enums"]["transaction_category"]
           created_at?: string
@@ -340,6 +376,7 @@ export type Database = {
       is_treasurer: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
+      account_type: "bank" | "great_lodge"
       fee_type: "standard" | "solidarity"
       transaction_category:
         | "monthly_fee"
@@ -479,6 +516,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      account_type: ["bank", "great_lodge"],
       fee_type: ["standard", "solidarity"],
       transaction_category: [
         "monthly_fee",
