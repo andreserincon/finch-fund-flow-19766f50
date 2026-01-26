@@ -87,17 +87,13 @@ export default function Members() {
     return member.current_balance - eventDebt;
   };
 
-  // Determine payment status based on monthly debt and event debt
+  // Determine payment status based on overall balance
   const getPaymentStatus = (member: MemberBalance) => {
-    const monthlyDebt = member.total_fees_owed - member.total_paid;
+    const overallBalance = getOverallBalance(member);
     const monthlyFeeRate = currentMonthFees[member.fee_type] || 0;
-    const eventDebt = getEventDebt(member.member_id);
     
-    // Overdue if: owes more than 1 monthly fee OR has any unpaid events
-    const isOverdue = monthlyDebt > monthlyFeeRate || eventDebt > 0;
-    
-    if (!isOverdue && monthlyDebt <= 0) return 'ahead';
-    if (!isOverdue) return 'up_to_date';
+    if (overallBalance > monthlyFeeRate) return 'ahead';
+    if (overallBalance >= 0) return 'up_to_date';
     return 'overdue';
   };
 
@@ -239,10 +235,6 @@ export default function Members() {
                     {formatCurrency(getOverallBalance(member))}
                   </p>
                 </div>
-                <div>
-                  <p className="text-muted-foreground text-xs">Owed</p>
-                  <p className="font-mono text-muted-foreground">{formatCurrency(member.total_fees_owed + getEventDebt(member.member_id))}</p>
-                </div>
               </div>
             </div>
           ))
@@ -258,7 +250,6 @@ export default function Members() {
               <TableHead>Fee Type</TableHead>
               <TableHead className="text-right">Monthly Fee</TableHead>
               <TableHead className="text-right">Balance</TableHead>
-              <TableHead className="text-right">Owed</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Joined</TableHead>
               <TableHead className="w-[50px]"></TableHead>
@@ -301,9 +292,6 @@ export default function Members() {
                     >
                       {formatCurrency(getOverallBalance(member))}
                     </span>
-                  </TableCell>
-                  <TableCell className="text-right font-mono text-muted-foreground">
-                    {formatCurrency(member.total_fees_owed + getEventDebt(member.member_id))}
                   </TableCell>
                   <TableCell>
                     {member.is_active ? (
