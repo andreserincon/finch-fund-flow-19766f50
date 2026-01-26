@@ -4,6 +4,7 @@ import { AddLoanDialog } from '@/components/loans/AddLoanDialog';
 import { MarkPaidDialog } from '@/components/loans/MarkPaidDialog';
 import { DeleteLoanDialog } from '@/components/loans/DeleteLoanDialog';
 import { AddPaymentDialog } from '@/components/loans/AddPaymentDialog';
+import { PaymentHistoryDialog } from '@/components/loans/PaymentHistoryDialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -28,7 +29,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { MoreHorizontal, Plus, CheckCircle, XCircle, Trash2, DollarSign } from 'lucide-react';
+import { MoreHorizontal, Plus, CheckCircle, XCircle, Trash2, DollarSign, History } from 'lucide-react';
 import { format } from 'date-fns';
 import { Loan, ACCOUNT_LABELS, LOAN_STATUS_LABELS, LoanStatus } from '@/lib/types';
 import { formatCurrency, getCurrencyForAccount, cn } from '@/lib/utils';
@@ -40,6 +41,7 @@ export default function Loans() {
   const [markingPaidLoan, setMarkingPaidLoan] = useState<Loan | null>(null);
   const [deletingLoan, setDeletingLoan] = useState<Loan | null>(null);
   const [addingPaymentLoan, setAddingPaymentLoan] = useState<Loan | null>(null);
+  const [viewingHistoryLoan, setViewingHistoryLoan] = useState<Loan | null>(null);
 
   const filteredLoans = loans.filter((loan) => {
     if (statusFilter === 'all') return true;
@@ -194,6 +196,10 @@ export default function Loans() {
                               <DollarSign className="mr-2 h-4 w-4" />
                               Add Payment
                             </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setViewingHistoryLoan(loan)}>
+                              <History className="mr-2 h-4 w-4" />
+                              View History
+                            </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => setMarkingPaidLoan(loan)}>
                               <CheckCircle className="mr-2 h-4 w-4" />
                               Mark as Fully Paid
@@ -331,6 +337,10 @@ export default function Loans() {
                                 <DollarSign className="mr-2 h-4 w-4" />
                                 Add Payment
                               </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => setViewingHistoryLoan(loan)}>
+                                <History className="mr-2 h-4 w-4" />
+                                View History
+                              </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => setMarkingPaidLoan(loan)}>
                                 <CheckCircle className="mr-2 h-4 w-4" />
                                 Mark as Fully Paid
@@ -386,6 +396,14 @@ export default function Loans() {
           loan={addingPaymentLoan}
           open={!!addingPaymentLoan}
           onOpenChange={(open) => !open && setAddingPaymentLoan(null)}
+        />
+      )}
+
+      {viewingHistoryLoan && (
+        <PaymentHistoryDialog
+          loan={viewingHistoryLoan}
+          open={!!viewingHistoryLoan}
+          onOpenChange={(open) => !open && setViewingHistoryLoan(null)}
         />
       )}
     </div>
