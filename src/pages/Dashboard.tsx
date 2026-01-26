@@ -188,7 +188,7 @@ export default function Dashboard() {
       </div>
 
       {/* Key Metrics - Row 2 */}
-      <div className="grid gap-3 grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-3 grid-cols-2 lg:grid-cols-3">
         <StatCard
           title="Savings Account"
           value={formatCurrency(savingsBalance, 'USD')}
@@ -210,6 +210,10 @@ export default function Dashboard() {
           icon={<TrendingUp className="h-8 w-8 text-success/20" />}
           variant={monthlyIncome - monthlyExpenses >= 0 ? 'success' : 'danger'}
         />
+      </div>
+
+      {/* Key Metrics - Row 3 */}
+      <div className="grid gap-3 grid-cols-2">
         <StatCard
           title="Members Unpaid"
           value={membersUnpaid}
