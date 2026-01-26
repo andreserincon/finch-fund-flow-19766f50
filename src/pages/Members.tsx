@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useMembers } from '@/hooks/useMembers';
 import { useMonthlyFees } from '@/hooks/useMonthlyFees';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { AddMemberForm } from '@/components/forms/AddMemberForm';
 import { EditMemberForm } from '@/components/forms/EditMemberForm';
 import { DeleteMemberDialog } from '@/components/forms/DeleteMemberDialog';
 import { FeeTypeHistoryDialog } from '@/components/forms/FeeTypeHistoryDialog';
-import { MemberStatusBadge } from '@/components/dashboard/MemberStatusBadge';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -42,6 +43,28 @@ export default function Members() {
   const [editMember, setEditMember] = useState<MemberBalance | null>(null);
   const [deleteMember, setDeleteMember] = useState<MemberBalance | null>(null);
 
+  // Query unpaid event amounts per member
+  const { data: memberEventDebts = {} } = useQuery({
+    queryKey: ['member-event-debts'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('event_member_payments')
+        .select('member_id, amount_owed, amount_paid');
+      
+      if (error) throw error;
+      
+      // Aggregate unpaid event amounts per member
+      const debts: Record<string, number> = {};
+      data?.forEach((payment) => {
+        const unpaid = payment.amount_owed - payment.amount_paid;
+        if (unpaid > 0) {
+          debts[payment.member_id] = (debts[payment.member_id] || 0) + unpaid;
+        }
+      });
+      return debts;
+    },
+  });
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('es-AR', {
       style: 'currency',
@@ -53,9 +76,39 @@ export default function Members() {
     return currentMonthFees[feeType] ?? 0;
   };
 
-  const getPaymentStatus = (balance: number, owed: number) => {
-    if (balance >= owed) return 'up_to_date';
+  // Get event debt for a member
+  const getEventDebt = (memberId: string) => {
+    return memberEventDebts[memberId] || 0;
+  };
+
+  // Calculate overall balance (monthly + events)
+  const getOverallBalance = (member: MemberBalance) => {
+    const eventDebt = getEventDebt(member.member_id);
+    return member.current_balance - eventDebt;
+  };
+
+  // Determine payment status based on monthly debt and event debt
+  const getPaymentStatus = (member: MemberBalance) => {
+    const monthlyDebt = member.total_fees_owed - member.total_paid;
+    const monthlyFeeRate = currentMonthFees[member.fee_type] || 0;
+    const eventDebt = getEventDebt(member.member_id);
+    
+    // Overdue if: owes more than 1 monthly fee OR has any unpaid events
+    const isOverdue = monthlyDebt > monthlyFeeRate || eventDebt > 0;
+    
+    if (!isOverdue && monthlyDebt <= 0) return 'ahead';
+    if (!isOverdue) return 'up_to_date';
     return 'overdue';
+  };
+
+  const getStatusBadge = (status: string) => {
+    const config = {
+      ahead: { label: 'Ahead', className: 'status-ahead' },
+      up_to_date: { label: 'Up to date', className: 'status-up-to-date' },
+      overdue: { label: 'Overdue', className: 'status-overdue' },
+    };
+    const c = config[status as keyof typeof config] || config.up_to_date;
+    return <span className={`status-badge ${c.className}`}>{c.label}</span>;
   };
 
   const filteredMembers = memberBalances.filter((member) => {
@@ -63,7 +116,7 @@ export default function Members() {
       member.full_name.toLowerCase().includes(search.toLowerCase()) ||
       member.phone_number.includes(search);
 
-    const status = getPaymentStatus(member.current_balance, member.total_fees_owed);
+    const status = getPaymentStatus(member);
     const matchesStatus =
       statusFilter === 'all' ||
       (statusFilter === 'active' && member.is_active) ||
@@ -139,10 +192,7 @@ export default function Members() {
                 </div>
                 <div className="flex items-center gap-2">
                   {member.is_active ? (
-                    <MemberStatusBadge
-                      balance={member.current_balance}
-                      totalOwed={member.total_fees_owed}
-                    />
+                    getStatusBadge(getPaymentStatus(member))
                   ) : (
                     <Badge variant="outline">Inactive</Badge>
                   )}
@@ -185,13 +235,13 @@ export default function Members() {
                 </div>
                 <div>
                   <p className="text-muted-foreground text-xs">Balance</p>
-                  <p className={`font-mono font-semibold ${member.current_balance >= 0 ? 'amount-positive' : 'amount-negative'}`}>
-                    {formatCurrency(member.current_balance)}
+                  <p className={`font-mono font-semibold ${getOverallBalance(member) >= 0 ? 'amount-positive' : 'amount-negative'}`}>
+                    {formatCurrency(getOverallBalance(member))}
                   </p>
                 </div>
                 <div>
                   <p className="text-muted-foreground text-xs">Owed</p>
-                  <p className="font-mono text-muted-foreground">{formatCurrency(member.total_fees_owed)}</p>
+                  <p className="font-mono text-muted-foreground">{formatCurrency(member.total_fees_owed + getEventDebt(member.member_id))}</p>
                 </div>
               </div>
             </div>
@@ -244,23 +294,20 @@ export default function Members() {
                   <TableCell className="text-right font-mono">
                     <span
                       className={
-                        member.current_balance >= 0
+                        getOverallBalance(member) >= 0
                           ? 'amount-positive'
                           : 'amount-negative'
                       }
                     >
-                      {formatCurrency(member.current_balance)}
+                      {formatCurrency(getOverallBalance(member))}
                     </span>
                   </TableCell>
                   <TableCell className="text-right font-mono text-muted-foreground">
-                    {formatCurrency(member.total_fees_owed)}
+                    {formatCurrency(member.total_fees_owed + getEventDebt(member.member_id))}
                   </TableCell>
                   <TableCell>
                     {member.is_active ? (
-                      <MemberStatusBadge
-                        balance={member.current_balance}
-                        totalOwed={member.total_fees_owed}
-                      />
+                      getStatusBadge(getPaymentStatus(member))
                     ) : (
                       <Badge variant="outline">Inactive</Badge>
                     )}
