@@ -4,7 +4,8 @@ import {
   Receipt, 
   PlusCircle,
   LogOut,
-  Wallet
+  Wallet,
+  Settings
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import {
@@ -31,6 +32,10 @@ const mainNavItems = [
 const actionItems = [
   { title: 'Log Payment', url: '/log-payment', icon: PlusCircle },
   { title: 'Log Expense', url: '/log-expense', icon: Wallet },
+];
+
+const settingsItems = [
+  { title: 'Monthly Fees', url: '/monthly-fees', icon: Settings },
 ];
 
 export function AppSidebar() {
@@ -87,6 +92,30 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {actionItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild>
+                    <NavLink 
+                      to={item.url} 
+                      className="sidebar-nav-item"
+                      activeClassName="active"
+                    >
+                      <item.icon className="h-5 w-5" />
+                      <span>{item.title}</span>
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel className="text-sidebar-foreground/50 text-xs uppercase tracking-wider px-3">
+            Settings
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {settingsItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <NavLink 

@@ -10,6 +10,7 @@ import Members from "./pages/Members";
 import Transactions from "./pages/Transactions";
 import LogPayment from "./pages/LogPayment";
 import LogExpense from "./pages/LogExpense";
+import MonthlyFees from "./pages/MonthlyFees";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
@@ -64,6 +65,7 @@ const App = () => (
           <Route path="/transactions" element={<ProtectedRoute><Transactions /></ProtectedRoute>} />
           <Route path="/log-payment" element={<ProtectedRoute><LogPayment /></ProtectedRoute>} />
           <Route path="/log-expense" element={<ProtectedRoute><LogExpense /></ProtectedRoute>} />
+          <Route path="/monthly-fees" element={<ProtectedRoute><MonthlyFees /></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
