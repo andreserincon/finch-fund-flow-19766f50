@@ -92,15 +92,21 @@ export default function Members() {
     const overallBalance = getOverallBalance(member);
     const monthlyFeeRate = currentMonthFees[member.fee_type] || 0;
     
+    // Negative balance more than 1 monthly fee = overdue
+    if (overallBalance < -monthlyFeeRate) return 'overdue';
+    // Negative balance between 0 and 1 monthly fee = unpaid
+    if (overallBalance < 0) return 'unpaid';
+    // Balance above 1 monthly fee = ahead
     if (overallBalance > monthlyFeeRate) return 'ahead';
-    if (overallBalance >= 0) return 'up_to_date';
-    return 'overdue';
+    // Balance between 0 and 1 monthly fee = up_to_date
+    return 'up_to_date';
   };
 
   const getStatusBadge = (status: string) => {
     const config = {
       ahead: { label: 'Ahead', className: 'status-ahead' },
       up_to_date: { label: 'Up to date', className: 'status-up-to-date' },
+      unpaid: { label: 'Unpaid', className: 'status-unpaid' },
       overdue: { label: 'Overdue', className: 'status-overdue' },
     };
     const c = config[status as keyof typeof config] || config.up_to_date;
