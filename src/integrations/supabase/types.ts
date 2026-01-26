@@ -404,6 +404,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "profiles_id_fkey"
+            columns: ["id"]
+            isOneToOne: true
+            referencedRelation: "users_with_roles"
+            referencedColumns: ["user_id"]
+          },
+          {
             foreignKeyName: "profiles_member_id_fkey"
             columns: ["member_id"]
             isOneToOne: false
@@ -473,6 +480,35 @@ export type Database = {
           },
         ]
       }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users_with_roles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
     }
     Views: {
       member_balances: {
@@ -491,17 +527,52 @@ export type Database = {
         }
         Relationships: []
       }
+      users_with_roles: {
+        Row: {
+          email: string | null
+          member_id: string | null
+          role: Database["public"]["Enums"]["app_role"] | null
+          role_assigned_at: string | null
+          user_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "member_balances"
+            referencedColumns: ["member_id"]
+          },
+          {
+            foreignKeyName: "profiles_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
+      can_view: { Args: { _user_id: string }; Returns: boolean }
       get_member_fee_type_for_month: {
         Args: { p_member_id: string; p_month: string }
         Returns: Database["public"]["Enums"]["fee_type"]
       }
       get_user_member_id: { Args: { _user_id: string }; Returns: string }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_admin: { Args: { _user_id: string }; Returns: boolean }
       is_treasurer: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
       account_type: "bank" | "great_lodge" | "savings"
+      app_role: "treasurer" | "vm" | "member"
       fee_type: "standard" | "solidarity"
       loan_status: "active" | "paid" | "cancelled"
       transaction_category:
@@ -645,6 +716,7 @@ export const Constants = {
   public: {
     Enums: {
       account_type: ["bank", "great_lodge", "savings"],
+      app_role: ["treasurer", "vm", "member"],
       fee_type: ["standard", "solidarity"],
       loan_status: ["active", "paid", "cancelled"],
       transaction_category: [
