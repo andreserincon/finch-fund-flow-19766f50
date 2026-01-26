@@ -123,7 +123,7 @@ export default function LogPayment() {
         amount: data.amount,
         transaction_type: 'income',
         category: data.category,
-        member_id: data.member_id || null,
+        member_id: data.member_id === 'guest' ? null : (data.member_id || null),
         account: data.account,
         notes: data.notes || null,
       });
@@ -286,6 +286,9 @@ export default function LogPayment() {
                         {member.full_name}
                       </SelectItem>
                     ))}
+                    <SelectItem value="guest" className="text-muted-foreground border-t mt-1 pt-1">
+                      Guest
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
