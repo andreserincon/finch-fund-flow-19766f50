@@ -240,12 +240,13 @@ function AddMonthlyFeeDialog({
   onSave: (fee: { year_month: string; fee_type: FeeType; amount: number }) => Promise<unknown>;
   existingMonths: string[];
 }) {
+  const [selectedDate, setSelectedDate] = useState<Date>(startOfMonth(new Date()));
   const [standardAmount, setStandardAmount] = useState('');
   const [solidarityAmount, setSolidarityAmount] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const currentMonth = format(startOfMonth(new Date()), 'yyyy-MM-dd');
-  const alreadyExists = existingMonths.includes(currentMonth);
+  const selectedMonth = format(selectedDate, 'yyyy-MM-dd');
+  const alreadyExists = existingMonths.includes(selectedMonth);
 
   const handleSubmit = async () => {
     if (alreadyExists) return;
@@ -253,12 +254,13 @@ function AddMonthlyFeeDialog({
     setIsSubmitting(true);
     try {
       await Promise.all([
-        onSave({ year_month: currentMonth, fee_type: 'standard', amount: parseFloat(standardAmount) || 0 }),
-        onSave({ year_month: currentMonth, fee_type: 'solidarity', amount: parseFloat(solidarityAmount) || 0 }),
+        onSave({ year_month: selectedMonth, fee_type: 'standard', amount: parseFloat(standardAmount) || 0 }),
+        onSave({ year_month: selectedMonth, fee_type: 'solidarity', amount: parseFloat(solidarityAmount) || 0 }),
       ]);
       
       setStandardAmount('');
       setSolidarityAmount('');
+      setSelectedDate(startOfMonth(new Date()));
       onOpenChange(false);
     } finally {
       setIsSubmitting(false);
@@ -268,27 +270,49 @@ function AddMonthlyFeeDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
-        <Button disabled={alreadyExists}>
+        <Button>
           <PlusCircle className="mr-2 h-4 w-4" />
-          {alreadyExists ? 'Current Month Already Set' : 'Add Monthly Fees'}
+          Add Monthly Fees
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Add Monthly Fees</DialogTitle>
           <DialogDescription>
-            Set the fee amounts for {format(new Date(), 'MMMM yyyy')}
+            Set the fee amounts for a specific month
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
-          <div className="rounded-md bg-muted p-3">
-            <div className="flex items-center gap-2">
-              <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-              <span className="font-medium">{format(new Date(), 'MMMM yyyy')}</span>
-            </div>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Fees can only be added for the current month
-            </p>
+          <div className="space-y-2">
+            <Label>Select Month</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-full justify-start text-left font-normal",
+                    !selectedDate && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {format(selectedDate, 'MMMM yyyy')}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={(date) => date && setSelectedDate(startOfMonth(date))}
+                  initialFocus
+                  className="p-3 pointer-events-auto"
+                />
+              </PopoverContent>
+            </Popover>
+            {alreadyExists && (
+              <p className="text-sm text-destructive">
+                Fees for this month already exist. Edit them instead.
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -319,7 +343,7 @@ function AddMonthlyFeeDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleSubmit} disabled={isSubmitting}>
+          <Button onClick={handleSubmit} disabled={isSubmitting || alreadyExists}>
             {isSubmitting ? 'Saving...' : 'Save Fees'}
           </Button>
         </DialogFooter>
