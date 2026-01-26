@@ -201,11 +201,16 @@ function ViewPaymentsDialog({ expense }: { expense: ExtraordinaryExpense }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editAmount, setEditAmount] = useState<string>('');
 
-  // Get list of members already in the event
+  // Get list of members already in the event, sorted alphabetically
   const memberIdsInEvent = new Set(payments.map((p: any) => p.member_id));
+  const sortedPayments = [...payments].sort((a: any, b: any) => 
+    (a.member?.full_name || '').localeCompare(b.member?.full_name || '')
+  );
   
-  // Get active members not in the event
-  const membersNotInEvent = memberBalances.filter(m => m.is_active && !memberIdsInEvent.has(m.member_id));
+  // Get active members not in the event, sorted alphabetically
+  const membersNotInEvent = memberBalances
+    .filter(m => m.is_active && !memberIdsInEvent.has(m.member_id))
+    .sort((a, b) => a.full_name.localeCompare(b.full_name));
 
   const handleMarkPaid = async (paymentId: string, amountOwed: number) => {
     await updatePayment.mutateAsync({ id: paymentId, amount_paid: amountOwed });
@@ -284,7 +289,7 @@ function ViewPaymentsDialog({ expense }: { expense: ExtraordinaryExpense }) {
                     </TableCell>
                   </TableRow>
                 )}
-                {payments.map((payment: any) => {
+                {sortedPayments.map((payment: any) => {
                   const isPaid = Number(payment.amount_paid) >= Number(payment.amount_owed);
                   const isEditing = editingId === payment.id;
                   
