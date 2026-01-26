@@ -42,14 +42,14 @@ export function useExtraordinaryExpenses() {
         .single();
 
       if (error) throw error;
-      return data;
+      return data as ExtraordinaryExpense;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['extraordinary-expenses'] });
-      toast({ title: 'Expense category added successfully' });
+      toast({ title: 'Event added successfully' });
     },
     onError: (error) => {
-      toast({ title: 'Failed to add expense category', description: error.message, variant: 'destructive' });
+      toast({ title: 'Failed to add event', description: error.message, variant: 'destructive' });
     },
   });
 
