@@ -56,11 +56,19 @@ export default function Dashboard() {
   }, 0);
 
   const membersOverdue = memberBalances.filter(m => {
-    return m.current_balance < m.total_fees_owed && m.is_active;
+    if (!m.is_active) return false;
+    const amountOwed = m.total_fees_owed - m.total_paid;
+    const monthlyFeeRate = currentMonthFees[m.fee_type] || 0;
+    const hasUnpaidEvents = (memberEventDebts[m.member_id] || 0) > 0;
+    return amountOwed > monthlyFeeRate || hasUnpaidEvents;
   }).length;
 
   const membersUpToDate = memberBalances.filter(m => {
-    return m.current_balance >= m.total_fees_owed && m.is_active;
+    if (!m.is_active) return false;
+    const amountOwed = m.total_fees_owed - m.total_paid;
+    const monthlyFeeRate = currentMonthFees[m.fee_type] || 0;
+    const hasUnpaidEvents = (memberEventDebts[m.member_id] || 0) > 0;
+    return amountOwed <= monthlyFeeRate && !hasUnpaidEvents;
   }).length;
 
   const thisMonth = new Date();
