@@ -66,12 +66,12 @@ export default function MonthlyFees() {
   }
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-4 md:space-y-6 animate-fade-in">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Monthly Fees</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-xl md:text-2xl font-bold text-foreground">Monthly Fees</h1>
+          <p className="text-sm text-muted-foreground">
             Configure fee amounts for Standard and Solidarity members
           </p>
         </div>
@@ -84,7 +84,7 @@ export default function MonthlyFees() {
       </div>
 
       {/* Current Month Card */}
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-3 grid-cols-2">
         <CurrentMonthFeeCard
           feeType="standard"
           fees={feesByMonth}
@@ -107,8 +107,60 @@ export default function MonthlyFees() {
         />
       </div>
 
-      {/* History Table */}
-      <Card>
+      {/* History - Mobile Card View */}
+      <div className="md:hidden space-y-3">
+        <h3 className="font-semibold">Fee History</h3>
+        {sortedMonths.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground bg-card rounded-lg border">
+            No monthly fees configured yet
+          </div>
+        ) : (
+          sortedMonths.map((month) => {
+            const monthDate = parseISO(month);
+            const isUpcoming = isFuture(startOfDay(monthDate));
+            return (
+              <div key={month} className="rounded-lg border bg-card p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">{format(monthDate, 'MMMM yyyy')}</span>
+                    {isUpcoming && (
+                      <Badge variant="outline" className="text-xs">
+                        <Clock className="mr-1 h-3 w-3" />
+                        Upcoming
+                      </Badge>
+                    )}
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      const fee = monthlyFees.find(
+                        (f) => f.year_month === month && f.fee_type === 'standard'
+                      );
+                      if (fee) setEditFee(fee);
+                    }}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div>
+                    <p className="text-muted-foreground text-xs">Standard</p>
+                    <p className="font-mono font-semibold">{formatCurrency(feesByMonth[month].standard)}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground text-xs">Solidarity</p>
+                    <p className="font-mono font-semibold">{formatCurrency(feesByMonth[month].solidarity)}</p>
+                  </div>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {/* History - Desktop Table View */}
+      <Card className="hidden md:block">
         <CardHeader>
           <CardTitle>Fee History</CardTitle>
           <CardDescription>Monthly fee rates by period</CardDescription>
@@ -211,18 +263,18 @@ function CurrentMonthFeeCard({
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4">
+        <CardTitle className="text-xs md:text-sm font-medium">
           {FEE_TYPE_LABELS[feeType]} Fee
         </CardTitle>
-        <Button variant="ghost" size="sm" onClick={() => onEdit(currentMonth)}>
+        <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => onEdit(currentMonth)}>
           <Pencil className="h-4 w-4" />
         </Button>
       </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-bold">{formatCurrency(currentFee)}</div>
-        <p className="text-xs text-muted-foreground">
-          Current month ({format(new Date(), 'MMMM yyyy')})
+      <CardContent className="p-4 pt-0">
+        <div className="text-lg md:text-2xl font-bold truncate">{formatCurrency(currentFee)}</div>
+        <p className="text-xs text-muted-foreground truncate">
+          {format(new Date(), 'MMM yyyy')}
         </p>
       </CardContent>
     </Card>

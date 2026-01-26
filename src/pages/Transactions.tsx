@@ -79,35 +79,35 @@ export default function Transactions() {
   }
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-4 md:space-y-6 animate-fade-in">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Transactions</h1>
-        <p className="text-muted-foreground">
+        <h1 className="text-xl md:text-2xl font-bold text-foreground">Transactions</h1>
+        <p className="text-sm text-muted-foreground">
           {transactions.length} total transactions
         </p>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="stat-card flex items-center gap-4">
-          <div className="p-3 rounded-lg bg-success/10">
-            <TrendingUp className="h-6 w-6 text-success" />
+      <div className="grid gap-3 grid-cols-2">
+        <div className="stat-card flex items-center gap-3">
+          <div className="p-2 md:p-3 rounded-lg bg-success/10">
+            <TrendingUp className="h-5 w-5 md:h-6 md:w-6 text-success" />
           </div>
-          <div>
-            <p className="text-sm text-muted-foreground">Total Income</p>
-            <p className="text-2xl font-bold amount-positive">
+          <div className="min-w-0">
+            <p className="text-xs md:text-sm text-muted-foreground">Total Income</p>
+            <p className="text-lg md:text-2xl font-bold amount-positive truncate">
               {formatCurrency(totalIncome)}
             </p>
           </div>
         </div>
-        <div className="stat-card flex items-center gap-4">
-          <div className="p-3 rounded-lg bg-overdue/10">
-            <TrendingDown className="h-6 w-6 text-overdue" />
+        <div className="stat-card flex items-center gap-3">
+          <div className="p-2 md:p-3 rounded-lg bg-overdue/10">
+            <TrendingDown className="h-5 w-5 md:h-6 md:w-6 text-overdue" />
           </div>
-          <div>
-            <p className="text-sm text-muted-foreground">Total Expenses</p>
-            <p className="text-2xl font-bold amount-negative">
+          <div className="min-w-0">
+            <p className="text-xs md:text-sm text-muted-foreground">Total Expenses</p>
+            <p className="text-lg md:text-2xl font-bold amount-negative truncate">
               {formatCurrency(totalExpenses)}
             </p>
           </div>
@@ -115,8 +115,8 @@ export default function Transactions() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
+      <div className="flex flex-col gap-3">
+        <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search transactions..."
@@ -125,33 +125,103 @@ export default function Transactions() {
             className="pl-9"
           />
         </div>
-        <Select value={typeFilter} onValueChange={setTypeFilter}>
-          <SelectTrigger className="w-[140px]">
-            <SelectValue placeholder="Type" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Types</SelectItem>
-            <SelectItem value="income">Income</SelectItem>
-            <SelectItem value="expense">Expense</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-          <SelectTrigger className="w-[200px]">
-            <SelectValue placeholder="Category" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Categories</SelectItem>
-            {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
-              <SelectItem key={value} value={value}>
-                {label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex gap-2">
+          <Select value={typeFilter} onValueChange={setTypeFilter}>
+            <SelectTrigger className="flex-1 sm:w-[140px] sm:flex-none">
+              <SelectValue placeholder="Type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Types</SelectItem>
+              <SelectItem value="income">Income</SelectItem>
+              <SelectItem value="expense">Expense</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+            <SelectTrigger className="flex-1 sm:w-[180px] sm:flex-none">
+              <SelectValue placeholder="Category" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Categories</SelectItem>
+              {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
+                <SelectItem key={value} value={value}>
+                  {label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
-      {/* Table */}
-      <div className="rounded-lg border bg-card">
+      {/* Mobile Card View */}
+      <div className="md:hidden space-y-3">
+        {filteredTransactions.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground bg-card rounded-lg border">
+            No transactions found
+          </div>
+        ) : (
+          filteredTransactions.map((transaction) => (
+            <div key={transaction.id} className="rounded-lg border bg-card p-4 space-y-3">
+              <div className="flex items-start justify-between">
+                <div className="space-y-1">
+                  <Badge
+                    variant={transaction.transaction_type === 'income' ? 'default' : 'destructive'}
+                    className={cn(
+                      transaction.transaction_type === 'income'
+                        ? 'bg-success/10 text-success hover:bg-success/20'
+                        : 'bg-overdue/10 text-overdue hover:bg-overdue/20'
+                    )}
+                  >
+                    {CATEGORY_LABELS[transaction.category]}
+                  </Badge>
+                  <p className="text-xs text-muted-foreground">
+                    {format(new Date(transaction.transaction_date), 'MMM d, yyyy')}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span
+                    className={cn(
+                      'font-mono font-semibold text-lg',
+                      transaction.transaction_type === 'income' ? 'amount-positive' : 'amount-negative'
+                    )}
+                  >
+                    {transaction.transaction_type === 'income' ? '+' : '-'}
+                    {formatCurrency(transaction.amount)}
+                  </span>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="bg-popover">
+                      <DropdownMenuItem onClick={() => setEditingTransaction(transaction)}>
+                        <Pencil className="mr-2 h-4 w-4" />
+                        Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuItem 
+                        onClick={() => setDeletingTransaction(transaction)}
+                        className="text-destructive focus:text-destructive"
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </div>
+              {(transaction.member?.full_name || transaction.notes) && (
+                <div className="text-sm text-muted-foreground">
+                  {transaction.member?.full_name && <p>Member: {transaction.member.full_name}</p>}
+                  {transaction.notes && <p className="truncate">Note: {transaction.notes}</p>}
+                </div>
+              )}
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Desktop Table View */}
+      <div className="hidden md:block rounded-lg border bg-card">
         <Table>
           <TableHeader>
             <TableRow>
