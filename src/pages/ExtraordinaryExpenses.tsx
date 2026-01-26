@@ -252,8 +252,8 @@ function ViewPaymentsDialog({ expense }: { expense: ExtraordinaryExpense }) {
           <Users className="h-4 w-4" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col">
-        <DialogHeader>
+      <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col overflow-hidden">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle>{expense.name} - Member Payments</DialogTitle>
           <DialogDescription>
             {payments.length} members assigned • ARS {totalPaid.toFixed(2)} / ARS {totalOwed.toFixed(2)} collected
@@ -263,8 +263,8 @@ function ViewPaymentsDialog({ expense }: { expense: ExtraordinaryExpense }) {
         {isLoading ? (
           <div className="text-center py-4">Loading...</div>
         ) : (
-          <ScrollArea className="flex-1 h-[60vh]">
-            <div className="min-w-[600px] pr-4">
+          <div className="flex-1 overflow-auto min-h-0">
+            <div className="min-w-[600px]">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -372,7 +372,7 @@ function ViewPaymentsDialog({ expense }: { expense: ExtraordinaryExpense }) {
               </TableBody>
             </Table>
             </div>
-          </ScrollArea>
+          </div>
         )}
       </DialogContent>
     </Dialog>
