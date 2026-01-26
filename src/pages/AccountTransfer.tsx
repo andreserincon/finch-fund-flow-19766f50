@@ -16,12 +16,14 @@ import {
 } from '@/components/ui/select';
 import { useAccountTransfers } from '@/hooks/useAccountTransfers';
 import { AccountType, ACCOUNT_LABELS } from '@/lib/types';
-import { ArrowLeft, ArrowLeftRight } from 'lucide-react';
+import { formatCurrency, getCurrencyForAccount } from '@/lib/utils';
+import { ArrowLeft, ArrowLeftRight, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const transferSchema = z.object({
   transfer_date: z.string().min(1, 'Date is required'),
-  amount: z.number().positive('Amount must be positive'),
+  source_amount: z.number().positive('Amount must be positive'),
+  destination_amount: z.number().positive('Amount must be positive'),
   from_account: z.enum(['bank', 'great_lodge', 'savings']),
   to_account: z.enum(['bank', 'great_lodge', 'savings']),
   notes: z.string().max(500).optional(),
@@ -48,21 +50,62 @@ export default function AccountTransfer() {
       transfer_date: new Date().toISOString().split('T')[0],
       from_account: 'bank',
       to_account: 'great_lodge',
+      source_amount: 0,
+      destination_amount: 0,
     },
   });
 
   const fromAccount = watch('from_account');
   const toAccount = watch('to_account');
+  const sourceAmount = watch('source_amount');
+  const destinationAmount = watch('destination_amount');
+
+  // Check if this is a cross-currency transfer
+  const fromCurrency = getCurrencyForAccount(fromAccount);
+  const toCurrency = getCurrencyForAccount(toAccount);
+  const isCrossCurrencyTransfer = fromCurrency !== toCurrency;
+
+  // Calculate implied exchange rate when both amounts are filled
+  const impliedRate = sourceAmount && destinationAmount 
+    ? (fromCurrency === 'ARS' ? sourceAmount / destinationAmount : destinationAmount / sourceAmount)
+    : null;
 
   const onSubmit = async (data: TransferFormData) => {
+    // For cross-currency transfers, record the destination amount (the amount that arrives)
+    // The notes will include the conversion details
+    const transferAmount = isCrossCurrencyTransfer ? data.destination_amount : data.source_amount;
+    
+    let notes = data.notes || '';
+    if (isCrossCurrencyTransfer) {
+      const conversionNote = `Converted ${formatCurrency(data.source_amount, fromCurrency)} to ${formatCurrency(data.destination_amount, toCurrency)}`;
+      notes = notes ? `${conversionNote}. ${notes}` : conversionNote;
+    }
+
     await addTransfer.mutateAsync({
       transfer_date: data.transfer_date,
-      amount: data.amount,
+      amount: transferAmount,
       from_account: data.from_account,
       to_account: data.to_account,
-      notes: data.notes || null,
+      notes: notes || null,
     });
     navigate('/');
+  };
+
+  // Sync amounts when not cross-currency
+  const handleSourceAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseFloat(e.target.value) || 0;
+    setValue('source_amount', value, { shouldValidate: true });
+    if (!isCrossCurrencyTransfer) {
+      setValue('destination_amount', value, { shouldValidate: true });
+    }
+  };
+
+  const handleDestinationAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseFloat(e.target.value) || 0;
+    setValue('destination_amount', value, { shouldValidate: true });
+    if (!isCrossCurrencyTransfer) {
+      setValue('source_amount', value, { shouldValidate: true });
+    }
   };
 
   return (
@@ -87,6 +130,11 @@ export default function AccountTransfer() {
           </CardTitle>
           <CardDescription>
             Transfer funds between accounts
+            {isCrossCurrencyTransfer && (
+              <span className="block mt-1 text-warning">
+                Currency conversion required: {fromCurrency} → {toCurrency}
+              </span>
+            )}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -96,7 +144,13 @@ export default function AccountTransfer() {
                 <Label>From Account</Label>
                 <Select
                   value={fromAccount}
-                  onValueChange={(value: AccountType) => setValue('from_account', value)}
+                  onValueChange={(value: AccountType) => {
+                    setValue('from_account', value);
+                    // Reset amounts when accounts change
+                    if (!isCrossCurrencyTransfer) {
+                      setValue('destination_amount', sourceAmount);
+                    }
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -115,7 +169,13 @@ export default function AccountTransfer() {
                 <Label>To Account</Label>
                 <Select
                   value={toAccount}
-                  onValueChange={(value: AccountType) => setValue('to_account', value)}
+                  onValueChange={(value: AccountType) => {
+                    setValue('to_account', value);
+                    // Reset amounts when accounts change
+                    if (!isCrossCurrencyTransfer) {
+                      setValue('destination_amount', sourceAmount);
+                    }
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -134,33 +194,73 @@ export default function AccountTransfer() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="transfer_date">Date</Label>
-                <Input
-                  id="transfer_date"
-                  type="date"
-                  {...register('transfer_date')}
-                />
-                {errors.transfer_date && (
-                  <p className="text-sm text-destructive">{errors.transfer_date.message}</p>
+            <div className="space-y-2">
+              <Label htmlFor="transfer_date">Date</Label>
+              <Input
+                id="transfer_date"
+                type="date"
+                {...register('transfer_date')}
+              />
+              {errors.transfer_date && (
+                <p className="text-sm text-destructive">{errors.transfer_date.message}</p>
+              )}
+            </div>
+
+            {isCrossCurrencyTransfer ? (
+              <div className="space-y-4">
+                <div className="p-4 rounded-lg bg-muted/50 border border-border">
+                  <p className="text-sm font-medium mb-3">Currency Conversion</p>
+                  <div className="grid grid-cols-[1fr,auto,1fr] gap-3 items-end">
+                    <div className="space-y-2">
+                      <Label htmlFor="source_amount">Amount ({fromCurrency})</Label>
+                      <Input
+                        id="source_amount"
+                        type="number"
+                        step="0.01"
+                        value={sourceAmount || ''}
+                        onChange={handleSourceAmountChange}
+                        placeholder="0.00"
+                      />
+                    </div>
+                    <ArrowRight className="h-5 w-5 text-muted-foreground mb-2" />
+                    <div className="space-y-2">
+                      <Label htmlFor="destination_amount">Amount ({toCurrency})</Label>
+                      <Input
+                        id="destination_amount"
+                        type="number"
+                        step="0.01"
+                        value={destinationAmount || ''}
+                        onChange={handleDestinationAmountChange}
+                        placeholder="0.00"
+                      />
+                    </div>
+                  </div>
+                  {impliedRate && impliedRate > 0 && (
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Implied rate: 1 USD = {impliedRate.toFixed(2)} ARS
+                    </p>
+                  )}
+                </div>
+                {(errors.source_amount || errors.destination_amount) && (
+                  <p className="text-sm text-destructive">Both amounts are required</p>
                 )}
               </div>
-
+            ) : (
               <div className="space-y-2">
-                <Label htmlFor="amount">Amount ($)</Label>
+                <Label htmlFor="source_amount">Amount ({fromCurrency})</Label>
                 <Input
-                  id="amount"
+                  id="source_amount"
                   type="number"
                   step="0.01"
-                  {...register('amount', { valueAsNumber: true })}
+                  value={sourceAmount || ''}
+                  onChange={handleSourceAmountChange}
                   placeholder="0.00"
                 />
-                {errors.amount && (
-                  <p className="text-sm text-destructive">{errors.amount.message}</p>
+                {errors.source_amount && (
+                  <p className="text-sm text-destructive">{errors.source_amount.message}</p>
                 )}
               </div>
-            </div>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="notes">Notes (Optional)</Label>
