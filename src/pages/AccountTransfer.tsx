@@ -22,8 +22,8 @@ import { Link } from 'react-router-dom';
 const transferSchema = z.object({
   transfer_date: z.string().min(1, 'Date is required'),
   amount: z.number().positive('Amount must be positive'),
-  from_account: z.enum(['bank', 'great_lodge']),
-  to_account: z.enum(['bank', 'great_lodge']),
+  from_account: z.enum(['bank', 'great_lodge', 'savings']),
+  to_account: z.enum(['bank', 'great_lodge', 'savings']),
   notes: z.string().max(500).optional(),
 }).refine(data => data.from_account !== data.to_account, {
   message: 'Source and destination accounts must be different',
@@ -86,7 +86,7 @@ export default function AccountTransfer() {
             Account Transfer
           </CardTitle>
           <CardDescription>
-            Transfer funds between Bank Main Account and Great Lodge Account
+            Transfer funds between accounts
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -102,7 +102,7 @@ export default function AccountTransfer() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {(['bank', 'great_lodge'] as AccountType[]).map((acc) => (
+                    {(['bank', 'great_lodge', 'savings'] as AccountType[]).map((acc) => (
                       <SelectItem key={acc} value={acc}>
                         {ACCOUNT_LABELS[acc]}
                       </SelectItem>
@@ -121,7 +121,7 @@ export default function AccountTransfer() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {(['bank', 'great_lodge'] as AccountType[]).map((acc) => (
+                    {(['bank', 'great_lodge', 'savings'] as AccountType[]).map((acc) => (
                       <SelectItem key={acc} value={acc}>
                         {ACCOUNT_LABELS[acc]}
                       </SelectItem>

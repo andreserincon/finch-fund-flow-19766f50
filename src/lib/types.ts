@@ -1,6 +1,6 @@
 export type FeeType = 'standard' | 'solidarity';
 export type TransactionType = 'income' | 'expense';
-export type AccountType = 'bank' | 'great_lodge';
+export type AccountType = 'bank' | 'great_lodge' | 'savings';
 export type TransactionCategory = 
   | 'monthly_fee'
   | 'extraordinary_income'
@@ -112,4 +112,5 @@ export const FEE_TYPE_LABELS: Record<FeeType, string> = {
 export const ACCOUNT_LABELS: Record<AccountType, string> = {
   bank: 'Bank Main Account',
   great_lodge: 'Great Lodge Account',
+  savings: 'Savings Account (USD)',
 };

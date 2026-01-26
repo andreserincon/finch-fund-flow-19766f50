@@ -42,7 +42,7 @@ const transactionSchema = z.object({
     'other_income',
     'event_payment',
   ]),
-  account: z.enum(['bank', 'great_lodge']),
+  account: z.enum(['bank', 'great_lodge', 'savings']),
   member_id: z.string().optional(),
   notes: z.string().max(500).optional(),
 });
@@ -139,7 +139,7 @@ export function AddTransactionForm({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {(['bank', 'great_lodge'] as AccountType[]).map((acc) => (
+                {(['bank', 'great_lodge', 'savings'] as AccountType[]).map((acc) => (
                   <SelectItem key={acc} value={acc}>
                     {ACCOUNT_LABELS[acc]}
                   </SelectItem>

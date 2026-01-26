@@ -376,7 +376,7 @@ export type Database = {
       is_treasurer: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
-      account_type: "bank" | "great_lodge"
+      account_type: "bank" | "great_lodge" | "savings"
       fee_type: "standard" | "solidarity"
       transaction_category:
         | "monthly_fee"
@@ -516,7 +516,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      account_type: ["bank", "great_lodge"],
+      account_type: ["bank", "great_lodge", "savings"],
       fee_type: ["standard", "solidarity"],
       transaction_category: [
         "monthly_fee",

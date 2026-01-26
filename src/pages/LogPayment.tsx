@@ -37,7 +37,7 @@ const paymentSchema = z.object({
   ]),
   member_id: z.string().optional(),
   event_id: z.string().optional(),
-  account: z.enum(['bank', 'great_lodge']),
+  account: z.enum(['bank', 'great_lodge', 'savings']),
   notes: z.string().max(500).optional(),
 });
 
@@ -173,7 +173,7 @@ export default function LogPayment() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {(['bank', 'great_lodge'] as AccountType[]).map((acc) => (
+                  {(['bank', 'great_lodge', 'savings'] as AccountType[]).map((acc) => (
                     <SelectItem key={acc} value={acc}>
                       {ACCOUNT_LABELS[acc]}
                     </SelectItem>
