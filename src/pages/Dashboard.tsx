@@ -7,6 +7,7 @@ import { StatCard } from '@/components/dashboard/StatCard';
 import { MemberStatusBadge } from '@/components/dashboard/MemberStatusBadge';
 import { MemberFeeMatrix } from '@/components/dashboard/MemberFeeMatrix';
 import { useAccountTransfers } from '@/hooks/useAccountTransfers';
+import { useLoans } from '@/hooks/useLoans';
 import { AddTransactionForm } from '@/components/forms/AddTransactionForm';
 import { 
   Wallet, 
@@ -16,7 +17,8 @@ import {
   TrendingDown,
   ArrowRight,
   Building,
-  Landmark
+  Landmark,
+  HandCoins
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -29,7 +31,7 @@ export default function Dashboard() {
   const { transactions, isLoading: transactionsLoading } = useTransactions();
   const { currentMonthFees, isLoading: feesLoading } = useMonthlyFees();
   const { transfers, isLoading: transfersLoading } = useAccountTransfers();
-
+  const { loans, isLoading: loansLoading } = useLoans();
   // Query unpaid event amounts per member
   const { data: memberEventDebts = {} } = useQuery({
     queryKey: ['member-event-debts'],
@@ -52,7 +54,15 @@ export default function Dashboard() {
     },
   });
 
-  const isLoading = membersLoading || transactionsLoading || feesLoading || transfersLoading;
+  const isLoading = membersLoading || transactionsLoading || feesLoading || transfersLoading || loansLoading;
+
+  // Calculate total loans due (ARS and USD separately)
+  const activeLoans = loans.filter(l => l.status === 'active');
+  const loansARS = activeLoans.filter(l => l.account === 'bank');
+  const loansUSD = activeLoans.filter(l => l.account === 'savings');
+  const totalLoansDueARS = loansARS.reduce((sum, l) => sum + (l.amount - l.amount_paid), 0);
+  const totalLoansDueUSD = loansUSD.reduce((sum, l) => sum + (l.amount - l.amount_paid), 0);
+
 
   // Calculate account balances
   const bankBalance = transactions
@@ -178,13 +188,20 @@ export default function Dashboard() {
       </div>
 
       {/* Key Metrics - Row 2 */}
-      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 grid-cols-2 lg:grid-cols-5">
         <StatCard
           title="Savings Account"
           value={formatCurrency(savingsBalance, 'USD')}
           subtitle="USD savings"
           icon={<Wallet className="h-8 w-8 text-success/20" />}
           variant={savingsBalance >= 0 ? 'success' : 'danger'}
+        />
+        <StatCard
+          title="Loans Due (USD)"
+          value={formatCurrency(totalLoansDueUSD, 'USD')}
+          subtitle={`${loansUSD.length} active loan${loansUSD.length !== 1 ? 's' : ''}`}
+          icon={<HandCoins className="h-8 w-8 text-warning/20" />}
+          variant={totalLoansDueUSD > 0 ? 'warning' : 'success'}
         />
         <StatCard
           title="Monthly Flow"
