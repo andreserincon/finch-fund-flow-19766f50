@@ -1,6 +1,5 @@
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -55,23 +54,21 @@ function AuthRoute({ children }: { children: React.ReactNode }) {
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/auth" element={<AuthRoute><Auth /></AuthRoute>} />
-          <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-          <Route path="/members" element={<ProtectedRoute><Members /></ProtectedRoute>} />
-          <Route path="/transactions" element={<ProtectedRoute><Transactions /></ProtectedRoute>} />
-          <Route path="/log-payment" element={<ProtectedRoute><LogPayment /></ProtectedRoute>} />
-          <Route path="/log-expense" element={<ProtectedRoute><LogExpense /></ProtectedRoute>} />
-          <Route path="/monthly-fees" element={<ProtectedRoute><MonthlyFees /></ProtectedRoute>} />
-          <Route path="/expense-categories" element={<ProtectedRoute><ExtraordinaryExpenses /></ProtectedRoute>} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
+    <Toaster />
+    <Sonner />
+    <BrowserRouter>
+      <Routes>
+        <Route path="/auth" element={<AuthRoute><Auth /></AuthRoute>} />
+        <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+        <Route path="/members" element={<ProtectedRoute><Members /></ProtectedRoute>} />
+        <Route path="/transactions" element={<ProtectedRoute><Transactions /></ProtectedRoute>} />
+        <Route path="/log-payment" element={<ProtectedRoute><LogPayment /></ProtectedRoute>} />
+        <Route path="/log-expense" element={<ProtectedRoute><LogExpense /></ProtectedRoute>} />
+        <Route path="/monthly-fees" element={<ProtectedRoute><MonthlyFees /></ProtectedRoute>} />
+        <Route path="/expense-categories" element={<ProtectedRoute><ExtraordinaryExpenses /></ProtectedRoute>} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </BrowserRouter>
   </QueryClientProvider>
 );
 
