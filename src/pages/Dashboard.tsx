@@ -187,7 +187,7 @@ export default function Dashboard() {
                   <div className="flex-1">
                     <p className="font-medium text-sm">{member.full_name}</p>
                     <p className="text-xs text-muted-foreground">
-                      Owes {formatCurrency(member.total_fees_owed - member.current_balance)}
+                      Owes {formatCurrency(member.total_fees_owed - member.total_paid)}
                     </p>
                   </div>
                   <MemberStatusBadge
