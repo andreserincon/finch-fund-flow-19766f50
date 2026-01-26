@@ -1,11 +1,9 @@
 import { useState } from 'react';
 import { useMembers } from '@/hooks/useMembers';
 import { useMonthlyFees } from '@/hooks/useMonthlyFees';
-import { useAuth } from '@/hooks/useAuth';
 import { AddMemberForm } from '@/components/forms/AddMemberForm';
 import { EditMemberForm } from '@/components/forms/EditMemberForm';
 import { DeleteMemberDialog } from '@/components/forms/DeleteMemberDialog';
-import { ResetPasswordDialog } from '@/components/forms/ResetPasswordDialog';
 import { MemberStatusBadge } from '@/components/dashboard/MemberStatusBadge';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -29,24 +27,19 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Search, Phone, MoreHorizontal, Pencil, Trash2, KeyRound } from 'lucide-react';
+import { Search, Phone, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { FEE_TYPE_LABELS, MemberBalance } from '@/lib/types';
 
 export default function Members() {
   const { memberBalances, isLoading } = useMembers();
   const { currentMonthFees, isLoading: feesLoading } = useMonthlyFees();
-  const { user, profile } = useAuth();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [editMember, setEditMember] = useState<MemberBalance | null>(null);
   const [deleteMember, setDeleteMember] = useState<MemberBalance | null>(null);
-  const [showResetPassword, setShowResetPassword] = useState(false);
-  const [resetPasswordEmail, setResetPasswordEmail] = useState<string | undefined>(undefined);
-  const [resetPasswordName, setResetPasswordName] = useState<string | undefined>(undefined);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('es-AR', {
@@ -98,23 +91,7 @@ export default function Members() {
             {memberBalances.filter((m) => m.is_active).length} active members
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              setResetPasswordEmail(undefined);
-              setResetPasswordName(undefined);
-              setShowResetPassword(true);
-            }}
-            className="gap-2"
-          >
-            <KeyRound className="h-4 w-4" />
-            <span className="hidden sm:inline">Reset Password</span>
-            <span className="sm:hidden">Reset</span>
-          </Button>
-          <AddMemberForm />
-        </div>
+        <AddMemberForm />
       </div>
 
       {/* Filters */}
@@ -179,7 +156,6 @@ export default function Members() {
                         <Pencil className="mr-2 h-4 w-4" />
                         Edit
                       </DropdownMenuItem>
-                      <DropdownMenuSeparator />
                       <DropdownMenuItem 
                         onClick={() => setDeleteMember(member)}
                         className="text-destructive focus:text-destructive"
@@ -300,7 +276,6 @@ export default function Members() {
                           <Pencil className="mr-2 h-4 w-4" />
                           Edit
                         </DropdownMenuItem>
-                        <DropdownMenuSeparator />
                         <DropdownMenuItem 
                           onClick={() => setDeleteMember(member)}
                           className="text-destructive focus:text-destructive"
@@ -328,19 +303,6 @@ export default function Members() {
         member={deleteMember}
         open={!!deleteMember}
         onOpenChange={(open) => !open && setDeleteMember(null)}
-      />
-
-      <ResetPasswordDialog
-        open={showResetPassword}
-        onOpenChange={(open) => {
-          setShowResetPassword(open);
-          if (!open) {
-            setResetPasswordEmail(undefined);
-            setResetPasswordName(undefined);
-          }
-        }}
-        userEmail={resetPasswordEmail}
-        userName={resetPasswordName}
       />
     </div>
   );
