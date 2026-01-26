@@ -60,9 +60,9 @@ export default function Members() {
   const [editMember, setEditMember] = useState<MemberBalance | null>(null);
   const [deleteMember, setDeleteMember] = useState<MemberBalance | null>(null);
 
-  // Query unpaid event amounts per member
-  const { data: memberEventDebts = {} } = useQuery({
-    queryKey: ['member-event-debts'],
+  // Query event amounts per member (owed and paid)
+  const { data: memberEventData = { owed: {}, paid: {} } } = useQuery({
+    queryKey: ['member-event-data'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('event_member_payments')
@@ -70,15 +70,14 @@ export default function Members() {
       
       if (error) throw error;
       
-      // Aggregate unpaid event amounts per member
-      const debts: Record<string, number> = {};
+      // Aggregate event amounts per member
+      const owed: Record<string, number> = {};
+      const paid: Record<string, number> = {};
       data?.forEach((payment) => {
-        const unpaid = payment.amount_owed - payment.amount_paid;
-        if (unpaid > 0) {
-          debts[payment.member_id] = (debts[payment.member_id] || 0) + unpaid;
-        }
+        owed[payment.member_id] = (owed[payment.member_id] || 0) + payment.amount_owed;
+        paid[payment.member_id] = (paid[payment.member_id] || 0) + payment.amount_paid;
       });
-      return debts;
+      return { owed, paid };
     },
   });
 
@@ -93,15 +92,32 @@ export default function Members() {
     return currentMonthFees[feeType] ?? 0;
   };
 
-  // Get event debt for a member
-  const getEventDebt = (memberId: string) => {
-    return memberEventDebts[memberId] || 0;
+  // Get total event fees owed for a member
+  const getEventOwed = (memberId: string) => {
+    return memberEventData.owed[memberId] || 0;
+  };
+
+  // Get total event fees paid by a member
+  const getEventPaid = (memberId: string) => {
+    return memberEventData.paid[memberId] || 0;
+  };
+
+  // Get monthly fees owed (total_fees_owed minus event fees)
+  const getMonthlyOwed = (member: MemberBalance) => {
+    const eventOwed = getEventOwed(member.member_id);
+    return member.total_fees_owed - eventOwed;
+  };
+
+  // Get events balance (event fees paid - event fees owed)
+  const getEventsBalance = (memberId: string) => {
+    return getEventPaid(memberId) - getEventOwed(memberId);
   };
 
   // Calculate overall balance (monthly + events)
   const getOverallBalance = (member: MemberBalance) => {
-    const eventDebt = getEventDebt(member.member_id);
-    return member.current_balance - eventDebt;
+    const monthlyOwed = getMonthlyOwed(member);
+    const eventOwed = getEventOwed(member.member_id);
+    return member.total_paid - monthlyOwed - eventOwed;
   };
 
   // Determine payment status based on overall balance
@@ -428,23 +444,23 @@ export default function Members() {
                   <TableCell className="text-right font-mono">
                     <span
                       className={
-                        member.current_balance >= 0
+                        (member.total_paid - getMonthlyOwed(member)) >= 0
                           ? 'amount-positive'
                           : 'amount-negative'
                       }
                     >
-                      {formatCurrency(member.current_balance)}
+                      {formatCurrency(member.total_paid - getMonthlyOwed(member))}
                     </span>
                   </TableCell>
                   <TableCell className="text-right font-mono">
                     <span
                       className={
-                        -getEventDebt(member.member_id) >= 0
+                        getEventsBalance(member.member_id) >= 0
                           ? 'amount-positive'
                           : 'amount-negative'
                       }
                     >
-                      {formatCurrency(-getEventDebt(member.member_id))}
+                      {formatCurrency(getEventsBalance(member.member_id))}
                     </span>
                   </TableCell>
                   <TableCell className="text-right font-mono">
