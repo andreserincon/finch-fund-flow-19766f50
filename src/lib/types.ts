@@ -48,6 +48,7 @@ export interface MemberBalance {
   current_balance: number;
   months_since_join: number;
   total_fees_owed: number;
+  total_paid: number;
 }
 
 export interface OrganizationSetting {
