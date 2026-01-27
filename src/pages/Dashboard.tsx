@@ -170,8 +170,22 @@ export default function Dashboard() {
       </div>
 
 
-      {/* Key Metrics - Row 1 */}
-      <div className="grid gap-3 grid-cols-2 lg:grid-cols-3">
+      {/* Key Metrics - Balance Summary */}
+      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          title={t('dashboard.totalARSBalance')}
+          value={formatCurrency(totalARSBalance)}
+          subtitle={t('dashboard.bankLodgeCombined')}
+          icon={<Wallet className="h-8 w-8 text-primary/20" />}
+          variant={totalARSBalance >= 0 ? 'success' : 'danger'}
+        />
+        <StatCard
+          title={t('dashboard.savingsAccount')}
+          value={formatCurrency(savingsBalance, 'USD')}
+          subtitle={t('dashboard.usdSavings')}
+          icon={<Wallet className="h-8 w-8 text-success/20" />}
+          variant={savingsBalance >= 0 ? 'success' : 'danger'}
+        />
         <StatCard
           title={t('dashboard.bankMainAccount')}
           value={formatCurrency(bankBalance)}
@@ -186,24 +200,10 @@ export default function Dashboard() {
           icon={<Building className="h-8 w-8 text-primary/20" />}
           variant={greatLodgeBalance >= 0 ? 'success' : 'danger'}
         />
-        <StatCard
-          title={t('dashboard.totalARSBalance')}
-          value={formatCurrency(totalARSBalance)}
-          subtitle={t('dashboard.bankLodgeCombined')}
-          icon={<Wallet className="h-8 w-8 text-primary/20" />}
-          variant={totalARSBalance >= 0 ? 'success' : 'danger'}
-        />
       </div>
 
-      {/* Key Metrics - Row 2 */}
+      {/* Key Metrics - Activity */}
       <div className="grid gap-3 grid-cols-2 lg:grid-cols-3">
-        <StatCard
-          title={t('dashboard.savingsAccount')}
-          value={formatCurrency(savingsBalance, 'USD')}
-          subtitle={t('dashboard.usdSavings')}
-          icon={<Wallet className="h-8 w-8 text-success/20" />}
-          variant={savingsBalance >= 0 ? 'success' : 'danger'}
-        />
         <StatCard
           title={t('dashboard.loansDueUSD')}
           value={formatCurrency(totalLoansDueUSD, 'USD')}
