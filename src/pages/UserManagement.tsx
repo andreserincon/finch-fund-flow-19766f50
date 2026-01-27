@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -7,11 +8,13 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useUserRoles, AppRole } from '@/hooks/useUserRoles';
-import { Users, Shield, Eye, User, X } from 'lucide-react';
+import { CreateUserDialog } from '@/components/users/CreateUserDialog';
+import { Users, Shield, Eye, User, X, UserPlus } from 'lucide-react';
 
 export default function UserManagement() {
   const { t } = useTranslation();
   const { users, isLoading, assignRole, removeRole } = useUserRoles();
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
 
   const getRoleBadge = (role: AppRole | null) => {
     if (!role) {
@@ -79,6 +82,10 @@ export default function UserManagement() {
               {t('userManagement.subtitle')}
             </p>
           </div>
+          <Button onClick={() => setIsCreateDialogOpen(true)}>
+            <UserPlus className="h-4 w-4 mr-2" />
+            {t('userManagement.createUser', 'Crear Usuario')}
+          </Button>
         </div>
 
         <div className="grid gap-4 md:grid-cols-3">
@@ -199,6 +206,11 @@ export default function UserManagement() {
             )}
           </CardContent>
         </Card>
+
+        <CreateUserDialog
+          open={isCreateDialogOpen}
+          onOpenChange={setIsCreateDialogOpen}
+        />
       </div>
     </MainLayout>
   );
