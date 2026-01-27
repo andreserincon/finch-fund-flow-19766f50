@@ -6,7 +6,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { MemberFeeMatrix } from '@/components/dashboard/MemberFeeMatrix';
-import { InsightsAgent } from '@/components/dashboard/InsightsAgent';
+
 import { useAccountTransfers } from '@/hooks/useAccountTransfers';
 import { useLoans } from '@/hooks/useLoans';
 import { AddTransactionForm } from '@/components/forms/AddTransactionForm';
@@ -25,7 +25,7 @@ import { format } from 'date-fns';
 import { es, enUS } from 'date-fns/locale';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { CATEGORY_LABELS } from '@/lib/types';
+
 
 export default function Dashboard() {
   const { t, i18n } = useTranslation();
@@ -155,26 +155,6 @@ export default function Dashboard() {
     );
   }
 
-  // Prepare context for insights agent
-  const insightsContext = {
-    bankBalance,
-    greatLodgeBalance,
-    savingsBalance,
-    totalARSBalance,
-    monthlyIncome,
-    monthlyExpenses,
-    activeMembersCount,
-    membersUnpaid,
-    membersOverdue,
-    totalLoansDueARS,
-    totalLoansDueUSD,
-    recentTransactions: transactions.slice(0, 5).map(t => ({
-      category: CATEGORY_LABELS[t.category],
-      amount: t.amount,
-      transaction_type: t.transaction_type,
-      transaction_date: t.transaction_date,
-    })),
-  };
 
   return (
     <div className="space-y-6 md:space-y-8 animate-fade-in">
@@ -189,8 +169,6 @@ export default function Dashboard() {
         {isAdmin && <AddTransactionForm triggerLabel={t('dashboard.logTransaction')} />}
       </div>
 
-      {/* Insights Agent */}
-      <InsightsAgent context={insightsContext} />
 
       {/* Key Metrics - Row 1 */}
       <div className="grid gap-3 grid-cols-2 lg:grid-cols-3">
