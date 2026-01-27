@@ -10,6 +10,7 @@ import { InsightsAgent } from '@/components/dashboard/InsightsAgent';
 import { useAccountTransfers } from '@/hooks/useAccountTransfers';
 import { useLoans } from '@/hooks/useLoans';
 import { AddTransactionForm } from '@/components/forms/AddTransactionForm';
+import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { 
   Wallet, 
   Users, 
@@ -33,6 +34,7 @@ export default function Dashboard() {
   const { currentMonthFees, isLoading: feesLoading } = useMonthlyFees();
   const { transfers, isLoading: transfersLoading } = useAccountTransfers();
   const { loans, isLoading: loansLoading } = useLoans();
+  const { isAdmin } = useIsAdmin();
   
   const dateLocale = i18n.language === 'es' ? es : enUS;
 
@@ -184,7 +186,7 @@ export default function Dashboard() {
             {t('dashboard.financialOverview', { month: format(new Date(), 'MMMM yyyy', { locale: dateLocale }) })}
           </p>
         </div>
-        <AddTransactionForm triggerLabel={t('dashboard.logTransaction')} />
+        {isAdmin && <AddTransactionForm triggerLabel={t('dashboard.logTransaction')} />}
       </div>
 
       {/* Insights Agent */}
