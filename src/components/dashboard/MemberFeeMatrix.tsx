@@ -28,11 +28,11 @@ export function MemberFeeMatrix() {
 
   const isLoading = membersLoading || feesLoading || historyLoading;
 
-  // Generate array of months: 3 months for mobile (2 past + current), 7 months for desktop (3 past, current, 3 future)
+  // Generate array of months: 1 month for mobile (current only), 7 months for desktop (3 past, current, 3 future)
   const months = useMemo(() => {
     const now = new Date();
     const result = [];
-    const startOffset = isMobile ? -2 : -3;
+    const startOffset = isMobile ? 0 : -3;
     const endOffset = isMobile ? 0 : 3;
     
     for (let i = startOffset; i <= endOffset; i++) {
