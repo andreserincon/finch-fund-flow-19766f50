@@ -3,6 +3,7 @@ import { format, subMonths, addMonths, startOfMonth, isBefore, isAfter, parseISO
 import { useMembers } from '@/hooks/useMembers';
 import { useMonthlyFees } from '@/hooks/useMonthlyFees';
 import { useMemberFeeTypeHistory } from '@/hooks/useMemberFeeTypeHistory';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Table,
@@ -20,17 +21,21 @@ type PaymentStatus = 'paid' | 'overdue' | 'current_unpaid' | 'future' | 'not_mem
 
 export function MemberFeeMatrix() {
   const [showAllMembers, setShowAllMembers] = useState(false);
+  const isMobile = useIsMobile();
   const { memberBalances, isLoading: membersLoading } = useMembers();
   const { monthlyFees, isLoading: feesLoading } = useMonthlyFees();
   const { getFeeTypeForMonth: getHistoricalFeeType, isLoading: historyLoading } = useMemberFeeTypeHistory();
 
   const isLoading = membersLoading || feesLoading || historyLoading;
 
-  // Generate array of 7 months: 3 past, current, 3 future
+  // Generate array of months: 3 months for mobile (2 past + current), 7 months for desktop (3 past, current, 3 future)
   const months = useMemo(() => {
     const now = new Date();
     const result = [];
-    for (let i = -3; i <= 3; i++) {
+    const startOffset = isMobile ? -2 : -3;
+    const endOffset = isMobile ? 0 : 3;
+    
+    for (let i = startOffset; i <= endOffset; i++) {
       const monthDate = startOfMonth(i < 0 ? subMonths(now, Math.abs(i)) : i > 0 ? addMonths(now, i) : now);
       result.push({
         date: monthDate,
@@ -43,7 +48,7 @@ export function MemberFeeMatrix() {
       });
     }
     return result;
-  }, []);
+  }, [isMobile]);
 
   // Get fee rate for a specific month and fee type
   const getFeeForMonth = (monthKey: string, feeType: 'standard' | 'solidarity'): number => {
@@ -235,7 +240,7 @@ export function MemberFeeMatrix() {
             <TableBody>
               {displayedMembers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={months.length + 1} className="text-center py-8 text-muted-foreground">
                     {showAllMembers ? 'No active members' : 'All members are up to date!'}
                   </TableCell>
                 </TableRow>
