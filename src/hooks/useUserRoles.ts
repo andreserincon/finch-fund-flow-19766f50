@@ -46,7 +46,9 @@ export function useUserRoles() {
       toast.success(t('userManagement.roleAssigned'));
     },
     onError: (error) => {
-      console.error('Error assigning role:', error);
+      if (import.meta.env.DEV) {
+        console.error('Error assigning role:', error);
+      }
       toast.error(t('userManagement.roleAssignError'));
     },
   });
@@ -65,7 +67,9 @@ export function useUserRoles() {
       toast.success(t('userManagement.roleRemoved'));
     },
     onError: (error) => {
-      console.error('Error removing role:', error);
+      if (import.meta.env.DEV) {
+        console.error('Error removing role:', error);
+      }
       toast.error(t('userManagement.roleRemoveError'));
     },
   });
