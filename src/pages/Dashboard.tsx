@@ -180,13 +180,6 @@ export default function Dashboard() {
           variant={totalARSBalance >= 0 ? 'success' : 'danger'}
         />
         <StatCard
-          title={t('dashboard.savingsAccount')}
-          value={formatCurrency(savingsBalance, 'USD')}
-          subtitle={t('dashboard.usdSavings')}
-          icon={<Wallet className="h-8 w-8 text-success/20" />}
-          variant={savingsBalance >= 0 ? 'success' : 'danger'}
-        />
-        <StatCard
           title={t('dashboard.bankMainAccount')}
           value={formatCurrency(bankBalance)}
           subtitle={t('dashboard.primaryBankBalance')}
@@ -199,6 +192,13 @@ export default function Dashboard() {
           subtitle={t('dashboard.lodgeBalance')}
           icon={<Building className="h-8 w-8 text-primary/20" />}
           variant={greatLodgeBalance >= 0 ? 'success' : 'danger'}
+        />
+        <StatCard
+          title={t('dashboard.savingsAccount')}
+          value={formatCurrency(savingsBalance, 'USD')}
+          subtitle={t('dashboard.usdSavings')}
+          icon={<Wallet className="h-8 w-8 text-success/20" />}
+          variant={savingsBalance >= 0 ? 'success' : 'danger'}
         />
       </div>
 
