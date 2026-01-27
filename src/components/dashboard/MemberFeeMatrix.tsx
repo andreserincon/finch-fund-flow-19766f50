@@ -215,8 +215,8 @@ export function MemberFeeMatrix() {
         </div>
       </CardHeader>
       <CardContent className="p-3 md:p-6">
-        <div className="overflow-x-auto -mx-3 md:mx-0">
-          <div className="min-w-[600px] px-3 md:px-0">
+        <div className={cn("overflow-x-auto", !isMobile && "-mx-3 md:mx-0")}>
+          <div className={cn(!isMobile && "min-w-[600px]", "px-3 md:px-0")}>
             <Table>
               <TableHeader>
               <TableRow>
