@@ -22,7 +22,6 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es, enUS } from 'date-fns/locale';
-import { cn } from '@/lib/utils';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { CATEGORY_LABELS } from '@/lib/types';
@@ -117,8 +116,8 @@ export default function Dashboard() {
     .filter(t => new Date(t.transaction_date) >= monthStart && t.transaction_type === 'expense')
     .reduce((sum, t) => sum + t.amount, 0);
 
-  const recentTransactions = transactions.slice(0, 5);
-  
+
+
   // Filter members: owe more than 1 monthly fee OR have unpaid events
   const overdueMembers = memberBalances
     .filter(m => {
@@ -167,7 +166,7 @@ export default function Dashboard() {
     membersOverdue,
     totalLoansDueARS,
     totalLoansDueUSD,
-    recentTransactions: recentTransactions.map(t => ({
+    recentTransactions: transactions.slice(0, 5).map(t => ({
       category: CATEGORY_LABELS[t.category],
       amount: t.amount,
       transaction_type: t.transaction_type,
@@ -259,57 +258,8 @@ export default function Dashboard() {
         />
       </div>
 
-      {/* Two Column Layout */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Recent Transactions */}
-        <div className="stat-card">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="section-header mb-0">{t('dashboard.recentTransactions')}</h2>
-            <Link to="/transactions">
-              <Button variant="ghost" size="sm">
-                {t('common.viewAll')} <ArrowRight className="ml-1 h-4 w-4" />
-              </Button>
-            </Link>
-          </div>
-          {recentTransactions.length === 0 ? (
-            <p className="text-muted-foreground text-center py-8">
-              {t('dashboard.noTransactionsYet')}
-            </p>
-          ) : (
-            <div className="space-y-3">
-              {recentTransactions.map((transaction) => (
-                <div
-                  key={transaction.id}
-                  className="flex items-center justify-between py-2 border-b border-border/50 last:border-0"
-                >
-                  <div className="flex-1">
-                    <p className="font-medium text-sm">
-                      {CATEGORY_LABELS[transaction.category]}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {format(new Date(transaction.transaction_date), 'MMM d, yyyy', { locale: dateLocale })}
-                      {transaction.member && ` • ${transaction.member.full_name}`}
-                    </p>
-                  </div>
-                  <span
-                    className={cn(
-                      'font-mono text-sm font-semibold',
-                      transaction.transaction_type === 'income'
-                        ? 'amount-positive'
-                        : 'amount-negative'
-                    )}
-                  >
-                    {transaction.transaction_type === 'income' ? '+' : '-'}
-                    {formatCurrency(transaction.amount)}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Overdue Members */}
-        <div className="stat-card">
+      {/* Overdue Members */}
+      <div className="stat-card">
           <div className="flex items-center justify-between mb-4">
             <h2 className="section-header mb-0">{t('dashboard.membersRequiringAttention')}</h2>
             <Link to="/members">
@@ -375,7 +325,6 @@ export default function Dashboard() {
             </div>
           )}
         </div>
-      </div>
 
       {/* Member Fee Matrix */}
       <MemberFeeMatrix />
