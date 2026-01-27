@@ -51,12 +51,16 @@ export function useAuth() {
         .maybeSingle();
 
       if (error) {
-        console.error('Error fetching profile:', error);
+        if (import.meta.env.DEV) {
+          console.error('Error fetching profile:', error);
+        }
       } else {
         setProfile(data as Profile | null);
       }
     } catch (err) {
-      console.error('Error in fetchProfile:', err);
+      if (import.meta.env.DEV) {
+        console.error('Error in fetchProfile:', err);
+      }
     } finally {
       setLoading(false);
     }

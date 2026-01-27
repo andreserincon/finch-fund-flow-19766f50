@@ -130,7 +130,9 @@ export default function LogPayment() {
 
       navigate('/');
     } catch (error) {
-      console.error('Error logging payment:', error);
+      if (import.meta.env.DEV) {
+        console.error('Error logging payment:', error);
+      }
     }
   };
 
