@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { NavLink } from '@/components/NavLink';
+import { useIsAdmin } from '@/hooks/useIsAdmin';
 import {
   Sidebar,
   SidebarContent,
@@ -30,6 +31,7 @@ import { useAuth } from '@/hooks/useAuth';
 export function AppSidebar() {
   const { signOut, user } = useAuth();
   const { t } = useTranslation();
+  const { isAdmin } = useIsAdmin();
 
   const mainNavItems = [
     { title: t('nav.dashboard'), url: '/', icon: LayoutDashboard },
@@ -47,6 +49,9 @@ export function AppSidebar() {
   const settingsItems = [
     { title: t('nav.monthlyFees'), url: '/monthly-fees', icon: Settings },
     { title: t('nav.events'), url: '/expense-categories', icon: Wallet },
+  ];
+
+  const adminSettingsItems = [
     { title: t('nav.userManagement'), url: '/user-management', icon: UserCog },
   ];
 
@@ -94,13 +99,39 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
+        {isAdmin && (
+          <SidebarGroup>
+            <SidebarGroupLabel className="text-sidebar-foreground/50 text-xs uppercase tracking-wider px-3">
+              {t('nav.quickActions')}
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {actionItems.map((item) => (
+                  <SidebarMenuItem key={item.url}>
+                    <SidebarMenuButton asChild>
+                      <NavLink 
+                        to={item.url} 
+                        className="sidebar-nav-item"
+                        activeClassName="active"
+                      >
+                        <item.icon className="h-5 w-5" />
+                        <span>{item.title}</span>
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+
         <SidebarGroup>
           <SidebarGroupLabel className="text-sidebar-foreground/50 text-xs uppercase tracking-wider px-3">
-            {t('nav.quickActions')}
+            {t('nav.settings')}
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {actionItems.map((item) => (
+              {settingsItems.map((item) => (
                 <SidebarMenuItem key={item.url}>
                   <SidebarMenuButton asChild>
                     <NavLink 
@@ -114,17 +145,7 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-sidebar-foreground/50 text-xs uppercase tracking-wider px-3">
-            {t('nav.settings')}
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {settingsItems.map((item) => (
+              {isAdmin && adminSettingsItems.map((item) => (
                 <SidebarMenuItem key={item.url}>
                   <SidebarMenuButton asChild>
                     <NavLink 
@@ -149,7 +170,9 @@ export function AppSidebar() {
             <p className="text-sm font-medium text-sidebar-foreground truncate">
               {user?.email}
             </p>
-            <p className="text-xs text-sidebar-foreground/60">{t('nav.treasurer')}</p>
+            <p className="text-xs text-sidebar-foreground/60">
+              {isAdmin ? t('nav.treasurer') : t('nav.viewer')}
+            </p>
           </div>
           <Button
             variant="ghost"

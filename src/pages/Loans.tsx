@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useLoans } from '@/hooks/useLoans';
+import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { AddLoanDialog } from '@/components/loans/AddLoanDialog';
 import { MarkPaidDialog } from '@/components/loans/MarkPaidDialog';
 import { DeleteLoanDialog } from '@/components/loans/DeleteLoanDialog';
@@ -37,6 +38,7 @@ import { formatCurrency, getCurrencyForAccount, cn } from '@/lib/utils';
 
 export default function Loans() {
   const { loans, isLoading, cancelLoan } = useLoans();
+  const { isAdmin } = useIsAdmin();
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [markingPaidLoan, setMarkingPaidLoan] = useState<Loan | null>(null);
@@ -93,10 +95,12 @@ export default function Loans() {
             Manage member loans and track repayments
           </p>
         </div>
-        <Button onClick={() => setShowAddDialog(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          New Loan
-        </Button>
+        {isAdmin && (
+          <Button onClick={() => setShowAddDialog(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            New Loan
+          </Button>
+        )}
       </div>
 
       {/* Summary Cards */}
@@ -185,57 +189,63 @@ export default function Loans() {
                   </div>
                   <div className="flex items-center gap-2">
                     {getStatusBadge(loan.status)}
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="bg-popover">
-                        {loan.status === 'active' && (
-                          <>
-                            <DropdownMenuItem onClick={() => setAddingPaymentLoan(loan)}>
-                              <DollarSign className="mr-2 h-4 w-4" />
-                              Add Payment
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => setViewingHistoryLoan(loan)}>
-                              <History className="mr-2 h-4 w-4" />
-                              View History
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => setMarkingPaidLoan(loan)}>
-                              <CheckCircle className="mr-2 h-4 w-4" />
-                              Mark as Fully Paid
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => cancelLoan.mutate(loan.id)}
-                              className="text-warning focus:text-warning"
-                            >
-                              <XCircle className="mr-2 h-4 w-4" />
-                              Cancel Loan
-                            </DropdownMenuItem>
-                          </>
-                        )}
-                        {loan.status === 'paid' && (
-                          <>
-                            <DropdownMenuItem onClick={() => setViewingHistoryLoan(loan)}>
-                              <History className="mr-2 h-4 w-4" />
-                              View History
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => setRevertingLoan(loan)}>
-                              <Undo2 className="mr-2 h-4 w-4" />
-                              Revert to Active
-                            </DropdownMenuItem>
-                          </>
-                        )}
-                        <DropdownMenuItem
-                          onClick={() => setDeletingLoan(loan)}
-                          className="text-destructive focus:text-destructive"
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    {isAdmin ? (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="bg-popover">
+                          {loan.status === 'active' && (
+                            <>
+                              <DropdownMenuItem onClick={() => setAddingPaymentLoan(loan)}>
+                                <DollarSign className="mr-2 h-4 w-4" />
+                                Add Payment
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => setViewingHistoryLoan(loan)}>
+                                <History className="mr-2 h-4 w-4" />
+                                View History
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => setMarkingPaidLoan(loan)}>
+                                <CheckCircle className="mr-2 h-4 w-4" />
+                                Mark as Fully Paid
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => cancelLoan.mutate(loan.id)}
+                                className="text-warning focus:text-warning"
+                              >
+                                <XCircle className="mr-2 h-4 w-4" />
+                                Cancel Loan
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                          {loan.status === 'paid' && (
+                            <>
+                              <DropdownMenuItem onClick={() => setViewingHistoryLoan(loan)}>
+                                <History className="mr-2 h-4 w-4" />
+                                View History
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => setRevertingLoan(loan)}>
+                                <Undo2 className="mr-2 h-4 w-4" />
+                                Revert to Active
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                          <DropdownMenuItem
+                            onClick={() => setDeletingLoan(loan)}
+                            className="text-destructive focus:text-destructive"
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    ) : (
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setViewingHistoryLoan(loan)}>
+                        <History className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
                 </div>
                 
@@ -336,60 +346,68 @@ export default function Loans() {
                     <TableCell className="max-w-[150px] truncate text-muted-foreground">
                       {loan.notes || '—'}
                     </TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreHorizontal className="h-4 w-4" />
-                            <span className="sr-only">Open menu</span>
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="bg-popover">
-                          {loan.status === 'active' && (
-                            <>
-                              <DropdownMenuItem onClick={() => setAddingPaymentLoan(loan)}>
-                                <DollarSign className="mr-2 h-4 w-4" />
-                                Add Payment
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => setViewingHistoryLoan(loan)}>
-                                <History className="mr-2 h-4 w-4" />
-                                View History
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => setMarkingPaidLoan(loan)}>
-                                <CheckCircle className="mr-2 h-4 w-4" />
-                                Mark as Fully Paid
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => cancelLoan.mutate(loan.id)}
-                                className="text-warning focus:text-warning"
-                              >
-                                <XCircle className="mr-2 h-4 w-4" />
-                                Cancel Loan
-                              </DropdownMenuItem>
-                            </>
-                          )}
-                          {loan.status === 'paid' && (
-                            <>
-                              <DropdownMenuItem onClick={() => setViewingHistoryLoan(loan)}>
-                                <History className="mr-2 h-4 w-4" />
-                                View History
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => setRevertingLoan(loan)}>
-                                <Undo2 className="mr-2 h-4 w-4" />
-                                Revert to Active
-                              </DropdownMenuItem>
-                            </>
-                          )}
-                          <DropdownMenuItem
-                            onClick={() => setDeletingLoan(loan)}
-                            className="text-destructive focus:text-destructive"
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
+                    {isAdmin ? (
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreHorizontal className="h-4 w-4" />
+                              <span className="sr-only">Open menu</span>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="bg-popover">
+                            {loan.status === 'active' && (
+                              <>
+                                <DropdownMenuItem onClick={() => setAddingPaymentLoan(loan)}>
+                                  <DollarSign className="mr-2 h-4 w-4" />
+                                  Add Payment
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setViewingHistoryLoan(loan)}>
+                                  <History className="mr-2 h-4 w-4" />
+                                  View History
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setMarkingPaidLoan(loan)}>
+                                  <CheckCircle className="mr-2 h-4 w-4" />
+                                  Mark as Fully Paid
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => cancelLoan.mutate(loan.id)}
+                                  className="text-warning focus:text-warning"
+                                >
+                                  <XCircle className="mr-2 h-4 w-4" />
+                                  Cancel Loan
+                                </DropdownMenuItem>
+                              </>
+                            )}
+                            {loan.status === 'paid' && (
+                              <>
+                                <DropdownMenuItem onClick={() => setViewingHistoryLoan(loan)}>
+                                  <History className="mr-2 h-4 w-4" />
+                                  View History
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setRevertingLoan(loan)}>
+                                  <Undo2 className="mr-2 h-4 w-4" />
+                                  Revert to Active
+                                </DropdownMenuItem>
+                              </>
+                            )}
+                            <DropdownMenuItem
+                              onClick={() => setDeletingLoan(loan)}
+                              className="text-destructive focus:text-destructive"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    ) : (
+                      <TableCell>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setViewingHistoryLoan(loan)}>
+                          <History className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    )}
                   </TableRow>
                 );
               })
