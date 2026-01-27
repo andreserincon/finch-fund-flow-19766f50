@@ -203,7 +203,7 @@ export default function Dashboard() {
       </div>
 
       {/* Key Metrics - Activity */}
-      <div className="grid gap-3 grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-3 grid-cols-2">
         <StatCard
           title={t('dashboard.loansDueUSD')}
           value={formatCurrency(totalLoansDueUSD, 'USD')}
