@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useMonthlyFees, MonthlyFee } from '@/hooks/useMonthlyFees';
+import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -35,6 +36,7 @@ import { Badge } from '@/components/ui/badge';
 
 export default function MonthlyFees() {
   const { monthlyFees, isLoading, upsertMonthlyFee } = useMonthlyFees();
+  const { isAdmin } = useIsAdmin();
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [editFee, setEditFee] = useState<MonthlyFee | null>(null);
 
@@ -75,12 +77,14 @@ export default function MonthlyFees() {
             Configure fee amounts for Standard and Solidarity members
           </p>
         </div>
-        <AddMonthlyFeeDialog
-          open={addDialogOpen}
-          onOpenChange={setAddDialogOpen}
-          onSave={upsertMonthlyFee.mutateAsync}
-          existingMonths={sortedMonths}
-        />
+        {isAdmin && (
+          <AddMonthlyFeeDialog
+            open={addDialogOpen}
+            onOpenChange={setAddDialogOpen}
+            onSave={upsertMonthlyFee.mutateAsync}
+            existingMonths={sortedMonths}
+          />
+        )}
       </div>
 
       {/* Current Month Card */}
@@ -88,22 +92,22 @@ export default function MonthlyFees() {
         <CurrentMonthFeeCard
           feeType="standard"
           fees={feesByMonth}
-          onEdit={(month) => {
+          onEdit={isAdmin ? (month) => {
             const fee = monthlyFees.find(
               (f) => f.year_month === month && f.fee_type === 'standard'
             );
             if (fee) setEditFee(fee);
-          }}
+          } : undefined}
         />
         <CurrentMonthFeeCard
           feeType="solidarity"
           fees={feesByMonth}
-          onEdit={(month) => {
+          onEdit={isAdmin ? (month) => {
             const fee = monthlyFees.find(
               (f) => f.year_month === month && f.fee_type === 'solidarity'
             );
             if (fee) setEditFee(fee);
-          }}
+          } : undefined}
         />
       </div>
 
@@ -120,29 +124,31 @@ export default function MonthlyFees() {
             const isUpcoming = isFuture(startOfDay(monthDate));
             return (
               <div key={month} className="rounded-lg border bg-card p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">{format(monthDate, 'MMMM yyyy')}</span>
-                    {isUpcoming && (
-                      <Badge variant="outline" className="text-xs">
-                        <Clock className="mr-1 h-3 w-3" />
-                        Upcoming
-                      </Badge>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{format(monthDate, 'MMMM yyyy')}</span>
+                      {isUpcoming && (
+                        <Badge variant="outline" className="text-xs">
+                          <Clock className="mr-1 h-3 w-3" />
+                          Upcoming
+                        </Badge>
+                      )}
+                    </div>
+                    {isAdmin && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          const fee = monthlyFees.find(
+                            (f) => f.year_month === month && f.fee_type === 'standard'
+                          );
+                          if (fee) setEditFee(fee);
+                        }}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
                     )}
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      const fee = monthlyFees.find(
-                        (f) => f.year_month === month && f.fee_type === 'standard'
-                      );
-                      if (fee) setEditFee(fee);
-                    }}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                </div>
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <div>
                     <p className="text-muted-foreground text-xs">Standard</p>
@@ -170,9 +176,9 @@ export default function MonthlyFees() {
             <TableHeader>
               <TableRow>
                 <TableHead>Month</TableHead>
-                <TableHead className="text-right">Standard Fee</TableHead>
-                <TableHead className="text-right">Solidarity Fee</TableHead>
-                <TableHead className="w-[100px]"></TableHead>
+              <TableHead className="text-right">Standard Fee</TableHead>
+              <TableHead className="text-right">Solidarity Fee</TableHead>
+              {isAdmin && <TableHead className="w-[100px]"></TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -205,20 +211,22 @@ export default function MonthlyFees() {
                       <TableCell className="text-right font-mono">
                         {formatCurrency(feesByMonth[month].solidarity)}
                       </TableCell>
-                      <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            const fee = monthlyFees.find(
-                              (f) => f.year_month === month && f.fee_type === 'standard'
-                            );
-                            if (fee) setEditFee(fee);
-                          }}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
+                      {isAdmin && (
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              const fee = monthlyFees.find(
+                                (f) => f.year_month === month && f.fee_type === 'standard'
+                              );
+                              if (fee) setEditFee(fee);
+                            }}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      )}
                     </TableRow>
                   );
                 })
@@ -249,7 +257,7 @@ function CurrentMonthFeeCard({
 }: {
   feeType: FeeType;
   fees: Record<string, Record<FeeType, number>>;
-  onEdit: (month: string) => void;
+  onEdit?: (month: string) => void;
 }) {
   const currentMonth = new Date().toISOString().slice(0, 7) + '-01';
   const currentFee = fees[currentMonth]?.[feeType] ?? 0;
@@ -267,9 +275,11 @@ function CurrentMonthFeeCard({
         <CardTitle className="text-xs md:text-sm font-medium">
           {FEE_TYPE_LABELS[feeType]} Fee
         </CardTitle>
-        <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => onEdit(currentMonth)}>
-          <Pencil className="h-4 w-4" />
-        </Button>
+        {onEdit && (
+          <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => onEdit(currentMonth)}>
+            <Pencil className="h-4 w-4" />
+          </Button>
+        )}
       </CardHeader>
       <CardContent className="p-4 pt-0">
         <div className="text-lg md:text-2xl font-bold truncate">{formatCurrency(currentFee)}</div>

@@ -50,6 +50,7 @@ export default {
       monthlyFees: 'Cuotas Mensuales',
       events: 'Eventos',
       treasurer: 'Tesorero',
+      viewer: 'Visualizador',
       userManagement: 'Gestión de Usuarios',
     },
 

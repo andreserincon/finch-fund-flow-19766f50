@@ -34,6 +34,7 @@ import {
 import { useExtraordinaryExpenses, ExtraordinaryExpense } from '@/hooks/useExtraordinaryExpenses';
 import { useEventMemberPayments } from '@/hooks/useEventMemberPayments';
 import { useMembers } from '@/hooks/useMembers';
+import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { PlusCircle, Pencil, Trash2, Tag, Users, Check, X } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
@@ -417,6 +418,7 @@ function DeleteExpenseDialog({ expense }: { expense: ExtraordinaryExpense }) {
 
 export default function ExtraordinaryExpenses() {
   const { expenses, isLoading, updateExpense } = useExtraordinaryExpenses();
+  const { isAdmin } = useIsAdmin();
 
   const handleToggleActive = (expense: ExtraordinaryExpense) => {
     updateExpense.mutate({ id: expense.id, is_active: !expense.is_active });
@@ -429,7 +431,7 @@ export default function ExtraordinaryExpenses() {
           <h1 className="text-2xl font-bold text-foreground">Events & Expenses</h1>
           <p className="text-muted-foreground">Manage events with per-member fees</p>
         </div>
-        <AddExpenseDialog />
+        {isAdmin && <AddExpenseDialog />}
       </div>
 
       <Card>
@@ -472,13 +474,18 @@ export default function ExtraordinaryExpenses() {
                       <Switch
                         checked={expense.is_active}
                         onCheckedChange={() => handleToggleActive(expense)}
+                        disabled={!isAdmin}
                       />
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
                         <ViewPaymentsDialog expense={expense} />
-                        <EditExpenseDialog expense={expense} />
-                        <DeleteExpenseDialog expense={expense} />
+                        {isAdmin && (
+                          <>
+                            <EditExpenseDialog expense={expense} />
+                            <DeleteExpenseDialog expense={expense} />
+                          </>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
