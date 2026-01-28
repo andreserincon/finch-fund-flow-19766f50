@@ -222,34 +222,32 @@ export default function Reports() {
                 <TableRow>
                   <TableHead>{t('reports.period')}</TableHead>
                   <TableHead>{t('reports.generatedAt')}</TableHead>
-                  <TableHead>{t('common.status')}</TableHead>
-                  <TableHead className="text-right">{t('reports.netResult')}</TableHead>
-                  <TableHead className="text-right">{t('reports.collectionRate')}</TableHead>
+                  <TableHead className="hidden md:table-cell">{t('common.status')}</TableHead>
+                  <TableHead className="hidden md:table-cell text-right">{t('reports.netResult')}</TableHead>
+                  <TableHead className="hidden md:table-cell text-right">{t('reports.collectionRate')}</TableHead>
                   <TableHead className="text-right">{t('common.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {reports.map((report) => (
                   <TableRow key={report.id}>
-                    <TableCell className="font-medium">
+                    <TableCell className="font-medium whitespace-nowrap">
                       {monthNames[report.report_month - 1]} {report.report_year}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="whitespace-nowrap text-sm">
                       {report.generated_at
                         ? new Date(report.generated_at).toLocaleDateString('es-AR', {
                             year: 'numeric',
                             month: 'short',
                             day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit',
                           })
                         : '-'}
                     </TableCell>
-                    <TableCell>{getStatusBadge(report.status)}</TableCell>
-                    <TableCell className={`text-right font-medium ${report.net_result >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    <TableCell className="hidden md:table-cell">{getStatusBadge(report.status)}</TableCell>
+                    <TableCell className={`hidden md:table-cell text-right font-medium ${report.net_result >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                       {formatCurrency(report.net_result)}
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="hidden md:table-cell text-right">
                       <span className={report.collection_percentage >= 80 ? 'text-green-600' : report.collection_percentage >= 50 ? 'text-yellow-600' : 'text-red-600'}>
                         {report.collection_percentage}%
                       </span>
