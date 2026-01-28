@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FileText, Download, Eye, RefreshCw, Calendar, CheckCircle, Clock, AlertCircle } from 'lucide-react';
+import { FileText, Download, RefreshCw, Calendar, CheckCircle, Clock, AlertCircle } from 'lucide-react';
 import { useMonthlyReports } from '@/hooks/useMonthlyReports';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -26,7 +26,6 @@ export default function Reports() {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
   const [selectedMonth, setSelectedMonth] = useState((new Date().getMonth() + 1).toString());
   const [forceRegenerate, setForceRegenerate] = useState(false);
-  const [viewingReport, setViewingReport] = useState<string | null>(null);
 
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: 5 }, (_, i) => currentYear - i);
@@ -39,13 +38,6 @@ export default function Reports() {
     });
     setIsGenerateDialogOpen(false);
     setForceRegenerate(false);
-  };
-
-  const handleViewReport = async (pdfPath: string) => {
-    const url = await getReportPdfUrl(pdfPath);
-    if (url) {
-      window.open(url, '_blank');
-    }
   };
 
   const handleDownloadReport = async (pdfPath: string, year: number, month: number) => {
@@ -263,23 +255,14 @@ export default function Reports() {
                       </span>
                     </TableCell>
                     <TableCell className="text-right">
-                      {report.status === 'generated' && report.pdf_path && (
-                        <div className="flex items-center justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleViewReport(report.pdf_path!)}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDownloadReport(report.pdf_path!, report.report_year, report.report_month)}
-                          >
-                            <Download className="h-4 w-4" />
-                          </Button>
-                        </div>
+                    {report.status === 'generated' && report.pdf_path && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDownloadReport(report.pdf_path!, report.report_year, report.report_month)}
+                        >
+                          <Download className="h-4 w-4" />
+                        </Button>
                       )}
                     </TableCell>
                   </TableRow>
