@@ -77,11 +77,27 @@ export function useMonthlyReports() {
   });
 
   const getReportPdfUrl = async (pdfPath: string): Promise<string | null> => {
-    const { data } = await supabase.storage
+    const { data, error } = await supabase.storage
       .from('reports')
       .createSignedUrl(pdfPath, 3600); // 1 hour expiry
 
-    return data?.signedUrl || null;
+    if (error) {
+      console.error('Error creating signed URL:', error);
+      toast.error('Error al obtener el reporte');
+      return null;
+    }
+
+    // Supabase SDK returns full URL in signedUrl property
+    if (data?.signedUrl) {
+      // If it's a relative URL, prepend the Supabase storage URL
+      if (data.signedUrl.startsWith('/')) {
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        return `${supabaseUrl}/storage/v1${data.signedUrl}`;
+      }
+      return data.signedUrl;
+    }
+    
+    return null;
   };
 
   return {
