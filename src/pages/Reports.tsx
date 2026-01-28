@@ -51,12 +51,26 @@ export default function Reports() {
   const handleDownloadReport = async (pdfPath: string, year: number, month: number) => {
     const url = await getReportPdfUrl(pdfPath);
     if (url) {
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `Reporte_Financiero_${year}_${month.toString().padStart(2, '0')}.html`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      try {
+        // Fetch the HTML content
+        const response = await fetch(url);
+        const htmlContent = await response.text();
+        
+        // Open a new window with the HTML content and trigger print dialog
+        const printWindow = window.open('', '_blank');
+        if (printWindow) {
+          printWindow.document.write(htmlContent);
+          printWindow.document.close();
+          // Give the browser time to render, then trigger print
+          setTimeout(() => {
+            printWindow.print();
+          }, 500);
+        }
+      } catch (error) {
+        console.error('Error downloading report:', error);
+        // Fallback: open in new tab
+        window.open(url, '_blank');
+      }
     }
   };
 
