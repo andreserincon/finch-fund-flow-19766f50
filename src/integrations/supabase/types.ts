@@ -356,6 +356,81 @@ export type Database = {
         }
         Relationships: []
       }
+      monthly_reports: {
+        Row: {
+          bank_balance: number
+          collected_monthly_fees: number
+          collection_percentage: number
+          created_at: string
+          expected_monthly_fees: number
+          generated_at: string | null
+          generated_by: string | null
+          great_lodge_balance: number
+          id: string
+          members_missing_payment: number
+          net_result: number
+          net_treasury_position: number
+          outstanding_member_debt: number
+          pdf_path: string | null
+          prepaid_member_credit: number
+          report_month: number
+          report_year: number
+          savings_balance: number
+          status: Database["public"]["Enums"]["report_status"]
+          total_inflows: number
+          total_outflows: number
+          updated_at: string
+        }
+        Insert: {
+          bank_balance?: number
+          collected_monthly_fees?: number
+          collection_percentage?: number
+          created_at?: string
+          expected_monthly_fees?: number
+          generated_at?: string | null
+          generated_by?: string | null
+          great_lodge_balance?: number
+          id?: string
+          members_missing_payment?: number
+          net_result?: number
+          net_treasury_position?: number
+          outstanding_member_debt?: number
+          pdf_path?: string | null
+          prepaid_member_credit?: number
+          report_month: number
+          report_year: number
+          savings_balance?: number
+          status?: Database["public"]["Enums"]["report_status"]
+          total_inflows?: number
+          total_outflows?: number
+          updated_at?: string
+        }
+        Update: {
+          bank_balance?: number
+          collected_monthly_fees?: number
+          collection_percentage?: number
+          created_at?: string
+          expected_monthly_fees?: number
+          generated_at?: string | null
+          generated_by?: string | null
+          great_lodge_balance?: number
+          id?: string
+          members_missing_payment?: number
+          net_result?: number
+          net_treasury_position?: number
+          outstanding_member_debt?: number
+          pdf_path?: string | null
+          prepaid_member_credit?: number
+          report_month?: number
+          report_year?: number
+          savings_balance?: number
+          status?: Database["public"]["Enums"]["report_status"]
+          total_inflows?: number
+          total_outflows?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       organization_settings: {
         Row: {
           description: string | null
@@ -415,6 +490,159 @@ export type Database = {
             columns: ["member_id"]
             isOneToOne: false
             referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      report_event_snapshots: {
+        Row: {
+          amount_collected: number
+          created_at: string
+          event_id: string
+          event_name: string
+          event_status: string
+          id: string
+          members_included: number
+          members_unpaid: number
+          outstanding_amount: number
+          report_id: string
+          total_amount: number
+        }
+        Insert: {
+          amount_collected: number
+          created_at?: string
+          event_id: string
+          event_name: string
+          event_status: string
+          id?: string
+          members_included: number
+          members_unpaid: number
+          outstanding_amount: number
+          report_id: string
+          total_amount: number
+        }
+        Update: {
+          amount_collected?: number
+          created_at?: string
+          event_id?: string
+          event_name?: string
+          event_status?: string
+          id?: string
+          members_included?: number
+          members_unpaid?: number
+          outstanding_amount?: number
+          report_id?: string
+          total_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_event_snapshots_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "monthly_reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      report_loan_snapshots: {
+        Row: {
+          account: Database["public"]["Enums"]["account_type"]
+          amount_paid: number
+          borrower_name: string
+          created_at: string
+          id: string
+          loan_id: string
+          original_amount: number
+          outstanding_balance: number
+          payment_status: string
+          report_id: string
+        }
+        Insert: {
+          account: Database["public"]["Enums"]["account_type"]
+          amount_paid: number
+          borrower_name: string
+          created_at?: string
+          id?: string
+          loan_id: string
+          original_amount: number
+          outstanding_balance: number
+          payment_status: string
+          report_id: string
+        }
+        Update: {
+          account?: Database["public"]["Enums"]["account_type"]
+          amount_paid?: number
+          borrower_name?: string
+          created_at?: string
+          id?: string
+          loan_id?: string
+          original_amount?: number
+          outstanding_balance?: number
+          payment_status?: string
+          report_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_loan_snapshots_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "monthly_reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      report_member_snapshots: {
+        Row: {
+          balance_at_month_end: number
+          created_at: string
+          fee_type: Database["public"]["Enums"]["fee_type"]
+          full_name: string
+          id: string
+          last_payment_date: string | null
+          member_id: string
+          monthly_fee_amount: number
+          months_ahead: number | null
+          months_overdue: number | null
+          overdue_amount: number | null
+          report_id: string
+          status: string
+        }
+        Insert: {
+          balance_at_month_end: number
+          created_at?: string
+          fee_type: Database["public"]["Enums"]["fee_type"]
+          full_name: string
+          id?: string
+          last_payment_date?: string | null
+          member_id: string
+          monthly_fee_amount: number
+          months_ahead?: number | null
+          months_overdue?: number | null
+          overdue_amount?: number | null
+          report_id: string
+          status: string
+        }
+        Update: {
+          balance_at_month_end?: number
+          created_at?: string
+          fee_type?: Database["public"]["Enums"]["fee_type"]
+          full_name?: string
+          id?: string
+          last_payment_date?: string | null
+          member_id?: string
+          monthly_fee_amount?: number
+          months_ahead?: number | null
+          months_overdue?: number | null
+          overdue_amount?: number | null
+          report_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_member_snapshots_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "monthly_reports"
             referencedColumns: ["id"]
           },
         ]
@@ -545,6 +773,7 @@ export type Database = {
       app_role: "treasurer" | "vm" | "member"
       fee_type: "standard" | "solidarity"
       loan_status: "active" | "paid" | "cancelled"
+      report_status: "generating" | "generated" | "failed"
       transaction_category:
         | "monthly_fee"
         | "extraordinary_income"
@@ -689,6 +918,7 @@ export const Constants = {
       app_role: ["treasurer", "vm", "member"],
       fee_type: ["standard", "solidarity"],
       loan_status: ["active", "paid", "cancelled"],
+      report_status: ["generating", "generated", "failed"],
       transaction_category: [
         "monthly_fee",
         "extraordinary_income",

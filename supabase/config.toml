@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.admin-create-user]
 verify_jwt = false
+
+[functions.generate-monthly-report]
+verify_jwt = false

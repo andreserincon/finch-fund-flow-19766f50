@@ -16,6 +16,7 @@ import MonthlyFees from "./pages/MonthlyFees";
 import ExtraordinaryExpenses from "./pages/ExtraordinaryExpenses";
 import AccountTransfer from "./pages/AccountTransfer";
 import UserManagement from "./pages/UserManagement";
+import Reports from "./pages/Reports";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
@@ -97,6 +98,7 @@ const App = () => (
         <Route path="/account-transfer" element={<AdminRoute><AccountTransfer /></AdminRoute>} />
         <Route path="/monthly-fees" element={<ProtectedRoute><MonthlyFees /></ProtectedRoute>} />
         <Route path="/expense-categories" element={<ProtectedRoute><ExtraordinaryExpenses /></ProtectedRoute>} />
+        <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
         <Route path="/user-management" element={<AdminRoute><UserManagement /></AdminRoute>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
