@@ -162,14 +162,43 @@ Deno.serve(async (req) => {
       else if (t.to_account === 'savings') savingsBalance += t.amount;
     });
 
-    // Calculate monthly flows
-    const totalInflows = transactions
-      .filter((t: any) => t.transaction_type === 'income')
+    // Fetch official exchange rate for USD to ARS conversion
+    let exchangeRate = 1200; // Default fallback rate
+    try {
+      const rateResponse = await fetch('https://dolarapi.com/v1/dolares/oficial');
+      if (rateResponse.ok) {
+        const rateData = await rateResponse.json();
+        exchangeRate = rateData.venta || 1200;
+        console.log(`Exchange rate fetched: ${exchangeRate}`);
+      }
+    } catch (e) {
+      console.warn('Failed to fetch exchange rate, using fallback:', e);
+    }
+
+    // Calculate total ARS balance including savings converted
+    const savingsInARS = savingsBalance * exchangeRate;
+    const totalARSBalance = bankBalance + greatLodgeBalance + savingsInARS;
+
+    // Calculate monthly flows (including USD transactions converted)
+    const monthlyInflowsARS = transactions
+      .filter((t: any) => t.transaction_type === 'income' && t.account !== 'savings')
+      .reduce((sum: number, t: any) => sum + Number(t.amount), 0);
+    
+    const monthlyInflowsUSD = transactions
+      .filter((t: any) => t.transaction_type === 'income' && t.account === 'savings')
       .reduce((sum: number, t: any) => sum + Number(t.amount), 0);
 
-    const totalOutflows = transactions
-      .filter((t: any) => t.transaction_type === 'expense')
+    const totalInflows = monthlyInflowsARS + (monthlyInflowsUSD * exchangeRate);
+
+    const monthlyOutflowsARS = transactions
+      .filter((t: any) => t.transaction_type === 'expense' && t.account !== 'savings')
       .reduce((sum: number, t: any) => sum + Number(t.amount), 0);
+    
+    const monthlyOutflowsUSD = transactions
+      .filter((t: any) => t.transaction_type === 'expense' && t.account === 'savings')
+      .reduce((sum: number, t: any) => sum + Number(t.amount), 0);
+
+    const totalOutflows = monthlyOutflowsARS + (monthlyOutflowsUSD * exchangeRate);
 
     const netResult = totalInflows - totalOutflows;
 
@@ -373,6 +402,8 @@ Deno.serve(async (req) => {
       bankBalance,
       greatLodgeBalance,
       savingsBalance,
+      totalARSBalance,
+      exchangeRate,
       totalInflows,
       totalOutflows,
       netResult,
@@ -647,6 +678,11 @@ function generatePDFHTML(data: any): string {
     
     <h3 style="margin: 15px 0 10px; color: #4a69bd;">Saldos de Cuentas</h3>
     <div class="grid">
+      <div class="stat-card ${data.totalARSBalance >= 0 ? 'success' : 'danger'}">
+        <div class="stat-label">Balance Total (ARS)</div>
+        <div class="stat-value">${formatCurrency(data.totalARSBalance)}</div>
+        <div style="font-size: 10px; color: #666; margin-top: 4px;">Incluye USD al TC Oficial: ${formatCurrency(data.exchangeRate)}</div>
+      </div>
       <div class="stat-card ${data.bankBalance >= 0 ? 'success' : 'danger'}">
         <div class="stat-label">Cuenta Bancaria Principal (ARS)</div>
         <div class="stat-value">${formatCurrency(data.bankBalance)}</div>
@@ -655,13 +691,16 @@ function generatePDFHTML(data: any): string {
         <div class="stat-label">Cuenta GL (ARS)</div>
         <div class="stat-value">${formatCurrency(data.greatLodgeBalance)}</div>
       </div>
+    </div>
+    <div class="grid" style="margin-top: 15px; grid-template-columns: 1fr;">
       <div class="stat-card ${data.savingsBalance >= 0 ? 'success' : 'danger'}">
         <div class="stat-label">Cuenta de Ahorros (USD)</div>
         <div class="stat-value">${formatCurrency(data.savingsBalance, 'USD')}</div>
+        <div style="font-size: 11px; color: #666; margin-top: 4px;">Equivalente en ARS: ${formatCurrency(data.savingsBalance * data.exchangeRate)}</div>
       </div>
     </div>
 
-    <h3 style="margin: 25px 0 10px; color: #4a69bd;">Flujo del Mes</h3>
+    <h3 style="margin: 25px 0 10px; color: #4a69bd;">Flujo del Mes (en ARS)</h3>
     <div class="grid">
       <div class="stat-card success">
         <div class="stat-label">Ingresos Totales</div>
@@ -677,8 +716,8 @@ function generatePDFHTML(data: any): string {
       </div>
     </div>
 
-    <h3 style="margin: 25px 0 10px; color: #4a69bd;">Posición de Tesorería</h3>
-    <div class="grid">
+    <h3 style="margin: 25px 0 10px; color: #4a69bd;">Posición de Miembros</h3>
+    <div class="grid" style="grid-template-columns: repeat(2, 1fr);">
       <div class="stat-card danger">
         <div class="stat-label">Deuda Pendiente de Miembros</div>
         <div class="stat-value negative">${formatCurrency(data.outstandingMemberDebt)}</div>
@@ -686,10 +725,6 @@ function generatePDFHTML(data: any): string {
       <div class="stat-card success">
         <div class="stat-label">Crédito Prepagado</div>
         <div class="stat-value positive">${formatCurrency(data.prepaidMemberCredit)}</div>
-      </div>
-      <div class="stat-card ${(data.prepaidMemberCredit - data.outstandingMemberDebt) >= 0 ? 'success' : 'danger'}">
-        <div class="stat-label">Posición Neta de Tesorería</div>
-        <div class="stat-value">${formatCurrency(data.prepaidMemberCredit - data.outstandingMemberDebt)}</div>
       </div>
     </div>
   </div>

@@ -4,6 +4,7 @@ import { useTransactions } from '@/hooks/useTransactions';
 import { useMonthlyFees } from '@/hooks/useMonthlyFees';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useExchangeRate } from '@/hooks/useExchangeRate';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { MemberFeeMatrix } from '@/components/dashboard/MemberFeeMatrix';
 
@@ -35,6 +36,7 @@ export default function Dashboard() {
   const { transfers, isLoading: transfersLoading } = useAccountTransfers();
   const { loans, isLoading: loansLoading } = useLoans();
   const { isAdmin } = useIsAdmin();
+  const { exchangeRate } = useExchangeRate();
   
   const dateLocale = i18n.language === 'es' ? es : enUS;
 
@@ -89,8 +91,9 @@ export default function Dashboard() {
     - transfers.filter(t => t.from_account === 'savings').reduce((sum, t) => sum + t.amount, 0)
     + transfers.filter(t => t.to_account === 'savings').reduce((sum, t) => sum + t.amount, 0);
 
-  // Calculate stats (ARS balance excludes savings which is in USD)
-  const totalARSBalance = bankBalance + greatLodgeBalance;
+  // Calculate stats (ARS balance includes savings converted to ARS)
+  const savingsInARS = savingsBalance * exchangeRate;
+  const totalARSBalance = bankBalance + greatLodgeBalance + savingsInARS;
 
   const activeMembersCount = memberBalances.filter(m => m.is_active).length;
 
@@ -110,13 +113,27 @@ export default function Dashboard() {
   const thisMonth = new Date();
   const monthStart = new Date(thisMonth.getFullYear(), thisMonth.getMonth(), 1);
   
-  const monthlyIncome = transactions
-    .filter(t => new Date(t.transaction_date) >= monthStart && t.transaction_type === 'income')
+  // Calculate monthly income (ARS accounts + savings converted to ARS)
+  const monthlyIncomeARS = transactions
+    .filter(t => new Date(t.transaction_date) >= monthStart && t.transaction_type === 'income' && t.account !== 'savings')
     .reduce((sum, t) => sum + t.amount, 0);
+  
+  const monthlyIncomeUSD = transactions
+    .filter(t => new Date(t.transaction_date) >= monthStart && t.transaction_type === 'income' && t.account === 'savings')
+    .reduce((sum, t) => sum + t.amount, 0);
+  
+  const monthlyIncome = monthlyIncomeARS + (monthlyIncomeUSD * exchangeRate);
 
-  const monthlyExpenses = transactions
-    .filter(t => new Date(t.transaction_date) >= monthStart && t.transaction_type === 'expense')
+  // Calculate monthly expenses (ARS accounts + savings converted to ARS)
+  const monthlyExpensesARS = transactions
+    .filter(t => new Date(t.transaction_date) >= monthStart && t.transaction_type === 'expense' && t.account !== 'savings')
     .reduce((sum, t) => sum + t.amount, 0);
+  
+  const monthlyExpensesUSD = transactions
+    .filter(t => new Date(t.transaction_date) >= monthStart && t.transaction_type === 'expense' && t.account === 'savings')
+    .reduce((sum, t) => sum + t.amount, 0);
+  
+  const monthlyExpenses = monthlyExpensesARS + (monthlyExpensesUSD * exchangeRate);
 
 
 
