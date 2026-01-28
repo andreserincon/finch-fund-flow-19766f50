@@ -14,3 +14,6 @@ verify_jwt = false
 
 [functions.generate-monthly-report]
 verify_jwt = false
+
+[functions.generate-monthly-report-scheduled]
+verify_jwt = false
