@@ -729,7 +729,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
       display: flex;
       align-items: flex-start;
       justify-content: space-between;
-      margin-bottom: 15px;
+      margin-bottom: 8px;
     }
     
     .header-logo {
@@ -747,24 +747,24 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
       font-weight: bold;
       color: #000;
       letter-spacing: 2px;
-      margin-bottom: 3px;
+    }
+    
+    .header-right-block {
+      text-align: right;
+      margin-bottom: 10px;
     }
     
     .header-lodge {
       font-size: 13px;
       font-weight: bold;
       color: #000;
-    }
-    
-    .header-right {
-      text-align: right;
-      min-width: 200px;
+      margin-bottom: 3px;
     }
     
     .header-date {
       font-size: 12px;
-      color: #333;
-      margin-top: 8px;
+      font-weight: bold;
+      color: #000;
     }
     
     .header-title {
@@ -949,11 +949,12 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
       ${logoHtml ? `<div class="header-left">${logoHtml}</div>` : '<div class="header-left"></div>'}
       <div class="header-center">
         <div class="header-invocation">A.·.L.·.G.·.D.·.G.·.A.·.D.·.U.·.</div>
-        <div class="header-lodge">R.·.L.·. Simón Bolívar N° 646</div>
       </div>
-      <div class="header-right">
-        <div class="header-date">${formattedDate}</div>
-      </div>
+      <div class="header-left-placeholder" style="width: 70px;"></div>
+    </div>
+    <div class="header-right-block">
+      <div class="header-lodge">R.·.L.·. Simón Bolívar N° 646</div>
+      <div class="header-date">${formattedDate}</div>
     </div>
     <div class="header-title">
       <h1>${reportTitleFormatted}</h1>
