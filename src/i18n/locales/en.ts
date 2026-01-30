@@ -387,6 +387,8 @@ export default {
       latestReport: 'Latest Report',
       avgCollectionRate: 'Avg Collection Rate',
       avgNetResult: 'Avg Net Result',
+      downloadComprehensive: 'Comprehensive Report',
+      downloadLite: 'Summary Report',
       status: {
         generated: 'Generated',
         generating: 'Generating',

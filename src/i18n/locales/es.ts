@@ -387,6 +387,8 @@ export default {
       latestReport: 'Último Reporte',
       avgCollectionRate: 'Recaudación Promedio',
       avgNetResult: 'Resultado Neto Promedio',
+      downloadComprehensive: 'Reporte Completo',
+      downloadLite: 'Reporte Resumen',
       status: {
         generated: 'Generado',
         generating: 'Generando',

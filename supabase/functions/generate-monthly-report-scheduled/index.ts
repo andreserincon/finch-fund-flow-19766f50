@@ -351,7 +351,12 @@ Deno.serve(async (req) => {
                         'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
     const monthName = monthNames[month - 1];
 
-    const pdfContent = generatePDFHTML({
+    // Calculate loan KPIs for lite report
+    const totalActiveLoans = loans.length;
+    const totalLoanAmount = loans.reduce((sum: number, l: any) => sum + Number(l.amount), 0);
+    const totalLoanDue = loans.reduce((sum: number, l: any) => sum + (Number(l.amount) - Number(l.amount_paid)), 0);
+
+    const reportData = {
       year,
       month,
       monthName,
@@ -372,30 +377,54 @@ Deno.serve(async (req) => {
       memberSnapshots,
       loanSnapshots,
       eventSnapshots,
-    });
+      totalActiveLoans,
+      totalLoanAmount,
+      totalLoanDue,
+    };
 
-    // Upload PDF to storage
+    // Generate comprehensive report
+    const pdfContent = generatePDFHTML(reportData, 'comprehensive');
+    
+    // Generate lite report
+    const liteContent = generatePDFHTML(reportData, 'lite');
+
+    // Upload both reports to storage
     const pdfPath = `${year}/${month.toString().padStart(2, '0')}/Reporte_Financiero_${year}_${month.toString().padStart(2, '0')}.html`;
+    const litePdfPath = `${year}/${month.toString().padStart(2, '0')}/Reporte_Financiero_Lite_${year}_${month.toString().padStart(2, '0')}.html`;
 
-    const { error: uploadError } = await supabase.storage
-      .from('reports')
-      .upload(pdfPath, new Blob([pdfContent], { type: 'text/html' }), {
-        contentType: 'text/html',
-        upsert: true,
-      });
+    const [uploadResult, liteUploadResult] = await Promise.all([
+      supabase.storage
+        .from('reports')
+        .upload(pdfPath, new Blob([pdfContent], { type: 'text/html' }), {
+          contentType: 'text/html',
+          upsert: true,
+        }),
+      supabase.storage
+        .from('reports')
+        .upload(litePdfPath, new Blob([liteContent], { type: 'text/html' }), {
+          contentType: 'text/html',
+          upsert: true,
+        }),
+    ]);
 
-    if (uploadError) {
-      console.error('Upload error:', uploadError);
-      throw uploadError;
+    if (uploadResult.error) {
+      console.error('Upload error (comprehensive):', uploadResult.error);
+      throw uploadResult.error;
     }
 
-    // Update report with PDF path and mark as generated
+    if (liteUploadResult.error) {
+      console.error('Upload error (lite):', liteUploadResult.error);
+      throw liteUploadResult.error;
+    }
+
+    // Update report with both PDF paths and mark as generated
     await supabase
       .from('monthly_reports')
       .update({
         status: 'generated',
         generated_at: new Date().toISOString(),
         pdf_path: pdfPath,
+        lite_pdf_path: litePdfPath,
       })
       .eq('id', reportId);
 
@@ -406,6 +435,7 @@ Deno.serve(async (req) => {
         success: true, 
         reportId,
         pdfPath,
+        litePdfPath,
         message: `Reporte generado automáticamente para ${monthName} ${year}` 
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -421,7 +451,9 @@ Deno.serve(async (req) => {
   }
 });
 
-function generatePDFHTML(data: any): string {
+function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comprehensive'): string {
+  const isLite = reportType === 'lite';
+  
   const formatCurrency = (amount: number, currency = 'ARS') => {
     return new Intl.NumberFormat('es-AR', {
       style: 'currency',
@@ -463,6 +495,191 @@ function generatePDFHTML(data: any): string {
   const overdueMembers = sortedMembers.filter((m: any) => m.status === 'overdue' || m.status === 'unpaid');
   const upToDateMembers = sortedMembers.filter((m: any) => m.status === 'up_to_date');
   const aheadMembers = sortedMembers.filter((m: any) => m.status === 'ahead');
+
+  const reportTitle = isLite ? 'Reporte Financiero Mensual (Resumen)' : 'Reporte Financiero Mensual';
+  const feesSectionTitle = isLite ? '📋 Cobranza de Capita' : '📋 Cobranza de Cuotas';
+
+  // Build overdue members table
+  const overdueMembersSection = overdueMembers.length > 0 ? `
+    <h3 style="color: #ef4444; margin: 15px 0 10px;">⚠️ Miembros Morosos (${overdueMembers.length})</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Nombre</th>
+          <th>Tipo Cuota</th>
+          <th class="text-right">Monto Cuota</th>
+          <th class="text-right">Balance</th>
+          <th class="text-center">Meses Mora</th>
+          <th>Último Pago</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${overdueMembers.map((m: any) => `
+          <tr>
+            <td>${m.full_name}</td>
+            <td>${feeTypeLabels[m.fee_type] || m.fee_type}</td>
+            <td class="text-right">${formatCurrency(m.monthly_fee_amount)}</td>
+            <td class="text-right" style="color: #ef4444; font-weight: 600;">${formatCurrency(m.balance_at_month_end)}</td>
+            <td class="text-center">${m.months_overdue || '-'}</td>
+            <td>${m.last_payment_date ? new Date(m.last_payment_date).toLocaleDateString('es-AR') : 'Sin pagos'}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  ` : `<p style="color: #10b981;">✅ No hay miembros morosos.</p>`;
+
+  // Build up to date members table (only for comprehensive)
+  const upToDateMembersSection = !isLite && upToDateMembers.length > 0 ? `
+    <h3 style="color: #10b981; margin: 20px 0 10px;">✅ Miembros Al Día (${upToDateMembers.length})</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Nombre</th>
+          <th>Tipo Cuota</th>
+          <th class="text-right">Monto Cuota</th>
+          <th class="text-right">Balance</th>
+          <th>Último Pago</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${upToDateMembers.map((m: any) => `
+          <tr>
+            <td>${m.full_name}</td>
+            <td>${feeTypeLabels[m.fee_type] || m.fee_type}</td>
+            <td class="text-right">${formatCurrency(m.monthly_fee_amount)}</td>
+            <td class="text-right">${formatCurrency(m.balance_at_month_end)}</td>
+            <td>${m.last_payment_date ? new Date(m.last_payment_date).toLocaleDateString('es-AR') : 'Sin pagos'}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  ` : '';
+
+  // Build ahead members table (only for comprehensive)
+  const aheadMembersSection = !isLite && aheadMembers.length > 0 ? `
+    <h3 style="color: #5b21b6; margin: 20px 0 10px;">🌟 Miembros Adelantados (${aheadMembers.length})</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Nombre</th>
+          <th>Tipo Cuota</th>
+          <th class="text-right">Monto Cuota</th>
+          <th class="text-right">Crédito</th>
+          <th class="text-center">Meses Adelanto</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${aheadMembers.map((m: any) => `
+          <tr>
+            <td>${m.full_name}</td>
+            <td>${feeTypeLabels[m.fee_type] || m.fee_type}</td>
+            <td class="text-right">${formatCurrency(m.monthly_fee_amount)}</td>
+            <td class="text-right" style="color: #10b981; font-weight: 600;">${formatCurrency(m.balance_at_month_end)}</td>
+            <td class="text-center">${m.months_ahead || '-'}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  ` : '';
+
+  // Build loans section
+  let loansSection = '';
+  if (isLite) {
+    // Lite version: show KPIs only
+    if (data.totalActiveLoans > 0) {
+      loansSection = `
+        <div class="section">
+          <h2 class="section-title">💳 Préstamos Activos (Resumen)</h2>
+          <div class="grid">
+            <div class="stat-card">
+              <div class="label">Cantidad de Préstamos</div>
+              <div class="value">${data.totalActiveLoans}</div>
+            </div>
+            <div class="stat-card warning">
+              <div class="label">Monto Total</div>
+              <div class="value">${formatCurrency(data.totalLoanAmount)}</div>
+            </div>
+            <div class="stat-card negative">
+              <div class="label">Pendiente de Cobro</div>
+              <div class="value negative">${formatCurrency(data.totalLoanDue)}</div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+  } else if (data.loanSnapshots.length > 0) {
+    // Comprehensive version: show detailed table
+    loansSection = `
+      <div class="section">
+        <h2 class="section-title">💳 Préstamos Activos (${data.loanSnapshots.length})</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Prestatario</th>
+              <th>Cuenta</th>
+              <th class="text-right">Monto Original</th>
+              <th class="text-right">Pagado</th>
+              <th class="text-right">Pendiente</th>
+              <th class="text-center">Estado</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${data.loanSnapshots.map((l: any) => `
+              <tr>
+                <td>${l.borrower_name}</td>
+                <td>${accountLabels[l.account] || l.account}</td>
+                <td class="text-right">${formatCurrency(l.original_amount)}</td>
+                <td class="text-right">${formatCurrency(l.amount_paid)}</td>
+                <td class="text-right" style="color: ${l.outstanding_balance > 0 ? '#ef4444' : '#10b981'}; font-weight: 600;">
+                  ${formatCurrency(l.outstanding_balance)}
+                </td>
+                <td class="text-center">
+                  <span class="status-badge ${l.payment_status === 'fully_paid' ? 'status-up_to_date' : l.payment_status === 'partial' ? 'status-unpaid' : 'status-overdue'}">
+                    ${paymentStatusLabels[l.payment_status] || l.payment_status}
+                  </span>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  // Build events section
+  const eventsSection = data.eventSnapshots.length > 0 ? `
+    <div class="section">
+      <h2 class="section-title">📅 Eventos Activos (${data.eventSnapshots.length})</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Evento</th>
+            <th class="text-center">Miembros</th>
+            <th class="text-right">Total</th>
+            <th class="text-right">Cobrado</th>
+            <th class="text-right">Pendiente</th>
+            <th class="text-center">Sin Pagar</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${data.eventSnapshots.map((e: any) => `
+            <tr>
+              <td>${e.event_name}</td>
+              <td class="text-center">${e.members_included}</td>
+              <td class="text-right">${formatCurrency(e.total_amount)}</td>
+              <td class="text-right">${formatCurrency(e.amount_collected)}</td>
+              <td class="text-right" style="color: ${e.outstanding_amount > 0 ? '#ef4444' : '#10b981'}; font-weight: 600;">
+                ${formatCurrency(e.outstanding_amount)}
+              </td>
+              <td class="text-center">${e.members_unpaid}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  ` : '';
+
+  const memberSectionTitle = isLite ? '👥 Miembros Morosos' : `👥 Detalle de Miembros (${data.memberSnapshots.length})`;
 
   return `
 <!DOCTYPE html>
@@ -558,7 +775,7 @@ function generatePDFHTML(data: any): string {
 <body>
   <div class="container">
     <div class="header">
-      <h1>Reporte Financiero Mensual</h1>
+      <h1>${reportTitle}</h1>
       <div class="subtitle">Generado automáticamente</div>
       <div class="period">${data.monthName} ${data.year}</div>
     </div>
@@ -624,7 +841,7 @@ function generatePDFHTML(data: any): string {
 
       <!-- Fee Collection -->
       <div class="section">
-        <h2 class="section-title">📋 Cobranza de Cuotas</h2>
+        <h2 class="section-title">${feesSectionTitle}</h2>
         <div class="grid">
           <div class="stat-card">
             <div class="label">Cuotas Esperadas</div>
@@ -643,163 +860,20 @@ function generatePDFHTML(data: any): string {
 
       <!-- Member Details -->
       <div class="section">
-        <h2 class="section-title">👥 Detalle de Miembros (${data.memberSnapshots.length})</h2>
-        
-        ${overdueMembers.length > 0 ? `
-        <h3 style="color: #ef4444; margin: 15px 0 10px;">⚠️ Miembros con Deuda (${overdueMembers.length})</h3>
-        <table>
-          <thead>
-            <tr>
-              <th>Nombre</th>
-              <th>Tipo Cuota</th>
-              <th class="text-right">Monto Cuota</th>
-              <th class="text-right">Balance</th>
-              <th class="text-center">Meses Mora</th>
-              <th>Último Pago</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${overdueMembers.map((m: any) => `
-              <tr>
-                <td>${m.full_name}</td>
-                <td>${feeTypeLabels[m.fee_type] || m.fee_type}</td>
-                <td class="text-right">${formatCurrency(m.monthly_fee_amount)}</td>
-                <td class="text-right" style="color: #ef4444; font-weight: 600;">${formatCurrency(m.balance_at_month_end)}</td>
-                <td class="text-center">${m.months_overdue || '-'}</td>
-                <td>${m.last_payment_date ? new Date(m.last_payment_date).toLocaleDateString('es-AR') : 'Sin pagos'}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-        ` : ''}
-
-        ${upToDateMembers.length > 0 ? `
-        <h3 style="color: #10b981; margin: 20px 0 10px;">✅ Miembros Al Día (${upToDateMembers.length})</h3>
-        <table>
-          <thead>
-            <tr>
-              <th>Nombre</th>
-              <th>Tipo Cuota</th>
-              <th class="text-right">Monto Cuota</th>
-              <th class="text-right">Balance</th>
-              <th>Último Pago</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${upToDateMembers.map((m: any) => `
-              <tr>
-                <td>${m.full_name}</td>
-                <td>${feeTypeLabels[m.fee_type] || m.fee_type}</td>
-                <td class="text-right">${formatCurrency(m.monthly_fee_amount)}</td>
-                <td class="text-right">${formatCurrency(m.balance_at_month_end)}</td>
-                <td>${m.last_payment_date ? new Date(m.last_payment_date).toLocaleDateString('es-AR') : 'Sin pagos'}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-        ` : ''}
-
-        ${aheadMembers.length > 0 ? `
-        <h3 style="color: #5b21b6; margin: 20px 0 10px;">🌟 Miembros Adelantados (${aheadMembers.length})</h3>
-        <table>
-          <thead>
-            <tr>
-              <th>Nombre</th>
-              <th>Tipo Cuota</th>
-              <th class="text-right">Monto Cuota</th>
-              <th class="text-right">Crédito</th>
-              <th class="text-center">Meses Adelanto</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${aheadMembers.map((m: any) => `
-              <tr>
-                <td>${m.full_name}</td>
-                <td>${feeTypeLabels[m.fee_type] || m.fee_type}</td>
-                <td class="text-right">${formatCurrency(m.monthly_fee_amount)}</td>
-                <td class="text-right" style="color: #10b981; font-weight: 600;">${formatCurrency(m.balance_at_month_end)}</td>
-                <td class="text-center">${m.months_ahead || '-'}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-        ` : ''}
+        <h2 class="section-title">${memberSectionTitle}</h2>
+        ${overdueMembersSection}
+        ${upToDateMembersSection}
+        ${aheadMembersSection}
       </div>
 
-      ${data.loanSnapshots.length > 0 ? `
-      <!-- Loans -->
-      <div class="section">
-        <h2 class="section-title">💳 Préstamos Activos (${data.loanSnapshots.length})</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>Prestatario</th>
-              <th>Cuenta</th>
-              <th class="text-right">Monto Original</th>
-              <th class="text-right">Pagado</th>
-              <th class="text-right">Pendiente</th>
-              <th class="text-center">Estado</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${data.loanSnapshots.map((l: any) => `
-              <tr>
-                <td>${l.borrower_name}</td>
-                <td>${accountLabels[l.account] || l.account}</td>
-                <td class="text-right">${formatCurrency(l.original_amount)}</td>
-                <td class="text-right">${formatCurrency(l.amount_paid)}</td>
-                <td class="text-right" style="color: ${l.outstanding_balance > 0 ? '#ef4444' : '#10b981'}; font-weight: 600;">
-                  ${formatCurrency(l.outstanding_balance)}
-                </td>
-                <td class="text-center">
-                  <span class="status-badge ${l.payment_status === 'fully_paid' ? 'status-up_to_date' : l.payment_status === 'partial' ? 'status-unpaid' : 'status-overdue'}">
-                    ${paymentStatusLabels[l.payment_status] || l.payment_status}
-                  </span>
-                </td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      </div>
-      ` : ''}
+      ${loansSection}
 
-      ${data.eventSnapshots.length > 0 ? `
-      <!-- Events -->
-      <div class="section">
-        <h2 class="section-title">📅 Eventos Activos (${data.eventSnapshots.length})</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>Evento</th>
-              <th class="text-center">Miembros</th>
-              <th class="text-right">Total</th>
-              <th class="text-right">Cobrado</th>
-              <th class="text-right">Pendiente</th>
-              <th class="text-center">Sin Pagar</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${data.eventSnapshots.map((e: any) => `
-              <tr>
-                <td>${e.event_name}</td>
-                <td class="text-center">${e.members_included}</td>
-                <td class="text-right">${formatCurrency(e.total_amount)}</td>
-                <td class="text-right">${formatCurrency(e.amount_collected)}</td>
-                <td class="text-right" style="color: ${e.outstanding_amount > 0 ? '#ef4444' : '#10b981'}; font-weight: 600;">
-                  ${formatCurrency(e.outstanding_amount)}
-                </td>
-                <td class="text-center">${e.members_unpaid}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      </div>
-      ` : ''}
+      ${eventsSection}
     </div>
 
     <div class="footer">
       <p>Reporte generado automáticamente el ${new Date().toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' })}</p>
-      <p>Este documento es un reporte oficial de tesorería.</p>
+      <p>Este documento es un reporte oficial de tesorería.${isLite ? ' (Versión Resumen)' : ''}</p>
     </div>
   </div>
 </body>

@@ -367,6 +367,7 @@ export type Database = {
           generated_by: string | null
           great_lodge_balance: number
           id: string
+          lite_pdf_path: string | null
           members_missing_payment: number
           net_result: number
           net_treasury_position: number
@@ -391,6 +392,7 @@ export type Database = {
           generated_by?: string | null
           great_lodge_balance?: number
           id?: string
+          lite_pdf_path?: string | null
           members_missing_payment?: number
           net_result?: number
           net_treasury_position?: number
@@ -415,6 +417,7 @@ export type Database = {
           generated_by?: string | null
           great_lodge_balance?: number
           id?: string
+          lite_pdf_path?: string | null
           members_missing_payment?: number
           net_result?: number
           net_treasury_position?: number

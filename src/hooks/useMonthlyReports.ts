@@ -10,6 +10,7 @@ export interface MonthlyReport {
   generated_at: string | null;
   generated_by: string | null;
   pdf_path: string | null;
+  lite_pdf_path: string | null;
   bank_balance: number;
   great_lodge_balance: number;
   savings_balance: number;
