@@ -523,16 +523,6 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
     savings: 'Ahorros (USD)',
   };
 
-  // Format generation date in Spanish fixed format
-  const generationDate = new Date();
-  const monthNamesSpanish = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
-                             'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-  const formattedDate = `Or.·. de Buenos Aires, ${generationDate.getDate()} de ${monthNamesSpanish[generationDate.getMonth()]} del ${generationDate.getFullYear()} (E.·.V.·.)`;
-
-  // Report title with month and year
-  const reportTitle = `REPORTE FINANCIERO MENSUAL ${data.monthName.toUpperCase()} ${data.year}`;
-  const reportSubtitle = isLite ? '(Resumen)' : '(Detallado)';
-
   // Sort members by status priority: overdue first, then unpaid, then by balance
   const sortedMembers = [...data.memberSnapshots].sort((a: any, b: any) => {
     const statusPriority: Record<string, number> = { overdue: 0, unpaid: 1, up_to_date: 2, ahead: 3 };
@@ -546,6 +536,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
     ? sortedMembers.filter((m: any) => m.status === 'overdue')
     : sortedMembers;
   
+  const reportTitle = isLite ? 'Reporte Financiero Mensual (Resumen)' : 'Reporte Financiero Mensual';
   const memberSectionTitle = isLite ? '2. Miembros con más de un mes de capita pendiente' : '2. Detalle Financiero de Miembros';
   const feeSectionTitle = isLite ? '3. Cobranza de Capita' : '3. Cobertura de Cuotas Mensuales';
 
@@ -578,7 +569,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
         </thead>
         <tbody>${memberRows}</tbody>
       </table>`
-    : `<p class="empty-message">No hay miembros con más de un mes de capita pendiente.</p>`;
+    : `<p style="color: #666; text-align: center;">No hay miembros con más de un mes de capita pendiente.</p>`;
 
   // Build loans section
   let loansSection = '';
@@ -705,9 +696,6 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
     `;
   }
 
-  // Logo URL from storage
-  const logoUrl = 'https://gisusrkhpmehmbjoffen.supabase.co/storage/v1/object/public/reports/assets/lodge-logo.png';
-
   return `<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -716,23 +704,17 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
   <title>Reporte Financiero - ${data.monthName} ${data.year}</title>
   <style>
     @media print {
-      body { margin: 0; padding: 15px; }
+      body { margin: 0; padding: 20px; }
       .page-break { page-break-before: always; }
       .no-print { display: none; }
-      .header-repeat { 
-        display: block;
-        padding: 10px 0;
-        border-bottom: 1px solid #ccc;
-        margin-bottom: 15px;
-      }
     }
     
     * { box-sizing: border-box; }
     
     body {
-      font-family: 'Georgia', 'Times New Roman', serif;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       line-height: 1.6;
-      color: #1a1a1a;
+      color: #1a1a2e;
       max-width: 210mm;
       margin: 0 auto;
       padding: 20px;
@@ -741,203 +723,141 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
     
     .header {
       text-align: center;
-      border-bottom: 2px solid #1a1a1a;
+      border-bottom: 3px solid #4a69bd;
       padding-bottom: 20px;
       margin-bottom: 30px;
     }
     
-    .header-logo {
-      width: 80px;
-      height: auto;
-      margin-bottom: 10px;
-    }
-    
-    .header-org-name {
-      font-size: 18px;
-      font-weight: bold;
-      color: #1a1a1a;
-      margin: 5px 0;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-    }
-    
-    .header-lodge {
-      font-size: 14px;
-      color: #333;
-      margin: 5px 0;
-    }
-    
-    .header-date {
-      font-size: 12px;
-      color: #444;
-      margin: 10px 0 15px 0;
-      font-style: italic;
-    }
-    
     .header h1 {
-      color: #1a1a1a;
-      margin: 15px 0 5px 0;
-      font-size: 22px;
-      font-weight: bold;
-      text-transform: uppercase;
-      letter-spacing: 1px;
+      color: #4a69bd;
+      margin: 0;
+      font-size: 28px;
     }
     
-    .header .report-type {
-      font-size: 14px;
-      color: #444;
-      font-weight: normal;
-    }
-    
-    .header-repeat {
-      display: none;
-      text-align: center;
-      font-size: 12px;
+    .header p {
       color: #666;
-      padding: 8px 0;
-      border-bottom: 1px solid #ccc;
-      margin-bottom: 15px;
-    }
-    
-    .header-repeat img {
-      width: 40px;
-      height: auto;
-      vertical-align: middle;
-      margin-right: 10px;
+      margin: 5px 0;
     }
     
     .section {
-      margin-bottom: 25px;
+      margin-bottom: 30px;
     }
     
     .section-title {
-      background: #1a1a1a;
+      background: #4a69bd;
       color: white;
-      padding: 8px 15px;
+      padding: 10px 15px;
       margin: 0 0 15px 0;
-      font-size: 14px;
-      font-weight: bold;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
+      border-radius: 5px;
+      font-size: 16px;
     }
     
     .grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 12px;
+      gap: 15px;
     }
     
     .stat-card {
-      background: #f8f8f8;
-      border: 1px solid #ddd;
-      padding: 12px 15px;
-      border-left: 4px solid #1a1a1a;
+      background: #f8f9fa;
+      border-radius: 8px;
+      padding: 15px;
+      border-left: 4px solid #4a69bd;
     }
     
-    .stat-card.success { border-left-color: #16a34a; }
-    .stat-card.warning { border-left-color: #d97706; }
-    .stat-card.danger { border-left-color: #dc2626; }
+    .stat-card.success { border-left-color: #27ae60; }
+    .stat-card.warning { border-left-color: #f39c12; }
+    .stat-card.danger { border-left-color: #e74c3c; }
     
     .stat-label {
-      font-size: 11px;
-      color: #555;
+      font-size: 12px;
+      color: #666;
       text-transform: uppercase;
-      margin-bottom: 4px;
-      letter-spacing: 0.3px;
+      margin-bottom: 5px;
     }
     
     .stat-value {
-      font-size: 18px;
+      font-size: 20px;
       font-weight: bold;
-      color: #1a1a1a;
+      color: #1a1a2e;
     }
     
     table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 11px;
+      font-size: 12px;
     }
     
     th, td {
-      border: 1px solid #999;
-      padding: 6px 8px;
+      border: 1px solid #ddd;
+      padding: 8px;
       text-align: left;
     }
     
     th {
-      background: #1a1a1a;
+      background: #4a69bd;
       color: white;
-      font-weight: bold;
-      text-transform: uppercase;
-      font-size: 10px;
-      letter-spacing: 0.3px;
     }
     
-    tr:nth-child(even) { background: #f5f5f5; }
-    tr:nth-child(odd) { background: #fff; }
+    tr:nth-child(even) { background: #f8f9fa; }
     
     .status-badge {
       display: inline-block;
       padding: 2px 8px;
-      border-radius: 3px;
-      font-size: 10px;
+      border-radius: 12px;
+      font-size: 11px;
       font-weight: bold;
-      text-transform: uppercase;
     }
     
-    .status-up_to_date { background: #dcfce7; color: #166534; }
-    .status-ahead { background: #e0e7ff; color: #3730a3; }
-    .status-overdue { background: #fee2e2; color: #991b1b; }
-    .status-unpaid { background: #fef3c7; color: #92400e; }
+    .status-up_to_date { background: #d4edda; color: #155724; }
+    .status-ahead { background: #cce5ff; color: #004085; }
+    .status-overdue { background: #f8d7da; color: #721c24; }
+    .status-unpaid { background: #fff3cd; color: #856404; }
     
     .text-right { text-align: right; }
     .text-center { text-align: center; }
     
-    .positive { color: #16a34a; }
-    .negative { color: #dc2626; }
-    
-    .empty-message {
-      text-align: center;
-      color: #16a34a;
-      padding: 15px;
-      background: #f0fdf4;
-      border: 1px solid #bbf7d0;
-    }
+    .positive { color: #27ae60; }
+    .negative { color: #e74c3c; }
     
     .footer {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
       text-align: center;
       font-size: 10px;
       color: #666;
-      padding: 15px 0;
-      border-top: 1px solid #ccc;
-      margin-top: 30px;
+      padding: 10px;
+      border-top: 1px solid #ddd;
+      background: white;
+    }
+    
+    @media print {
+      .footer {
+        position: fixed;
+        bottom: 10px;
+      }
     }
     
     .print-button {
       position: fixed;
       top: 20px;
       right: 20px;
-      background: #1a1a1a;
+      background: #4a69bd;
       color: white;
       border: none;
       padding: 10px 20px;
+      border-radius: 5px;
       cursor: pointer;
       font-size: 14px;
     }
     
-    .print-button:hover { background: #333; }
+    .print-button:hover { background: #3a5aa8; }
     
     .summary-row {
-      background: #e5e5e5 !important;
+      background: #e8f4fd !important;
       font-weight: bold;
-    }
-    
-    h3.subsection {
-      color: #1a1a1a;
-      font-size: 13px;
-      margin: 20px 0 10px 0;
-      padding-bottom: 5px;
-      border-bottom: 1px solid #ccc;
     }
   </style>
 </head>
@@ -945,24 +865,21 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
   <button class="print-button no-print" onclick="window.print()">📄 Imprimir / Guardar PDF</button>
 
   <div class="header">
-    <img src="${logoUrl}" alt="Logo" class="header-logo" />
-    <div class="header-org-name">Resp∴ Log∴ Simón Bolívar N° 646</div>
-    <div class="header-lodge">Or∴ de Buenos Aires</div>
-    <div class="header-date">${formattedDate}</div>
     <h1>${reportTitle}</h1>
-    <div class="report-type">${reportSubtitle}</div>
+    <p><strong>${data.monthName} ${data.year}</strong></p>
+    <p>Generado: ${new Date().toLocaleDateString('es-AR', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
   </div>
 
   <!-- Section 1: Global Financial Overview -->
   <div class="section">
     <h2 class="section-title">1. Resumen Financiero Global</h2>
     
-    <h3 class="subsection">Saldos de Cuentas</h3>
+    <h3 style="margin: 15px 0 10px; color: #4a69bd;">Saldos de Cuentas</h3>
     <div class="grid">
       <div class="stat-card ${data.totalARSBalance >= 0 ? 'success' : 'danger'}">
         <div class="stat-label">Balance Total (ARS)</div>
         <div class="stat-value">${formatCurrency(data.totalARSBalance)}</div>
-        <div style="font-size: 9px; color: #666; margin-top: 3px;">Incluye USD al TC Oficial: ${formatCurrency(data.exchangeRate)}</div>
+        <div style="font-size: 10px; color: #666; margin-top: 4px;">Incluye USD al TC Oficial: ${formatCurrency(data.exchangeRate)}</div>
       </div>
       <div class="stat-card ${data.bankBalance >= 0 ? 'success' : 'danger'}">
         <div class="stat-label">Cuenta Bancaria Principal (ARS)</div>
@@ -973,15 +890,15 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
         <div class="stat-value">${formatCurrency(data.greatLodgeBalance)}</div>
       </div>
     </div>
-    <div class="grid" style="margin-top: 12px; grid-template-columns: 1fr;">
+    <div class="grid" style="margin-top: 15px; grid-template-columns: 1fr;">
       <div class="stat-card ${data.savingsBalance >= 0 ? 'success' : 'danger'}">
         <div class="stat-label">Cuenta de Ahorros (USD)</div>
         <div class="stat-value">${formatCurrency(data.savingsBalance, 'USD')}</div>
-        <div style="font-size: 10px; color: #666; margin-top: 3px;">Equivalente en ARS: ${formatCurrency(data.savingsBalance * data.exchangeRate)}</div>
+        <div style="font-size: 11px; color: #666; margin-top: 4px;">Equivalente en ARS: ${formatCurrency(data.savingsBalance * data.exchangeRate)}</div>
       </div>
     </div>
 
-    <h3 class="subsection">Flujo del Mes (en ARS)</h3>
+    <h3 style="margin: 25px 0 10px; color: #4a69bd;">Flujo del Mes (en ARS)</h3>
     <div class="grid">
       <div class="stat-card success">
         <div class="stat-label">Ingresos Totales</div>
@@ -997,7 +914,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
       </div>
     </div>
 
-    <h3 class="subsection">Posición de Miembros</h3>
+    <h3 style="margin: 25px 0 10px; color: #4a69bd;">Posición de Miembros</h3>
     <div class="grid" style="grid-template-columns: repeat(2, 1fr);">
       <div class="stat-card danger">
         <div class="stat-label">Deuda Pendiente de Miembros</div>
@@ -1011,11 +928,6 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
   </div>
 
   <div class="page-break"></div>
-  
-  <!-- Repeated header for subsequent pages -->
-  <div class="header-repeat">
-    <img src="${logoUrl}" alt="Logo" /> R∴L∴ Simón Bolívar N° 646 — ${reportTitle}
-  </div>
 
   <!-- Section 2: Member Financial Detail -->
   <div class="section">
@@ -1040,7 +952,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
         <div class="stat-value">${data.collectionPercentage}%</div>
       </div>
     </div>
-    <p style="margin-top: 12px; color: #555; font-size: 12px;">
+    <p style="margin-top: 15px; color: #666;">
       <strong>${data.membersMissingPayment}</strong> miembro(s) sin pago registrado este mes.
     </p>
   </div>
@@ -1050,7 +962,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
   ${eventsSection}
 
   <div class="footer">
-    <p>Tesorería R∴L∴ Simón Bolívar N° 646 · Reporte de ${data.monthName} ${data.year}${isLite ? ' (Resumen)' : ' (Detallado)'}</p>
+    <p>Tesorería · Reporte de ${data.monthName} ${data.year}${isLite ? ' (Resumen)' : ''}</p>
   </div>
 </body>
 </html>`;
