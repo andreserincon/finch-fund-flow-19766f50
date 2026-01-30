@@ -255,7 +255,7 @@ export default function Reports() {
                     </TableCell>
                     <TableCell className="text-right">
                       {report.status === 'generated' && report.pdf_path && (
-                        <DropdownMenu>
+                        <DropdownMenu modal={false}>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="sm">
                               <Download className="h-4 w-4" />
@@ -263,14 +263,14 @@ export default function Reports() {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem
-                              onClick={() => handleDownloadReport(report.pdf_path!, report.report_year, report.report_month)}
+                              onSelect={() => handleDownloadReport(report.pdf_path!, report.report_year, report.report_month)}
                             >
                               <FileText className="h-4 w-4 mr-2" />
                               {t('reports.downloadComprehensive')}
                             </DropdownMenuItem>
                             {report.lite_pdf_path && (
                               <DropdownMenuItem
-                                onClick={() => handleDownloadReport(report.lite_pdf_path!, report.report_year, report.report_month)}
+                                onSelect={() => handleDownloadReport(report.lite_pdf_path!, report.report_year, report.report_month)}
                               >
                                 <FileDown className="h-4 w-4 mr-2" />
                                 {t('reports.downloadLite')}
