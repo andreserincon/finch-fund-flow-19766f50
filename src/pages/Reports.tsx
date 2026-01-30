@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FileText, Download, RefreshCw, Calendar, CheckCircle, Clock, AlertCircle } from 'lucide-react';
+import { FileText, Download, RefreshCw, Calendar, CheckCircle, Clock, AlertCircle, FileDown } from 'lucide-react';
 import { useMonthlyReports } from '@/hooks/useMonthlyReports';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 const monthNames = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -253,14 +254,30 @@ export default function Reports() {
                       </span>
                     </TableCell>
                     <TableCell className="text-right">
-                    {report.status === 'generated' && report.pdf_path && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDownloadReport(report.pdf_path!, report.report_year, report.report_month)}
-                        >
-                          <Download className="h-4 w-4" />
-                        </Button>
+                      {report.status === 'generated' && report.pdf_path && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm">
+                              <Download className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={() => handleDownloadReport(report.pdf_path!, report.report_year, report.report_month)}
+                            >
+                              <FileText className="h-4 w-4 mr-2" />
+                              {t('reports.downloadComprehensive')}
+                            </DropdownMenuItem>
+                            {report.lite_pdf_path && (
+                              <DropdownMenuItem
+                                onClick={() => handleDownloadReport(report.lite_pdf_path!, report.report_year, report.report_month)}
+                              >
+                                <FileDown className="h-4 w-4 mr-2" />
+                                {t('reports.downloadLite')}
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       )}
                     </TableCell>
                   </TableRow>
