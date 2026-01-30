@@ -805,9 +805,10 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
     }
     
     .header-date {
-      font-size: 12px;
-      color: #333;
-      margin-top: 8px;
+      font-size: 11px;
+      font-weight: bold;
+      color: #000;
+      margin-top: 2px;
     }
     
     .header-title {
@@ -992,9 +993,9 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
       ${logoHtml ? `<div class="header-left">${logoHtml}</div>` : '<div class="header-left"></div>'}
       <div class="header-center">
         <div class="header-invocation">A.·.L.·.G.·.D.·.G.·.A.·.D.·.U.·.</div>
-        <div class="header-lodge">R.·.L.·. Simón Bolívar N° 646</div>
       </div>
       <div class="header-right">
+        <div class="header-lodge">R.·.L.·. Simón Bolívar N° 646</div>
         <div class="header-date">${formattedDate}</div>
       </div>
     </div>
