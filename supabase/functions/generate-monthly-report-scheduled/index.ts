@@ -382,11 +382,32 @@ Deno.serve(async (req) => {
       totalLoanDue,
     };
 
+    // Fetch logo as base64 for embedding in HTML
+    let logoBase64: string | undefined;
+    try {
+      const { data: logoData } = await supabase.storage
+        .from('reports')
+        .download('assets/lodge-logo.png');
+      
+      if (logoData) {
+        const arrayBuffer = await logoData.arrayBuffer();
+        const uint8Array = new Uint8Array(arrayBuffer);
+        let binary = '';
+        for (let i = 0; i < uint8Array.length; i++) {
+          binary += String.fromCharCode(uint8Array[i]);
+        }
+        logoBase64 = btoa(binary);
+        console.log('Logo loaded successfully');
+      }
+    } catch (e) {
+      console.warn('Failed to load logo:', e);
+    }
+
     // Generate comprehensive report
-    const pdfContent = generatePDFHTML(reportData, 'comprehensive');
+    const pdfContent = generatePDFHTML(reportData, 'comprehensive', logoBase64);
     
     // Generate lite report
-    const liteContent = generatePDFHTML(reportData, 'lite');
+    const liteContent = generatePDFHTML(reportData, 'lite', logoBase64);
 
     // Upload both reports to storage
     const pdfPath = `${year}/${month.toString().padStart(2, '0')}/Reporte_Financiero_${year}_${month.toString().padStart(2, '0')}.html`;
@@ -451,7 +472,7 @@ Deno.serve(async (req) => {
   }
 });
 
-function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comprehensive'): string {
+function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comprehensive', logoBase64?: string): string {
   const isLite = reportType === 'lite';
   
   const formatCurrency = (amount: number, currency = 'ARS') => {
@@ -475,148 +496,124 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
   };
 
   const accountLabels: Record<string, string> = {
-    bank: 'Banco',
-    great_lodge: 'Gran Logia',
+    bank: 'Banco (ARS)',
+    great_lodge: 'Cuenta GL (ARS)',
     savings: 'Ahorros (USD)',
   };
 
-  const paymentStatusLabels: Record<string, string> = {
-    fully_paid: 'Pagado',
-    partial: 'Pago Parcial',
-    pending: 'Pendiente',
-  };
+  // Spanish month names for date formatting
+  const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
+                      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 
-  // Sort members by status for display
+  // Format generation date in Spanish ceremonial format
+  const now = new Date();
+  const dayNum = now.getDate();
+  const monthNameGenerated = monthNames[now.getMonth()];
+  const yearGenerated = now.getFullYear();
+  const formattedDate = `Or.·. de Buenos Aires, ${dayNum} de ${monthNameGenerated} del ${yearGenerated} (E.·.V.·.)`;
+
+  // Report title format
+  const reportTitleFormatted = `REPORTE FINANCIERO MENSUAL ${data.monthName.toUpperCase()} ${data.year}`;
+
+  // Sort members by status priority: overdue first, then unpaid, then by balance
   const sortedMembers = [...data.memberSnapshots].sort((a: any, b: any) => {
-    const statusOrder = { overdue: 0, unpaid: 1, up_to_date: 2, ahead: 3 };
-    return (statusOrder[a.status as keyof typeof statusOrder] || 2) - (statusOrder[b.status as keyof typeof statusOrder] || 2);
+    const statusPriority: Record<string, number> = { overdue: 0, unpaid: 1, up_to_date: 2, ahead: 3 };
+    const priorityDiff = statusPriority[a.status] - statusPriority[b.status];
+    if (priorityDiff !== 0) return priorityDiff;
+    return a.balance_at_month_end - b.balance_at_month_end;
   });
 
-  const overdueMembers = sortedMembers.filter((m: any) => m.status === 'overdue' || m.status === 'unpaid');
-  const upToDateMembers = sortedMembers.filter((m: any) => m.status === 'up_to_date');
-  const aheadMembers = sortedMembers.filter((m: any) => m.status === 'ahead');
+  // For lite report, only include overdue members
+  const membersToShow = isLite 
+    ? sortedMembers.filter((m: any) => m.status === 'overdue')
+    : sortedMembers;
+  
+  const memberSectionTitle = isLite ? '2. Miembros con más de un mes de capita pendiente' : '2. Detalle Financiero de Miembros';
+  const feeSectionTitle = isLite ? '3. Cobranza de Capita' : '3. Cobertura de Cuotas Mensuales';
 
-  const reportTitle = isLite ? 'Reporte Financiero Mensual (Resumen)' : 'Reporte Financiero Mensual';
-  const feesSectionTitle = isLite ? '📋 Cobranza de Capita' : '📋 Cobranza de Cuotas';
+  // Build member rows
+  const memberRows = membersToShow.map((m: any) => `
+    <tr>
+      <td>${m.full_name}</td>
+      <td class="text-center">${feeTypeLabels[m.fee_type] || m.fee_type}</td>
+      <td class="text-right">${formatCurrency(m.monthly_fee_amount)}</td>
+      <td class="text-right ${m.balance_at_month_end >= 0 ? 'positive' : 'negative'}">${formatCurrency(m.balance_at_month_end)}</td>
+      <td class="text-center"><span class="status-badge status-${m.status}">${statusLabels[m.status] || m.status}</span></td>
+      <td class="text-center">${m.months_ahead > 0 ? `+${m.months_ahead}` : m.months_overdue > 0 ? `-${m.months_overdue}` : '0'}</td>
+      <td class="text-center">${m.last_payment_date ? new Date(m.last_payment_date).toLocaleDateString('es-AR') : '-'}</td>
+    </tr>
+  `).join('');
 
-  // Build overdue members table
-  const overdueMembersSection = overdueMembers.length > 0 ? `
-    <h3 style="color: #ef4444; margin: 15px 0 10px;">⚠️ Miembros con más de un mes de capita pendiente (${overdueMembers.length})</h3>
-    <table>
-      <thead>
-        <tr>
-          <th>Nombre</th>
-          <th>Tipo Cuota</th>
-          <th class="text-right">Monto Cuota</th>
-          <th class="text-right">Balance</th>
-          <th class="text-center">Meses Mora</th>
-          <th>Último Pago</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${overdueMembers.map((m: any) => `
+  // Build member section
+  const memberSection = membersToShow.length > 0 
+    ? `<table>
+        <thead>
           <tr>
-            <td>${m.full_name}</td>
-            <td>${feeTypeLabels[m.fee_type] || m.fee_type}</td>
-            <td class="text-right">${formatCurrency(m.monthly_fee_amount)}</td>
-            <td class="text-right" style="color: #ef4444; font-weight: 600;">${formatCurrency(m.balance_at_month_end)}</td>
-            <td class="text-center">${m.months_overdue || '-'}</td>
-            <td>${m.last_payment_date ? new Date(m.last_payment_date).toLocaleDateString('es-AR') : 'Sin pagos'}</td>
+            <th>Miembro</th>
+            <th class="text-center">Tipo Cuota</th>
+            <th class="text-right">Cuota Mensual</th>
+            <th class="text-right">Saldo</th>
+            <th class="text-center">Estado</th>
+            <th class="text-center">Meses</th>
+            <th class="text-center">Último Pago</th>
           </tr>
-        `).join('')}
-      </tbody>
-    </table>
-  ` : `<p style="color: #10b981;">✅ No hay miembros con más de un mes de capita pendiente.</p>`;
-
-  // Build up to date members table (only for comprehensive)
-  const upToDateMembersSection = !isLite && upToDateMembers.length > 0 ? `
-    <h3 style="color: #10b981; margin: 20px 0 10px;">✅ Miembros Al Día (${upToDateMembers.length})</h3>
-    <table>
-      <thead>
-        <tr>
-          <th>Nombre</th>
-          <th>Tipo Cuota</th>
-          <th class="text-right">Monto Cuota</th>
-          <th class="text-right">Balance</th>
-          <th>Último Pago</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${upToDateMembers.map((m: any) => `
-          <tr>
-            <td>${m.full_name}</td>
-            <td>${feeTypeLabels[m.fee_type] || m.fee_type}</td>
-            <td class="text-right">${formatCurrency(m.monthly_fee_amount)}</td>
-            <td class="text-right">${formatCurrency(m.balance_at_month_end)}</td>
-            <td>${m.last_payment_date ? new Date(m.last_payment_date).toLocaleDateString('es-AR') : 'Sin pagos'}</td>
-          </tr>
-        `).join('')}
-      </tbody>
-    </table>
-  ` : '';
-
-  // Build ahead members table (only for comprehensive)
-  const aheadMembersSection = !isLite && aheadMembers.length > 0 ? `
-    <h3 style="color: #5b21b6; margin: 20px 0 10px;">🌟 Miembros Adelantados (${aheadMembers.length})</h3>
-    <table>
-      <thead>
-        <tr>
-          <th>Nombre</th>
-          <th>Tipo Cuota</th>
-          <th class="text-right">Monto Cuota</th>
-          <th class="text-right">Crédito</th>
-          <th class="text-center">Meses Adelanto</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${aheadMembers.map((m: any) => `
-          <tr>
-            <td>${m.full_name}</td>
-            <td>${feeTypeLabels[m.fee_type] || m.fee_type}</td>
-            <td class="text-right">${formatCurrency(m.monthly_fee_amount)}</td>
-            <td class="text-right" style="color: #10b981; font-weight: 600;">${formatCurrency(m.balance_at_month_end)}</td>
-            <td class="text-center">${m.months_ahead || '-'}</td>
-          </tr>
-        `).join('')}
-      </tbody>
-    </table>
-  ` : '';
+        </thead>
+        <tbody>${memberRows}</tbody>
+      </table>`
+    : `<p style="color: #666; text-align: center;">No hay miembros con más de un mes de capita pendiente.</p>`;
 
   // Build loans section
   let loansSection = '';
   if (isLite) {
-    // Lite version: show KPIs only
     if (data.totalActiveLoans > 0) {
       loansSection = `
         <div class="section">
-          <h2 class="section-title">💳 Préstamos Activos (Resumen)</h2>
+          <h2 class="section-title">4. Préstamos Activos (Resumen)</h2>
           <div class="grid">
             <div class="stat-card">
-              <div class="label">Cantidad de Préstamos</div>
-              <div class="value">${data.totalActiveLoans}</div>
+              <div class="stat-label">Cantidad de Préstamos Activos</div>
+              <div class="stat-value">${data.totalActiveLoans}</div>
             </div>
             <div class="stat-card warning">
-              <div class="label">Monto Total</div>
-              <div class="value">${formatCurrency(data.totalLoanAmount)}</div>
+              <div class="stat-label">Monto Total en Préstamos</div>
+              <div class="stat-value">${formatCurrency(data.totalLoanAmount)}</div>
             </div>
-            <div class="stat-card negative">
-              <div class="label">Pendiente de Cobro</div>
-              <div class="value negative">${formatCurrency(data.totalLoanDue)}</div>
+            <div class="stat-card danger">
+              <div class="stat-label">Monto Pendiente de Cobro</div>
+              <div class="stat-value negative">${formatCurrency(data.totalLoanDue)}</div>
             </div>
           </div>
         </div>
       `;
     }
   } else if (data.loanSnapshots.length > 0) {
-    // Comprehensive version: show detailed table
+    const loanRows = data.loanSnapshots.map((l: any) => `
+      <tr>
+        <td>${l.borrower_name}</td>
+        <td class="text-center">${accountLabels[l.account] || l.account}</td>
+        <td class="text-right">${formatCurrency(l.original_amount, l.account === 'savings' ? 'USD' : 'ARS')}</td>
+        <td class="text-right positive">${formatCurrency(l.amount_paid, l.account === 'savings' ? 'USD' : 'ARS')}</td>
+        <td class="text-right negative">${formatCurrency(l.outstanding_balance, l.account === 'savings' ? 'USD' : 'ARS')}</td>
+        <td class="text-center">${l.payment_status === 'partial' ? 'Parcial' : l.payment_status === 'pending' ? 'Pendiente' : 'Pagado'}</td>
+      </tr>
+    `).join('');
+
+    const totalPendingARS = data.loanSnapshots
+      .filter((l: any) => l.account !== 'savings')
+      .reduce((s: number, l: any) => s + l.outstanding_balance, 0);
+    const totalPendingUSD = data.loanSnapshots
+      .filter((l: any) => l.account === 'savings')
+      .reduce((s: number, l: any) => s + l.outstanding_balance, 0);
+
     loansSection = `
+      <div class="page-break"></div>
       <div class="section">
-        <h2 class="section-title">💳 Préstamos Activos (${data.loanSnapshots.length})</h2>
+        <h2 class="section-title">4. Préstamos Activos</h2>
         <table>
           <thead>
             <tr>
               <th>Prestatario</th>
-              <th>Cuenta</th>
+              <th class="text-center">Cuenta</th>
               <th class="text-right">Monto Original</th>
               <th class="text-right">Pagado</th>
               <th class="text-right">Pendiente</th>
@@ -624,22 +621,17 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
             </tr>
           </thead>
           <tbody>
-            ${data.loanSnapshots.map((l: any) => `
-              <tr>
-                <td>${l.borrower_name}</td>
-                <td>${accountLabels[l.account] || l.account}</td>
-                <td class="text-right">${formatCurrency(l.original_amount)}</td>
-                <td class="text-right">${formatCurrency(l.amount_paid)}</td>
-                <td class="text-right" style="color: ${l.outstanding_balance > 0 ? '#ef4444' : '#10b981'}; font-weight: 600;">
-                  ${formatCurrency(l.outstanding_balance)}
-                </td>
-                <td class="text-center">
-                  <span class="status-badge ${l.payment_status === 'fully_paid' ? 'status-up_to_date' : l.payment_status === 'partial' ? 'status-unpaid' : 'status-overdue'}">
-                    ${paymentStatusLabels[l.payment_status] || l.payment_status}
-                  </span>
-                </td>
-              </tr>
-            `).join('')}
+            ${loanRows}
+            <tr class="summary-row">
+              <td colspan="4" class="text-right">Total Pendiente (ARS)</td>
+              <td class="text-right negative">${formatCurrency(totalPendingARS)}</td>
+              <td></td>
+            </tr>
+            <tr class="summary-row">
+              <td colspan="4" class="text-right">Total Pendiente (USD)</td>
+              <td class="text-right negative">${formatCurrency(totalPendingUSD, 'USD')}</td>
+              <td></td>
+            </tr>
           </tbody>
         </table>
       </div>
@@ -647,236 +639,427 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
   }
 
   // Build events section
-  const eventsSection = data.eventSnapshots.length > 0 ? `
-    <div class="section">
-      <h2 class="section-title">📅 Eventos Activos (${data.eventSnapshots.length})</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>Evento</th>
-            <th class="text-center">Miembros</th>
-            <th class="text-right">Total</th>
-            <th class="text-right">Cobrado</th>
-            <th class="text-right">Pendiente</th>
-            <th class="text-center">Sin Pagar</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${data.eventSnapshots.map((e: any) => `
+  let eventsSection = '';
+  if (data.eventSnapshots.length > 0) {
+    const eventRows = data.eventSnapshots.map((e: any) => `
+      <tr>
+        <td>${e.event_name}</td>
+        <td class="text-right">${formatCurrency(e.total_amount)}</td>
+        <td class="text-right positive">${formatCurrency(e.amount_collected)}</td>
+        <td class="text-right negative">${formatCurrency(e.outstanding_amount)}</td>
+        <td class="text-center">${e.members_included}</td>
+        <td class="text-center">${e.members_unpaid}</td>
+        <td class="text-center">${e.event_status === 'settled' ? '✅ Saldado' : '⏳ Pendiente'}</td>
+      </tr>
+    `).join('');
+
+    const totalEventAmount = data.eventSnapshots.reduce((s: number, e: any) => s + e.total_amount, 0);
+    const totalEventCollected = data.eventSnapshots.reduce((s: number, e: any) => s + e.amount_collected, 0);
+    const totalEventOutstanding = data.eventSnapshots.reduce((s: number, e: any) => s + e.outstanding_amount, 0);
+
+    eventsSection = `
+      <div class="section">
+        <h2 class="section-title">5. Eventos / Gastos Extraordinarios</h2>
+        <table>
+          <thead>
             <tr>
-              <td>${e.event_name}</td>
-              <td class="text-center">${e.members_included}</td>
-              <td class="text-right">${formatCurrency(e.total_amount)}</td>
-              <td class="text-right">${formatCurrency(e.amount_collected)}</td>
-              <td class="text-right" style="color: ${e.outstanding_amount > 0 ? '#ef4444' : '#10b981'}; font-weight: 600;">
-                ${formatCurrency(e.outstanding_amount)}
-              </td>
-              <td class="text-center">${e.members_unpaid}</td>
+              <th>Evento</th>
+              <th class="text-right">Total</th>
+              <th class="text-right">Recaudado</th>
+              <th class="text-right">Pendiente</th>
+              <th class="text-center">Miembros</th>
+              <th class="text-center">Sin Pagar</th>
+              <th class="text-center">Estado</th>
             </tr>
-          `).join('')}
-        </tbody>
-      </table>
-    </div>
-  ` : '';
+          </thead>
+          <tbody>
+            ${eventRows}
+            <tr class="summary-row">
+              <td class="text-right">Totales</td>
+              <td class="text-right">${formatCurrency(totalEventAmount)}</td>
+              <td class="text-right positive">${formatCurrency(totalEventCollected)}</td>
+              <td class="text-right negative">${formatCurrency(totalEventOutstanding)}</td>
+              <td colspan="3"></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    `;
+  }
 
-  const memberSectionTitle = isLite ? '👥 Miembros con más de un mes de capita pendiente' : `👥 Detalle de Miembros (${data.memberSnapshots.length})`;
+  // Logo HTML - use base64 if available
+  const logoHtml = logoBase64 
+    ? `<img src="data:image/png;base64,${logoBase64}" alt="Logo" class="header-logo" />`
+    : '';
 
-  return `
-<!DOCTYPE html>
+  return `<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Reporte Financiero - ${data.monthName} ${data.year}</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { 
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-      line-height: 1.6; 
-      color: #1a1a2e; 
-      background: #f8f9fa;
-      padding: 20px;
+    @media print {
+      body { margin: 0; padding: 20px; }
+      .page-break { page-break-before: always; }
+      .no-print { display: none; }
+      @page { margin: 20mm 15mm; }
     }
-    .container { max-width: 1000px; margin: 0 auto; background: white; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-    .header { 
-      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); 
-      color: white; 
-      padding: 30px 40px; 
+    
+    * { box-sizing: border-box; }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      line-height: 1.6;
+      color: #1a1a1a;
+      max-width: 210mm;
+      margin: 0 auto;
+      padding: 20px;
+      background: #fff;
+    }
+    
+    /* Header styling - Black & White institutional */
+    .header {
+      border-bottom: 2px solid #000;
+      padding-bottom: 20px;
+      margin-bottom: 30px;
+    }
+    
+    .header-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 15px;
+    }
+    
+    .header-logo {
+      width: 70px;
+      height: auto;
+    }
+    
+    .header-center {
+      flex: 1;
       text-align: center;
     }
-    .header h1 { font-size: 28px; margin-bottom: 5px; }
-    .header .subtitle { font-size: 16px; opacity: 0.9; }
-    .header .period { font-size: 22px; margin-top: 10px; font-weight: 600; }
-    .content { padding: 30px 40px; }
-    .section { margin-bottom: 30px; }
-    .section-title { 
-      font-size: 18px; 
-      font-weight: 600; 
-      color: #1a1a2e; 
-      border-bottom: 2px solid #e0e0e0; 
-      padding-bottom: 10px; 
-      margin-bottom: 20px;
+    
+    .header-invocation {
+      font-size: 14px;
+      font-weight: bold;
+      color: #000;
+      letter-spacing: 2px;
+      margin-bottom: 5px;
     }
-    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
-    .stat-card { 
-      background: #f8f9fa; 
-      padding: 15px 20px; 
-      border-radius: 8px; 
-      border-left: 4px solid #1a1a2e;
+    
+    .header-right {
+      text-align: right;
     }
-    .stat-card.positive { border-left-color: #10b981; }
-    .stat-card.negative { border-left-color: #ef4444; }
-    .stat-card.warning { border-left-color: #f59e0b; }
-    .stat-card .label { font-size: 12px; color: #666; text-transform: uppercase; letter-spacing: 0.5px; }
-    .stat-card .value { font-size: 20px; font-weight: 700; color: #1a1a2e; margin-top: 5px; }
-    .stat-card .value.positive { color: #10b981; }
-    .stat-card .value.negative { color: #ef4444; }
-    table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    th { background: #1a1a2e; color: white; padding: 12px 10px; text-align: left; font-weight: 600; }
-    td { padding: 10px; border-bottom: 1px solid #e0e0e0; }
-    tr:nth-child(even) { background: #f8f9fa; }
-    .status-badge { 
-      display: inline-block; 
-      padding: 3px 10px; 
-      border-radius: 12px; 
-      font-size: 11px; 
-      font-weight: 600; 
+    
+    .header-lodge {
+      font-size: 14px;
+      font-weight: bold;
+      color: #000;
     }
-    .status-overdue { background: #fecaca; color: #991b1b; }
-    .status-unpaid { background: #fed7aa; color: #9a3412; }
-    .status-up_to_date { background: #bbf7d0; color: #166534; }
-    .status-ahead { background: #ddd6fe; color: #5b21b6; }
+    
+    .header-date {
+      font-size: 12px;
+      color: #333;
+      margin-top: 8px;
+    }
+    
+    .header-title {
+      text-align: center;
+      margin-top: 15px;
+    }
+    
+    .header-title h1 {
+      color: #000;
+      margin: 0;
+      font-size: 22px;
+      font-weight: bold;
+      letter-spacing: 1px;
+    }
+    
+    /* Condensed header for subsequent pages */
+    .page-header {
+      display: none;
+    }
+    
+    @media print {
+      .page-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #999;
+        margin-bottom: 15px;
+        font-size: 10px;
+        color: #666;
+      }
+      .page-header .logo-small {
+        width: 30px;
+        height: auto;
+      }
+    }
+    
+    .section {
+      margin-bottom: 30px;
+    }
+    
+    /* Section titles - Black background */
+    .section-title {
+      background: #1a1a1a;
+      color: white;
+      padding: 10px 15px;
+      margin: 0 0 15px 0;
+      border-radius: 3px;
+      font-size: 16px;
+    }
+    
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 15px;
+    }
+    
+    /* Stat cards - Gray borders with status colors preserved */
+    .stat-card {
+      background: #f9f9f9;
+      border-radius: 5px;
+      padding: 15px;
+      border-left: 4px solid #333;
+      border: 1px solid #ddd;
+    }
+    
+    .stat-card.success { border-left: 4px solid #27ae60; }
+    .stat-card.warning { border-left: 4px solid #f39c12; }
+    .stat-card.danger { border-left: 4px solid #e74c3c; }
+    
+    .stat-label {
+      font-size: 12px;
+      color: #555;
+      text-transform: uppercase;
+      margin-bottom: 5px;
+    }
+    
+    .stat-value {
+      font-size: 20px;
+      font-weight: bold;
+      color: #1a1a1a;
+    }
+    
+    /* Tables - Black/gray borders */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    
+    th, td {
+      border: 1px solid #999;
+      padding: 8px;
+      text-align: left;
+    }
+    
+    th {
+      background: #1a1a1a;
+      color: white;
+    }
+    
+    tr:nth-child(even) { background: #f5f5f5; }
+    
+    /* Status badges - preserve KPI colors */
+    .status-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: bold;
+    }
+    
+    .status-up_to_date { background: #d4edda; color: #155724; }
+    .status-ahead { background: #e0e0e0; color: #333; }
+    .status-overdue { background: #f8d7da; color: #721c24; }
+    .status-unpaid { background: #fff3cd; color: #856404; }
+    
     .text-right { text-align: right; }
     .text-center { text-align: center; }
-    .footer { 
-      background: #f8f9fa; 
-      padding: 20px 40px; 
-      text-align: center; 
-      font-size: 12px; 
+    
+    /* KPI colors preserved */
+    .positive { color: #27ae60; }
+    .negative { color: #e74c3c; }
+    
+    .footer {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      text-align: center;
+      font-size: 10px;
       color: #666;
-      border-top: 1px solid #e0e0e0;
+      padding: 10px;
+      border-top: 1px solid #999;
+      background: white;
     }
-    .summary-box {
-      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-      color: white;
-      padding: 20px;
-      border-radius: 8px;
-      margin-bottom: 20px;
-    }
-    .summary-box .title { font-size: 14px; opacity: 0.9; }
-    .summary-box .amount { font-size: 28px; font-weight: 700; }
+    
     @media print {
-      body { padding: 0; background: white; }
-      .container { box-shadow: none; }
-      .section { page-break-inside: avoid; }
+      .footer {
+        position: fixed;
+        bottom: 10px;
+      }
+    }
+    
+    .print-button {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: #1a1a1a;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    
+    .print-button:hover { background: #333; }
+    
+    .summary-row {
+      background: #e8e8e8 !important;
+      font-weight: bold;
+    }
+    
+    /* Subsection headers - Gray */
+    .subsection-title {
+      margin: 25px 0 10px;
+      color: #1a1a1a;
+      font-size: 14px;
+      font-weight: 600;
+      border-bottom: 1px solid #ccc;
+      padding-bottom: 5px;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="header">
-      <h1>${reportTitle}</h1>
-      <div class="subtitle">Generado automáticamente</div>
-      <div class="period">${data.monthName} ${data.year}</div>
+  <button class="print-button no-print" onclick="window.print()">📄 Imprimir / Guardar PDF</button>
+
+  <!-- Main Header - Full version on first page -->
+  <div class="header">
+    <div class="header-top">
+      ${logoHtml ? `<div class="header-left">${logoHtml}</div>` : '<div class="header-left"></div>'}
+      <div class="header-center">
+        <div class="header-invocation">A.·.L.·.G.·.D.·.G.·.A.·.D.·.U.·.</div>
+      </div>
+      <div class="header-right">
+        <div class="header-lodge">R.·.L.·. Simón Bolívar N° 646</div>
+        <div class="header-date">${formattedDate}</div>
+      </div>
     </div>
-    
-    <div class="content">
-      <!-- Global Overview -->
-      <div class="section">
-        <h2 class="section-title">📊 Resumen Global</h2>
-        <div class="summary-box">
-          <div class="title">Balance Total (incluyendo USD convertido)</div>
-          <div class="amount">${formatCurrency(data.totalARSBalance)}</div>
-          <div style="font-size: 12px; margin-top: 5px; opacity: 0.8;">Tipo de cambio oficial: ${formatCurrency(data.exchangeRate)}/USD</div>
-        </div>
-        <div class="grid">
-          <div class="stat-card">
-            <div class="label">Cuenta Banco (ARS)</div>
-            <div class="value">${formatCurrency(data.bankBalance)}</div>
-          </div>
-          <div class="stat-card">
-            <div class="label">Gran Logia (ARS)</div>
-            <div class="value">${formatCurrency(data.greatLodgeBalance)}</div>
-          </div>
-          <div class="stat-card">
-            <div class="label">Ahorros (USD)</div>
-            <div class="value">${formatCurrency(data.savingsBalance, 'USD')}</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Monthly Flow -->
-      <div class="section">
-        <h2 class="section-title">💰 Flujo del Mes</h2>
-        <div class="grid">
-          <div class="stat-card positive">
-            <div class="label">Ingresos Totales</div>
-            <div class="value positive">${formatCurrency(data.totalInflows)}</div>
-          </div>
-          <div class="stat-card negative">
-            <div class="label">Egresos Totales</div>
-            <div class="value negative">${formatCurrency(data.totalOutflows)}</div>
-          </div>
-          <div class="stat-card ${data.netResult >= 0 ? 'positive' : 'negative'}">
-            <div class="label">Resultado Neto</div>
-            <div class="value ${data.netResult >= 0 ? 'positive' : 'negative'}">${formatCurrency(data.netResult)}</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Treasury Position -->
-      <div class="section">
-        <h2 class="section-title">🏦 Posición de Tesorería</h2>
-        <div class="grid">
-          <div class="stat-card negative">
-            <div class="label">Deuda de Miembros</div>
-            <div class="value negative">${formatCurrency(data.outstandingMemberDebt)}</div>
-          </div>
-          <div class="stat-card positive">
-            <div class="label">Crédito Prepago</div>
-            <div class="value positive">${formatCurrency(data.prepaidMemberCredit)}</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Fee Collection -->
-      <div class="section">
-        <h2 class="section-title">${feesSectionTitle}</h2>
-        <div class="grid">
-          <div class="stat-card">
-            <div class="label">Cuotas Esperadas</div>
-            <div class="value">${formatCurrency(data.expectedMonthlyFees)}</div>
-          </div>
-          <div class="stat-card ${data.collectionPercentage >= 80 ? 'positive' : data.collectionPercentage >= 50 ? 'warning' : 'negative'}">
-            <div class="label">Cuotas Cobradas</div>
-            <div class="value">${formatCurrency(data.collectedMonthlyFees)} (${data.collectionPercentage}%)</div>
-          </div>
-          <div class="stat-card ${data.membersMissingPayment === 0 ? 'positive' : 'warning'}">
-            <div class="label">Miembros Sin Pago</div>
-            <div class="value">${data.membersMissingPayment}</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Member Details -->
-      <div class="section">
-        <h2 class="section-title">${memberSectionTitle}</h2>
-        ${overdueMembersSection}
-        ${upToDateMembersSection}
-        ${aheadMembersSection}
-      </div>
-
-      ${loansSection}
-
-      ${eventsSection}
-    </div>
-
-    <div class="footer">
-      <p>Reporte generado automáticamente el ${new Date().toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' })}</p>
-      <p>Este documento es un reporte oficial de tesorería.${isLite ? ' (Versión Resumen)' : ''}</p>
+    <div class="header-title">
+      <h1>${reportTitleFormatted}</h1>
     </div>
   </div>
+
+  <!-- Section 1: Global Financial Overview -->
+  <div class="section">
+    <h2 class="section-title">1. Resumen Financiero Global</h2>
+    
+    <h3 class="subsection-title">Saldos de Cuentas</h3>
+    <div class="grid">
+      <div class="stat-card ${data.totalARSBalance >= 0 ? 'success' : 'danger'}">
+        <div class="stat-label">Balance Total (ARS)</div>
+        <div class="stat-value">${formatCurrency(data.totalARSBalance)}</div>
+        <div style="font-size: 10px; color: #666; margin-top: 4px;">Incluye USD al TC Oficial: ${formatCurrency(data.exchangeRate)}</div>
+      </div>
+      <div class="stat-card ${data.bankBalance >= 0 ? 'success' : 'danger'}">
+        <div class="stat-label">Cuenta Bancaria Principal (ARS)</div>
+        <div class="stat-value">${formatCurrency(data.bankBalance)}</div>
+      </div>
+      <div class="stat-card ${data.greatLodgeBalance >= 0 ? 'success' : 'danger'}">
+        <div class="stat-label">Cuenta GL (ARS)</div>
+        <div class="stat-value">${formatCurrency(data.greatLodgeBalance)}</div>
+      </div>
+    </div>
+    <div class="grid" style="margin-top: 15px; grid-template-columns: 1fr;">
+      <div class="stat-card ${data.savingsBalance >= 0 ? 'success' : 'danger'}">
+        <div class="stat-label">Cuenta de Ahorros (USD)</div>
+        <div class="stat-value">${formatCurrency(data.savingsBalance, 'USD')}</div>
+        <div style="font-size: 11px; color: #666; margin-top: 4px;">Equivalente en ARS: ${formatCurrency(data.savingsBalance * data.exchangeRate)}</div>
+      </div>
+    </div>
+
+    <h3 class="subsection-title">Flujo del Mes (en ARS)</h3>
+    <div class="grid">
+      <div class="stat-card success">
+        <div class="stat-label">Ingresos Totales</div>
+        <div class="stat-value positive">${formatCurrency(data.totalInflows)}</div>
+      </div>
+      <div class="stat-card danger">
+        <div class="stat-label">Egresos Totales</div>
+        <div class="stat-value negative">${formatCurrency(data.totalOutflows)}</div>
+      </div>
+      <div class="stat-card ${data.netResult >= 0 ? 'success' : 'danger'}">
+        <div class="stat-label">Resultado Neto</div>
+        <div class="stat-value ${data.netResult >= 0 ? 'positive' : 'negative'}">${formatCurrency(data.netResult)}</div>
+      </div>
+    </div>
+
+    <h3 class="subsection-title">Posición de Miembros</h3>
+    <div class="grid" style="grid-template-columns: repeat(2, 1fr);">
+      <div class="stat-card danger">
+        <div class="stat-label">Deuda Pendiente de Miembros</div>
+        <div class="stat-value negative">${formatCurrency(data.outstandingMemberDebt)}</div>
+      </div>
+      <div class="stat-card success">
+        <div class="stat-label">Crédito Prepagado</div>
+        <div class="stat-value positive">${formatCurrency(data.prepaidMemberCredit)}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-break"></div>
+
+  <!-- Condensed header for page 2+ -->
+  <div class="page-header">
+    ${logoBase64 ? `<img src="data:image/png;base64,${logoBase64}" alt="Logo" class="logo-small" />` : ''}
+    <span>R.·.L.·. Simón Bolívar N° 646</span>
+    <span>${reportTitleFormatted}</span>
+  </div>
+
+  <!-- Section 2: Member Financial Detail -->
+  <div class="section">
+    <h2 class="section-title">${memberSectionTitle}</h2>
+    ${memberSection}
+  </div>
+
+  <!-- Section 3: Monthly Fee Coverage -->
+  <div class="section">
+    <h2 class="section-title">${feeSectionTitle}</h2>
+    <div class="grid">
+      <div class="stat-card">
+        <div class="stat-label">Cuotas Esperadas</div>
+        <div class="stat-value">${formatCurrency(data.expectedMonthlyFees)}</div>
+      </div>
+      <div class="stat-card success">
+        <div class="stat-label">Cuotas Recaudadas</div>
+        <div class="stat-value">${formatCurrency(data.collectedMonthlyFees)}</div>
+      </div>
+      <div class="stat-card ${data.collectionPercentage >= 80 ? 'success' : data.collectionPercentage >= 50 ? 'warning' : 'danger'}">
+        <div class="stat-label">Porcentaje de Recaudación</div>
+        <div class="stat-value">${data.collectionPercentage}%</div>
+      </div>
+    </div>
+    <p style="margin-top: 15px; color: #555;">
+      <strong>${data.membersMissingPayment}</strong> miembro(s) sin pago registrado este mes.
+    </p>
+  </div>
+
+  ${loansSection}
+
+  ${eventsSection}
+
+  <div class="footer">
+    <p>R.·.L.·. Simón Bolívar N° 646 · Tesorería · ${data.monthName} ${data.year}${isLite ? ' (Resumen)' : ''}</p>
+  </div>
 </body>
-</html>
-  `;
+</html>`;
 }
