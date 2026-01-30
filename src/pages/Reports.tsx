@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FileText, Download, RefreshCw, Calendar, CheckCircle, Clock, AlertCircle, FileDown } from 'lucide-react';
+import { FileText, Download, RefreshCw, Calendar, CheckCircle, Clock, AlertCircle, FileDown, Share2 } from 'lucide-react';
 import { useMonthlyReports } from '@/hooks/useMonthlyReports';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -66,6 +66,48 @@ export default function Reports() {
       }
     }
   };
+
+  const handleShareReport = async (pdfPath: string, year: number, month: number, isLite: boolean) => {
+    const url = await getReportPdfUrl(pdfPath);
+    if (!url) return;
+
+    try {
+      const response = await fetch(url);
+      const htmlContent = await response.text();
+      
+      // Create a blob from HTML content
+      const blob = new Blob([htmlContent], { type: 'text/html' });
+      const reportType = isLite ? 'Lite' : 'Completo';
+      const fileName = `Reporte_${monthNames[month - 1]}_${year}_${reportType}.html`;
+      const file = new File([blob], fileName, { type: 'text/html' });
+
+      if (navigator.share && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: `Reporte Financiero ${monthNames[month - 1]} ${year}`,
+          text: `Reporte Financiero ${reportType} - ${monthNames[month - 1]} ${year}`,
+        });
+      } else if (navigator.share) {
+        // Fallback: share URL only if file sharing not supported
+        await navigator.share({
+          title: `Reporte Financiero ${monthNames[month - 1]} ${year}`,
+          text: `Reporte Financiero ${reportType} - ${monthNames[month - 1]} ${year}`,
+          url: url,
+        });
+      } else {
+        // Fallback for browsers without Web Share API
+        handleDownloadReport(pdfPath, year, month);
+      }
+    } catch (error) {
+      if ((error as Error).name !== 'AbortError') {
+        console.error('Error sharing report:', error);
+        // Fallback to download
+        handleDownloadReport(pdfPath, year, month);
+      }
+    }
+  };
+
+  const canShare = typeof navigator !== 'undefined' && !!navigator.share;
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -275,6 +317,24 @@ export default function Reports() {
                                 <FileDown className="h-4 w-4 mr-2" />
                                 {t('reports.downloadLite')}
                               </DropdownMenuItem>
+                            )}
+                            {canShare && (
+                              <>
+                                <DropdownMenuItem
+                                  onSelect={() => handleShareReport(report.pdf_path!, report.report_year, report.report_month, false)}
+                                >
+                                  <Share2 className="h-4 w-4 mr-2" />
+                                  {t('reports.shareComprehensive')}
+                                </DropdownMenuItem>
+                                {report.lite_pdf_path && (
+                                  <DropdownMenuItem
+                                    onSelect={() => handleShareReport(report.lite_pdf_path!, report.report_year, report.report_month, true)}
+                                  >
+                                    <Share2 className="h-4 w-4 mr-2" />
+                                    {t('reports.shareLite')}
+                                  </DropdownMenuItem>
+                                )}
+                              </>
                             )}
                           </DropdownMenuContent>
                         </DropdownMenu>

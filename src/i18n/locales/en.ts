@@ -389,6 +389,8 @@ export default {
       avgNetResult: 'Avg Net Result',
       downloadComprehensive: 'Comprehensive Report',
       downloadLite: 'Summary Report',
+      shareComprehensive: 'Share Comprehensive',
+      shareLite: 'Share Summary',
       status: {
         generated: 'Generated',
         generating: 'Generating',
