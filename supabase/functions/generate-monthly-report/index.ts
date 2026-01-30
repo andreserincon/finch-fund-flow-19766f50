@@ -537,7 +537,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
     : sortedMembers;
   
   const reportTitle = isLite ? 'Reporte Financiero Mensual (Resumen)' : 'Reporte Financiero Mensual';
-  const memberSectionTitle = isLite ? '2. Miembros Morosos' : '2. Detalle Financiero de Miembros';
+  const memberSectionTitle = isLite ? '2. Miembros con más de un mes de capita pendiente' : '2. Detalle Financiero de Miembros';
   const feeSectionTitle = isLite ? '3. Cobranza de Capita' : '3. Cobertura de Cuotas Mensuales';
 
   // Build member rows
@@ -569,7 +569,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
         </thead>
         <tbody>${memberRows}</tbody>
       </table>`
-    : `<p style="color: #666; text-align: center;">No hay miembros morosos.</p>`;
+    : `<p style="color: #666; text-align: center;">No hay miembros con más de un mes de capita pendiente.</p>`;
 
   // Build loans section
   let loansSection = '';

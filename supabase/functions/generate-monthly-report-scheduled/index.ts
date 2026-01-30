@@ -501,7 +501,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
 
   // Build overdue members table
   const overdueMembersSection = overdueMembers.length > 0 ? `
-    <h3 style="color: #ef4444; margin: 15px 0 10px;">⚠️ Miembros Morosos (${overdueMembers.length})</h3>
+    <h3 style="color: #ef4444; margin: 15px 0 10px;">⚠️ Miembros con más de un mes de capita pendiente (${overdueMembers.length})</h3>
     <table>
       <thead>
         <tr>
@@ -526,7 +526,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
         `).join('')}
       </tbody>
     </table>
-  ` : `<p style="color: #10b981;">✅ No hay miembros morosos.</p>`;
+  ` : `<p style="color: #10b981;">✅ No hay miembros con más de un mes de capita pendiente.</p>`;
 
   // Build up to date members table (only for comprehensive)
   const upToDateMembersSection = !isLite && upToDateMembers.length > 0 ? `
@@ -679,7 +679,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
     </div>
   ` : '';
 
-  const memberSectionTitle = isLite ? '👥 Miembros Morosos' : `👥 Detalle de Miembros (${data.memberSnapshots.length})`;
+  const memberSectionTitle = isLite ? '👥 Miembros con más de un mes de capita pendiente' : `👥 Detalle de Miembros (${data.memberSnapshots.length})`;
 
   return `
 <!DOCTYPE html>
