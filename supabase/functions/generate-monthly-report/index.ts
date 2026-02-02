@@ -803,13 +803,192 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
     ? `<img src="data:image/png;base64,${logoBase64}" alt="Logo" class="header-logo" />`
     : '';
 
-  return `<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Reporte Financiero - ${data.monthName} ${data.year}</title>
-  <style>
+  // Different styles for lite vs comprehensive
+  const liteStyles = isLite ? `
+    /* Lite report - optimized for single page */
+    @media print {
+      body { margin: 0; padding: 8px; }
+      .page-break { display: none; }
+      .no-print { display: none; }
+      @page { margin: 8mm 8mm; size: A4; }
+    }
+    
+    * { box-sizing: border-box; }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      line-height: 1.2;
+      color: #1a1a1a;
+      max-width: 210mm;
+      margin: 0 auto;
+      padding: 8px;
+      background: #fff;
+      font-size: 9px;
+    }
+    
+    .header {
+      border-bottom: 1px solid #000;
+      padding-bottom: 8px;
+      margin-bottom: 10px;
+    }
+    
+    .header-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 4px;
+    }
+    
+    .header-logo { width: 40px; height: auto; }
+    
+    .header-center { flex: 1; text-align: center; }
+    
+    .header-invocation {
+      font-size: 10px;
+      font-weight: bold;
+      color: #000;
+      letter-spacing: 1px;
+    }
+    
+    .header-right-block { text-align: right; margin-bottom: 4px; }
+    
+    .header-lodge {
+      font-size: 9px;
+      font-weight: bold;
+      color: #000;
+      margin-bottom: 1px;
+    }
+    
+    .header-date { font-size: 8px; font-weight: bold; color: #000; }
+    
+    .header-title { text-align: center; margin-top: 6px; }
+    
+    .header-title h1 {
+      color: #000;
+      margin: 0;
+      font-size: 12px;
+      font-weight: bold;
+      letter-spacing: 0.5px;
+    }
+    
+    .page-header { display: none; }
+    
+    .section { margin-bottom: 8px; }
+    
+    .section-title {
+      background: #1a1a1a;
+      color: white;
+      padding: 4px 8px;
+      margin: 0 0 6px 0;
+      border-radius: 2px;
+      font-size: 10px;
+    }
+    
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+    }
+    
+    .stat-card {
+      background: #f9f9f9;
+      border-radius: 3px;
+      padding: 6px;
+      border-left: 3px solid #333;
+      border: 1px solid #ddd;
+    }
+    
+    .stat-card.success { border-left: 3px solid #27ae60; }
+    .stat-card.warning { border-left: 3px solid #f39c12; }
+    .stat-card.danger { border-left: 3px solid #e74c3c; }
+    
+    .stat-label {
+      font-size: 7px;
+      color: #555;
+      text-transform: uppercase;
+      margin-bottom: 2px;
+    }
+    
+    .stat-value { font-size: 11px; font-weight: bold; color: #1a1a1a; }
+    
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 8px;
+    }
+    
+    th, td {
+      border: 1px solid #999;
+      padding: 3px 4px;
+      text-align: left;
+    }
+    
+    th { background: #1a1a1a; color: white; font-size: 7px; }
+    
+    tr:nth-child(even) { background: #f5f5f5; }
+    
+    .status-badge {
+      display: inline-block;
+      padding: 1px 4px;
+      border-radius: 8px;
+      font-size: 7px;
+      font-weight: bold;
+    }
+    
+    .status-up_to_date { background: #d4edda; color: #155724; }
+    .status-ahead { background: #e0e0e0; color: #333; }
+    .status-overdue { background: #f8d7da; color: #721c24; }
+    .status-unpaid { background: #fff3cd; color: #856404; }
+    
+    .text-right { text-align: right; }
+    .text-center { text-align: center; }
+    
+    .positive { color: #27ae60; }
+    .negative { color: #e74c3c; }
+    
+    .footer {
+      text-align: center;
+      font-size: 7px;
+      color: #666;
+      padding: 4px;
+      border-top: 1px solid #999;
+      margin-top: 8px;
+    }
+    
+    @media print {
+      .footer { position: relative; margin-top: 10px; }
+    }
+    
+    .print-button {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      background: #1a1a1a;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 3px;
+      cursor: pointer;
+      font-size: 10px;
+    }
+    
+    .print-button:hover { background: #333; }
+    
+    .summary-row {
+      background: #e8e8e8 !important;
+      font-weight: bold;
+    }
+    
+    .subsection-title {
+      margin: 8px 0 4px;
+      color: #1a1a1a;
+      font-size: 9px;
+      font-weight: 600;
+      border-bottom: 1px solid #ccc;
+      padding-bottom: 2px;
+    }
+  ` : `
+    /* Comprehensive report - full styling */
     @media print {
       body { margin: 0; padding: 20px; }
       .page-break { page-break-before: always; }
@@ -829,7 +1008,6 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
       background: #fff;
     }
     
-    /* Header styling - Black & White institutional */
     .header {
       border-bottom: 2px solid #000;
       padding-bottom: 20px;
@@ -843,15 +1021,9 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
       margin-bottom: 8px;
     }
     
-    .header-logo {
-      width: 70px;
-      height: auto;
-    }
+    .header-logo { width: 70px; height: auto; }
     
-    .header-center {
-      flex: 1;
-      text-align: center;
-    }
+    .header-center { flex: 1; text-align: center; }
     
     .header-invocation {
       font-size: 14px;
@@ -860,10 +1032,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
       letter-spacing: 2px;
     }
     
-    .header-right-block {
-      text-align: right;
-      margin-bottom: 10px;
-    }
+    .header-right-block { text-align: right; margin-bottom: 10px; }
     
     .header-lodge {
       font-size: 13px;
@@ -872,16 +1041,9 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
       margin-bottom: 3px;
     }
     
-    .header-date {
-      font-size: 12px;
-      font-weight: bold;
-      color: #000;
-    }
+    .header-date { font-size: 12px; font-weight: bold; color: #000; }
     
-    .header-title {
-      text-align: center;
-      margin-top: 15px;
-    }
+    .header-title { text-align: center; margin-top: 15px; }
     
     .header-title h1 {
       color: #000;
@@ -891,10 +1053,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
       letter-spacing: 1px;
     }
     
-    /* Condensed header for subsequent pages */
-    .page-header {
-      display: none;
-    }
+    .page-header { display: none; }
     
     @media print {
       .page-header {
@@ -907,17 +1066,11 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
         font-size: 10px;
         color: #666;
       }
-      .page-header .logo-small {
-        width: 30px;
-        height: auto;
-      }
+      .page-header .logo-small { width: 30px; height: auto; }
     }
     
-    .section {
-      margin-bottom: 30px;
-    }
+    .section { margin-bottom: 30px; }
     
-    /* Section titles - Black background */
     .section-title {
       background: #1a1a1a;
       color: white;
@@ -933,7 +1086,6 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
       gap: 15px;
     }
     
-    /* Stat cards - Gray borders with status colors preserved */
     .stat-card {
       background: #f9f9f9;
       border-radius: 5px;
@@ -953,13 +1105,8 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
       margin-bottom: 5px;
     }
     
-    .stat-value {
-      font-size: 20px;
-      font-weight: bold;
-      color: #1a1a1a;
-    }
+    .stat-value { font-size: 20px; font-weight: bold; color: #1a1a1a; }
     
-    /* Tables - Black/gray borders */
     table {
       width: 100%;
       border-collapse: collapse;
@@ -972,14 +1119,10 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
       text-align: left;
     }
     
-    th {
-      background: #1a1a1a;
-      color: white;
-    }
+    th { background: #1a1a1a; color: white; }
     
     tr:nth-child(even) { background: #f5f5f5; }
     
-    /* Status badges - preserve KPI colors */
     .status-badge {
       display: inline-block;
       padding: 2px 8px;
@@ -996,7 +1139,6 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
     .text-right { text-align: right; }
     .text-center { text-align: center; }
     
-    /* KPI colors preserved */
     .positive { color: #27ae60; }
     .negative { color: #e74c3c; }
     
@@ -1014,10 +1156,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
     }
     
     @media print {
-      .footer {
-        position: fixed;
-        bottom: 10px;
-      }
+      .footer { position: fixed; bottom: 10px; }
     }
     
     .print-button {
@@ -1040,7 +1179,6 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
       font-weight: bold;
     }
     
-    /* Subsection headers - Gray */
     .subsection-title {
       margin: 25px 0 10px;
       color: #1a1a1a;
@@ -1049,26 +1187,36 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
       border-bottom: 1px solid #ccc;
       padding-bottom: 5px;
     }
+  `;
+
+  return `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reporte Financiero${isLite ? ' Resumen' : ''} - ${data.monthName} ${data.year}</title>
+  <style>
+    ${liteStyles}
   </style>
 </head>
 <body>
   <button class="print-button no-print" onclick="window.print()">📄 Imprimir / Guardar PDF</button>
 
-  <!-- Main Header - Full version on first page -->
+  <!-- Main Header -->
   <div class="header">
     <div class="header-top">
       ${logoHtml ? `<div class="header-left">${logoHtml}</div>` : '<div class="header-left"></div>'}
       <div class="header-center">
         <div class="header-invocation">A.·.L.·.G.·.D.·.G.·.A.·.D.·.U.·.</div>
       </div>
-      <div class="header-left-placeholder" style="width: 70px;"></div>
+      <div class="header-left-placeholder" style="width: ${isLite ? '40' : '70'}px;"></div>
     </div>
     <div class="header-right-block">
       <div class="header-lodge">R.·.L.·. Simón Bolívar N° 646</div>
       <div class="header-date">${formattedDate}</div>
     </div>
     <div class="header-title">
-      <h1>${reportTitleFormatted}</h1>
+      <h1>${reportTitleFormatted}${isLite ? ' (RESUMEN)' : ''}</h1>
     </div>
   </div>
 
@@ -1081,10 +1229,10 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
       <div class="stat-card ${data.totalARSBalance >= 0 ? 'success' : 'danger'}">
         <div class="stat-label">Balance Total (ARS)</div>
         <div class="stat-value">${formatCurrency(data.totalARSBalance)}</div>
-        <div style="font-size: 10px; color: #666; margin-top: 4px;">Incluye USD al TC Oficial: ${formatCurrency(data.exchangeRate)}</div>
+        ${isLite ? '' : `<div style="font-size: 10px; color: #666; margin-top: 4px;">Incluye USD al TC Oficial: ${formatCurrency(data.exchangeRate)}</div>`}
       </div>
       <div class="stat-card ${data.bankBalance >= 0 ? 'success' : 'danger'}">
-        <div class="stat-label">Cuenta Bancaria Principal (ARS)</div>
+        <div class="stat-label">Cuenta Bancaria (ARS)</div>
         <div class="stat-value">${formatCurrency(data.bankBalance)}</div>
       </div>
       <div class="stat-card ${data.greatLodgeBalance >= 0 ? 'success' : 'danger'}">
@@ -1092,22 +1240,22 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
         <div class="stat-value">${formatCurrency(data.greatLodgeBalance)}</div>
       </div>
     </div>
-    <div class="grid" style="margin-top: 15px; grid-template-columns: 1fr;">
+    ${isLite ? '' : `<div class="grid" style="margin-top: 15px; grid-template-columns: 1fr;">
       <div class="stat-card ${data.savingsBalance >= 0 ? 'success' : 'danger'}">
         <div class="stat-label">Cuenta de Ahorros (USD)</div>
         <div class="stat-value">${formatCurrency(data.savingsBalance, 'USD')}</div>
         <div style="font-size: 11px; color: #666; margin-top: 4px;">Equivalente en ARS: ${formatCurrency(data.savingsBalance * data.exchangeRate)}</div>
       </div>
-    </div>
+    </div>`}
 
-    <h3 class="subsection-title">Flujo del Mes (en ARS)</h3>
+    <h3 class="subsection-title">Flujo del Mes${isLite ? '' : ' (en ARS)'}</h3>
     <div class="grid">
       <div class="stat-card success">
-        <div class="stat-label">Ingresos Totales</div>
+        <div class="stat-label">Ingresos</div>
         <div class="stat-value positive">${formatCurrency(data.totalInflows)}</div>
       </div>
       <div class="stat-card danger">
-        <div class="stat-label">Egresos Totales</div>
+        <div class="stat-label">Egresos</div>
         <div class="stat-value negative">${formatCurrency(data.totalOutflows)}</div>
       </div>
       <div class="stat-card ${data.netResult >= 0 ? 'success' : 'danger'}">
@@ -1119,7 +1267,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
     <h3 class="subsection-title">Posición de Miembros</h3>
     <div class="grid" style="grid-template-columns: repeat(2, 1fr);">
       <div class="stat-card danger">
-        <div class="stat-label">Deuda Pendiente de Miembros</div>
+        <div class="stat-label">Deuda Pendiente</div>
         <div class="stat-value negative">${formatCurrency(data.outstandingMemberDebt)}</div>
       </div>
       <div class="stat-card success">
@@ -1129,14 +1277,14 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
     </div>
   </div>
 
-  <div class="page-break"></div>
-
+  ${isLite ? '' : `<div class="page-break"></div>
+  
   <!-- Condensed header for page 2+ -->
   <div class="page-header">
     ${logoBase64 ? `<img src="data:image/png;base64,${logoBase64}" alt="Logo" class="logo-small" />` : ''}
     <span>R.·.L.·. Simón Bolívar N° 646</span>
     <span>${reportTitleFormatted}</span>
-  </div>
+  </div>`}
 
   <!-- Section 2: Member Financial Detail -->
   <div class="section">
@@ -1157,13 +1305,13 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
         <div class="stat-value">${formatCurrency(data.collectedMonthlyFees)}</div>
       </div>
       <div class="stat-card ${data.collectionPercentage >= 80 ? 'success' : data.collectionPercentage >= 50 ? 'warning' : 'danger'}">
-        <div class="stat-label">Porcentaje de Recaudación</div>
+        <div class="stat-label">% Recaudación</div>
         <div class="stat-value">${data.collectionPercentage}%</div>
       </div>
     </div>
-    <p style="margin-top: 15px; color: #555;">
+    ${isLite ? '' : `<p style="margin-top: 15px; color: #555;">
       <strong>${data.membersMissingPayment}</strong> miembro(s) sin pago registrado este mes.
-    </p>
+    </p>`}
   </div>
 
   ${loansSection}
