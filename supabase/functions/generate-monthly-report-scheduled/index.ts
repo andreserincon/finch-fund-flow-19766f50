@@ -584,13 +584,17 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
     return a.balance_at_month_end - b.balance_at_month_end;
   });
 
-  // For lite report, only include overdue members
+  // For lite report, skip member detail section entirely
   const membersToShow = isLite 
-    ? sortedMembers.filter((m: any) => m.status === 'overdue')
+    ? [] // Lite report doesn't show member details
     : sortedMembers;
   
-  const memberSectionTitle = isLite ? '2. Miembros con más de un mes de capita pendiente' : '2. Detalle Financiero de Miembros';
-  const feeSectionTitle = isLite ? '3. Cobranza de Capita' : '3. Cobertura de Cuotas Mensuales';
+  const memberSectionTitle = '2. Detalle Financiero de Miembros';
+  // For lite: section 2 is fee coverage (since member detail is skipped)
+  const feeSectionTitle = isLite ? '2. Cobranza de Capita' : '3. Cobertura de Cuotas Mensuales';
+  // For lite: loans section is 3, events is 4
+  const loansSectionNum = isLite ? '3' : '4';
+  const eventsSectionNum = isLite ? '4' : '5';
 
   // Build member rows
   const memberRows = membersToShow.map((m: any) => `
@@ -629,7 +633,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
     if (data.totalActiveLoans > 0) {
       loansSection = `
         <div class="section">
-          <h2 class="section-title">4. Préstamos Activos (Resumen)</h2>
+          <h2 class="section-title">${loansSectionNum}. Préstamos Activos (Resumen)</h2>
           <div class="grid">
             <div class="stat-card">
               <div class="stat-label">Cantidad de Préstamos Activos</div>
@@ -669,7 +673,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
     loansSection = `
       <div class="page-break"></div>
       <div class="section">
-        <h2 class="section-title">4. Préstamos Activos</h2>
+        <h2 class="section-title">${loansSectionNum}. Préstamos Activos</h2>
         <table>
           <thead>
             <tr>
@@ -720,7 +724,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
 
     eventsSection = `
       <div class="section">
-        <h2 class="section-title">5. Eventos / Gastos Extraordinarios</h2>
+        <h2 class="section-title">${eventsSectionNum}. Eventos / Gastos Extraordinarios</h2>
         <table>
           <thead>
             <tr>
@@ -826,12 +830,13 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
     .section { margin-bottom: 8px; }
     
     .section-title {
-      background: #1a1a1a;
+      background: #000;
       color: white;
       padding: 4px 8px;
       margin: 0 0 6px 0;
       border-radius: 2px;
       font-size: 10px;
+      font-weight: bold;
     }
     
     .grid {
@@ -873,7 +878,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
       text-align: left;
     }
     
-    th { background: #1a1a1a; color: white; font-size: 7px; }
+    th { background: #000; color: white; font-size: 7px; font-weight: bold; }
     
     tr:nth-child(even) { background: #f5f5f5; }
     
@@ -1022,12 +1027,13 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
     .section { margin-bottom: 30px; }
     
     .section-title {
-      background: #1a1a1a;
+      background: #000;
       color: white;
       padding: 10px 15px;
       margin: 0 0 15px 0;
       border-radius: 3px;
       font-size: 16px;
+      font-weight: bold;
     }
     
     .grid {
@@ -1069,7 +1075,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
       text-align: left;
     }
     
-    th { background: #1a1a1a; color: white; }
+    th { background: #000; color: white; font-weight: bold; }
     
     tr:nth-child(even) { background: #f5f5f5; }
     
@@ -1236,11 +1242,11 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
     <span>${reportTitleFormatted}</span>
   </div>`}
 
-  <!-- Section 2: Member Financial Detail -->
+  ${isLite ? '' : `<!-- Section 2: Member Financial Detail -->
   <div class="section">
     <h2 class="section-title">${memberSectionTitle}</h2>
     ${memberSection}
-  </div>
+  </div>`}
 
   <!-- Section 3: Monthly Fee Coverage -->
   <div class="section">
