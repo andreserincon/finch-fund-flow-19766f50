@@ -99,15 +99,16 @@ Deno.serve(async (req) => {
 
     console.log(`Generating report for ${year}-${month.toString().padStart(2, '0')}`);
 
-    // Fetch all required data
+    // Fetch all required data - including historical data for point-in-time calculations
     const [
       transactionsResult,
       membersResult,
-      memberBalancesResult,
+      allMonthlyFeesResult,
       loansResult,
       eventsResult,
       eventPaymentsResult,
       monthlyFeesResult,
+      feeTypeHistoryResult,
     ] = await Promise.all([
       supabase
         .from('transactions')
@@ -115,31 +116,98 @@ Deno.serve(async (req) => {
         .gte('transaction_date', monthStartStr)
         .lte('transaction_date', monthEndStr),
       supabase.from('members').select('*').eq('is_active', true),
-      supabase.from('member_balances').select('*'),
+      // Get all monthly fees up to month end for balance calculation
+      supabase.from('monthly_fees').select('*').lte('year_month', monthEndStr),
       supabase.from('loans').select('*, member:members(full_name)').eq('status', 'active'),
       supabase.from('extraordinary_expenses').select('*').eq('is_active', true),
       supabase.from('event_member_payments').select('*'),
       supabase.from('monthly_fees').select('*').eq('year_month', `${year}-${month.toString().padStart(2, '0')}-01`),
+      supabase.from('member_fee_type_history').select('*'),
     ]);
 
     const transactions = transactionsResult.data || [];
     const members = membersResult.data || [];
-    const memberBalances = memberBalancesResult.data || [];
+    const allMonthlyFees = allMonthlyFeesResult.data || [];
     const loans = loansResult.data || [];
     const events = eventsResult.data || [];
     const eventPayments = eventPaymentsResult.data || [];
     const monthlyFees = monthlyFeesResult.data || [];
+    const feeTypeHistory = feeTypeHistoryResult.data || [];
 
-    // Calculate account balances from all transactions up to month end
-    const { data: allTransactions } = await supabase
-      .from('transactions')
-      .select('*')
-      .lte('transaction_date', monthEndStr);
+    // Fetch all transactions and transfers up to month end first (needed for balance calculations)
+    const [allTransactionsResult, allTransfersResult] = await Promise.all([
+      supabase.from('transactions').select('*').lte('transaction_date', monthEndStr),
+      supabase.from('account_transfers').select('*').lte('transfer_date', monthEndStr),
+    ]);
 
-    const { data: allTransfers } = await supabase
-      .from('account_transfers')
-      .select('*')
-      .lte('transfer_date', monthEndStr);
+    const allTransactions = allTransactionsResult.data || [];
+    const allTransfers = allTransfersResult.data || [];
+
+    // Helper function to get member's fee type for a given month
+    const getMemberFeeTypeForMonth = (memberId: string, monthDate: string): string => {
+      const memberHistory = feeTypeHistory
+        .filter((h: any) => h.member_id === memberId && h.effective_from <= monthDate)
+        .sort((a: any, b: any) => b.effective_from.localeCompare(a.effective_from));
+      
+      if (memberHistory.length > 0) {
+        return memberHistory[0].fee_type;
+      }
+      
+      // Fallback to current fee type from member record
+      const member = members.find((m: any) => m.id === memberId);
+      return member?.fee_type || 'standard';
+    };
+
+    // Calculate member balances as of month end (point-in-time snapshot)
+    const calculateMemberBalanceAsOfDate = (memberId: string, asOfDate: string, memberJoinDate: string) => {
+      const member = members.find((m: any) => m.id === memberId);
+      if (!member) return 0;
+
+      // Calculate total fees owed up to asOfDate
+      let totalFeesOwed = 0;
+      allMonthlyFees.forEach((fee: any) => {
+        const feeMonth = fee.year_month;
+        // Only count fees from join date to asOfDate
+        if (feeMonth >= memberJoinDate.substring(0, 7) + '-01' && feeMonth <= asOfDate) {
+          const memberFeeType = getMemberFeeTypeForMonth(memberId, feeMonth);
+          if (fee.fee_type === memberFeeType) {
+            totalFeesOwed += Number(fee.amount);
+          }
+        }
+      });
+
+      // Add event fees owed
+      const memberEventPayments = eventPayments.filter((ep: any) => ep.member_id === memberId);
+      const eventFeesOwed = memberEventPayments.reduce((sum: number, ep: any) => sum + Number(ep.amount_owed), 0);
+      totalFeesOwed += eventFeesOwed;
+
+      // Calculate total payments made up to asOfDate
+      const memberPayments = allTransactions
+        .filter((t: any) => 
+          t.member_id === memberId && 
+          t.transaction_type === 'income' &&
+          (t.category === 'monthly_fee' || t.category === 'event_payment') &&
+          t.transaction_date <= asOfDate
+        )
+        .reduce((sum: number, t: any) => sum + Number(t.amount), 0);
+
+      return memberPayments - totalFeesOwed;
+    };
+
+    // Build point-in-time member balances
+    const memberBalances = members.map((m: any) => {
+      const balance = calculateMemberBalanceAsOfDate(m.id, monthEndStr, m.join_date);
+      return {
+        member_id: m.id,
+        full_name: m.full_name,
+        phone_number: m.phone_number,
+        monthly_fee_amount: m.monthly_fee_amount,
+        fee_type: getMemberFeeTypeForMonth(m.id, monthEndStr),
+        is_active: m.is_active,
+        join_date: m.join_date,
+        current_balance: balance,
+      };
+    });
 
     let bankBalance = 0;
     let greatLodgeBalance = 0;
