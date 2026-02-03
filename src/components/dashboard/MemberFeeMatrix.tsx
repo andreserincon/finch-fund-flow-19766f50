@@ -64,6 +64,19 @@ export function MemberFeeMatrix() {
     return historicalFeeType ?? currentFeeType;
   };
 
+  // Generate all months from a start date to an end date for cumulative calculation
+  const generateMonthRange = (startDate: Date, endDate: Date): string[] => {
+    const result: string[] = [];
+    let current = startOfMonth(startDate);
+    const end = startOfMonth(endDate);
+    
+    while (!isAfter(current, end)) {
+      result.push(format(current, 'yyyy-MM-dd'));
+      current = addMonths(current, 1);
+    }
+    return result;
+  };
+
   // Calculate payment status for each member/month
   const getMemberMonthStatus = (
     member: typeof memberBalances[0],
@@ -85,16 +98,15 @@ export function MemberFeeMatrix() {
     }
 
     // Calculate cumulative fees owed up to and including this month
+    // Use the full range from join date to the displayed month, not the limited display array
     let cumulativeOwed = 0;
     const memberJoinMonth = startOfMonth(joinDate);
+    const allMonthsToCalculate = generateMonthRange(memberJoinMonth, monthStart);
     
-    for (const m of months) {
-      if (isAfter(startOfMonth(parseISO(m.key)), monthStart)) break;
-      if (isBefore(startOfMonth(parseISO(m.key)), memberJoinMonth)) continue;
-      
+    for (const mKey of allMonthsToCalculate) {
       // Use historical fee type for each month
-      const monthFeeType = getMemberFeeTypeForMonth(member.member_id, m.key, member.fee_type);
-      cumulativeOwed += getFeeForMonth(m.key, monthFeeType);
+      const monthFeeType = getMemberFeeTypeForMonth(member.member_id, mKey, member.fee_type);
+      cumulativeOwed += getFeeForMonth(mKey, monthFeeType);
     }
 
     // If total paid covers cumulative owed, this month is paid (even if future)
