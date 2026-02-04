@@ -18,11 +18,13 @@ import { useTransactions } from '@/hooks/useTransactions';
 import { useMembers } from '@/hooks/useMembers';
 import { useExtraordinaryExpenses } from '@/hooks/useExtraordinaryExpenses';
 import { useEventMemberPayments } from '@/hooks/useEventMemberPayments';
+import { useMonthlyFees } from '@/hooks/useMonthlyFees';
 import { TransactionCategory, CATEGORY_LABELS, AccountType, ACCOUNT_LABELS } from '@/lib/types';
 import { ArrowLeft, PlusCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useEffect } from 'react';
 
 const paymentSchema = z.object({
   transaction_date: z.string().min(1, 'Date is required'),
@@ -56,6 +58,7 @@ export default function LogPayment() {
   const { addTransaction } = useTransactions();
   const { members } = useMembers();
   const { expenses } = useExtraordinaryExpenses();
+  const { currentMonthFees } = useMonthlyFees();
 
   // Filter only active events
   const activeEvents = expenses.filter(e => e.is_active);
@@ -74,6 +77,14 @@ export default function LogPayment() {
       account: 'bank',
     },
   });
+
+  // Set default amount to current month's standard fee when available
+  const currentAmount = watch('amount');
+  useEffect(() => {
+    if (currentMonthFees.standard > 0 && !currentAmount) {
+      setValue('amount', currentMonthFees.standard);
+    }
+  }, [currentMonthFees.standard, currentAmount, setValue]);
 
   const category = watch('category');
   const selectedEventId = watch('event_id');
