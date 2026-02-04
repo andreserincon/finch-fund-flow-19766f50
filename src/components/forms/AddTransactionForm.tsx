@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/dialog';
 import { useTransactions } from '@/hooks/useTransactions';
 import { useMembers } from '@/hooks/useMembers';
+import { useMonthlyFees } from '@/hooks/useMonthlyFees';
 import { TransactionType, TransactionCategory, CATEGORY_LABELS, AccountType, ACCOUNT_LABELS } from '@/lib/types';
 import { PlusCircle } from 'lucide-react';
 
@@ -63,6 +64,7 @@ export function AddTransactionForm({
   const [open, setOpen] = useState(false);
   const { addTransaction } = useTransactions();
   const { members } = useMembers();
+  const { currentMonthFees } = useMonthlyFees();
 
   const incomeCategories: TransactionCategory[] = [
     'monthly_fee',
@@ -98,6 +100,14 @@ export function AddTransactionForm({
   const transactionType = watch('transaction_type');
   const category = watch('category');
   const selectedAccount = watch('account');
+  const currentAmount = watch('amount');
+
+  // Set default amount to current month's standard fee when available (for income transactions)
+  useEffect(() => {
+    if (currentMonthFees.standard > 0 && !currentAmount && transactionType === 'income') {
+      setValue('amount', currentMonthFees.standard);
+    }
+  }, [currentMonthFees.standard, currentAmount, transactionType, setValue]);
 
   const availableCategories = transactionType === 'income' ? incomeCategories : expenseCategories;
 
