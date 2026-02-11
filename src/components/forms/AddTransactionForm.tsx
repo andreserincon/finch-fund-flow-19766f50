@@ -44,6 +44,7 @@ const transactionSchema = z.object({
     'event_payment',
     'loan_disbursement',
     'loan_repayment',
+    'account_yield',
   ]),
   account: z.enum(['bank', 'great_lodge', 'savings']),
   member_id: z.string().optional(),
@@ -72,6 +73,7 @@ export function AddTransactionForm({
     'donation',
     'reimbursement',
     'other_income',
+    'account_yield',
   ];
 
   const expenseCategories: TransactionCategory[] = [

@@ -13,7 +13,8 @@ export type TransactionCategory =
   | 'other_income'
   | 'event_payment'
   | 'loan_disbursement'
-  | 'loan_repayment';
+  | 'loan_repayment'
+  | 'account_yield';
 
 export type PaymentStatus = 'up_to_date' | 'ahead' | 'overdue';
 
@@ -124,6 +125,7 @@ export const CATEGORY_LABELS: Record<TransactionCategory, string> = {
   event_payment: 'Event Payment',
   loan_disbursement: 'Loan Disbursement',
   loan_repayment: 'Loan Repayment',
+  account_yield: 'Rendimiento de Cuenta',
 };
 
 export const FEE_TYPE_LABELS: Record<FeeType, string> = {

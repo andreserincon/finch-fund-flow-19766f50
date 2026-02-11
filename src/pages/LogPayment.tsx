@@ -35,6 +35,7 @@ const paymentSchema = z.object({
     'donation',
     'reimbursement',
     'other_income',
+    'account_yield',
     'event_payment',
   ]),
   member_id: z.string().optional(),
@@ -51,6 +52,7 @@ const incomeCategories: TransactionCategory[] = [
   'donation',
   'reimbursement',
   'other_income',
+  'account_yield',
 ];
 
 export default function LogPayment() {

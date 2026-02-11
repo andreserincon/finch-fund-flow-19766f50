@@ -41,6 +41,7 @@ const transactionSchema = z.object({
     'event_payment',
     'loan_disbursement',
     'loan_repayment',
+    'account_yield',
   ]),
   member_id: z.string().optional(),
   notes: z.string().max(500).optional(),
@@ -69,6 +70,7 @@ export function EditTransactionDialog({
     'reimbursement',
     'other_income',
     'event_payment',
+    'account_yield',
   ];
 
   const expenseCategories: TransactionCategory[] = [

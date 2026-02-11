@@ -1,0 +1,1 @@
+ALTER TYPE public.transaction_category ADD VALUE 'account_yield';

@@ -789,6 +789,7 @@ export type Database = {
         | "event_payment"
         | "loan_disbursement"
         | "loan_repayment"
+        | "account_yield"
       transaction_type: "income" | "expense"
     }
     CompositeTypes: {
@@ -934,6 +935,7 @@ export const Constants = {
         "event_payment",
         "loan_disbursement",
         "loan_repayment",
+        "account_yield",
       ],
       transaction_type: ["income", "expense"],
     },
