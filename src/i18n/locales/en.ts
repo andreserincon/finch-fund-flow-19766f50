@@ -82,6 +82,8 @@ export default {
       fees: 'Fees',
       event: 'Event',
       owes: 'Owes',
+      accountYield: 'Account Yield',
+      annual: 'Annual total',
     },
 
     // Insights Agent

@@ -18,7 +18,6 @@ import {
   AlertTriangle,
   TrendingUp,
   ArrowRight,
-  Building,
   Landmark,
   HandCoins
 } from 'lucide-react';
@@ -95,6 +94,27 @@ export default function Dashboard() {
   const savingsInARS = savingsBalance * exchangeRate;
   const totalARSBalance = bankBalance + greatLodgeBalance + savingsInARS;
 
+  const thisMonth = new Date();
+  const monthStart = new Date(thisMonth.getFullYear(), thisMonth.getMonth(), 1);
+  const yearStart = new Date(thisMonth.getFullYear(), 0, 1);
+
+  // Calculate account yield (monthly and annual)
+  const monthlyYieldARS = transactions
+    .filter(t => new Date(t.transaction_date) >= monthStart && t.category === 'account_yield' && t.account !== 'savings')
+    .reduce((sum, t) => sum + (t.transaction_type === 'income' ? t.amount : -t.amount), 0);
+  const monthlyYieldUSD = transactions
+    .filter(t => new Date(t.transaction_date) >= monthStart && t.category === 'account_yield' && t.account === 'savings')
+    .reduce((sum, t) => sum + (t.transaction_type === 'income' ? t.amount : -t.amount), 0);
+  const annualYieldARS = transactions
+    .filter(t => new Date(t.transaction_date) >= yearStart && t.category === 'account_yield' && t.account !== 'savings')
+    .reduce((sum, t) => sum + (t.transaction_type === 'income' ? t.amount : -t.amount), 0);
+  const annualYieldUSD = transactions
+    .filter(t => new Date(t.transaction_date) >= yearStart && t.category === 'account_yield' && t.account === 'savings')
+    .reduce((sum, t) => sum + (t.transaction_type === 'income' ? t.amount : -t.amount), 0);
+
+  const totalMonthlyYield = monthlyYieldARS + (monthlyYieldUSD * exchangeRate);
+  const totalAnnualYield = annualYieldARS + (annualYieldUSD * exchangeRate);
+
   const activeMembersCount = memberBalances.filter(m => m.is_active).length;
 
   const membersUnpaid = memberBalances.filter(m => {
@@ -109,9 +129,6 @@ export default function Dashboard() {
     const hasUnpaidEvents = (memberEventDebts[m.member_id] || 0) > 0;
     return amountOwed > monthlyFeeRate || hasUnpaidEvents;
   }).length;
-
-  const thisMonth = new Date();
-  const monthStart = new Date(thisMonth.getFullYear(), thisMonth.getMonth(), 1);
   
   // Calculate monthly income (ARS accounts + savings converted to ARS)
   const monthlyIncomeARS = transactions
@@ -199,16 +216,16 @@ export default function Dashboard() {
         <StatCard
           title={t('dashboard.bankMainAccount')}
           value={formatCurrency(bankBalance)}
-          subtitle={t('dashboard.primaryBankBalance')}
+          subtitle={`${t('dashboard.greatLodgeAccount')}: ${formatCurrency(greatLodgeBalance)}`}
           icon={<Landmark className="h-8 w-8 text-primary/20" />}
           variant={bankBalance >= 0 ? 'success' : 'danger'}
         />
         <StatCard
-          title={t('dashboard.greatLodgeAccount')}
-          value={formatCurrency(greatLodgeBalance)}
-          subtitle={t('dashboard.lodgeBalance')}
-          icon={<Building className="h-8 w-8 text-primary/20" />}
-          variant={greatLodgeBalance >= 0 ? 'success' : 'danger'}
+          title={t('dashboard.accountYield')}
+          value={formatCurrency(totalMonthlyYield)}
+          subtitle={`${t('dashboard.annual')}: ${formatCurrency(totalAnnualYield)}`}
+          icon={<TrendingUp className="h-8 w-8 text-success/20" />}
+          variant={totalMonthlyYield >= 0 ? 'success' : 'default'}
         />
         <StatCard
           title={t('dashboard.savingsAccount')}

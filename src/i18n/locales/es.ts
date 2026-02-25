@@ -82,6 +82,8 @@ export default {
       fees: 'Cuotas',
       event: 'Evento',
       owes: 'Debe',
+      accountYield: 'Rendimiento de Cuenta',
+      annual: 'Acumulado anual',
     },
 
     // Insights Agent
