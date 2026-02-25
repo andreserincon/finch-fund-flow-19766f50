@@ -41,7 +41,7 @@ export function StatCard({
             {value}
           </p>
           {subtitle && (
-            <p className="text-xs md:text-sm text-muted-foreground mt-1 truncate">{subtitle}</p>
+            <p className="text-xs md:text-sm text-muted-foreground mt-1 break-words">{subtitle}</p>
           )}
         </div>
         {icon && (
