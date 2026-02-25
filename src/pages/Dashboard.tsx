@@ -224,7 +224,7 @@ export default function Dashboard() {
         <StatCard
           title={t('dashboard.loansDueUSD')}
           value={formatCurrency(totalLoansDueUSD, 'USD')}
-          subtitle={t('dashboard.activeLoans', { count: loansUSD.length })}
+          subtitle={`${t('dashboard.activeLoans', { count: loansUSD.length })} · ARS: ${formatCurrency(totalLoansDueARS)}`}
           icon={<HandCoins className="h-8 w-8 text-warning/20" />}
           variant={totalLoansDueUSD > 0 ? 'warning' : 'success'}
         />
