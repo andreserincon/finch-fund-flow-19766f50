@@ -80,18 +80,17 @@ export default function LogPayment() {
     },
   });
 
-  // Set default amount to current month's standard fee when available
-  const currentAmount = watch('amount');
-  useEffect(() => {
-    if (currentMonthFees.standard > 0 && !currentAmount) {
-      setValue('amount', currentMonthFees.standard);
-    }
-  }, [currentMonthFees.standard, currentAmount, setValue]);
-
   const category = watch('category');
   const selectedEventId = watch('event_id');
   const selectedMemberId = watch('member_id');
   const selectedAccount = watch('account');
+
+  // Suggest default amount only when switching TO monthly_fee category
+  useEffect(() => {
+    if (currentMonthFees.standard > 0 && category === 'monthly_fee') {
+      setValue('amount', currentMonthFees.standard);
+    }
+  }, [category, currentMonthFees.standard, setValue]);
 
   // Get the selected event to show its default amount
   const selectedEvent = activeEvents.find(e => e.id === selectedEventId);
