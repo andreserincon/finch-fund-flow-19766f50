@@ -102,14 +102,13 @@ export function AddTransactionForm({
   const transactionType = watch('transaction_type');
   const category = watch('category');
   const selectedAccount = watch('account');
-  const currentAmount = watch('amount');
 
-  // Set default amount to current month's standard fee when available (for income transactions)
+  // Suggest default amount only when switching TO monthly_fee category
   useEffect(() => {
-    if (currentMonthFees.standard > 0 && !currentAmount && transactionType === 'income') {
+    if (currentMonthFees.standard > 0 && category === 'monthly_fee') {
       setValue('amount', currentMonthFees.standard);
     }
-  }, [currentMonthFees.standard, currentAmount, transactionType, setValue]);
+  }, [category, currentMonthFees.standard, setValue]);
 
   const availableCategories = transactionType === 'income' ? incomeCategories : expenseCategories;
 
