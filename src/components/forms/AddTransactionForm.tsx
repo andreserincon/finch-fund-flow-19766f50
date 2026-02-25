@@ -103,10 +103,12 @@ export function AddTransactionForm({
   const category = watch('category');
   const selectedAccount = watch('account');
 
-  // Suggest default amount only when switching TO monthly_fee category
+  // Reset amount when category changes; pre-fill only for monthly_fee
   useEffect(() => {
-    if (currentMonthFees.standard > 0 && category === 'monthly_fee') {
+    if (category === 'monthly_fee' && currentMonthFees.standard > 0) {
       setValue('amount', currentMonthFees.standard);
+    } else {
+      setValue('amount', 0);
     }
   }, [category, currentMonthFees.standard, setValue]);
 
