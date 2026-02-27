@@ -207,7 +207,7 @@ export default function Transactions() {
       </div>
 
       {/* Mobile Card View */}
-      <div className="md:hidden space-y-3">
+      <div className="md:hidden landscape-hide-cards space-y-3">
         {filteredTransactions.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground bg-card rounded-lg border">
             No transactions found
@@ -278,7 +278,7 @@ export default function Transactions() {
       </div>
 
       {/* Desktop Table View */}
-      <div className="hidden md:block rounded-lg border bg-card">
+      <div className="hidden md:block landscape-table rounded-lg border bg-card">
         <Table>
           <TableHeader>
             <TableRow>
