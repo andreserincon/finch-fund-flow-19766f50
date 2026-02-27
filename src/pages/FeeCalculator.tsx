@@ -209,24 +209,28 @@ export default function FeeCalculator() {
     toast.success('Archivo descargado');
   };
 
-  // Available months from monthly_fees for base fee selection
+  const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+  // Available months: up to 3 past and 3 future from current month
   const availableFeeMonths = useMemo(() => {
-    if (!monthlyFees.length) return [];
-    const months = [...new Set(monthlyFees.map((f) => f.year_month))].sort((a, b) => b.localeCompare(a));
-    return months.map((m) => ({
-      value: m,
-      label: new Date(m).toLocaleDateString('es-AR', { month: 'long', year: 'numeric' }),
-    }));
-  }, [monthlyFees]);
+    const now = new Date();
+    const months: { value: string; label: string }[] = [];
+    for (let offset = -3; offset <= 3; offset++) {
+      const d = new Date(now.getFullYear(), now.getMonth() + offset, 1);
+      const value = d.toISOString().slice(0, 7) + '-01';
+      const label = capitalize(d.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' }));
+      months.push({ value, label });
+    }
+    return months.sort((a, b) => b.value.localeCompare(a.value));
+  }, []);
 
   // Auto-select current month as default base
   useEffect(() => {
-    if (availableFeeMonths.length > 0 && !selectedBaseMonth) {
+    if (!selectedBaseMonth) {
       const currentMonth = new Date().toISOString().slice(0, 7) + '-01';
-      const found = availableFeeMonths.find((m) => m.value === currentMonth);
-      setSelectedBaseMonth(found ? currentMonth : availableFeeMonths[0].value);
+      setSelectedBaseMonth(currentMonth);
     }
-  }, [availableFeeMonths, selectedBaseMonth]);
+  }, [selectedBaseMonth]);
 
   // Derive current fees from selected base month
   const { currentStdFee, currentSolFee, feeOneYearAgoStd, glStdOneYearAgo } = useMemo(() => {
@@ -248,18 +252,30 @@ export default function FeeCalculator() {
     };
   }, [monthlyFees, selectedBaseMonth]);
 
-  // GL fees from DB (latest entry with non-null GL values)
+  // GL fees from selected base month, fallback to latest with GL data
   const glFromDb = useMemo(() => {
     if (!monthlyFees.length) return null;
+    if (selectedBaseMonth) {
+      const feesForMonth = monthlyFees.filter((f) => f.year_month === selectedBaseMonth);
+      const withGl = feesForMonth.find((f) => f.gl_standard_amount !== null || f.gl_solidarity_amount !== null);
+      if (withGl) {
+        return {
+          standard: withGl.gl_standard_amount ?? 0,
+          solidarity: withGl.gl_solidarity_amount ?? 0,
+          month: capitalize(new Date(withGl.year_month).toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })),
+        };
+      }
+    }
+    // Fallback: latest entry with GL values
     const sorted = [...monthlyFees].sort((a, b) => b.year_month.localeCompare(a.year_month));
     const withGl = sorted.find((f) => f.gl_standard_amount !== null || f.gl_solidarity_amount !== null);
     if (!withGl) return null;
     return {
       standard: withGl.gl_standard_amount ?? 0,
       solidarity: withGl.gl_solidarity_amount ?? 0,
-      month: new Date(withGl.year_month).toLocaleDateString('es-AR', { month: 'long', year: 'numeric' }),
+      month: capitalize(new Date(withGl.year_month).toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })),
     };
-  }, [monthlyFees]);
+  }, [monthlyFees, selectedBaseMonth]);
 
   const glStdNum = glFromDb ? glFromDb.standard : (parseFloat(manualGlStd) || 0);
   const glSolNum = glFromDb ? glFromDb.solidarity : (parseFloat(manualGlSol) || 0);
