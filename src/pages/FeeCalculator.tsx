@@ -380,11 +380,19 @@ export default function FeeCalculator() {
         {/* Section 1 — Current Reference */}
         <div>
           <h2 className="section-header">{t('feeCalculator.currentReference')}</h2>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
             <StatCard title={t('feeCalculator.currentStdFee')} value={formatARS(currentStdFee)} />
             <StatCard title={t('feeCalculator.currentSolFee')} value={formatARS(currentSolFee)} />
             <StatCard title={t('feeCalculator.activeStdMembers')} value={stdMemberCount} icon={<Users className="h-5 w-5 text-muted-foreground" />} />
             <StatCard title={t('feeCalculator.activeSolMembers')} value={solMemberCount} icon={<Users className="h-5 w-5 text-muted-foreground" />} />
+            <StatCard
+              title={t('feeCalculator.glStdFee')}
+              value={glStdNum > 0 ? formatARS(glStdNum) : '—'}
+            />
+            <StatCard
+              title={t('feeCalculator.glSolFee')}
+              value={glSolNum > 0 ? formatARS(glSolNum) : '—'}
+            />
           </div>
         </div>
 
