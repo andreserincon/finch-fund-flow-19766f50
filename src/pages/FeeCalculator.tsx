@@ -397,43 +397,6 @@ export default function FeeCalculator() {
             <p className="text-muted-foreground mt-1">{t('feeCalculator.subtitle')}</p>
           </div>
           <div className="flex items-center gap-2">
-            {/* CVS API fetch error warning */}
-            {fetchError && !cvsLoading && (
-              <Tooltip>
-                <TooltipTrigger>
-                  <AlertTriangle className="h-4 w-4 text-warning" />
-                </TooltipTrigger>
-                <TooltipContent>{t('feeCalculator.fetchError')}</TooltipContent>
-              </Tooltip>
-            )}
-
-            {/* Quarter selector or manual fallback */}
-            {!fetchError && quarterly.length > 0 ? (
-              <Select value={selectedQuarterId} onValueChange={setSelectedQuarterId}>
-                <SelectTrigger className="w-[220px]">
-                  <SelectValue placeholder={t('feeCalculator.selectQuarter')} />
-                </SelectTrigger>
-                <SelectContent>
-                  {quarterly.slice(0, 6).map((q) => (
-                    <SelectItem key={q.quarterId} value={q.quarterId}>
-                      {q.quarterLabel} — CVS: {formatPct(q.cvs)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            ) : !fetchError && cvsLoading ? (
-              <Skeleton className="h-10 w-[220px]" />
-            ) : (
-              <Input
-                type="number"
-                step="0.1"
-                placeholder="CVS %"
-                value={manualCvs}
-                onChange={(e) => setManualCvs(e.target.value)}
-                className="w-[120px]"
-              />
-            )}
-
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -458,6 +421,63 @@ export default function FeeCalculator() {
               <RefreshCw className={`h-4 w-4 ${cvsFetching ? 'animate-spin' : ''}`} />
             </Button>
           </div>
+        </div>
+
+        {/* Filters row: Month + Quarter side by side */}
+        <div className="flex flex-wrap items-end gap-4 -mt-2">
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs text-muted-foreground">Mes base</Label>
+            <Select value={selectedBaseMonth} onValueChange={setSelectedBaseMonth}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Mes base" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableFeeMonths.map((m) => (
+                  <SelectItem key={m.value} value={m.value}>
+                    {m.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs text-muted-foreground">Trimestre CVS</Label>
+            {!fetchError && quarterly.length > 0 ? (
+              <Select value={selectedQuarterId} onValueChange={setSelectedQuarterId}>
+                <SelectTrigger className="w-[240px]">
+                  <SelectValue placeholder={t('feeCalculator.selectQuarter')} />
+                </SelectTrigger>
+                <SelectContent>
+                  {quarterly.slice(0, 6).map((q) => (
+                    <SelectItem key={q.quarterId} value={q.quarterId}>
+                      {q.quarterLabel} — CVS: {formatPct(q.cvs)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : !fetchError && cvsLoading ? (
+              <Skeleton className="h-10 w-[240px]" />
+            ) : (
+              <Input
+                type="number"
+                step="0.1"
+                placeholder="CVS %"
+                value={manualCvs}
+                onChange={(e) => setManualCvs(e.target.value)}
+                className="w-[120px]"
+              />
+            )}
+          </div>
+
+          {fetchError && !cvsLoading && (
+            <Tooltip>
+              <TooltipTrigger>
+                <AlertTriangle className="h-4 w-4 text-warning mb-2.5" />
+              </TooltipTrigger>
+              <TooltipContent>{t('feeCalculator.fetchError')}</TooltipContent>
+            </Tooltip>
+          )}
         </div>
 
         {/* Monthly breakdown & YoY below header */}
@@ -490,23 +510,7 @@ export default function FeeCalculator() {
 
         {/* Section 1 — Current Reference */}
         <div>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="section-header mb-0">{t('feeCalculator.currentReference')}</h2>
-            {availableFeeMonths.length > 0 && (
-              <Select value={selectedBaseMonth} onValueChange={setSelectedBaseMonth}>
-                <SelectTrigger className="w-[200px]">
-                  <SelectValue placeholder="Mes base" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableFeeMonths.map((m) => (
-                    <SelectItem key={m.value} value={m.value}>
-                      {m.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          </div>
+          <h2 className="section-header">{t('feeCalculator.currentReference')}</h2>
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
             <StatCard title={t('feeCalculator.currentStdFee')} value={formatARS(currentStdFee)} />
             <StatCard title={t('feeCalculator.currentSolFee')} value={formatARS(currentSolFee)} />
