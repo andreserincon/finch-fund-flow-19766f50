@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useMonthlyFees, MonthlyFee } from '@/hooks/useMonthlyFees';
+import { useState, useCallback } from 'react';
+import { useMonthlyFees } from '@/hooks/useMonthlyFees';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,36 +30,135 @@ import {
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { format, startOfMonth, isFuture, startOfDay, parseISO } from 'date-fns';
-import { CalendarIcon, PlusCircle, Pencil, Clock } from 'lucide-react';
+import { CalendarIcon, PlusCircle, Clock } from 'lucide-react';
 import { FEE_TYPE_LABELS, FeeType } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
+
+type MonthData = {
+  standard: number;
+  solidarity: number;
+  gl_standard: number | null;
+  gl_solidarity: number | null;
+};
+
+const formatCurrency = (amount: number) =>
+  new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(amount);
+
+/** Inline-editable cell: shows value, on click becomes input, saves on blur/enter */
+function EditableCell({
+  value,
+  onSave,
+  disabled,
+  placeholder = '—',
+  isMuted = false,
+}: {
+  value: number | null;
+  onSave: (val: number | null) => void;
+  disabled?: boolean;
+  placeholder?: string;
+  isMuted?: boolean;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState('');
+
+  const startEdit = () => {
+    if (disabled) return;
+    setDraft(value != null && value !== 0 ? value.toString() : '');
+    setEditing(true);
+  };
+
+  const commit = () => {
+    setEditing(false);
+    const parsed = draft.trim() === '' ? null : parseFloat(draft);
+    if (parsed !== value && !(parsed === null && value === null)) {
+      onSave(parsed);
+    }
+  };
+
+  if (editing) {
+    return (
+      <Input
+        type="number"
+        step="0.01"
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') setEditing(false); }}
+        autoFocus
+        className="h-8 w-24 text-right font-mono text-sm"
+      />
+    );
+  }
+
+  const display = value != null && value !== 0 ? formatCurrency(value) : placeholder;
+
+  return (
+    <span
+      onClick={startEdit}
+      className={cn(
+        'font-mono text-sm cursor-pointer rounded px-1.5 py-0.5 transition-colors',
+        disabled ? 'cursor-default' : 'hover:bg-muted',
+        isMuted && 'text-muted-foreground',
+      )}
+    >
+      {display}
+    </span>
+  );
+}
 
 export default function MonthlyFees() {
   const { monthlyFees, isLoading, upsertMonthlyFee } = useMonthlyFees();
   const { isAdmin } = useIsAdmin();
   const [addDialogOpen, setAddDialogOpen] = useState(false);
-  const [editFee, setEditFee] = useState<MonthlyFee | null>(null);
 
   // Group fees by month
   const feesByMonth = monthlyFees.reduce((acc, fee) => {
     const month = fee.year_month;
     if (!acc[month]) {
-      acc[month] = { standard: 0, solidarity: 0, gl_standard: null as number | null, gl_solidarity: null as number | null };
+      acc[month] = { standard: 0, solidarity: 0, gl_standard: null, gl_solidarity: null };
     }
     acc[month][fee.fee_type] = fee.amount;
     if (fee.gl_standard_amount != null) acc[month].gl_standard = fee.gl_standard_amount;
     if (fee.gl_solidarity_amount != null) acc[month].gl_solidarity = fee.gl_solidarity_amount;
     return acc;
-  }, {} as Record<string, { standard: number; solidarity: number; gl_standard: number | null; gl_solidarity: number | null }>);
+  }, {} as Record<string, MonthData>);
 
   const sortedMonths = Object.keys(feesByMonth).sort((a, b) => b.localeCompare(a));
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('es-AR', {
-      style: 'currency',
-      currency: 'ARS',
-    }).format(amount);
-  };
+  const handleSave = useCallback(
+    (yearMonth: string, field: 'standard' | 'solidarity' | 'gl_standard' | 'gl_solidarity', val: number | null) => {
+      const current = feesByMonth[yearMonth];
+      if (!current) return;
+
+      if (field === 'standard' || field === 'solidarity') {
+        upsertMonthlyFee.mutate({
+          year_month: yearMonth,
+          fee_type: field as FeeType,
+          amount: val ?? 0,
+        });
+      } else {
+        // GL fields — save on both fee_type rows
+        const glPayload = field === 'gl_standard'
+          ? { gl_standard_amount: val }
+          : { gl_solidarity_amount: val };
+
+        upsertMonthlyFee.mutate({
+          year_month: yearMonth,
+          fee_type: 'standard',
+          amount: current.standard,
+          ...glPayload,
+        });
+        upsertMonthlyFee.mutate({
+          year_month: yearMonth,
+          fee_type: 'solidarity',
+          amount: current.solidarity,
+          ...glPayload,
+        });
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [feesByMonth, upsertMonthlyFee],
+  );
 
   if (isLoading) {
     return (
@@ -91,26 +190,8 @@ export default function MonthlyFees() {
 
       {/* Current Month Card */}
       <div className="grid gap-3 grid-cols-2">
-        <CurrentMonthFeeCard
-          feeType="standard"
-          fees={feesByMonth}
-          onEdit={isAdmin ? (month) => {
-            const fee = monthlyFees.find(
-              (f) => f.year_month === month && f.fee_type === 'standard'
-            );
-            if (fee) setEditFee(fee);
-          } : undefined}
-        />
-        <CurrentMonthFeeCard
-          feeType="solidarity"
-          fees={feesByMonth}
-          onEdit={isAdmin ? (month) => {
-            const fee = monthlyFees.find(
-              (f) => f.year_month === month && f.fee_type === 'solidarity'
-            );
-            if (fee) setEditFee(fee);
-          } : undefined}
-        />
+        <CurrentMonthFeeCard feeType="standard" fees={feesByMonth} />
+        <CurrentMonthFeeCard feeType="solidarity" fees={feesByMonth} />
       </div>
 
       {/* History - Mobile Card View */}
@@ -126,53 +207,35 @@ export default function MonthlyFees() {
             const isUpcoming = isFuture(startOfDay(monthDate));
             return (
               <div key={month} className="rounded-lg border bg-card p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">{format(monthDate, 'MMMM yyyy')}</span>
-                      {isUpcoming && (
-                        <Badge variant="outline" className="text-xs">
-                          <Clock className="mr-1 h-3 w-3" />
-                          Upcoming
-                        </Badge>
-                      )}
-                    </div>
-                    {isAdmin && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          const fee = monthlyFees.find(
-                            (f) => f.year_month === month && f.fee_type === 'standard'
-                          );
-                          if (fee) setEditFee(fee);
-                        }}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="font-medium">{format(monthDate, 'MMMM yyyy')}</span>
+                  {isUpcoming && (
+                    <Badge variant="outline" className="text-xs">
+                      <Clock className="mr-1 h-3 w-3" />
+                      Upcoming
+                    </Badge>
+                  )}
+                </div>
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <div>
                     <p className="text-muted-foreground text-xs">Standard</p>
-                    <p className="font-mono font-semibold">{formatCurrency(feesByMonth[month].standard)}</p>
+                    <EditableCell value={feesByMonth[month].standard} onSave={(v) => handleSave(month, 'standard', v)} disabled={!isAdmin} />
                   </div>
                   <div>
                     <p className="text-muted-foreground text-xs">Solidarity</p>
-                    <p className="font-mono font-semibold">{formatCurrency(feesByMonth[month].solidarity)}</p>
+                    <EditableCell value={feesByMonth[month].solidarity} onSave={(v) => handleSave(month, 'solidarity', v)} disabled={!isAdmin} />
                   </div>
                 </div>
-                {(feesByMonth[month].gl_standard != null || feesByMonth[month].gl_solidarity != null) && (
-                  <div className="grid grid-cols-2 gap-2 text-sm mt-2 pt-2 border-t border-dashed">
-                    <div>
-                      <p className="text-muted-foreground text-xs">GL Standard</p>
-                      <p className="font-mono text-sm text-muted-foreground">{feesByMonth[month].gl_standard != null ? formatCurrency(feesByMonth[month].gl_standard!) : '—'}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground text-xs">GL Solidarity</p>
-                      <p className="font-mono text-sm text-muted-foreground">{feesByMonth[month].gl_solidarity != null ? formatCurrency(feesByMonth[month].gl_solidarity!) : '—'}</p>
-                    </div>
+                <div className="grid grid-cols-2 gap-2 text-sm mt-2 pt-2 border-t border-dashed">
+                  <div>
+                    <p className="text-muted-foreground text-xs">GL Standard</p>
+                    <EditableCell value={feesByMonth[month].gl_standard} onSave={(v) => handleSave(month, 'gl_standard', v)} disabled={!isAdmin} isMuted />
                   </div>
-                )}
+                  <div>
+                    <p className="text-muted-foreground text-xs">GL Solidarity</p>
+                    <EditableCell value={feesByMonth[month].gl_solidarity} onSave={(v) => handleSave(month, 'gl_solidarity', v)} disabled={!isAdmin} isMuted />
+                  </div>
+                </div>
               </div>
             );
           })
@@ -183,24 +246,23 @@ export default function MonthlyFees() {
       <Card className="hidden md:block">
         <CardHeader>
           <CardTitle>Fee History</CardTitle>
-          <CardDescription>Monthly fee rates by period</CardDescription>
+          <CardDescription>Click any value to edit inline</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Month</TableHead>
-              <TableHead className="text-right">Standard Fee</TableHead>
-              <TableHead className="text-right">Solidarity Fee</TableHead>
-              <TableHead className="text-right">GL Std</TableHead>
-              <TableHead className="text-right">GL Sol</TableHead>
-              {isAdmin && <TableHead className="w-[100px]"></TableHead>}
+                <TableHead className="text-right">Standard Fee</TableHead>
+                <TableHead className="text-right">Solidarity Fee</TableHead>
+                <TableHead className="text-right">GL Std</TableHead>
+                <TableHead className="text-right">GL Sol</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {sortedMonths.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                     No monthly fees configured yet
                   </TableCell>
                 </TableRow>
@@ -221,34 +283,18 @@ export default function MonthlyFees() {
                           )}
                         </div>
                       </TableCell>
-                      <TableCell className="text-right font-mono">
-                        {formatCurrency(feesByMonth[month].standard)}
+                      <TableCell className="text-right">
+                        <EditableCell value={feesByMonth[month].standard} onSave={(v) => handleSave(month, 'standard', v)} disabled={!isAdmin} />
                       </TableCell>
-                      <TableCell className="text-right font-mono">
-                        {formatCurrency(feesByMonth[month].solidarity)}
+                      <TableCell className="text-right">
+                        <EditableCell value={feesByMonth[month].solidarity} onSave={(v) => handleSave(month, 'solidarity', v)} disabled={!isAdmin} />
                       </TableCell>
-                      <TableCell className="text-right font-mono text-muted-foreground">
-                        {feesByMonth[month].gl_standard != null ? formatCurrency(feesByMonth[month].gl_standard!) : '—'}
+                      <TableCell className="text-right">
+                        <EditableCell value={feesByMonth[month].gl_standard} onSave={(v) => handleSave(month, 'gl_standard', v)} disabled={!isAdmin} isMuted />
                       </TableCell>
-                      <TableCell className="text-right font-mono text-muted-foreground">
-                        {feesByMonth[month].gl_solidarity != null ? formatCurrency(feesByMonth[month].gl_solidarity!) : '—'}
+                      <TableCell className="text-right">
+                        <EditableCell value={feesByMonth[month].gl_solidarity} onSave={(v) => handleSave(month, 'gl_solidarity', v)} disabled={!isAdmin} isMuted />
                       </TableCell>
-                      {isAdmin && (
-                        <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              const fee = monthlyFees.find(
-                                (f) => f.year_month === month && f.fee_type === 'standard'
-                              );
-                              if (fee) setEditFee(fee);
-                            }}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      )}
                     </TableRow>
                   );
                 })
@@ -257,17 +303,6 @@ export default function MonthlyFees() {
           </Table>
         </CardContent>
       </Card>
-
-      {/* Edit Dialog */}
-      {editFee && (
-        <EditMonthlyFeeDialog
-          fee={editFee}
-          fees={feesByMonth[editFee.year_month]}
-          open={!!editFee}
-          onOpenChange={(open) => !open && setEditFee(null)}
-          onSave={upsertMonthlyFee.mutateAsync}
-        />
-      )}
     </div>
   );
 }
@@ -275,21 +310,12 @@ export default function MonthlyFees() {
 function CurrentMonthFeeCard({
   feeType,
   fees,
-  onEdit,
 }: {
   feeType: FeeType;
-  fees: Record<string, Record<FeeType, number>>;
-  onEdit?: (month: string) => void;
+  fees: Record<string, MonthData>;
 }) {
   const currentMonth = new Date().toISOString().slice(0, 7) + '-01';
   const currentFee = fees[currentMonth]?.[feeType] ?? 0;
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('es-AR', {
-      style: 'currency',
-      currency: 'ARS',
-    }).format(amount);
-  };
 
   return (
     <Card>
@@ -297,11 +323,6 @@ function CurrentMonthFeeCard({
         <CardTitle className="text-xs md:text-sm font-medium">
           {FEE_TYPE_LABELS[feeType]} Fee
         </CardTitle>
-        {onEdit && (
-          <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => onEdit(currentMonth)}>
-            <Pencil className="h-4 w-4" />
-          </Button>
-        )}
       </CardHeader>
       <CardContent className="p-4 pt-0">
         <div className="text-lg md:text-2xl font-bold truncate">{formatCurrency(currentFee)}</div>
@@ -336,7 +357,6 @@ function AddMonthlyFeeDialog({
 
   const handleSubmit = async () => {
     if (alreadyExists) return;
-    
     setIsSubmitting(true);
     const glStd = glStandardAmount ? parseFloat(glStandardAmount) : null;
     const glSol = glSolidarityAmount ? parseFloat(glSolidarityAmount) : null;
@@ -345,7 +365,6 @@ function AddMonthlyFeeDialog({
         onSave({ year_month: selectedMonth, fee_type: 'standard', amount: parseFloat(standardAmount) || 0, gl_standard_amount: glStd, gl_solidarity_amount: glSol }),
         onSave({ year_month: selectedMonth, fee_type: 'solidarity', amount: parseFloat(solidarityAmount) || 0, gl_standard_amount: glStd, gl_solidarity_amount: glSol }),
       ]);
-      
       setStandardAmount('');
       setSolidarityAmount('');
       setGlStandardAmount('');
@@ -368,9 +387,7 @@ function AddMonthlyFeeDialog({
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Add Monthly Fees</DialogTitle>
-          <DialogDescription>
-            Set the fee amounts for a specific month
-          </DialogDescription>
+          <DialogDescription>Set the fee amounts for a specific month</DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
           <div className="space-y-2">
@@ -379,10 +396,7 @@ function AddMonthlyFeeDialog({
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
-                  className={cn(
-                    "w-full justify-start text-left font-normal",
-                    !selectedDate && "text-muted-foreground"
-                  )}
+                  className={cn("w-full justify-start text-left font-normal", !selectedDate && "text-muted-foreground")}
                 >
                   <CalendarIcon className="mr-2 h-4 w-4" />
                   {format(selectedDate, 'MMMM yyyy')}
@@ -400,22 +414,17 @@ function AddMonthlyFeeDialog({
               </PopoverContent>
             </Popover>
             {alreadyExists && (
-              <p className="text-sm text-destructive">
-                Fees for this month already exist. Edit them instead.
-              </p>
+              <p className="text-sm text-destructive">Fees for this month already exist. Edit them instead.</p>
             )}
           </div>
-
           <div className="space-y-2">
             <Label htmlFor="standard_amount">Standard Fee Amount</Label>
             <Input id="standard_amount" type="number" step="0.01" value={standardAmount} onChange={(e) => setStandardAmount(e.target.value)} placeholder="0.00" />
           </div>
-
           <div className="space-y-2">
             <Label htmlFor="solidarity_amount">Solidarity Fee Amount</Label>
             <Input id="solidarity_amount" type="number" step="0.01" value={solidarityAmount} onChange={(e) => setSolidarityAmount(e.target.value)} placeholder="0.00" />
           </div>
-
           <div className="pt-2 border-t">
             <p className="text-xs font-medium text-muted-foreground mb-3">Great Lodge Fees (optional)</p>
             <div className="space-y-2">
@@ -432,81 +441,6 @@ function AddMonthlyFeeDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button onClick={handleSubmit} disabled={isSubmitting || alreadyExists}>
             {isSubmitting ? 'Saving...' : 'Save Fees'}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function EditMonthlyFeeDialog({
-  fee,
-  fees,
-  open,
-  onOpenChange,
-  onSave,
-}: {
-  fee: MonthlyFee;
-  fees: Record<FeeType, number>;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onSave: (fee: { year_month: string; fee_type: FeeType; amount: number; gl_standard_amount?: number | null; gl_solidarity_amount?: number | null }) => Promise<unknown>;
-}) {
-  const [standardAmount, setStandardAmount] = useState(fees.standard.toString());
-  const [solidarityAmount, setSolidarityAmount] = useState(fees.solidarity.toString());
-  const [glStandardAmount, setGlStandardAmount] = useState(fee.gl_standard_amount?.toString() ?? '');
-  const [glSolidarityAmount, setGlSolidarityAmount] = useState(fee.gl_solidarity_amount?.toString() ?? '');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const handleSubmit = async () => {
-    setIsSubmitting(true);
-    const glStd = glStandardAmount ? parseFloat(glStandardAmount) : null;
-    const glSol = glSolidarityAmount ? parseFloat(glSolidarityAmount) : null;
-    try {
-      await Promise.all([
-        onSave({ year_month: fee.year_month, fee_type: 'standard', amount: parseFloat(standardAmount) || 0, gl_standard_amount: glStd, gl_solidarity_amount: glSol }),
-        onSave({ year_month: fee.year_month, fee_type: 'solidarity', amount: parseFloat(solidarityAmount) || 0, gl_standard_amount: glStd, gl_solidarity_amount: glSol }),
-      ]);
-      onOpenChange(false);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Edit Monthly Fees</DialogTitle>
-          <DialogDescription>
-            Update fees for {format(parseISO(fee.year_month), 'MMMM yyyy')}
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="edit_standard_amount">Standard Fee Amount</Label>
-            <Input id="edit_standard_amount" type="number" step="0.01" value={standardAmount} onChange={(e) => setStandardAmount(e.target.value)} placeholder="0.00" />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="edit_solidarity_amount">Solidarity Fee Amount</Label>
-            <Input id="edit_solidarity_amount" type="number" step="0.01" value={solidarityAmount} onChange={(e) => setSolidarityAmount(e.target.value)} placeholder="0.00" />
-          </div>
-          <div className="pt-2 border-t">
-            <p className="text-xs font-medium text-muted-foreground mb-3">Great Lodge Fees (optional)</p>
-            <div className="space-y-2">
-              <Label htmlFor="edit_gl_standard">GL Standard Fee (ARS)</Label>
-              <Input id="edit_gl_standard" type="number" step="0.01" value={glStandardAmount} onChange={(e) => setGlStandardAmount(e.target.value)} placeholder="0.00" />
-            </div>
-            <div className="space-y-2 mt-2">
-              <Label htmlFor="edit_gl_solidarity">GL Solidarity Fee (ARS)</Label>
-              <Input id="edit_gl_solidarity" type="number" step="0.01" value={glSolidarityAmount} onChange={(e) => setGlSolidarityAmount(e.target.value)} placeholder="0.00" />
-            </div>
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleSubmit} disabled={isSubmitting}>
-            {isSubmitting ? 'Saving...' : 'Save Changes'}
           </Button>
         </DialogFooter>
       </DialogContent>
