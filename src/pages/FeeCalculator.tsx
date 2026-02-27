@@ -144,30 +144,36 @@ export default function FeeCalculator() {
   const exportCvsToExcel = () => {
     if (!monthly.length) return;
     const BOM = '\uFEFF';
-    const header = ['Mes', 'Índice', 'Variación Mensual %'];
-    // We need the raw index values too — reconstruct from variations
-    // Since we only have variations, export what we have
-    const rows = monthly.map((p) => [p.monthLabel, '', p.variation.toFixed(2)]);
-    
-    // Add quarterly summary
-    const qRows = quarterly.map((q) => [q.quarterLabel, '', q.cvs.toFixed(2)]);
-    
-    const csvContent = BOM + [
-      header.join(';'),
-      ...rows.map((r) => r.join(';')),
-      '',
-      ['Trimestre', '', 'CVS Acumulado %'].join(';'),
-      ...qRows.map((r) => r.join(';')),
-    ].join('\n');
+    const decSep = (n: number) => n.toFixed(2).replace('.', ',');
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const lines: string[] = [
+      'Índice de Salarios (INDEC) — Variación Mensual',
+      '',
+      'Mes\tÍndice\tVariación %',
+      ...monthly.map((p) => `${p.monthLabel}\t${decSep(p.indexValue)}\t${decSep(p.variation)}`),
+      '',
+      '',
+      'Resumen Trimestral — CVS Acumulado',
+      '',
+      'Trimestre\tCVS Acumulado %\tDetalle Mensual',
+      ...quarterly.map((q) => {
+        const detail = q.monthlyBreakdown.map((m) => `${m.label}: ${decSep(m.variation)}%`).join(' | ');
+        return `${q.quarterLabel}\t${decSep(q.cvs)}\t${detail}`;
+      }),
+    ];
+
+    if (yoyAccumulated > 0) {
+      lines.push('', '', `Índice Acumulado Anual (12 meses)\t${decSep(yoyAccumulated)}`);
+    }
+
+    const blob = new Blob([BOM + lines.join('\n')], { type: 'text/tab-separated-values;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `indice-salarios-cvs-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `indice-salarios-cvs-${new Date().toISOString().slice(0, 10)}.xls`;
     a.click();
     URL.revokeObjectURL(url);
-    toast.success('CSV descargado');
+    toast.success('Archivo descargado');
   };
 
   // Derive current fees from latest monthly_fees entries
