@@ -41,8 +41,6 @@ function KPIList({ kpis, t, noGlData, baselineKpis }: { kpis: ProposalKPIs; t: (
 
   const rows = isDelta ? [
     { label: t('feeCalculator.totalMonthlyIncome'), value: formatDelta(kpis.totalMonthlyIncome - baselineKpis.totalMonthlyIncome), color: kpis.totalMonthlyIncome >= baselineKpis.totalMonthlyIncome ? 'text-success' : 'text-destructive' },
-    { label: t('feeCalculator.netMonthlyIncome'), value: formatDelta(kpis.netMonthlyIncome - baselineKpis.netMonthlyIncome), color: kpis.netMonthlyIncome >= baselineKpis.netMonthlyIncome ? 'text-success' : 'text-destructive' },
-    { label: t('feeCalculator.ourFeeIncrease'), value: formatDeltaPct(kpis.ourFeeIncrease - baselineKpis.ourFeeIncrease), color: '' },
     { label: t('feeCalculator.delta'), value: formatDeltaPct(kpis.delta - baselineKpis.delta), color: kpis.delta >= baselineKpis.delta ? 'text-success' : 'text-warning' },
   ] : [
     { label: t('feeCalculator.totalMonthlyIncome'), value: formatARS(kpis.totalMonthlyIncome), color: '' },
