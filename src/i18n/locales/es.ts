@@ -399,7 +399,7 @@ export default {
       ourFeeIncrease: 'Incremento Propio',
       glFeeIncrease: 'Incremento GL (ref. CVS)',
       delta: 'Δ Capita vs GL',
-      deltaVsGlYearAgo: 'Delta vs GL (hace 1 año)',
+      deltaVsGlYearAgo: 'Δ Capita vs GL (hace 1 año)',
       yoyFeeVariation: 'Variación Anual de la Capita',
       yoyIndexRef: 'Índice Anual (ref.)',
       fetchError: 'No se pudo obtener el CVS del INDEC. Ingresá el CVS trimestral manualmente.',
