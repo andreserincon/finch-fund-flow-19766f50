@@ -149,8 +149,6 @@ export default function FeeCalculator() {
   const { memberBalances, isLoading: membersLoading } = useMembers();
   const { data: cvsData, isLoading: cvsLoading, refetch: refetchCvs, isFetching: cvsFetching } = useCVSIndex();
 
-  const [selectedQuarterId, setSelectedQuarterId] = useState<string>('');
-  const [autoSelectedQuarter, setAutoSelectedQuarter] = useState(false);
   const [selectedBaseMonth, setSelectedBaseMonth] = useState<string>('');
   const [manualCvs, setManualCvs] = useState<string>('');
   const [manualGlStd, setManualGlStd] = useState<string>('');
@@ -163,16 +161,23 @@ export default function FeeCalculator() {
   const quarterly = cvsData?.quarterly ?? [];
   const monthly = cvsData?.monthly ?? [];
 
-  // Auto-select quarter -1 (second most recent)
-  useEffect(() => {
-    if (!autoSelectedQuarter && quarterly.length > 1 && !selectedQuarterId) {
-      setSelectedQuarterId(quarterly[1].quarterId);
-      setAutoSelectedQuarter(true);
-    } else if (!autoSelectedQuarter && quarterly.length === 1 && !selectedQuarterId) {
-      setSelectedQuarterId(quarterly[0].quarterId);
-      setAutoSelectedQuarter(true);
+  // Auto-derive quarter: 2 quarters before the selected base month's quarter
+  const selectedQuarterId = useMemo(() => {
+    if (!selectedBaseMonth || quarterly.length === 0) return '';
+    const [baseYear, baseMonthNum] = selectedBaseMonth.split('-').map(Number);
+    const baseQ = Math.ceil(baseMonthNum / 3);
+    // Go back 2 quarters
+    let targetQ = baseQ - 2;
+    let targetYear = baseYear;
+    while (targetQ <= 0) {
+      targetQ += 4;
+      targetYear -= 1;
     }
-  }, [quarterly, autoSelectedQuarter, selectedQuarterId]);
+    const targetId = `Q${targetQ}-${targetYear}`;
+    // If we have this quarter in data, use it; otherwise find closest
+    const found = quarterly.find(q => q.quarterId === targetId);
+    return found ? found.quarterId : '';
+  }, [selectedBaseMonth, quarterly]);
 
   const exportCvsToExcel = () => {
     if (!monthly.length) return;
@@ -211,12 +216,19 @@ export default function FeeCalculator() {
 
   const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
-  // Available months: up to 3 past and 3 future from current month
+  // Available months: only first month of each quarter, up to ~4 quarters around current
   const availableFeeMonths = useMemo(() => {
     const now = new Date();
+    const currentQ = Math.ceil((now.getMonth() + 1) / 3);
     const months: { value: string; label: string }[] = [];
-    for (let offset = -3; offset <= 3; offset++) {
-      const d = new Date(now.getFullYear(), now.getMonth() + offset, 1);
+    // Show ~3 past quarters + current + 1 future quarter
+    for (let qOffset = -3; qOffset <= 1; qOffset++) {
+      let q = currentQ + qOffset;
+      let y = now.getFullYear();
+      while (q <= 0) { q += 4; y -= 1; }
+      while (q > 4) { q -= 4; y += 1; }
+      const m = (q - 1) * 3 + 1; // first month of quarter
+      const d = new Date(y, m - 1, 1);
       const value = d.toISOString().slice(0, 7) + '-01';
       const label = capitalize(d.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' }));
       months.push({ value, label });
@@ -224,11 +236,14 @@ export default function FeeCalculator() {
     return months.sort((a, b) => b.value.localeCompare(a.value));
   }, []);
 
-  // Auto-select current month as default base
+  // Auto-select first month of current quarter as default base
   useEffect(() => {
     if (!selectedBaseMonth) {
-      const currentMonth = new Date().toISOString().slice(0, 7) + '-01';
-      setSelectedBaseMonth(currentMonth);
+      const now = new Date();
+      const currentQ = Math.ceil((now.getMonth() + 1) / 3);
+      const firstMonth = (currentQ - 1) * 3 + 1;
+      const d = new Date(now.getFullYear(), firstMonth - 1, 1);
+      setSelectedBaseMonth(d.toISOString().slice(0, 7) + '-01');
     }
   }, [selectedBaseMonth]);
 
@@ -450,23 +465,14 @@ export default function FeeCalculator() {
             </Select>
           </div>
 
-          <div className="flex flex-col gap-1">
+        <div className="flex flex-col gap-1">
             <Label className="text-xs text-muted-foreground">Trimestre CVS</Label>
-            {!fetchError && quarterly.length > 0 ? (
-              <Select value={selectedQuarterId} onValueChange={setSelectedQuarterId}>
-                <SelectTrigger className="w-[240px]">
-                  <SelectValue placeholder={t('feeCalculator.selectQuarter')} />
-                </SelectTrigger>
-                <SelectContent>
-                  {quarterly.slice(0, 6).map((q) => (
-                    <SelectItem key={q.quarterId} value={q.quarterId}>
-                      {q.quarterLabel} — CVS: {formatPct(q.cvs)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            {!fetchError && selectedQuarter ? (
+              <div className="h-10 flex items-center px-3 rounded-md border border-input bg-muted/50 text-sm w-[260px]">
+                {selectedQuarter.quarterLabel} — CVS: <span className="font-semibold ml-1">{formatPct(selectedQuarter.cvs)}</span>
+              </div>
             ) : !fetchError && cvsLoading ? (
-              <Skeleton className="h-10 w-[240px]" />
+              <Skeleton className="h-10 w-[260px]" />
             ) : (
               <Input
                 type="number"
