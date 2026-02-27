@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Calculator, ExternalLink, Users, Sparkles, AlertTriangle, RefreshCw, Download } from 'lucide-react';
 import { toast } from 'sonner';
@@ -150,6 +150,7 @@ export default function FeeCalculator() {
   const { data: cvsData, isLoading: cvsLoading, refetch: refetchCvs, isFetching: cvsFetching } = useCVSIndex();
 
   const [selectedQuarterId, setSelectedQuarterId] = useState<string>('');
+  const [autoSelectedQuarter, setAutoSelectedQuarter] = useState(false);
   const [manualCvs, setManualCvs] = useState<string>('');
   const [manualGlStd, setManualGlStd] = useState<string>('');
   const [manualGlSol, setManualGlSol] = useState<string>('');
@@ -160,6 +161,14 @@ export default function FeeCalculator() {
   const fetchError = cvsData?.fetchError ?? false;
   const quarterly = cvsData?.quarterly ?? [];
   const monthly = cvsData?.monthly ?? [];
+
+  // Auto-select the most recent quarter
+  useEffect(() => {
+    if (!autoSelectedQuarter && quarterly.length > 0 && !selectedQuarterId) {
+      setSelectedQuarterId(quarterly[0].quarterId);
+      setAutoSelectedQuarter(true);
+    }
+  }, [quarterly, autoSelectedQuarter, selectedQuarterId]);
 
   const exportCvsToExcel = () => {
     if (!monthly.length) return;
