@@ -6,6 +6,7 @@ import {
   LogOut,
   Wallet,
   Settings,
+  Calculator,
   ArrowLeftRight,
   HandCoins,
   UserCog,
@@ -51,6 +52,7 @@ export function AppSidebar() {
   const settingsItems = [
     { title: t('nav.monthlyFees'), url: '/monthly-fees', icon: Settings },
     { title: t('nav.events'), url: '/expense-categories', icon: Wallet },
+    { title: t('nav.feeCalculator'), url: '/fee-calculator', icon: Calculator },
   ];
 
   const adminSettingsItems = [

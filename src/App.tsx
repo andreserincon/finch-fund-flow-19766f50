@@ -14,6 +14,7 @@ import LogPayment from "./pages/LogPayment";
 import LogExpense from "./pages/LogExpense";
 import MonthlyFees from "./pages/MonthlyFees";
 import ExtraordinaryExpenses from "./pages/ExtraordinaryExpenses";
+import FeeCalculator from "./pages/FeeCalculator";
 import AccountTransfer from "./pages/AccountTransfer";
 import UserManagement from "./pages/UserManagement";
 import Reports from "./pages/Reports";
@@ -98,6 +99,7 @@ const App = () => (
         <Route path="/account-transfer" element={<AdminRoute><AccountTransfer /></AdminRoute>} />
         <Route path="/monthly-fees" element={<ProtectedRoute><MonthlyFees /></ProtectedRoute>} />
         <Route path="/expense-categories" element={<ProtectedRoute><ExtraordinaryExpenses /></ProtectedRoute>} />
+        <Route path="/fee-calculator" element={<ProtectedRoute><FeeCalculator /></ProtectedRoute>} />
         <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
         <Route path="/user-management" element={<AdminRoute><UserManagement /></AdminRoute>} />
         <Route path="*" element={<NotFound />} />
