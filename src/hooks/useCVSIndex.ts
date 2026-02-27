@@ -1,70 +1,68 @@
 import { useQuery } from '@tanstack/react-query';
 
 export interface MonthlyIndexPoint {
-  monthKey: string;
-  monthLabel: string;
-  variation: number;
+  monthKey: string;   // "2025-01"
+  monthLabel: string; // "Ene 2025"
+  variation: number;  // monthly % variation e.g. 3.5
 }
 
 export interface QuarterlyIndex {
-  quarterId: string;
-  quarterLabel: string;
+  quarterId: string;    // "Q1-2025"
+  quarterLabel: string; // "Q1 2025 (Ene–Mar)"
   year: number;
-  quarter: number;
-  months: string[];
-  cvs: number;
+  quarter: number;      // 1–4
+  months: string[];     // ["2025-01", "2025-02", "2025-03"]
+  cvs: number;          // quarterly CVS % compounded
   monthlyBreakdown: { label: string; variation: number }[];
 }
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const CSV_PROXY_URL = `${SUPABASE_URL}/functions/v1/cvs-proxy`;
+const PROXY_URL = `${SUPABASE_URL}/functions/v1/cvs-proxy`;
 
 const MONTH_NAMES_ES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 const QUARTER_RANGES: Record<number, string> = { 1: 'Ene–Mar', 2: 'Abr–Jun', 3: 'Jul–Sep', 4: 'Oct–Dic' };
 
 export function useCVSIndex() {
   return useQuery({
-    queryKey: ['cvs-index-csv'],
+    queryKey: ['cvs-index-api'],
     queryFn: async (): Promise<{
       monthly: MonthlyIndexPoint[];
       quarterly: QuarterlyIndex[];
       fetchError: boolean;
     }> => {
       try {
-        const res = await fetch(CSV_PROXY_URL);
+        const res = await fetch(PROXY_URL);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const text = await res.text();
+        const json = await res.json();
 
-        const lines = text.trim().split('\n').slice(1);
-
-        const monthlyLastValue: Record<string, number> = {};
-        for (const line of lines) {
-          const [dateStr, totalReg, total] = line.split(',');
-          if (!dateStr) continue;
-          const value = parseFloat(total || totalReg);
-          if (isNaN(value)) continue;
-          const monthKey = dateStr.slice(0, 7);
-          monthlyLastValue[monthKey] = value;
+        // json.data is an array of [date, value] pairs sorted desc
+        const dataPoints: [string, number][] = json.data;
+        if (!dataPoints || dataPoints.length < 2) {
+          return { monthly: [], quarterly: [], fetchError: true };
         }
 
-        const sortedMonths = Object.keys(monthlyLastValue).sort();
+        // Sort ascending by date
+        const sorted = [...dataPoints]
+          .filter(([, v]) => v != null)
+          .sort((a, b) => a[0].localeCompare(b[0]));
 
+        // Compute monthly % variations
         const monthly: MonthlyIndexPoint[] = [];
-        for (let i = 1; i < sortedMonths.length; i++) {
-          const prevKey = sortedMonths[i - 1];
-          const currKey = sortedMonths[i];
-          const prev = monthlyLastValue[prevKey];
-          const curr = monthlyLastValue[currKey];
-          if (!prev || !curr) continue;
+        for (let i = 1; i < sorted.length; i++) {
+          const prev = sorted[i - 1][1];
+          const curr = sorted[i][1];
+          const dateStr = sorted[i][0]; // "YYYY-MM-DD"
+          const monthKey = dateStr.slice(0, 7); // "YYYY-MM"
+          const [year, month] = monthKey.split('-').map(Number);
           const variation = parseFloat(((curr / prev - 1) * 100).toFixed(2));
-          const [year, month] = currKey.split('-').map(Number);
           monthly.push({
-            monthKey: currKey,
+            monthKey,
             monthLabel: `${MONTH_NAMES_ES[month - 1]} ${year}`,
             variation,
           });
         }
 
+        // Group into complete quarters
         const quarterMap: Record<string, MonthlyIndexPoint[]> = {};
         for (const point of monthly) {
           const [year, month] = point.monthKey.split('-').map(Number);

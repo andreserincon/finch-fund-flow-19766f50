@@ -1,11 +1,14 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-const CSV_URL =
-  "https://infra.datos.gob.ar/catalog/sspm/dataset/447/distribution/447.1/download/coeficiente-de-variacion-salarial.csv";
+// Índice de Salarios (monthly, updated through current data)
+// Series API from datos.gob.ar
+const API_URL =
+  "https://apis.datos.gob.ar/series/api/series/?ids=149.1_TL_INDIIOS_OCTU_0_21&format=json&limit=24&sort=desc";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 serve(async (req) => {
@@ -14,18 +17,19 @@ serve(async (req) => {
   }
 
   try {
-    const res = await fetch(CSV_URL);
+    const res = await fetch(API_URL);
     if (!res.ok) {
-      return new Response(JSON.stringify({ error: `Upstream HTTP ${res.status}` }), {
+      const body = await res.text();
+      return new Response(JSON.stringify({ error: `Upstream HTTP ${res.status}`, body }), {
         status: 502,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const text = await res.text();
-    return new Response(text, {
+    const json = await res.json();
+    return new Response(JSON.stringify(json), {
       headers: {
         ...corsHeaders,
-        "Content-Type": "text/csv",
+        "Content-Type": "application/json",
         "Cache-Control": "public, max-age=3600",
       },
     });
