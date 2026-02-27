@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Calculator, ExternalLink, Info, Users, Sparkles, AlertTriangle, RefreshCw, Download } from 'lucide-react';
+import { Calculator, ExternalLink, Users, Sparkles, AlertTriangle, RefreshCw, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -131,7 +131,6 @@ export default function FeeCalculator() {
 
   const [selectedQuarterId, setSelectedQuarterId] = useState<string>('');
   const [manualCvs, setManualCvs] = useState<string>('');
-  const [otherGlExpenses, setOtherGlExpenses] = useState<string>('');
   const [manualGlStd, setManualGlStd] = useState<string>('');
   const [manualGlSol, setManualGlSol] = useState<string>('');
   const [customStd, setCustomStd] = useState<string>('');
@@ -205,8 +204,7 @@ export default function FeeCalculator() {
 
   const glStdNum = glFromDb ? glFromDb.standard : (parseFloat(manualGlStd) || 0);
   const glSolNum = glFromDb ? glFromDb.solidarity : (parseFloat(manualGlSol) || 0);
-  const otherGlNum = parseFloat(otherGlExpenses) || 0;
-  const noGlData = glStdNum === 0 && glSolNum === 0 && otherGlNum === 0;
+  const noGlData = glStdNum === 0 && glSolNum === 0;
 
   const { stdMemberCount, solMemberCount } = useMemo(() => {
     const active = memberBalances.filter((m) => m.is_active);
@@ -236,7 +234,10 @@ export default function FeeCalculator() {
   }, [selectedQuarter, monthly]);
 
   const computeKPIs = (proposedStd: number, proposedSol: number): ProposalKPIs => {
-    const glTotalCost = glStdNum + glSolNum + otherGlNum;
+    // Projected GL fees = current GL per-member fee × (1 + CVS%)
+    const projectedGlStd = Math.round(glStdNum * (1 + selectedCVS / 100));
+    const projectedGlSol = Math.round(glSolNum * (1 + selectedCVS / 100));
+    const glTotalCost = projectedGlStd * stdMemberCount + projectedGlSol * solMemberCount;
     const totalMonthlyIncome = stdMemberCount * proposedStd + solMemberCount * proposedSol;
     const netMonthlyIncome = totalMonthlyIncome - glTotalCost;
     const ourFeeIncrease = currentStdFee > 0 ? ((proposedStd - currentStdFee) / currentStdFee) * 100 : 0;
@@ -271,14 +272,14 @@ export default function FeeCalculator() {
       return { ...p, proposedStd, proposedSol, kpis: computeKPIs(proposedStd, proposedSol) };
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasCvs, selectedCVS, currentStdFee, currentSolFee, stdMemberCount, solMemberCount, glStdNum, glSolNum, otherGlNum, yoyAccumulated, feeOneYearAgoStd, t]);
+  }, [hasCvs, selectedCVS, currentStdFee, currentSolFee, stdMemberCount, solMemberCount, glStdNum, glSolNum, yoyAccumulated, feeOneYearAgoStd, t]);
 
   const customStdNum = parseFloat(customStd) || 0;
   const customSolNum = parseFloat(customSol) || 0;
   const customKPIs = useMemo(
     () => (customStdNum > 0 || customSolNum > 0 ? computeKPIs(customStdNum, customSolNum) : null),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [customStdNum, customSolNum, stdMemberCount, solMemberCount, glStdNum, glSolNum, otherGlNum, selectedCVS, yoyAccumulated, currentStdFee, feeOneYearAgoStd]
+    [customStdNum, customSolNum, stdMemberCount, solMemberCount, glStdNum, glSolNum, selectedCVS, yoyAccumulated, currentStdFee, feeOneYearAgoStd]
   );
 
   if (isLoading) {
@@ -469,18 +470,23 @@ export default function FeeCalculator() {
                 </div>
               </div>
             )}
-            <div className="space-y-1.5">
-              <div className="flex items-center gap-1">
-                <Label>{t('feeCalculator.otherGlExpenses')}</Label>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
-                  </TooltipTrigger>
-                  <TooltipContent className="max-w-xs">{t('feeCalculator.otherGlExpensesTooltip')}</TooltipContent>
-                </Tooltip>
+
+            {/* Projected new GL fees */}
+            {hasCvs && (glStdNum > 0 || glSolNum > 0) && (
+              <div className="space-y-2 pt-2 border-t">
+                <p className="text-xs font-medium text-muted-foreground">{t('feeCalculator.projectedGlFees')}</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs text-muted-foreground">{t('feeCalculator.glStdFee')} ({formatPct(selectedCVS)})</p>
+                    <p className="text-lg font-bold">{formatARS(Math.round(glStdNum * (1 + selectedCVS / 100)))}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">{t('feeCalculator.glSolFee')} ({formatPct(selectedCVS)})</p>
+                    <p className="text-lg font-bold">{formatARS(Math.round(glSolNum * (1 + selectedCVS / 100)))}</p>
+                  </div>
+                </div>
               </div>
-              <Input type="number" step="0.01" placeholder="0.00" value={otherGlExpenses} onChange={(e) => setOtherGlExpenses(e.target.value)} />
-            </div>
+            )}
           </CardContent>
         </Card>
 
