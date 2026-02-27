@@ -33,8 +33,18 @@ interface ProposalKPIs {
   yoyAccumulatedIndex: number;
 }
 
-function KPIList({ kpis, t, noGlData }: { kpis: ProposalKPIs; t: (key: string) => string; noGlData?: boolean }) {
-  const rows = [
+function KPIList({ kpis, t, noGlData, baselineKpis }: { kpis: ProposalKPIs; t: (key: string) => string; noGlData?: boolean; baselineKpis?: ProposalKPIs }) {
+  const isDelta = !!baselineKpis;
+
+  const formatDelta = (val: number) => `${val >= 0 ? '+' : ''}${formatARS(val)}`;
+  const formatDeltaPct = (val: number) => `${val >= 0 ? '+' : ''}${val.toFixed(1)} pp`;
+
+  const rows = isDelta ? [
+    { label: t('feeCalculator.totalMonthlyIncome'), value: formatDelta(kpis.totalMonthlyIncome - baselineKpis.totalMonthlyIncome), color: kpis.totalMonthlyIncome >= baselineKpis.totalMonthlyIncome ? 'text-success' : 'text-destructive' },
+    { label: t('feeCalculator.netMonthlyIncome'), value: formatDelta(kpis.netMonthlyIncome - baselineKpis.netMonthlyIncome), color: kpis.netMonthlyIncome >= baselineKpis.netMonthlyIncome ? 'text-success' : 'text-destructive' },
+    { label: t('feeCalculator.ourFeeIncrease'), value: formatDeltaPct(kpis.ourFeeIncrease - baselineKpis.ourFeeIncrease), color: '' },
+    { label: t('feeCalculator.delta'), value: formatDeltaPct(kpis.delta - baselineKpis.delta), color: kpis.delta >= baselineKpis.delta ? 'text-success' : 'text-warning' },
+  ] : [
     { label: t('feeCalculator.totalMonthlyIncome'), value: formatARS(kpis.totalMonthlyIncome), color: '' },
     { label: t('feeCalculator.glTotalCost'), value: formatARS(kpis.glTotalCost), color: '' },
     {
@@ -63,8 +73,11 @@ function KPIList({ kpis, t, noGlData }: { kpis: ProposalKPIs; t: (key: string) =
 
   return (
     <div className="space-y-2">
-      {noGlData && (
+      {noGlData && !isDelta && (
         <p className="text-xs text-muted-foreground italic mb-2">{t('feeCalculator.enterGlFees')}</p>
+      )}
+      {isDelta && (
+        <p className="text-xs text-muted-foreground italic mb-2">{t('feeCalculator.vsBaseline')}</p>
       )}
       {rows.map((row) => (
         <div key={row.label} className="flex items-center justify-between text-sm">
@@ -85,8 +98,8 @@ function ProposalCard({
   kpis,
   t,
   noGlData,
-  deltaVsBaseline,
   isVariant,
+  baselineKpis,
 }: {
   name: string;
   badgeColor: string;
@@ -96,8 +109,8 @@ function ProposalCard({
   kpis: ProposalKPIs;
   t: (key: string, opts?: Record<string, unknown>) => string;
   noGlData?: boolean;
-  deltaVsBaseline?: { std: number; sol: number } | null;
   isVariant?: boolean;
+  baselineKpis?: ProposalKPIs;
 }) {
   return (
     <Card>
@@ -110,37 +123,18 @@ function ProposalCard({
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {isVariant && deltaVsBaseline ? (
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <p className="text-xs text-muted-foreground">{t('feeCalculator.proposedStd')}</p>
-              <p className="text-xl font-bold">{formatARS(proposedStd)}</p>
-              <p className={`text-xs font-medium ${deltaVsBaseline.std >= 0 ? 'text-success' : 'text-destructive'}`}>
-                {deltaVsBaseline.std >= 0 ? '+' : ''}{formatARS(deltaVsBaseline.std)} {t('feeCalculator.vsBaseline')}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">{t('feeCalculator.proposedSol')}</p>
-              <p className="text-xl font-bold">{formatARS(proposedSol)}</p>
-              <p className={`text-xs font-medium ${deltaVsBaseline.sol >= 0 ? 'text-success' : 'text-destructive'}`}>
-                {deltaVsBaseline.sol >= 0 ? '+' : ''}{formatARS(deltaVsBaseline.sol)} {t('feeCalculator.vsBaseline')}
-              </p>
-            </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <p className="text-xs text-muted-foreground">{t('feeCalculator.proposedStd')}</p>
+            <p className="text-xl font-bold">{formatARS(proposedStd)}</p>
           </div>
-        ) : (
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <p className="text-xs text-muted-foreground">{t('feeCalculator.proposedStd')}</p>
-              <p className="text-xl font-bold">{formatARS(proposedStd)}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">{t('feeCalculator.proposedSol')}</p>
-              <p className="text-xl font-bold">{formatARS(proposedSol)}</p>
-            </div>
+          <div>
+            <p className="text-xs text-muted-foreground">{t('feeCalculator.proposedSol')}</p>
+            <p className="text-xl font-bold">{formatARS(proposedSol)}</p>
           </div>
-        )}
+        </div>
         <Separator />
-        <KPIList kpis={kpis} t={t} noGlData={noGlData} />
+        <KPIList kpis={kpis} t={t} noGlData={noGlData} baselineKpis={baselineKpis} />
       </CardContent>
     </Card>
   );
@@ -293,16 +287,21 @@ export default function FeeCalculator() {
     if (!hasCvs) return [];
     const baseStd = Math.round(currentStdFee * (1 + selectedCVS / 100));
     const baseSol = Math.round(currentSolFee * (1 + selectedCVS / 100));
-    return [
+    const raw = [
       { buffer: -2, name: t('feeCalculator.low'), color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200', isVariant: true },
       { buffer: 0, name: t('feeCalculator.baseline'), color: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200', isVariant: false },
       { buffer: 2, name: t('feeCalculator.high'), color: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200', isVariant: true },
-    ].map((p) => {
+    ];
+    const items = raw.map((p) => {
       const proposedStd = Math.round(baseStd * (1 + p.buffer / 100));
       const proposedSol = Math.round(baseSol * (1 + p.buffer / 100));
-      const deltaVsBaseline = p.isVariant ? { std: proposedStd - baseStd, sol: proposedSol - baseSol } : null;
-      return { ...p, proposedStd, proposedSol, kpis: computeKPIs(proposedStd, proposedSol), deltaVsBaseline };
+      return { ...p, proposedStd, proposedSol, kpis: computeKPIs(proposedStd, proposedSol) };
     });
+    const bKpis = items.find((p) => !p.isVariant)?.kpis;
+    return items.map((p) => ({
+      ...p,
+      baselineKpis: p.isVariant ? bKpis : undefined,
+    }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasCvs, selectedCVS, currentStdFee, currentSolFee, stdMemberCount, solMemberCount, glStdNum, glSolNum, yoyAccumulated, feeOneYearAgoStd, t]);
 
@@ -542,7 +541,7 @@ export default function FeeCalculator() {
                   kpis={p.kpis}
                   t={t}
                   noGlData={noGlData}
-                  deltaVsBaseline={p.deltaVsBaseline}
+                  baselineKpis={p.baselineKpis}
                   isVariant={p.isVariant}
                 />
               ))}
