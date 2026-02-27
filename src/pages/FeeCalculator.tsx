@@ -42,7 +42,7 @@ function KPIList({ kpis, t, noGlData, baselineKpis }: { kpis: ProposalKPIs; t: (
 
   const rows = isDelta ? [
     { label: t('feeCalculator.totalMonthlyIncome'), value: formatDelta(kpis.totalMonthlyIncome - baselineKpis.totalMonthlyIncome), color: kpis.totalMonthlyIncome >= baselineKpis.totalMonthlyIncome ? 'text-success' : 'text-destructive' },
-    { label: t('feeCalculator.delta'), value: formatDeltaPct(kpis.delta - baselineKpis.delta), color: kpis.delta >= baselineKpis.delta ? 'text-success' : 'text-warning' },
+    { label: t('feeCalculator.delta'), value: `${(kpis.delta - baselineKpis.delta).toFixed(1)}pp`, color: '' },
   ] : [
     { label: t('feeCalculator.totalMonthlyIncome'), value: formatARS(kpis.totalMonthlyIncome), color: '' },
     { label: t('feeCalculator.glTotalCost'), value: formatARS(kpis.glTotalCost), color: '' },
@@ -54,13 +54,13 @@ function KPIList({ kpis, t, noGlData, baselineKpis }: { kpis: ProposalKPIs; t: (
     { label: t('feeCalculator.ourFeeIncrease'), value: formatPct(kpis.ourFeeIncrease), color: '' },
     {
       label: t('feeCalculator.delta'),
-      value: formatPct(kpis.delta),
-      color: kpis.delta >= 0 ? 'text-success' : 'text-warning',
+      value: `${kpis.delta.toFixed(1)}%`,
+      color: '',
     },
     {
       label: t('feeCalculator.deltaVsGlYearAgo'),
-      value: kpis.deltaVsGlYearAgo !== null ? formatPct(kpis.deltaVsGlYearAgo) : t('feeCalculator.noYoyData'),
-      color: kpis.deltaVsGlYearAgo !== null ? (kpis.deltaVsGlYearAgo >= 0 ? 'text-success' : 'text-warning') : 'text-muted-foreground',
+      value: kpis.deltaVsGlYearAgo !== null ? `${kpis.deltaVsGlYearAgo.toFixed(1)}%` : t('feeCalculator.noYoyData'),
+      color: 'text-muted-foreground',
     },
     {
       label: t('feeCalculator.yoyFeeVariation'),
@@ -326,15 +326,15 @@ export default function FeeCalculator() {
     const netMonthlyIncome = totalMonthlyIncome - glTotalCost;
     const ourFeeIncrease = currentStdFee > 0 ? ((proposedStd - currentStdFee) / currentStdFee) * 100 : 0;
     const glFeeIncrease = selectedCVS;
-    const delta = projectedGlStd > 0 ? ((proposedStd - projectedGlStd) / projectedGlStd) * 100 : 0;
+    const delta = proposedStd > 0 ? (projectedGlStd / proposedStd) * 100 : 0;
     const yoyFeeVariation =
       feeOneYearAgoStd !== null && feeOneYearAgoStd > 0
         ? ((proposedStd - feeOneYearAgoStd) / feeOneYearAgoStd) * 100
         : null;
 
     const deltaVsGlYearAgo =
-      feeOneYearAgoStd !== null && glStdOneYearAgo !== null && glStdOneYearAgo > 0
-        ? ((feeOneYearAgoStd - glStdOneYearAgo) / glStdOneYearAgo) * 100
+      feeOneYearAgoStd !== null && glStdOneYearAgo !== null && feeOneYearAgoStd > 0
+        ? (glStdOneYearAgo / feeOneYearAgoStd) * 100
         : null;
 
     return {
