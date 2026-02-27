@@ -162,9 +162,12 @@ export default function FeeCalculator() {
   const quarterly = cvsData?.quarterly ?? [];
   const monthly = cvsData?.monthly ?? [];
 
-  // Auto-select the most recent quarter
+  // Auto-select quarter -1 (second most recent)
   useEffect(() => {
-    if (!autoSelectedQuarter && quarterly.length > 0 && !selectedQuarterId) {
+    if (!autoSelectedQuarter && quarterly.length > 1 && !selectedQuarterId) {
+      setSelectedQuarterId(quarterly[1].quarterId);
+      setAutoSelectedQuarter(true);
+    } else if (!autoSelectedQuarter && quarterly.length === 1 && !selectedQuarterId) {
       setSelectedQuarterId(quarterly[0].quarterId);
       setAutoSelectedQuarter(true);
     }
