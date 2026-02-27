@@ -299,12 +299,14 @@ function AddMonthlyFeeDialog({
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (fee: { year_month: string; fee_type: FeeType; amount: number }) => Promise<unknown>;
+  onSave: (fee: { year_month: string; fee_type: FeeType; amount: number; gl_standard_amount?: number | null; gl_solidarity_amount?: number | null }) => Promise<unknown>;
   existingMonths: string[];
 }) {
   const [selectedDate, setSelectedDate] = useState<Date>(startOfMonth(new Date()));
   const [standardAmount, setStandardAmount] = useState('');
   const [solidarityAmount, setSolidarityAmount] = useState('');
+  const [glStandardAmount, setGlStandardAmount] = useState('');
+  const [glSolidarityAmount, setGlSolidarityAmount] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const selectedMonth = format(selectedDate, 'yyyy-MM-dd');
@@ -314,14 +316,18 @@ function AddMonthlyFeeDialog({
     if (alreadyExists) return;
     
     setIsSubmitting(true);
+    const glStd = glStandardAmount ? parseFloat(glStandardAmount) : null;
+    const glSol = glSolidarityAmount ? parseFloat(glSolidarityAmount) : null;
     try {
       await Promise.all([
-        onSave({ year_month: selectedMonth, fee_type: 'standard', amount: parseFloat(standardAmount) || 0 }),
-        onSave({ year_month: selectedMonth, fee_type: 'solidarity', amount: parseFloat(solidarityAmount) || 0 }),
+        onSave({ year_month: selectedMonth, fee_type: 'standard', amount: parseFloat(standardAmount) || 0, gl_standard_amount: glStd, gl_solidarity_amount: glSol }),
+        onSave({ year_month: selectedMonth, fee_type: 'solidarity', amount: parseFloat(solidarityAmount) || 0, gl_standard_amount: glStd, gl_solidarity_amount: glSol }),
       ]);
       
       setStandardAmount('');
       setSolidarityAmount('');
+      setGlStandardAmount('');
+      setGlSolidarityAmount('');
       setSelectedDate(startOfMonth(new Date()));
       onOpenChange(false);
     } finally {
@@ -380,32 +386,28 @@ function AddMonthlyFeeDialog({
 
           <div className="space-y-2">
             <Label htmlFor="standard_amount">Standard Fee Amount</Label>
-            <Input
-              id="standard_amount"
-              type="number"
-              step="0.01"
-              value={standardAmount}
-              onChange={(e) => setStandardAmount(e.target.value)}
-              placeholder="0.00"
-            />
+            <Input id="standard_amount" type="number" step="0.01" value={standardAmount} onChange={(e) => setStandardAmount(e.target.value)} placeholder="0.00" />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="solidarity_amount">Solidarity Fee Amount</Label>
-            <Input
-              id="solidarity_amount"
-              type="number"
-              step="0.01"
-              value={solidarityAmount}
-              onChange={(e) => setSolidarityAmount(e.target.value)}
-              placeholder="0.00"
-            />
+            <Input id="solidarity_amount" type="number" step="0.01" value={solidarityAmount} onChange={(e) => setSolidarityAmount(e.target.value)} placeholder="0.00" />
+          </div>
+
+          <div className="pt-2 border-t">
+            <p className="text-xs font-medium text-muted-foreground mb-3">Great Lodge Fees (optional)</p>
+            <div className="space-y-2">
+              <Label htmlFor="gl_standard_amount">GL Standard Fee (ARS)</Label>
+              <Input id="gl_standard_amount" type="number" step="0.01" value={glStandardAmount} onChange={(e) => setGlStandardAmount(e.target.value)} placeholder="0.00" />
+            </div>
+            <div className="space-y-2 mt-2">
+              <Label htmlFor="gl_solidarity_amount">GL Solidarity Fee (ARS)</Label>
+              <Input id="gl_solidarity_amount" type="number" step="0.01" value={glSolidarityAmount} onChange={(e) => setGlSolidarityAmount(e.target.value)} placeholder="0.00" />
+            </div>
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button onClick={handleSubmit} disabled={isSubmitting || alreadyExists}>
             {isSubmitting ? 'Saving...' : 'Save Fees'}
           </Button>
@@ -426,18 +428,22 @@ function EditMonthlyFeeDialog({
   fees: Record<FeeType, number>;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (fee: { year_month: string; fee_type: FeeType; amount: number }) => Promise<unknown>;
+  onSave: (fee: { year_month: string; fee_type: FeeType; amount: number; gl_standard_amount?: number | null; gl_solidarity_amount?: number | null }) => Promise<unknown>;
 }) {
   const [standardAmount, setStandardAmount] = useState(fees.standard.toString());
   const [solidarityAmount, setSolidarityAmount] = useState(fees.solidarity.toString());
+  const [glStandardAmount, setGlStandardAmount] = useState(fee.gl_standard_amount?.toString() ?? '');
+  const [glSolidarityAmount, setGlSolidarityAmount] = useState(fee.gl_solidarity_amount?.toString() ?? '');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async () => {
     setIsSubmitting(true);
+    const glStd = glStandardAmount ? parseFloat(glStandardAmount) : null;
+    const glSol = glSolidarityAmount ? parseFloat(glSolidarityAmount) : null;
     try {
       await Promise.all([
-        onSave({ year_month: fee.year_month, fee_type: 'standard', amount: parseFloat(standardAmount) || 0 }),
-        onSave({ year_month: fee.year_month, fee_type: 'solidarity', amount: parseFloat(solidarityAmount) || 0 }),
+        onSave({ year_month: fee.year_month, fee_type: 'standard', amount: parseFloat(standardAmount) || 0, gl_standard_amount: glStd, gl_solidarity_amount: glSol }),
+        onSave({ year_month: fee.year_month, fee_type: 'solidarity', amount: parseFloat(solidarityAmount) || 0, gl_standard_amount: glStd, gl_solidarity_amount: glSol }),
       ]);
       onOpenChange(false);
     } finally {
@@ -457,32 +463,26 @@ function EditMonthlyFeeDialog({
         <div className="space-y-4 py-4">
           <div className="space-y-2">
             <Label htmlFor="edit_standard_amount">Standard Fee Amount</Label>
-            <Input
-              id="edit_standard_amount"
-              type="number"
-              step="0.01"
-              value={standardAmount}
-              onChange={(e) => setStandardAmount(e.target.value)}
-              placeholder="0.00"
-            />
+            <Input id="edit_standard_amount" type="number" step="0.01" value={standardAmount} onChange={(e) => setStandardAmount(e.target.value)} placeholder="0.00" />
           </div>
-
           <div className="space-y-2">
             <Label htmlFor="edit_solidarity_amount">Solidarity Fee Amount</Label>
-            <Input
-              id="edit_solidarity_amount"
-              type="number"
-              step="0.01"
-              value={solidarityAmount}
-              onChange={(e) => setSolidarityAmount(e.target.value)}
-              placeholder="0.00"
-            />
+            <Input id="edit_solidarity_amount" type="number" step="0.01" value={solidarityAmount} onChange={(e) => setSolidarityAmount(e.target.value)} placeholder="0.00" />
+          </div>
+          <div className="pt-2 border-t">
+            <p className="text-xs font-medium text-muted-foreground mb-3">Great Lodge Fees (optional)</p>
+            <div className="space-y-2">
+              <Label htmlFor="edit_gl_standard">GL Standard Fee (ARS)</Label>
+              <Input id="edit_gl_standard" type="number" step="0.01" value={glStandardAmount} onChange={(e) => setGlStandardAmount(e.target.value)} placeholder="0.00" />
+            </div>
+            <div className="space-y-2 mt-2">
+              <Label htmlFor="edit_gl_solidarity">GL Solidarity Fee (ARS)</Label>
+              <Input id="edit_gl_solidarity" type="number" step="0.01" value={glSolidarityAmount} onChange={(e) => setGlSolidarityAmount(e.target.value)} placeholder="0.00" />
+            </div>
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button onClick={handleSubmit} disabled={isSubmitting}>
             {isSubmitting ? 'Saving...' : 'Save Changes'}
           </Button>

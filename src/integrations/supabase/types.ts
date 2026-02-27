@@ -334,6 +334,8 @@ export type Database = {
           amount: number
           created_at: string
           fee_type: Database["public"]["Enums"]["fee_type"]
+          gl_solidarity_amount: number | null
+          gl_standard_amount: number | null
           id: string
           updated_at: string
           year_month: string
@@ -342,6 +344,8 @@ export type Database = {
           amount?: number
           created_at?: string
           fee_type: Database["public"]["Enums"]["fee_type"]
+          gl_solidarity_amount?: number | null
+          gl_standard_amount?: number | null
           id?: string
           updated_at?: string
           year_month: string
@@ -350,6 +354,8 @@ export type Database = {
           amount?: number
           created_at?: string
           fee_type?: Database["public"]["Enums"]["fee_type"]
+          gl_solidarity_amount?: number | null
+          gl_standard_amount?: number | null
           id?: string
           updated_at?: string
           year_month?: string
