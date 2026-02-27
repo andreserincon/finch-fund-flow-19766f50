@@ -423,17 +423,23 @@ export default function FeeCalculator() {
 
         {/* Monthly breakdown & YoY below header */}
         {quarterMonthlyBreakdown && quarterMonthlyBreakdown.length > 0 && (
-          <p className="text-xs text-muted-foreground -mt-4">
-            {quarterMonthlyBreakdown.map((p, i) => (
+          <div className="rounded-lg bg-muted/50 px-4 py-2.5 -mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+            {quarterMonthlyBreakdown.map((p) => (
               <span key={p.monthKey}>
-                {i > 0 && ' | '}
-                {p.monthLabel}: {formatPct(p.variation)}
+                {p.monthLabel}: <span className="font-medium text-foreground">{formatPct(p.variation)}</span>
               </span>
             ))}
-            {monthly.length >= 12 && (
-              <span> | Acum. 12m: {formatPct(yoyAccumulated)}</span>
+            {selectedQuarter && (
+              <span className="font-bold text-foreground">
+                {selectedQuarter.quarterLabel}: {formatPct(selectedQuarter.cvs)}
+              </span>
             )}
-          </p>
+            {monthly.length >= 12 && (
+              <span>
+                Acum. 12m: <span className="font-medium text-foreground">{formatPct(yoyAccumulated)}</span>
+              </span>
+            )}
+          </div>
         )}
 
         {/* Warning if no fees */}
