@@ -303,7 +303,9 @@ export default function FeeCalculator() {
     const startIdx = (baseIdx >= 0 ? baseIdx + 2 : 1);
     const prev4 = quarterly.slice(startIdx, startIdx + 4);
     if (prev4.length < 4) return 0;
-    return (prev4.reduce((acc, q) => acc * (1 + q.cvs / 100), 1) - 1) * 100;
+    const result = (prev4.reduce((acc, q) => acc * (1 + q.cvs / 100), 1) - 1) * 100;
+    console.log('[YoY Index]', { baseMonth: selectedBaseMonth, baseQ: `Q${baseQ} ${baseYear}`, baseIdx, startIdx, quarters: prev4.map(q => `${q.quarterId}: ${q.cvs}%`), accumulated: result.toFixed(2) + '%' });
+    return result;
   }, [quarterly, selectedBaseMonth]);
 
   // Monthly breakdown for selected quarter
