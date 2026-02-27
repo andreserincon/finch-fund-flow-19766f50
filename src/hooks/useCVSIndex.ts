@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 
 export interface MonthlyIndexPoint {
-  date: string;
+  monthKey: string;
   monthLabel: string;
   variation: number;
 }
@@ -13,46 +13,66 @@ export interface QuarterlyIndex {
   quarter: number;
   months: string[];
   cvs: number;
+  monthlyBreakdown: { label: string; variation: number }[];
 }
+
+const CSV_URL =
+  'https://infra.datos.gob.ar/catalog/sspm/dataset/447/distribution/447.1/download/coeficiente-de-variacion-salarial.csv';
+
+const MONTH_NAMES_ES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+const QUARTER_RANGES: Record<number, string> = { 1: 'Ene–Mar', 2: 'Abr–Jun', 3: 'Jul–Sep', 4: 'Oct–Dic' };
 
 export function useCVSIndex() {
   return useQuery({
-    queryKey: ['cvs-index'],
-    queryFn: async (): Promise<{ monthly: MonthlyIndexPoint[]; quarterly: QuarterlyIndex[]; fetchError: boolean }> => {
+    queryKey: ['cvs-index-csv'],
+    queryFn: async (): Promise<{
+      monthly: MonthlyIndexPoint[];
+      quarterly: QuarterlyIndex[];
+      fetchError: boolean;
+    }> => {
       try {
-        const res = await fetch(
-          'https://apis.datos.gob.ar/series/api/series/?ids=173.1_IS_2016_M_13&limit=16&sort=desc&format=json'
-        );
-        if (!res.ok) throw new Error('API error');
-        const json = await res.json();
+        const res = await fetch(CSV_URL);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const text = await res.text();
 
-        const raw: [string, number | null][] = json?.data ?? [];
+        const lines = text.trim().split('\n').slice(1);
 
-        const monthly: MonthlyIndexPoint[] = raw
-          .filter(([, v]) => v !== null)
-          .map(([date, value]) => ({
-            date,
-            monthLabel: new Date(date).toLocaleDateString('es-AR', { month: 'short', year: 'numeric' }),
-            variation: value as number,
-          }))
-          .reverse();
+        const monthlyLastValue: Record<string, number> = {};
+        for (const line of lines) {
+          const [dateStr, totalReg, total] = line.split(',');
+          if (!dateStr) continue;
+          const value = parseFloat(total || totalReg);
+          if (isNaN(value)) continue;
+          const monthKey = dateStr.slice(0, 7);
+          monthlyLastValue[monthKey] = value;
+        }
+
+        const sortedMonths = Object.keys(monthlyLastValue).sort();
+
+        const monthly: MonthlyIndexPoint[] = [];
+        for (let i = 1; i < sortedMonths.length; i++) {
+          const prevKey = sortedMonths[i - 1];
+          const currKey = sortedMonths[i];
+          const prev = monthlyLastValue[prevKey];
+          const curr = monthlyLastValue[currKey];
+          if (!prev || !curr) continue;
+          const variation = parseFloat(((curr / prev - 1) * 100).toFixed(2));
+          const [year, month] = currKey.split('-').map(Number);
+          monthly.push({
+            monthKey: currKey,
+            monthLabel: `${MONTH_NAMES_ES[month - 1]} ${year}`,
+            variation,
+          });
+        }
 
         const quarterMap: Record<string, MonthlyIndexPoint[]> = {};
         for (const point of monthly) {
-          const d = new Date(point.date);
-          const year = d.getFullYear();
-          const q = Math.floor(d.getMonth() / 3) + 1;
+          const [year, month] = point.monthKey.split('-').map(Number);
+          const q = Math.ceil(month / 3);
           const key = `Q${q}-${year}`;
           if (!quarterMap[key]) quarterMap[key] = [];
           quarterMap[key].push(point);
         }
-
-        const quarterLabels: Record<number, string> = {
-          1: 'Ene–Mar',
-          2: 'Abr–Jun',
-          3: 'Jul–Sep',
-          4: 'Oct–Dic',
-        };
 
         const quarterly: QuarterlyIndex[] = Object.entries(quarterMap)
           .filter(([, pts]) => pts.length === 3)
@@ -60,20 +80,28 @@ export function useCVSIndex() {
             const [qStr, yearStr] = key.split('-');
             const q = parseInt(qStr.replace('Q', ''));
             const year = parseInt(yearStr);
-            const cvs = (pts.reduce((acc, p) => acc * (1 + p.variation / 100), 1) - 1) * 100;
+            const cvs = parseFloat(
+              ((pts.reduce((acc, p) => acc * (1 + p.variation / 100), 1) - 1) * 100).toFixed(2)
+            );
             return {
               quarterId: key,
-              quarterLabel: `${qStr} ${year} (${quarterLabels[q]})`,
+              quarterLabel: `${qStr} ${year} (${QUARTER_RANGES[q]})`,
               year,
               quarter: q,
-              months: pts.map((p) => p.date.slice(0, 7)),
-              cvs: parseFloat(cvs.toFixed(2)),
+              months: pts.map((p) => p.monthKey),
+              cvs,
+              monthlyBreakdown: pts.map((p) => ({
+                label: p.monthLabel,
+                variation: p.variation,
+              })),
             };
           })
-          .sort((a, b) => b.year - a.year || b.quarter - a.quarter);
+          .sort((a, b) => b.year - a.year || b.quarter - a.quarter)
+          .slice(0, 8);
 
-        return { monthly, quarterly, fetchError: false };
-      } catch {
+        return { monthly: monthly.slice(-15), quarterly, fetchError: false };
+      } catch (err) {
+        console.error('CVS fetch error:', err);
         return { monthly: [], quarterly: [], fetchError: true };
       }
     },

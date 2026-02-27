@@ -201,7 +201,7 @@ export default function FeeCalculator() {
   // Monthly breakdown for selected quarter
   const quarterMonthlyBreakdown = useMemo(() => {
     if (!selectedQuarter) return null;
-    const points = monthly.filter((m) => selectedQuarter.months.includes(m.date.slice(0, 7)));
+    const points = monthly.filter((m) => selectedQuarter.months.includes(m.monthKey));
     return points;
   }, [selectedQuarter, monthly]);
 
@@ -342,8 +342,8 @@ export default function FeeCalculator() {
                 {/* Monthly breakdown */}
                 {quarterMonthlyBreakdown && quarterMonthlyBreakdown.length > 0 && (
                   <p className="text-xs text-muted-foreground">
-                    {quarterMonthlyBreakdown.map((p, i) => (
-                      <span key={p.date}>
+                  {quarterMonthlyBreakdown.map((p, i) => (
+                      <span key={p.monthKey}>
                         {i > 0 && ' | '}
                         {p.monthLabel}: {formatPct(p.variation)}
                       </span>
