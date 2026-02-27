@@ -103,9 +103,9 @@ export function useCVSIndex() {
             };
           })
           .sort((a, b) => b.year - a.year || b.quarter - a.quarter)
-          .slice(0, 4);
+          .slice(0, 8);
 
-        return { monthly: monthly.slice(-15), quarterly, fetchError: false };
+        return { monthly: monthly.slice(-24), quarterly, fetchError: false };
       } catch (err) {
         console.error('CVS fetch error:', err);
         return { monthly: [], quarterly: [], fetchError: true };
