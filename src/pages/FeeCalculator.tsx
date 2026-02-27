@@ -41,7 +41,7 @@ function KPIList({ kpis, t, noGlData, baselineKpis }: { kpis: ProposalKPIs; t: (
 
   const rows = isDelta ? [
     { label: t('feeCalculator.totalMonthlyIncome'), value: formatDelta(kpis.totalMonthlyIncome - baselineKpis.totalMonthlyIncome), color: kpis.totalMonthlyIncome >= baselineKpis.totalMonthlyIncome ? 'text-success' : 'text-destructive' },
-    { label: t('feeCalculator.delta'), value: formatDelta(kpis.delta - baselineKpis.delta), color: kpis.delta >= baselineKpis.delta ? 'text-success' : 'text-warning' },
+    { label: t('feeCalculator.delta'), value: formatDeltaPct(kpis.delta - baselineKpis.delta), color: kpis.delta >= baselineKpis.delta ? 'text-success' : 'text-warning' },
   ] : [
     { label: t('feeCalculator.totalMonthlyIncome'), value: formatARS(kpis.totalMonthlyIncome), color: '' },
     { label: t('feeCalculator.glTotalCost'), value: formatARS(kpis.glTotalCost), color: '' },
@@ -51,10 +51,9 @@ function KPIList({ kpis, t, noGlData, baselineKpis }: { kpis: ProposalKPIs; t: (
       color: kpis.netMonthlyIncome > 0 ? 'text-success' : 'text-overdue',
     },
     { label: t('feeCalculator.ourFeeIncrease'), value: formatPct(kpis.ourFeeIncrease), color: '' },
-    { label: t('feeCalculator.glFeeIncrease'), value: formatPct(kpis.glFeeIncrease), color: 'text-muted-foreground' },
     {
       label: t('feeCalculator.delta'),
-      value: formatARS(kpis.delta),
+      value: formatPct(kpis.delta),
       color: kpis.delta >= 0 ? 'text-success' : 'text-warning',
     },
     {
@@ -263,7 +262,7 @@ export default function FeeCalculator() {
     const netMonthlyIncome = totalMonthlyIncome - glTotalCost;
     const ourFeeIncrease = currentStdFee > 0 ? ((proposedStd - currentStdFee) / currentStdFee) * 100 : 0;
     const glFeeIncrease = selectedCVS;
-    const delta = proposedStd - projectedGlStd;
+    const delta = projectedGlStd > 0 ? ((proposedStd - projectedGlStd) / projectedGlStd) * 100 : 0;
     const yoyFeeVariation =
       feeOneYearAgoStd !== null && feeOneYearAgoStd > 0
         ? ((proposedStd - feeOneYearAgoStd) / feeOneYearAgoStd) * 100
