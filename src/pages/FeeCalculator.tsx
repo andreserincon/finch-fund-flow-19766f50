@@ -388,10 +388,12 @@ export default function FeeCalculator() {
             <StatCard
               title={t('feeCalculator.glStdFee')}
               value={glStdNum > 0 ? formatARS(glStdNum) : '—'}
+              subtitle={glStdNum > 0 && hasCvs ? `Proyectado: ${formatARS(Math.round(glStdNum * (1 + selectedCVS / 100)))}` : undefined}
             />
             <StatCard
               title={t('feeCalculator.glSolFee')}
               value={glSolNum > 0 ? formatARS(glSolNum) : '—'}
+              subtitle={glSolNum > 0 && hasCvs ? `Proyectado: ${formatARS(Math.round(glSolNum * (1 + selectedCVS / 100)))}` : undefined}
             />
           </div>
         </div>
