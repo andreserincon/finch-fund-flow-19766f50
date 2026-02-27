@@ -44,11 +44,13 @@ export default function MonthlyFees() {
   const feesByMonth = monthlyFees.reduce((acc, fee) => {
     const month = fee.year_month;
     if (!acc[month]) {
-      acc[month] = { standard: 0, solidarity: 0 };
+      acc[month] = { standard: 0, solidarity: 0, gl_standard: null as number | null, gl_solidarity: null as number | null };
     }
     acc[month][fee.fee_type] = fee.amount;
+    if (fee.gl_standard_amount != null) acc[month].gl_standard = fee.gl_standard_amount;
+    if (fee.gl_solidarity_amount != null) acc[month].gl_solidarity = fee.gl_solidarity_amount;
     return acc;
-  }, {} as Record<string, Record<FeeType, number>>);
+  }, {} as Record<string, { standard: number; solidarity: number; gl_standard: number | null; gl_solidarity: number | null }>);
 
   const sortedMonths = Object.keys(feesByMonth).sort((a, b) => b.localeCompare(a));
 
@@ -159,6 +161,18 @@ export default function MonthlyFees() {
                     <p className="font-mono font-semibold">{formatCurrency(feesByMonth[month].solidarity)}</p>
                   </div>
                 </div>
+                {(feesByMonth[month].gl_standard != null || feesByMonth[month].gl_solidarity != null) && (
+                  <div className="grid grid-cols-2 gap-2 text-sm mt-2 pt-2 border-t border-dashed">
+                    <div>
+                      <p className="text-muted-foreground text-xs">GL Standard</p>
+                      <p className="font-mono text-sm text-muted-foreground">{feesByMonth[month].gl_standard != null ? formatCurrency(feesByMonth[month].gl_standard!) : '—'}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-xs">GL Solidarity</p>
+                      <p className="font-mono text-sm text-muted-foreground">{feesByMonth[month].gl_solidarity != null ? formatCurrency(feesByMonth[month].gl_solidarity!) : '—'}</p>
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })
@@ -178,13 +192,15 @@ export default function MonthlyFees() {
                 <TableHead>Month</TableHead>
               <TableHead className="text-right">Standard Fee</TableHead>
               <TableHead className="text-right">Solidarity Fee</TableHead>
+              <TableHead className="text-right">GL Std</TableHead>
+              <TableHead className="text-right">GL Sol</TableHead>
               {isAdmin && <TableHead className="w-[100px]"></TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {sortedMonths.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                     No monthly fees configured yet
                   </TableCell>
                 </TableRow>
@@ -210,6 +226,12 @@ export default function MonthlyFees() {
                       </TableCell>
                       <TableCell className="text-right font-mono">
                         {formatCurrency(feesByMonth[month].solidarity)}
+                      </TableCell>
+                      <TableCell className="text-right font-mono text-muted-foreground">
+                        {feesByMonth[month].gl_standard != null ? formatCurrency(feesByMonth[month].gl_standard!) : '—'}
+                      </TableCell>
+                      <TableCell className="text-right font-mono text-muted-foreground">
+                        {feesByMonth[month].gl_solidarity != null ? formatCurrency(feesByMonth[month].gl_solidarity!) : '—'}
                       </TableCell>
                       {isAdmin && (
                         <TableCell>
