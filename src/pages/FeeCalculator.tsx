@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Calculator, ExternalLink, Info, Users, Sparkles, AlertTriangle, RefreshCw } from 'lucide-react';
+import { Calculator, ExternalLink, Info, Users, Sparkles, AlertTriangle, RefreshCw, Download } from 'lucide-react';
+import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -140,6 +141,35 @@ export default function FeeCalculator() {
   const fetchError = cvsData?.fetchError ?? false;
   const quarterly = cvsData?.quarterly ?? [];
   const monthly = cvsData?.monthly ?? [];
+
+  const exportCvsToExcel = () => {
+    if (!monthly.length) return;
+    const BOM = '\uFEFF';
+    const header = ['Mes', 'Índice', 'Variación Mensual %'];
+    // We need the raw index values too — reconstruct from variations
+    // Since we only have variations, export what we have
+    const rows = monthly.map((p) => [p.monthLabel, '', p.variation.toFixed(2)]);
+    
+    // Add quarterly summary
+    const qRows = quarterly.map((q) => [q.quarterLabel, '', q.cvs.toFixed(2)]);
+    
+    const csvContent = BOM + [
+      header.join(';'),
+      ...rows.map((r) => r.join(';')),
+      '',
+      ['Trimestre', '', 'CVS Acumulado %'].join(';'),
+      ...qRows.map((r) => r.join(';')),
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `indice-salarios-cvs-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success('CSV descargado');
+  };
 
   // Derive current fees from latest monthly_fees entries
   const { currentStdFee, currentSolFee, feeOneYearAgoStd } = useMemo(() => {
@@ -310,15 +340,31 @@ export default function FeeCalculator() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-lg">{t('feeCalculator.cvsSelection')}</CardTitle>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => refetchCvs()}
-              disabled={cvsFetching}
-              className="h-8 w-8"
-            >
-              <RefreshCw className={`h-4 w-4 ${cvsFetching ? 'animate-spin' : ''}`} />
-            </Button>
+            <div className="flex items-center gap-1">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={exportCvsToExcel}
+                    disabled={!monthly.length}
+                    className="h-8 w-8"
+                  >
+                    <Download className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Exportar CSV para Excel</TooltipContent>
+              </Tooltip>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => refetchCvs()}
+                disabled={cvsFetching}
+                className="h-8 w-8"
+              >
+                <RefreshCw className={`h-4 w-4 ${cvsFetching ? 'animate-spin' : ''}`} />
+              </Button>
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
             {/* CVS API fetch error warning */}
