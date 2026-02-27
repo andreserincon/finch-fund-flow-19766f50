@@ -285,16 +285,17 @@ export default function FeeCalculator() {
 
   const proposals = useMemo(() => {
     if (!hasCvs) return [];
-    const baseStd = Math.round(currentStdFee * (1 + selectedCVS / 100));
-    const baseSol = Math.round(currentSolFee * (1 + selectedCVS / 100));
+    const round500 = (n: number) => Math.round(n / 500) * 500;
+    const baseStd = round500(currentStdFee * (1 + selectedCVS / 100));
+    const baseSol = round500(currentSolFee * (1 + selectedCVS / 100));
     const raw = [
       { buffer: -2, name: t('feeCalculator.low'), color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200', isVariant: true },
       { buffer: 0, name: t('feeCalculator.baseline'), color: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200', isVariant: false },
       { buffer: 2, name: t('feeCalculator.high'), color: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200', isVariant: true },
     ];
     const items = raw.map((p) => {
-      const proposedStd = Math.round(baseStd * (1 + p.buffer / 100));
-      const proposedSol = Math.round(baseSol * (1 + p.buffer / 100));
+      const proposedStd = round500(baseStd * (1 + p.buffer / 100));
+      const proposedSol = round500(baseSol * (1 + p.buffer / 100));
       return { ...p, proposedStd, proposedSol, kpis: computeKPIs(proposedStd, proposedSol) };
     });
     const bKpis = items.find((p) => !p.isVariant)?.kpis;
