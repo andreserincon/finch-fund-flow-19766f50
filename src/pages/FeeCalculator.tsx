@@ -293,14 +293,14 @@ export default function FeeCalculator() {
   const selectedCVS = selectedQuarter ? selectedQuarter.cvs : (parseFloat(manualCvs) || 0);
   const hasCvs = selectedCVS > 0;
 
-  // YoY: compound CVS from 4 quarters prior to the base month's quarter
+  // YoY: compound CVS from 4 quarters, skipping the one immediately before base month's quarter
   const yoyAccumulated = useMemo(() => {
-    if (!selectedBaseMonth || quarterly.length < 4) return 0;
+    if (!selectedBaseMonth || quarterly.length < 5) return 0;
     const [baseYear, baseMonthNum] = selectedBaseMonth.split('-').map(Number);
     const baseQ = Math.ceil(baseMonthNum / 3);
-    // Find the index of the base month's quarter, then take the 4 before it
     const baseIdx = quarterly.findIndex((q) => q.year === baseYear && q.quarter === baseQ);
-    const startIdx = baseIdx >= 0 ? baseIdx + 1 : 0;
+    // Skip base quarter + skip 1 more (the immediately prior), then take 4
+    const startIdx = (baseIdx >= 0 ? baseIdx + 2 : 1);
     const prev4 = quarterly.slice(startIdx, startIdx + 4);
     if (prev4.length < 4) return 0;
     return (prev4.reduce((acc, q) => acc * (1 + q.cvs / 100), 1) - 1) * 100;
