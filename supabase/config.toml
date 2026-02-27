@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.generate-monthly-report-scheduled]
 verify_jwt = false
+
+[functions.cvs-proxy]
+verify_jwt = false
