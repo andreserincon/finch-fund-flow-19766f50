@@ -494,62 +494,7 @@ export default function FeeCalculator() {
           </CardContent>
         </Card>
 
-        {/* Section 3 — GL Fees */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">{t('feeCalculator.glFees')}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {glFromDb ? (
-              <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-xs text-muted-foreground">{t('feeCalculator.glStdFee')}</p>
-                    <p className="text-lg font-bold">{formatARS(glFromDb.standard)}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">{t('feeCalculator.glSolFee')}</p>
-                    <p className="text-lg font-bold">{formatARS(glFromDb.solidarity)}</p>
-                  </div>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {t('feeCalculator.glAutoLoaded', { month: glFromDb.month })} —{' '}
-                  <Link to="/monthly-fees" className="underline text-primary">
-                    {t('nav.monthlyFees')}
-                  </Link>
-                </p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label>{t('feeCalculator.glStdFee')}</Label>
-                  <Input type="number" step="0.01" placeholder="0.00" value={manualGlStd} onChange={(e) => setManualGlStd(e.target.value)} />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>{t('feeCalculator.glSolFee')}</Label>
-                  <Input type="number" step="0.01" placeholder="0.00" value={manualGlSol} onChange={(e) => setManualGlSol(e.target.value)} />
-                </div>
-              </div>
-            )}
 
-            {/* Projected new GL fees */}
-            {hasCvs && (glStdNum > 0 || glSolNum > 0) && (
-              <div className="space-y-2 pt-2 border-t">
-                <p className="text-xs font-medium text-muted-foreground">{t('feeCalculator.projectedGlFees')}</p>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-xs text-muted-foreground">{t('feeCalculator.glStdFee')} ({formatPct(selectedCVS)})</p>
-                    <p className="text-lg font-bold">{formatARS(Math.round(glStdNum * (1 + selectedCVS / 100)))}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">{t('feeCalculator.glSolFee')} ({formatPct(selectedCVS)})</p>
-                    <p className="text-lg font-bold">{formatARS(Math.round(glSolNum * (1 + selectedCVS / 100)))}</p>
-                  </div>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
 
         {/* Section 4 — Proposals */}
         <div>
