@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Calculator, ExternalLink, Info, Users, Sparkles, AlertTriangle } from 'lucide-react';
+import { Calculator, ExternalLink, Info, Users, Sparkles, AlertTriangle, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -126,7 +126,7 @@ export default function FeeCalculator() {
   const { t } = useTranslation();
   const { monthlyFees, isLoading: feesLoading } = useMonthlyFees();
   const { memberBalances, isLoading: membersLoading } = useMembers();
-  const { data: cvsData, isLoading: cvsLoading } = useCVSIndex();
+  const { data: cvsData, isLoading: cvsLoading, refetch: refetchCvs, isFetching: cvsFetching } = useCVSIndex();
 
   const [selectedQuarterId, setSelectedQuarterId] = useState<string>('');
   const [manualCvs, setManualCvs] = useState<string>('');
@@ -308,8 +308,17 @@ export default function FeeCalculator() {
 
         {/* Section 2 — CVS Quarter Selection */}
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-lg">{t('feeCalculator.cvsSelection')}</CardTitle>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => refetchCvs()}
+              disabled={cvsFetching}
+              className="h-8 w-8"
+            >
+              <RefreshCw className={`h-4 w-4 ${cvsFetching ? 'animate-spin' : ''}`} />
+            </Button>
           </CardHeader>
           <CardContent className="space-y-4">
             {/* CVS API fetch error warning */}
