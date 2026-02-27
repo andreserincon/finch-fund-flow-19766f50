@@ -38,7 +38,7 @@ function KPIList({ kpis, t, noGlData, baselineKpis }: { kpis: ProposalKPIs; t: (
   const isDelta = !!baselineKpis;
 
   const formatDelta = (val: number) => `${val >= 0 ? '+' : ''}${formatARS(val)}`;
-  const formatDeltaPct = (val: number) => `${val >= 0 ? '+' : ''}${val.toFixed(1)} pp`;
+  const formatDeltaPct = (val: number) => `${val >= 0 ? '+' : ''}${val.toFixed(1)}%`;
 
   const rows = isDelta ? [
     { label: t('feeCalculator.totalMonthlyIncome'), value: formatDelta(kpis.totalMonthlyIncome - baselineKpis.totalMonthlyIncome), color: kpis.totalMonthlyIncome >= baselineKpis.totalMonthlyIncome ? 'text-success' : 'text-destructive' },
