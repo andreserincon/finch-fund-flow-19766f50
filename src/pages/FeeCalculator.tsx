@@ -239,9 +239,8 @@ export default function FeeCalculator() {
     const latestStd = feesForMonth.find((f) => f.fee_type === 'standard');
     const latestSol = feesForMonth.find((f) => f.fee_type === 'solidarity');
 
-    const baseDate = new Date(selectedBaseMonth);
-    const yearAgo = new Date(baseDate.getFullYear() - 1, baseDate.getMonth(), 1);
-    const yearAgoStr = yearAgo.toISOString().slice(0, 7) + '-01';
+    const [baseYear, baseMonthNum] = selectedBaseMonth.split('-').map(Number);
+    const yearAgoStr = `${baseYear - 1}-${String(baseMonthNum).padStart(2, '0')}-01`;
     const stdYearAgo = monthlyFees.find((f) => f.fee_type === 'standard' && f.year_month === yearAgoStr);
 
     return {
