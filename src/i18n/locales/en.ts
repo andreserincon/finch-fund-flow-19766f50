@@ -399,6 +399,7 @@ export default {
       ourFeeIncrease: 'Our Fee Increase',
       glFeeIncrease: 'GL Increase (CVS ref.)',
       delta: 'Delta vs GL',
+      deltaVsGlYearAgo: 'Delta vs GL (1 year ago)',
       yoyFeeVariation: 'YoY Fee Variation',
       yoyIndexRef: 'YoY Index (ref.)',
       fetchError: 'Could not fetch CVS data from INDEC. Enter the quarterly CVS % manually below.',

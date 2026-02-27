@@ -29,6 +29,7 @@ interface ProposalKPIs {
   ourFeeIncrease: number;
   glFeeIncrease: number;
   delta: number;
+  deltaVsGlYearAgo: number | null;
   yoyFeeVariation: number | null;
   yoyAccumulatedIndex: number;
 }
@@ -60,6 +61,11 @@ function KPIList({ kpis, t, noGlData, baselineKpis }: { kpis: ProposalKPIs; t: (
       label: t('feeCalculator.yoyFeeVariation'),
       value: kpis.yoyFeeVariation !== null ? formatPct(kpis.yoyFeeVariation) : t('feeCalculator.noYoyData'),
       color: '',
+    },
+    {
+      label: t('feeCalculator.deltaVsGlYearAgo'),
+      value: kpis.deltaVsGlYearAgo !== null ? formatPct(kpis.deltaVsGlYearAgo) : t('feeCalculator.noYoyData'),
+      color: kpis.deltaVsGlYearAgo !== null ? (kpis.deltaVsGlYearAgo >= 0 ? 'text-success' : 'text-warning') : 'text-muted-foreground',
     },
     {
       label: t('feeCalculator.yoyIndexRef'),
@@ -191,8 +197,8 @@ export default function FeeCalculator() {
   };
 
   // Derive current fees from latest monthly_fees entries
-  const { currentStdFee, currentSolFee, feeOneYearAgoStd } = useMemo(() => {
-    if (!monthlyFees.length) return { currentStdFee: 0, currentSolFee: 0, feeOneYearAgoStd: null as number | null };
+  const { currentStdFee, currentSolFee, feeOneYearAgoStd, glStdOneYearAgo } = useMemo(() => {
+    if (!monthlyFees.length) return { currentStdFee: 0, currentSolFee: 0, feeOneYearAgoStd: null as number | null, glStdOneYearAgo: null as number | null };
     const sorted = [...monthlyFees].sort((a, b) => b.year_month.localeCompare(a.year_month));
     const latestStd = sorted.find((f) => f.fee_type === 'standard');
     const latestSol = sorted.find((f) => f.fee_type === 'solidarity');
@@ -206,6 +212,7 @@ export default function FeeCalculator() {
       currentStdFee: latestStd?.amount ?? 0,
       currentSolFee: latestSol?.amount ?? 0,
       feeOneYearAgoStd: stdYearAgo?.amount ?? null,
+      glStdOneYearAgo: stdYearAgo?.gl_standard_amount ?? null,
     };
   }, [monthlyFees]);
 
@@ -268,6 +275,11 @@ export default function FeeCalculator() {
         ? ((proposedStd - feeOneYearAgoStd) / feeOneYearAgoStd) * 100
         : null;
 
+    const deltaVsGlYearAgo =
+      feeOneYearAgoStd !== null && glStdOneYearAgo !== null && glStdOneYearAgo > 0
+        ? ((feeOneYearAgoStd - glStdOneYearAgo) / glStdOneYearAgo) * 100
+        : null;
+
     return {
       totalMonthlyIncome,
       glTotalCost,
@@ -275,6 +287,7 @@ export default function FeeCalculator() {
       ourFeeIncrease,
       glFeeIncrease,
       delta,
+      deltaVsGlYearAgo,
       yoyFeeVariation,
       yoyAccumulatedIndex: yoyAccumulated,
     };
@@ -301,14 +314,14 @@ export default function FeeCalculator() {
       baselineKpis: p.isVariant ? bKpis : undefined,
     }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasCvs, selectedCVS, currentStdFee, currentSolFee, stdMemberCount, solMemberCount, glStdNum, glSolNum, yoyAccumulated, feeOneYearAgoStd, t]);
+  }, [hasCvs, selectedCVS, currentStdFee, currentSolFee, stdMemberCount, solMemberCount, glStdNum, glSolNum, yoyAccumulated, feeOneYearAgoStd, glStdOneYearAgo, t]);
 
   const customStdNum = parseFloat(customStd) || 0;
   const customSolNum = parseFloat(customSol) || 0;
   const customKPIs = useMemo(
     () => (customStdNum > 0 || customSolNum > 0 ? computeKPIs(customStdNum, customSolNum) : null),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [customStdNum, customSolNum, stdMemberCount, solMemberCount, glStdNum, glSolNum, selectedCVS, yoyAccumulated, currentStdFee, feeOneYearAgoStd]
+    [customStdNum, customSolNum, stdMemberCount, solMemberCount, glStdNum, glSolNum, selectedCVS, yoyAccumulated, currentStdFee, feeOneYearAgoStd, glStdOneYearAgo]
   );
 
   if (isLoading) {

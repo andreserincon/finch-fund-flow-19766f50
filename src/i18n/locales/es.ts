@@ -399,6 +399,7 @@ export default {
       ourFeeIncrease: 'Incremento Propio',
       glFeeIncrease: 'Incremento GL (ref. CVS)',
       delta: 'Delta vs GL',
+      deltaVsGlYearAgo: 'Delta vs GL (hace 1 año)',
       yoyFeeVariation: 'Variación Anual del Arancel',
       yoyIndexRef: 'Índice Anual (ref.)',
       fetchError: 'No se pudo obtener el CVS del INDEC. Ingresá el CVS trimestral manualmente.',
