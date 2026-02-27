@@ -31,8 +31,14 @@ export function useCVSIndex() {
       fetchError: boolean;
     }> => {
       try {
-        const res = await fetch(PROXY_URL);
+        const res = await fetch(PROXY_URL, { cache: 'no-cache' });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const contentType = res.headers.get('content-type') || '';
+        if (!contentType.includes('application/json')) {
+          const text = await res.text();
+          console.error('CVS proxy returned non-JSON:', text.substring(0, 100));
+          return { monthly: [], quarterly: [], fetchError: true };
+        }
         const json = await res.json();
 
         // json.data is an array of [date, value] pairs sorted desc
