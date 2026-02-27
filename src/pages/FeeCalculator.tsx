@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Calculator, ExternalLink, Users, Sparkles, AlertTriangle, RefreshCw, Download } from 'lucide-react';
+import { Calculator, Users, Sparkles, AlertTriangle, RefreshCw, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -357,18 +357,84 @@ export default function FeeCalculator() {
             </h1>
             <p className="text-muted-foreground mt-1">{t('feeCalculator.subtitle')}</p>
           </div>
-          <Button variant="outline" size="sm" asChild>
-            <a
-              href="https://www.indec.gob.ar/indec/web/Institucional-Indec-InformesTecnicos-61"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1"
+          <div className="flex items-center gap-2">
+            {/* CVS API fetch error warning */}
+            {fetchError && !cvsLoading && (
+              <Tooltip>
+                <TooltipTrigger>
+                  <AlertTriangle className="h-4 w-4 text-warning" />
+                </TooltipTrigger>
+                <TooltipContent>{t('feeCalculator.fetchError')}</TooltipContent>
+              </Tooltip>
+            )}
+
+            {/* Quarter selector or manual fallback */}
+            {!fetchError && quarterly.length > 0 ? (
+              <Select value={selectedQuarterId} onValueChange={setSelectedQuarterId}>
+                <SelectTrigger className="w-[220px]">
+                  <SelectValue placeholder={t('feeCalculator.selectQuarter')} />
+                </SelectTrigger>
+                <SelectContent>
+                  {quarterly.slice(0, 6).map((q) => (
+                    <SelectItem key={q.quarterId} value={q.quarterId}>
+                      {q.quarterLabel} — CVS: {formatPct(q.cvs)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : !fetchError && cvsLoading ? (
+              <Skeleton className="h-10 w-[220px]" />
+            ) : (
+              <Input
+                type="number"
+                step="0.1"
+                placeholder="CVS %"
+                value={manualCvs}
+                onChange={(e) => setManualCvs(e.target.value)}
+                className="w-[120px]"
+              />
+            )}
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={exportCvsToExcel}
+                  disabled={!monthly.length}
+                  className="h-8 w-8"
+                >
+                  <Download className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Exportar CSV para Excel</TooltipContent>
+            </Tooltip>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => refetchCvs()}
+              disabled={cvsFetching}
+              className="h-8 w-8"
             >
-              <ExternalLink className="h-4 w-4" />
-              {t('feeCalculator.indecLink')}
-            </a>
-          </Button>
+              <RefreshCw className={`h-4 w-4 ${cvsFetching ? 'animate-spin' : ''}`} />
+            </Button>
+          </div>
         </div>
+
+        {/* Monthly breakdown & YoY below header */}
+        {quarterMonthlyBreakdown && quarterMonthlyBreakdown.length > 0 && (
+          <p className="text-xs text-muted-foreground -mt-4">
+            {quarterMonthlyBreakdown.map((p, i) => (
+              <span key={p.monthKey}>
+                {i > 0 && ' | '}
+                {p.monthLabel}: {formatPct(p.variation)}
+              </span>
+            ))}
+            {monthly.length >= 12 && (
+              <span> | Acum. 12m: {formatPct(yoyAccumulated)}</span>
+            )}
+          </p>
+        )}
 
         {/* Warning if no fees */}
         {currentStdFee === 0 && (
@@ -397,102 +463,6 @@ export default function FeeCalculator() {
             />
           </div>
         </div>
-
-        {/* Section 2 — CVS Quarter Selection */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-lg">{t('feeCalculator.cvsSelection')}</CardTitle>
-            <div className="flex items-center gap-1">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={exportCvsToExcel}
-                    disabled={!monthly.length}
-                    className="h-8 w-8"
-                  >
-                    <Download className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Exportar CSV para Excel</TooltipContent>
-              </Tooltip>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => refetchCvs()}
-                disabled={cvsFetching}
-                className="h-8 w-8"
-              >
-                <RefreshCw className={`h-4 w-4 ${cvsFetching ? 'animate-spin' : ''}`} />
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* CVS API fetch error warning */}
-            {fetchError && !cvsLoading && (
-              <div className="rounded-lg border border-warning/30 bg-warning/10 p-3 text-sm text-warning flex items-start gap-2">
-                <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
-                <span>{t('feeCalculator.fetchError')}</span>
-              </div>
-            )}
-
-            {/* Quarter selector or manual fallback */}
-            {!fetchError && quarterly.length > 0 ? (
-              <div className="space-y-3">
-                <div className="space-y-1.5">
-                  <Label>{t('feeCalculator.selectQuarter')}</Label>
-                  <Select value={selectedQuarterId} onValueChange={setSelectedQuarterId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder={t('feeCalculator.selectQuarter')} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {quarterly.slice(0, 6).map((q) => (
-                        <SelectItem key={q.quarterId} value={q.quarterId}>
-                          {q.quarterLabel} — CVS: {formatPct(q.cvs)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Monthly breakdown */}
-                {quarterMonthlyBreakdown && quarterMonthlyBreakdown.length > 0 && (
-                  <p className="text-xs text-muted-foreground">
-                  {quarterMonthlyBreakdown.map((p, i) => (
-                      <span key={p.monthKey}>
-                        {i > 0 && ' | '}
-                        {p.monthLabel}: {formatPct(p.variation)}
-                      </span>
-                    ))}
-                  </p>
-                )}
-
-                {/* YoY auto-calculated */}
-                {monthly.length >= 12 && (
-                  <div className="rounded-lg bg-muted/50 p-3">
-                    <p className="text-xs text-muted-foreground">{t('feeCalculator.yoyAutoCalc')}</p>
-                    <p className="text-lg font-bold">{formatPct(yoyAccumulated)}</p>
-                  </div>
-                )}
-              </div>
-            ) : !fetchError && cvsLoading ? (
-              <Skeleton className="h-10 w-full" />
-            ) : (
-              /* Manual CVS input fallback */
-              <div className="space-y-1.5">
-                <Label>{t('feeCalculator.manualCvs')}</Label>
-                <Input
-                  type="number"
-                  step="0.1"
-                  placeholder="e.g. 8.5"
-                  value={manualCvs}
-                  onChange={(e) => setManualCvs(e.target.value)}
-                />
-              </div>
-            )}
-          </CardContent>
-        </Card>
 
 
 
