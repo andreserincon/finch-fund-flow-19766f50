@@ -18,7 +18,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Link } from 'react-router-dom';
 
 const formatARS = (n: number) =>
-  new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(n);
+  new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(n);
 
 const formatPct = (n: number) => `${n >= 0 ? '+' : ''}${n.toFixed(1)}%`;
 
