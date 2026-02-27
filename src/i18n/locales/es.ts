@@ -398,7 +398,7 @@ export default {
       netMonthlyIncome: 'Ingreso Neto Mensual',
       ourFeeIncrease: 'Incremento Propio',
       glFeeIncrease: 'Incremento GL (ref. CVS)',
-      delta: 'Delta vs GL',
+      delta: 'Δ Capita vs GL',
       deltaVsGlYearAgo: 'Delta vs GL (hace 1 año)',
       yoyFeeVariation: 'Variación Anual de la Capita',
       yoyIndexRef: 'Índice Anual (ref.)',
