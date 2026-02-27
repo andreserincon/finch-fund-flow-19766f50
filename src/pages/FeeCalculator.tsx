@@ -151,6 +151,7 @@ export default function FeeCalculator() {
 
   const [selectedQuarterId, setSelectedQuarterId] = useState<string>('');
   const [autoSelectedQuarter, setAutoSelectedQuarter] = useState(false);
+  const [selectedBaseMonth, setSelectedBaseMonth] = useState<string>('');
   const [manualCvs, setManualCvs] = useState<string>('');
   const [manualGlStd, setManualGlStd] = useState<string>('');
   const [manualGlSol, setManualGlSol] = useState<string>('');
@@ -208,17 +209,36 @@ export default function FeeCalculator() {
     toast.success('Archivo descargado');
   };
 
-  // Derive current fees from latest monthly_fees entries
-  const { currentStdFee, currentSolFee, feeOneYearAgoStd, glStdOneYearAgo } = useMemo(() => {
-    if (!monthlyFees.length) return { currentStdFee: 0, currentSolFee: 0, feeOneYearAgoStd: null as number | null, glStdOneYearAgo: null as number | null };
-    const sorted = [...monthlyFees].sort((a, b) => b.year_month.localeCompare(a.year_month));
-    const latestStd = sorted.find((f) => f.fee_type === 'standard');
-    const latestSol = sorted.find((f) => f.fee_type === 'solidarity');
+  // Available months from monthly_fees for base fee selection
+  const availableFeeMonths = useMemo(() => {
+    if (!monthlyFees.length) return [];
+    const months = [...new Set(monthlyFees.map((f) => f.year_month))].sort((a, b) => b.localeCompare(a));
+    return months.map((m) => ({
+      value: m,
+      label: new Date(m).toLocaleDateString('es-AR', { month: 'long', year: 'numeric' }),
+    }));
+  }, [monthlyFees]);
 
-    const now = new Date();
-    const yearAgo = new Date(now.getFullYear() - 1, now.getMonth(), 1);
+  // Auto-select current month as default base
+  useEffect(() => {
+    if (availableFeeMonths.length > 0 && !selectedBaseMonth) {
+      const currentMonth = new Date().toISOString().slice(0, 7) + '-01';
+      const found = availableFeeMonths.find((m) => m.value === currentMonth);
+      setSelectedBaseMonth(found ? currentMonth : availableFeeMonths[0].value);
+    }
+  }, [availableFeeMonths, selectedBaseMonth]);
+
+  // Derive current fees from selected base month
+  const { currentStdFee, currentSolFee, feeOneYearAgoStd, glStdOneYearAgo } = useMemo(() => {
+    if (!monthlyFees.length || !selectedBaseMonth) return { currentStdFee: 0, currentSolFee: 0, feeOneYearAgoStd: null as number | null, glStdOneYearAgo: null as number | null };
+    const feesForMonth = monthlyFees.filter((f) => f.year_month === selectedBaseMonth);
+    const latestStd = feesForMonth.find((f) => f.fee_type === 'standard');
+    const latestSol = feesForMonth.find((f) => f.fee_type === 'solidarity');
+
+    const baseDate = new Date(selectedBaseMonth);
+    const yearAgo = new Date(baseDate.getFullYear() - 1, baseDate.getMonth(), 1);
     const yearAgoStr = yearAgo.toISOString().slice(0, 7) + '-01';
-    const stdYearAgo = sorted.find((f) => f.fee_type === 'standard' && f.year_month === yearAgoStr);
+    const stdYearAgo = monthlyFees.find((f) => f.fee_type === 'standard' && f.year_month === yearAgoStr);
 
     return {
       currentStdFee: latestStd?.amount ?? 0,
@@ -226,7 +246,7 @@ export default function FeeCalculator() {
       feeOneYearAgoStd: stdYearAgo?.amount ?? null,
       glStdOneYearAgo: stdYearAgo?.gl_standard_amount ?? null,
     };
-  }, [monthlyFees]);
+  }, [monthlyFees, selectedBaseMonth]);
 
   // GL fees from DB (latest entry with non-null GL values)
   const glFromDb = useMemo(() => {
@@ -454,7 +474,23 @@ export default function FeeCalculator() {
 
         {/* Section 1 — Current Reference */}
         <div>
-          <h2 className="section-header">{t('feeCalculator.currentReference')}</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="section-header mb-0">{t('feeCalculator.currentReference')}</h2>
+            {availableFeeMonths.length > 0 && (
+              <Select value={selectedBaseMonth} onValueChange={setSelectedBaseMonth}>
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Mes base" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableFeeMonths.map((m) => (
+                    <SelectItem key={m.value} value={m.value}>
+                      {m.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
             <StatCard title={t('feeCalculator.currentStdFee')} value={formatARS(currentStdFee)} />
             <StatCard title={t('feeCalculator.currentSolFee')} value={formatARS(currentSolFee)} />
