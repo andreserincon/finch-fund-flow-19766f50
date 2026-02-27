@@ -311,7 +311,7 @@ export default function Members() {
       </div>
 
       {/* Mobile Card View */}
-      <div className="md:hidden space-y-3">
+      <div className="md:hidden landscape-hide-cards space-y-3">
         {filteredMembers.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground bg-card rounded-lg border">
             No members found
@@ -385,7 +385,7 @@ export default function Members() {
       </div>
 
       {/* Desktop Table View */}
-      <div className="hidden md:block rounded-lg border bg-card overflow-x-auto">
+      <div className="hidden md:block landscape-table rounded-lg border bg-card overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
