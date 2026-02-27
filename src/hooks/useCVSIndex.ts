@@ -97,7 +97,7 @@ export function useCVSIndex() {
             };
           })
           .sort((a, b) => b.year - a.year || b.quarter - a.quarter)
-          .slice(0, 8);
+          .slice(0, 4);
 
         return { monthly: monthly.slice(-15), quarterly, fetchError: false };
       } catch (err) {
