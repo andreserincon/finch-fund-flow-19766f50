@@ -32,6 +32,8 @@ interface ProposalKPIs {
   deltaVsGlYearAgo: number | null;
   yoyFeeVariation: number | null;
   yoyAccumulatedIndex: number;
+  projectedGlStd: number;
+  projectedGlSol: number;
 }
 
 function KPIList({ kpis, t, noGlData, baselineKpis }: { kpis: ProposalKPIs; t: (key: string) => string; noGlData?: boolean; baselineKpis?: ProposalKPIs }) {
@@ -130,10 +132,12 @@ function ProposalCard({
           <div>
             <p className="text-[9px] md:text-xs text-muted-foreground">{t('feeCalculator.proposedStd')}</p>
             <p className="text-sm md:text-xl font-bold">{formatARS(proposedStd)}</p>
+            <p className="text-[8px] md:text-[10px] text-muted-foreground">GL: {formatARS(kpis.projectedGlStd)}</p>
           </div>
           <div>
             <p className="text-[9px] md:text-xs text-muted-foreground">{t('feeCalculator.proposedSol')}</p>
             <p className="text-sm md:text-xl font-bold">{formatARS(proposedSol)}</p>
+            <p className="text-[8px] md:text-[10px] text-muted-foreground">GL: {formatARS(kpis.projectedGlSol)}</p>
           </div>
         </div>
         <Separator />
@@ -333,7 +337,6 @@ export default function FeeCalculator() {
   }, [selectedQuarter, monthly]);
 
   const computeKPIs = (proposedStd: number, proposedSol: number): ProposalKPIs => {
-    // Projected GL fees = current GL per-member fee × (1 + CVS%)
     const projectedGlStd = Math.round(glStdNum * (1 + selectedCVS / 100));
     const projectedGlSol = Math.round(glSolNum * (1 + selectedCVS / 100));
     const glTotalCost = projectedGlStd * stdMemberCount + projectedGlSol * solMemberCount;
@@ -362,6 +365,8 @@ export default function FeeCalculator() {
       deltaVsGlYearAgo,
       yoyFeeVariation,
       yoyAccumulatedIndex: yoyAccumulated,
+      projectedGlStd,
+      projectedGlSol,
     };
   };
 
