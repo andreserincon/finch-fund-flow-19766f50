@@ -58,14 +58,14 @@ function KPIList({ kpis, t, noGlData, baselineKpis }: { kpis: ProposalKPIs; t: (
       color: kpis.delta >= 0 ? 'text-success' : 'text-warning',
     },
     {
-      label: t('feeCalculator.yoyFeeVariation'),
-      value: kpis.yoyFeeVariation !== null ? formatPct(kpis.yoyFeeVariation) : t('feeCalculator.noYoyData'),
-      color: '',
-    },
-    {
       label: t('feeCalculator.deltaVsGlYearAgo'),
       value: kpis.deltaVsGlYearAgo !== null ? formatPct(kpis.deltaVsGlYearAgo) : t('feeCalculator.noYoyData'),
       color: kpis.deltaVsGlYearAgo !== null ? (kpis.deltaVsGlYearAgo >= 0 ? 'text-success' : 'text-warning') : 'text-muted-foreground',
+    },
+    {
+      label: t('feeCalculator.yoyFeeVariation'),
+      value: kpis.yoyFeeVariation !== null ? formatPct(kpis.yoyFeeVariation) : t('feeCalculator.noYoyData'),
+      color: '',
     },
     {
       label: t('feeCalculator.yoyIndexRef'),
