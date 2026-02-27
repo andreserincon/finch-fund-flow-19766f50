@@ -293,12 +293,15 @@ export default function FeeCalculator() {
   const selectedCVS = selectedQuarter ? selectedQuarter.cvs : (parseFloat(manualCvs) || 0);
   const hasCvs = selectedCVS > 0;
 
-  // YoY auto-calculated from last 12 monthly points
+  // YoY: compound CVS from last 4 complete quarters up to Q-1
   const yoyAccumulated = useMemo(() => {
-    if (monthly.length < 12) return 0;
-    const last12 = monthly.slice(-12);
-    return (last12.reduce((acc, p) => acc * (1 + p.variation / 100), 1) - 1) * 100;
-  }, [monthly]);
+    if (quarterly.length < 2) return 0;
+    // quarterly is sorted desc; index 0 = most recent (possibly incomplete or current)
+    // Q-1 starts at index 1, take 4
+    const last4 = quarterly.slice(1, 5);
+    if (last4.length < 4) return 0;
+    return (last4.reduce((acc, q) => acc * (1 + q.cvs / 100), 1) - 1) * 100;
+  }, [quarterly]);
 
   // Monthly breakdown for selected quarter
   const quarterMonthlyBreakdown = useMemo(() => {

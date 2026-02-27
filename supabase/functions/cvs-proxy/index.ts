@@ -3,7 +3,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 // Índice de Salarios (monthly, updated through current data)
 // Series API from datos.gob.ar
 const API_URL =
-  "https://apis.datos.gob.ar/series/api/series/?ids=149.1_TL_INDIIOS_OCTU_0_21&format=json&limit=24&sort=desc";
+  "https://apis.datos.gob.ar/series/api/series/?ids=149.1_TL_INDIIOS_OCTU_0_21&format=json&limit=30&sort=desc";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
