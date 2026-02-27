@@ -8,6 +8,8 @@ export interface MonthlyFee {
   year_month: string;
   fee_type: FeeType;
   amount: number;
+  gl_standard_amount: number | null;
+  gl_solidarity_amount: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -58,6 +60,8 @@ export function useMonthlyFees() {
       year_month: string;
       fee_type: FeeType;
       amount: number;
+      gl_standard_amount?: number | null;
+      gl_solidarity_amount?: number | null;
     }) => {
       const { data, error } = await supabase
         .from('monthly_fees')
