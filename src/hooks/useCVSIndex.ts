@@ -4,6 +4,7 @@ export interface MonthlyIndexPoint {
   monthKey: string;   // "2025-01"
   monthLabel: string; // "Ene 2025"
   variation: number;  // monthly % variation e.g. 3.5
+  indexValue: number; // raw index value e.g. 7969.6
 }
 
 export interface QuarterlyIndex {
@@ -65,6 +66,7 @@ export function useCVSIndex() {
             monthKey,
             monthLabel: `${MONTH_NAMES_ES[month - 1]} ${year}`,
             variation,
+            indexValue: curr,
           });
         }
 
