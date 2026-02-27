@@ -16,8 +16,8 @@ export interface QuarterlyIndex {
   monthlyBreakdown: { label: string; variation: number }[];
 }
 
-const CSV_URL =
-  'https://infra.datos.gob.ar/catalog/sspm/dataset/447/distribution/447.1/download/coeficiente-de-variacion-salarial.csv';
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const CSV_PROXY_URL = `${SUPABASE_URL}/functions/v1/cvs-proxy`;
 
 const MONTH_NAMES_ES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 const QUARTER_RANGES: Record<number, string> = { 1: 'Ene–Mar', 2: 'Abr–Jun', 3: 'Jul–Sep', 4: 'Oct–Dic' };
@@ -31,7 +31,7 @@ export function useCVSIndex() {
       fetchError: boolean;
     }> => {
       try {
-        const res = await fetch(CSV_URL);
+        const res = await fetch(CSV_PROXY_URL);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const text = await res.text();
 
