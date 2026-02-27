@@ -386,6 +386,76 @@ export default function FeeCalculator() {
           </CardContent>
         </Card>
 
+        {/* CVS Historical Table */}
+        {monthly.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Índice de Salarios — Variación Mensual</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {/* Quarterly summary table */}
+                {quarterly.length > 0 && (
+                  <div>
+                    <h3 className="text-sm font-semibold mb-2">Resumen Trimestral</h3>
+                    <div className="overflow-x-auto rounded-md border">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b bg-muted/50">
+                            <th className="text-left p-2 font-medium">Trimestre</th>
+                            <th className="text-right p-2 font-medium">CVS Compuesto</th>
+                            <th className="text-left p-2 font-medium">Detalle Mensual</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {quarterly.map((q) => (
+                            <tr key={q.quarterId} className="border-b last:border-0">
+                              <td className="p-2 font-medium">{q.quarterLabel}</td>
+                              <td className={`p-2 text-right font-bold ${q.cvs >= 0 ? 'text-success' : 'text-overdue'}`}>
+                                {formatPct(q.cvs)}
+                              </td>
+                              <td className="p-2 text-muted-foreground text-xs">
+                                {q.monthlyBreakdown.map((m, i) => (
+                                  <span key={i}>{i > 0 && ' | '}{m.label}: {formatPct(m.variation)}</span>
+                                ))}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* Monthly detail table */}
+                <div>
+                  <h3 className="text-sm font-semibold mb-2">Detalle Mensual (últimos {monthly.length} meses)</h3>
+                  <div className="overflow-x-auto rounded-md border">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b bg-muted/50">
+                          <th className="text-left p-2 font-medium">Mes</th>
+                          <th className="text-right p-2 font-medium">Variación %</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {[...monthly].reverse().map((m) => (
+                          <tr key={m.monthKey} className="border-b last:border-0">
+                            <td className="p-2">{m.monthLabel}</td>
+                            <td className={`p-2 text-right font-medium ${m.variation >= 0 ? 'text-success' : 'text-overdue'}`}>
+                              {formatPct(m.variation)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Section 3 — GL Fees */}
         <Card>
           <CardHeader>
