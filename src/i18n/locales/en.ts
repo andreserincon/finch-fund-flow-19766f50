@@ -398,7 +398,7 @@ export default {
       netMonthlyIncome: 'Net Monthly Income',
       ourFeeIncrease: 'Our Fee Increase',
       glFeeIncrease: 'GL Increase (CVS ref.)',
-      delta: 'Delta vs GL',
+      delta: 'Δ Capita vs GL',
       deltaVsGlYearAgo: 'Delta vs GL (1 year ago)',
       yoyFeeVariation: 'YoY Fee Variation',
       yoyIndexRef: 'YoY Index (ref.)',
