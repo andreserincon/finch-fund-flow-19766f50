@@ -30,7 +30,8 @@ import {
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { format, startOfMonth, isFuture, startOfDay, parseISO } from 'date-fns';
-import { CalendarIcon, PlusCircle, Clock } from 'lucide-react';
+import { CalendarIcon, PlusCircle, Clock, Calculator } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { FEE_TYPE_LABELS, FeeType } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 
@@ -178,14 +179,22 @@ export default function MonthlyFees() {
             Configure fee amounts for Standard and Solidarity members
           </p>
         </div>
-        {isAdmin && (
-          <AddMonthlyFeeDialog
-            open={addDialogOpen}
-            onOpenChange={setAddDialogOpen}
-            onSave={upsertMonthlyFee.mutateAsync}
-            existingMonths={sortedMonths}
-          />
-        )}
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" asChild>
+            <Link to="/fee-calculator">
+              <Calculator className="mr-2 h-4 w-4" />
+              Fee Calculator
+            </Link>
+          </Button>
+          {isAdmin && (
+            <AddMonthlyFeeDialog
+              open={addDialogOpen}
+              onOpenChange={setAddDialogOpen}
+              onSave={upsertMonthlyFee.mutateAsync}
+              existingMonths={sortedMonths}
+            />
+          )}
+        </div>
       </div>
 
       {/* Current Month Card */}
