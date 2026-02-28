@@ -1017,10 +1017,10 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
   ` : `
     /* Comprehensive report - full styling */
     @media print {
-      body { margin: 0; padding: 20px; }
+      body { margin: 0; padding: 10px; }
       .page-break { page-break-before: always; }
       .no-print { display: none; }
-      @page { margin: 20mm 15mm; }
+      @page { margin: 10mm 12mm; }
     }
     
     * { box-sizing: border-box; }
@@ -1037,8 +1037,8 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
     
     .header {
       border-bottom: 2px solid #000;
-      padding-bottom: 20px;
-      margin-bottom: 30px;
+      padding-bottom: 10px;
+      margin-bottom: 15px;
     }
     
     .header-top {
@@ -1070,12 +1070,12 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
     
     .header-date { font-size: 12px; font-weight: bold; color: #000; }
     
-    .header-title { text-align: center; margin-top: 15px; }
+    .header-title { text-align: center; margin-top: 8px; }
     
     .header-title h1 {
       color: #000;
       margin: 0;
-      font-size: 22px;
+      font-size: 18px;
       font-weight: bold;
       letter-spacing: 1px;
     }
@@ -1096,28 +1096,28 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
       .page-header .logo-small { width: 30px; height: auto; }
     }
     
-    .section { margin-bottom: 30px; }
+    .section { margin-bottom: 15px; }
     
     .section-title {
       background: #000;
       color: white;
-      padding: 10px 15px;
-      margin: 0 0 15px 0;
+      padding: 6px 12px;
+      margin: 0 0 10px 0;
       border-radius: 3px;
-      font-size: 16px;
+      font-size: 13px;
       font-weight: bold;
     }
     
     .grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 15px;
+      gap: 8px;
     }
     
     .stat-card {
       background: #f9f9f9;
-      border-radius: 5px;
-      padding: 15px;
+      border-radius: 4px;
+      padding: 8px 10px;
       border-left: 4px solid #333;
       border: 1px solid #ddd;
     }
@@ -1127,13 +1127,13 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
     .stat-card.danger { border-left: 4px solid #e74c3c; }
     
     .stat-label {
-      font-size: 12px;
+      font-size: 10px;
       color: #555;
       text-transform: uppercase;
-      margin-bottom: 5px;
+      margin-bottom: 2px;
     }
     
-    .stat-value { font-size: 20px; font-weight: bold; color: #1a1a1a; }
+    .stat-value { font-size: 16px; font-weight: bold; color: #1a1a1a; }
     
     table {
       width: 100%;
@@ -1208,14 +1208,14 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
     }
     
     .subsection-title {
-      margin: 25px 0 10px;
+      margin: 12px 0 6px;
       color: #1a1a1a;
-      font-size: 14px;
+      font-size: 12px;
       font-weight: 600;
       border-bottom: 1px solid #ccc;
-      padding-bottom: 5px;
+      padding-bottom: 3px;
     }
-    .stat-subtext { font-size: 10px; color: #777; margin-top: 3px; }
+    .stat-subtext { font-size: 9px; color: #777; margin-top: 2px; }
   `;
 
   return `<!DOCTYPE html>
@@ -1269,7 +1269,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
         <div class="stat-value">${formatCurrency(data.greatLodgeBalance)}</div>
       </div>
     </div>
-    ${isLite ? '' : `<div class="grid" style="margin-top: 15px; grid-template-columns: 1fr;">
+    ${isLite ? '' : `<div class="grid" style="margin-top: 8px; grid-template-columns: 1fr;">
       <div class="stat-card ${data.savingsBalance >= 0 ? 'success' : 'danger'}">
         <div class="stat-label">Cuenta de Ahorros (USD)</div>
         <div class="stat-value">${formatCurrency(data.savingsBalance, 'USD')}</div>
