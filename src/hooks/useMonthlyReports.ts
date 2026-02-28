@@ -24,6 +24,8 @@ export interface MonthlyReport {
   collected_monthly_fees: number;
   collection_percentage: number;
   members_missing_payment: number;
+  outstanding_loans_ars: number;
+  outstanding_loans_usd: number;
   created_at: string;
   updated_at: string;
 }

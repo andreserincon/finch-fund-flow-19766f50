@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { FileText, Download, RefreshCw, Calendar, CheckCircle, Clock, AlertCircle, FileDown, Share2 } from 'lucide-react';
 import { useMonthlyReports } from '@/hooks/useMonthlyReports';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
+import { useExchangeRate } from '@/hooks/useExchangeRate';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -21,6 +22,7 @@ const monthNames = [
 export default function Reports() {
   const { t } = useTranslation();
   const { isAdmin } = useIsAdmin();
+  const { exchangeRate } = useExchangeRate();
   const { reports, isLoading, generateReport, getReportPdfUrl } = useMonthlyReports();
   
   const [isGenerateDialogOpen, setIsGenerateDialogOpen] = useState(false);
@@ -349,7 +351,7 @@ export default function Reports() {
       </Card>
 
       {reports.length > 0 && (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
           <Card>
             <CardHeader className="pb-2">
               <CardDescription>{t('reports.totalReports')}</CardDescription>
@@ -386,6 +388,24 @@ export default function Reports() {
               </CardTitle>
             </CardHeader>
           </Card>
+          {reports[0] && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardDescription>Préstamos Activos (último reporte)</CardDescription>
+                <CardTitle className="text-2xl">
+                  {formatCurrency(
+                    (reports[0].outstanding_loans_ars || 0) + 
+                    (reports[0].outstanding_loans_usd || 0) * exchangeRate
+                  )}
+                </CardTitle>
+                {(reports[0].outstanding_loans_usd || 0) > 0 && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    ARS {formatCurrency(reports[0].outstanding_loans_ars || 0)} + USD {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 }).format(reports[0].outstanding_loans_usd || 0)} × {exchangeRate}
+                  </p>
+                )}
+              </CardHeader>
+            </Card>
+          )}
         </div>
       )}
     </div>
