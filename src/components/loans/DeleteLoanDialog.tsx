@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useLoans } from '@/hooks/useLoans';
 import { Loan, ACCOUNT_LABELS, LOAN_STATUS_LABELS } from '@/lib/types';
-import { formatCurrency, getCurrencyForAccount } from '@/lib/utils';
+import { formatCurrency, getCurrencyForAccount, parseLocalDate } from '@/lib/utils';
 import { format } from 'date-fns';
 
 interface DeleteLoanDialogProps {
@@ -42,7 +42,7 @@ export function DeleteLoanDialog({ loan, open, onOpenChange }: DeleteLoanDialogP
                 {ACCOUNT_LABELS[loan.account]} • {LOAN_STATUS_LABELS[loan.status]}
               </p>
               <p className="text-sm text-muted-foreground">
-                {format(new Date(loan.loan_date), 'MMM d, yyyy')} • {formatCurrency(loan.amount, currency)}
+                {format(parseLocalDate(loan.loan_date), 'MMM d, yyyy')} • {formatCurrency(loan.amount, currency)}
               </p>
             </div>
             <p className="mt-4 text-destructive font-medium">

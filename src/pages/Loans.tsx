@@ -34,7 +34,7 @@ import {
 import { MoreHorizontal, Plus, CheckCircle, XCircle, Trash2, DollarSign, History, Undo2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { Loan, ACCOUNT_LABELS, LOAN_STATUS_LABELS, LoanStatus } from '@/lib/types';
-import { formatCurrency, getCurrencyForAccount, cn } from '@/lib/utils';
+import { formatCurrency, getCurrencyForAccount, cn, parseLocalDate } from '@/lib/utils';
 
 export default function Loans() {
   const { loans, isLoading, cancelLoan } = useLoans();
@@ -183,7 +183,7 @@ export default function Loans() {
                   <div className="space-y-1">
                     <p className="font-medium">{loan.member?.full_name}</p>
                     <p className="text-xs text-muted-foreground">
-                      {format(new Date(loan.loan_date), 'MMM d, yyyy')}
+                      {format(parseLocalDate(loan.loan_date), 'MMM d, yyyy')}
                       {' • '}{ACCOUNT_LABELS[loan.account]}
                     </p>
                   </div>
@@ -276,7 +276,7 @@ export default function Loans() {
                   </div>
                   {loan.paid_date && (
                     <span className="text-xs text-muted-foreground">
-                      Paid: {format(new Date(loan.paid_date), 'MMM d, yyyy')}
+                      Paid: {format(parseLocalDate(loan.paid_date), 'MMM d, yyyy')}
                     </span>
                   )}
                 </div>
@@ -320,7 +320,7 @@ export default function Loans() {
                 return (
                   <TableRow key={loan.id}>
                     <TableCell className="font-medium">
-                      {format(new Date(loan.loan_date), 'MMM d, yyyy')}
+                      {format(parseLocalDate(loan.loan_date), 'MMM d, yyyy')}
                     </TableCell>
                     <TableCell>{loan.member?.full_name}</TableCell>
                     <TableCell>

@@ -29,7 +29,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Search, TrendingUp, TrendingDown, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
-import { cn, formatCurrency, getCurrencyForAccount } from '@/lib/utils';
+import { cn, formatCurrency, getCurrencyForAccount, parseLocalDate } from '@/lib/utils';
 import { CATEGORY_LABELS, ACCOUNT_LABELS, Transaction, AccountType } from '@/lib/types';
 
 export default function Transactions() {
@@ -228,7 +228,7 @@ export default function Transactions() {
                     {CATEGORY_LABELS[transaction.category]}
                   </Badge>
                   <p className="text-xs text-muted-foreground">
-                    {format(new Date(transaction.transaction_date), 'MMM d, yyyy')}
+                    {format(parseLocalDate(transaction.transaction_date), 'MMM d, yyyy')}
                     {' • '}{ACCOUNT_LABELS[transaction.account] || 'Bank Main Account'}
                   </p>
                 </div>
@@ -302,7 +302,7 @@ export default function Transactions() {
               filteredTransactions.map((transaction) => (
                 <TableRow key={transaction.id}>
                   <TableCell className="font-medium">
-                    {format(new Date(transaction.transaction_date), 'MMM d, yyyy')}
+                    {format(parseLocalDate(transaction.transaction_date), 'MMM d, yyyy')}
                   </TableCell>
                   <TableCell>
                     <span className="text-xs text-muted-foreground">

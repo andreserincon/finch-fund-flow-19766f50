@@ -25,7 +25,7 @@ import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { Loan, ACCOUNT_LABELS } from '@/lib/types';
 import { useLoanPayments, LoanPayment } from '@/hooks/useLoanPayments';
-import { formatCurrency, getCurrencyForAccount } from '@/lib/utils';
+import { formatCurrency, getCurrencyForAccount, parseLocalDate } from '@/lib/utils';
 import { EditPaymentDialog } from './EditPaymentDialog';
 import { DeletePaymentDialog } from './DeletePaymentDialog';
 
@@ -85,7 +85,7 @@ export function PaymentHistoryDialog({
                             +{formatCurrency(payment.amount, currency)}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            {format(new Date(payment.payment_date), 'MMM d, yyyy')}
+                            {format(parseLocalDate(payment.payment_date), 'MMM d, yyyy')}
                           </p>
                         </div>
                         <DropdownMenu>
@@ -131,7 +131,7 @@ export function PaymentHistoryDialog({
                       {payments.map((payment) => (
                         <TableRow key={payment.id}>
                           <TableCell>
-                            {format(new Date(payment.payment_date), 'MMM d, yyyy')}
+                            {format(parseLocalDate(payment.payment_date), 'MMM d, yyyy')}
                           </TableCell>
                           <TableCell className="font-mono text-success">
                             +{formatCurrency(payment.amount, currency)}

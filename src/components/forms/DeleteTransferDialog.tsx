@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useAccountTransfers } from '@/hooks/useAccountTransfers';
 import { AccountTransfer, ACCOUNT_LABELS } from '@/lib/types';
-import { formatCurrency, getCurrencyForAccount } from '@/lib/utils';
+import { formatCurrency, getCurrencyForAccount, parseLocalDate } from '@/lib/utils';
 import { format } from 'date-fns';
 
 interface DeleteTransferDialogProps {
@@ -45,7 +45,7 @@ export function DeleteTransferDialog({
                 {ACCOUNT_LABELS[transfer.from_account]} → {ACCOUNT_LABELS[transfer.to_account]}
               </p>
               <p className="text-sm text-muted-foreground">
-                {format(new Date(transfer.transfer_date), 'MMM d, yyyy')} • {formatCurrency(transfer.amount, currency)}
+                {format(parseLocalDate(transfer.transfer_date), 'MMM d, yyyy')} • {formatCurrency(transfer.amount, currency)}
               </p>
               {transfer.notes && (
                 <p className="text-sm text-muted-foreground mt-1 truncate">

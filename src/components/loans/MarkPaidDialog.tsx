@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useLoans } from '@/hooks/useLoans';
 import { Loan, ACCOUNT_LABELS } from '@/lib/types';
-import { formatCurrency, getCurrencyForAccount } from '@/lib/utils';
+import { formatCurrency, getCurrencyForAccount, parseLocalDate } from '@/lib/utils';
 import { format } from 'date-fns';
 
 interface MarkPaidDialogProps {
@@ -53,7 +53,7 @@ export function MarkPaidDialog({ loan, open, onOpenChange }: MarkPaidDialogProps
           <div className="p-4 rounded-lg bg-muted">
             <p className="font-medium">{loan.member?.full_name}</p>
             <p className="text-sm text-muted-foreground">
-              {ACCOUNT_LABELS[loan.account]} • {format(new Date(loan.loan_date), 'MMM d, yyyy')}
+              {ACCOUNT_LABELS[loan.account]} • {format(parseLocalDate(loan.loan_date), 'MMM d, yyyy')}
             </p>
             <div className="grid grid-cols-2 gap-3 mt-3">
               <div>

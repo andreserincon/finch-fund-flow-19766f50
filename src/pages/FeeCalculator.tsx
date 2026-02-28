@@ -17,6 +17,7 @@ import { useMembers } from '@/hooks/useMembers';
 import { useCVSIndex, QuarterlyIndex } from '@/hooks/useCVSIndex';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Link } from 'react-router-dom';
+import { parseLocalDate } from '@/lib/utils';
 
 const formatARS = (n: number) =>
   new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(n);
@@ -410,7 +411,7 @@ export default function FeeCalculator() {
         return {
           standard: withGl.gl_standard_amount ?? 0,
           solidarity: withGl.gl_solidarity_amount ?? 0,
-          month: capitalize(new Date(withGl.year_month).toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })),
+          month: capitalize(parseLocalDate(withGl.year_month).toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })),
         };
       }
     }
@@ -421,7 +422,7 @@ export default function FeeCalculator() {
     return {
       standard: withGl.gl_standard_amount ?? 0,
       solidarity: withGl.gl_solidarity_amount ?? 0,
-      month: capitalize(new Date(withGl.year_month).toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })),
+      month: capitalize(parseLocalDate(withGl.year_month).toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })),
     };
   }, [monthlyFees, selectedBaseMonth]);
 

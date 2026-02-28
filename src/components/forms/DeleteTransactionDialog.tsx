@@ -11,6 +11,7 @@ import {
 import { useTransactions } from '@/hooks/useTransactions';
 import { Transaction, CATEGORY_LABELS } from '@/lib/types';
 import { format } from 'date-fns';
+import { parseLocalDate } from '@/lib/utils';
 
 interface DeleteTransactionDialogProps {
   transaction: Transaction;
@@ -47,7 +48,7 @@ export function DeleteTransactionDialog({
             <div className="mt-4 p-3 rounded-lg bg-muted">
               <p className="font-medium">{CATEGORY_LABELS[transaction.category]}</p>
               <p className="text-sm text-muted-foreground">
-                {format(new Date(transaction.transaction_date), 'MMM d, yyyy')} • {formatCurrency(transaction.amount)}
+                {format(parseLocalDate(transaction.transaction_date), 'MMM d, yyyy')} • {formatCurrency(transaction.amount)}
               </p>
             </div>
             <p className="mt-4 text-destructive font-medium">
