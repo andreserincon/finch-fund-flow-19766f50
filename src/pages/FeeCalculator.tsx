@@ -442,20 +442,18 @@ export default function FeeCalculator() {
   const selectedCVS = selectedQuarter ? selectedQuarter.cvs : (parseFloat(manualCvs) || 0);
   const hasCvs = selectedCVS > 0;
 
-  // YoY: compound CVS from 4 quarters, skipping the one immediately before base month's quarter
+  // YoY: compound the selected CVS quarter + 3 prior quarters (4 total)
   const yoyAccumulated = useMemo(() => {
-    if (!selectedBaseMonth || quarterly.length < 5) return 0;
-    const [baseYear, baseMonthNum] = selectedBaseMonth.split('-').map(Number);
-    const baseQ = Math.ceil(baseMonthNum / 3);
-    const baseIdx = quarterly.findIndex((q) => q.year === baseYear && q.quarter === baseQ);
-    // Skip base quarter + skip 1 more (the immediately prior), then take 4
-    const startIdx = (baseIdx >= 0 ? baseIdx + 2 : 1);
-    const prev4 = quarterly.slice(startIdx, startIdx + 4);
+    if (!selectedQuarterId || quarterly.length < 4) return 0;
+    const cvsIdx = quarterly.findIndex((q) => q.quarterId === selectedQuarterId);
+    if (cvsIdx < 0) return 0;
+    // quarterly is sorted descending, so cvsIdx is the most recent of the 4
+    const prev4 = quarterly.slice(cvsIdx, cvsIdx + 4);
     if (prev4.length < 4) return 0;
     const result = (prev4.reduce((acc, q) => acc * (1 + q.cvs / 100), 1) - 1) * 100;
-    console.log('[YoY Index]', { baseMonth: selectedBaseMonth, baseQ: `Q${baseQ} ${baseYear}`, baseIdx, startIdx, quarters: prev4.map(q => `${q.quarterId}: ${q.cvs}%`), accumulated: result.toFixed(2) + '%' });
+    console.log('[YoY Index]', { selectedQuarterId, quarters: prev4.map(q => `${q.quarterId}: ${q.cvs}%`), accumulated: result.toFixed(2) + '%' });
     return result;
-  }, [quarterly, selectedBaseMonth]);
+  }, [quarterly, selectedQuarterId]);
 
   // Monthly breakdown for selected quarter
   const quarterMonthlyBreakdown = useMemo(() => {
