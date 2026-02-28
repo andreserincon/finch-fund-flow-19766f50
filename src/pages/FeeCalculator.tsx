@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Calculator, Users, Sparkles, AlertTriangle, RefreshCw, Download } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -184,38 +185,165 @@ export default function FeeCalculator() {
   }, [selectedBaseMonth, quarterly]);
 
   const exportCvsToExcel = () => {
-    if (!monthly.length) return;
-    const BOM = '\uFEFF';
-    const decSep = (n: number) => n.toFixed(2).replace('.', ',');
+    try {
+      if (!monthly.length) return;
+      const wb = XLSX.utils.book_new();
 
-    const lines: string[] = [
-      'Índice de Salarios (INDEC) — Variación Mensual',
-      '',
-      'Mes\tÍndice\tVariación %',
-      ...monthly.map((p) => `${p.monthLabel}\t${decSep(p.indexValue)}\t${decSep(p.variation)}`),
-      '',
-      '',
-      'Resumen Trimestral — CVS Acumulado',
-      '',
-      'Trimestre\tCVS Acumulado %\tDetalle Mensual',
-      ...quarterly.map((q) => {
-        const detail = q.monthlyBreakdown.map((m) => `${m.label}: ${decSep(m.variation)}%`).join(' | ');
-        return `${q.quarterLabel}\t${decSep(q.cvs)}\t${detail}`;
-      }),
-    ];
+      // ========== Sheet 1: Índice CVS ==========
+      const s1Data: (string | number | null)[][] = [
+        ['Índice de Salarios (INDEC) — Variación Mensual', null, null],
+        [],
+        ['Mes', 'Índice (base oct-2016=100)', 'Variación Mensual %'],
+        ...monthly.map((p) => [p.monthLabel, p.indexValue, p.variation]),
+        [],
+        [],
+        ['Índice Acumulado Anual (12 meses)', null, yoyAccumulated > 0 ? yoyAccumulated : 'N/D'],
+        [],
+        ['Fuente: Ministerio de Economía — datos.gob.ar / INDEC', null, null],
+        ['💡 Para insertar gráfico: seleccioná las columnas A y C → Insertar → Gráfico de líneas', null, null],
+      ];
+      const ws1 = XLSX.utils.aoa_to_sheet(s1Data);
+      ws1['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 2 } }];
+      ws1['!cols'] = [{ wch: 14 }, { wch: 24 }, { wch: 22 }];
+      ws1['!freeze'] = { xSplit: 0, ySplit: 3 };
+      // Freeze pane via '!freeze' or views
+      if (!ws1['!views']) ws1['!views'] = [{}];
+      (ws1['!views'] as any[])[0] = { state: 'frozen', ySplit: 3 };
+      XLSX.utils.book_append_sheet(wb, ws1, 'Índice CVS');
 
-    if (yoyAccumulated > 0) {
-      lines.push('', '', `Índice Acumulado Anual (12 meses)\t${decSep(yoyAccumulated)}`);
+      // ========== Sheet 2: Trimestral CVS ==========
+      const s2Data: (string | number | null)[][] = [
+        ['Resumen Trimestral — CVS Acumulado', null, null, null, null, null],
+        [],
+        ['Trimestre', 'CVS Trimestral %', 'Mes 1 — Variación %', 'Mes 2 — Variación %', 'Mes 3 — Variación %', '¿Trimestre Seleccionado?'],
+        ...quarterly.map((q) => [
+          q.quarterLabel,
+          q.cvs,
+          q.monthlyBreakdown[0]?.variation ?? null,
+          q.monthlyBreakdown[1]?.variation ?? null,
+          q.monthlyBreakdown[2]?.variation ?? null,
+          q.quarterId === selectedQuarterId ? '✓ Seleccionado' : '',
+        ]),
+      ];
+      const ws2 = XLSX.utils.aoa_to_sheet(s2Data);
+      ws2['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 5 } }];
+      ws2['!cols'] = [{ wch: 26 }, { wch: 20 }, { wch: 18 }, { wch: 18 }, { wch: 18 }, { wch: 22 }];
+      if (!ws2['!views']) ws2['!views'] = [{}];
+      (ws2['!views'] as any[])[0] = { state: 'frozen', ySplit: 3 };
+      XLSX.utils.book_append_sheet(wb, ws2, 'Trimestral CVS');
+
+      // ========== Sheet 3: Propuestas de Aranceles ==========
+      const baseMonthLabel = availableFeeMonths.find(m => m.value === selectedBaseMonth)?.label ?? selectedBaseMonth ?? '';
+      const quarterLabel = selectedQuarter?.quarterLabel ?? 'Manual';
+
+      const lowP = proposals.find(p => p.buffer === -2);
+      const baseP = proposals.find(p => p.buffer === 0);
+      const highP = proposals.find(p => p.buffer === 2);
+      const getKpiVal = (p: typeof lowP, key: keyof ProposalKPIs) => p ? p.kpis[key] : '—';
+      const getCustomVal = (key: keyof ProposalKPIs) => customKPIs ? customKPIs[key] : '—';
+
+      const s3Data: (string | number | null)[][] = [
+        ['Propuestas de Aranceles — Calculadora de Aranceles', null, null, null, null, null, null],
+        [],
+        ['Período Base:', baseMonthLabel],
+        ['Trimestre CVS:', quarterLabel],
+        ['CVS Aplicado:', selectedCVS],
+        ['Índice YoY Acumulado:', yoyAccumulated],
+        ['Arancel GL Estándar actual:', glStdNum],
+        ['Arancel GL Solidaridad actual:', glSolNum],
+        ['Miembros Estándar activos:', stdMemberCount],
+        ['Miembros Solidaridad activos:', solMemberCount],
+        [],
+        ['', 'Conservador', 'Base CVS', 'Alto', 'Personalizado'],
+        ['Arancel Estándar Propuesto', lowP?.proposedStd ?? '—', baseP?.proposedStd ?? '—', highP?.proposedStd ?? '—', customKPIs ? customStdNum : '—'],
+        ['Arancel Solidaridad Propuesto', lowP?.proposedSol ?? '—', baseP?.proposedSol ?? '—', highP?.proposedSol ?? '—', customKPIs ? customSolNum : '—'],
+        ['GL Estándar Proyectado', getKpiVal(lowP, 'projectedGlStd'), getKpiVal(baseP, 'projectedGlStd'), getKpiVal(highP, 'projectedGlStd'), getCustomVal('projectedGlStd')],
+        ['GL Solidaridad Proyectado', getKpiVal(lowP, 'projectedGlSol'), getKpiVal(baseP, 'projectedGlSol'), getKpiVal(highP, 'projectedGlSol'), getCustomVal('projectedGlSol')],
+        [],
+        ['Ingreso Mensual Total', getKpiVal(lowP, 'totalMonthlyIncome'), getKpiVal(baseP, 'totalMonthlyIncome'), getKpiVal(highP, 'totalMonthlyIncome'), getCustomVal('totalMonthlyIncome')],
+        ['Costo Total GL', getKpiVal(lowP, 'glTotalCost'), getKpiVal(baseP, 'glTotalCost'), getKpiVal(highP, 'glTotalCost'), getCustomVal('glTotalCost')],
+        ['Ingreso Neto Mensual', getKpiVal(lowP, 'netMonthlyIncome'), getKpiVal(baseP, 'netMonthlyIncome'), getKpiVal(highP, 'netMonthlyIncome'), getCustomVal('netMonthlyIncome')],
+        ['Incremento Propio %', getKpiVal(lowP, 'ourFeeIncrease'), getKpiVal(baseP, 'ourFeeIncrease'), getKpiVal(highP, 'ourFeeIncrease'), getCustomVal('ourFeeIncrease')],
+        ['GL % de Capita', getKpiVal(lowP, 'delta'), getKpiVal(baseP, 'delta'), getKpiVal(highP, 'delta'), getCustomVal('delta')],
+        ['Variación Interanual Arancel %', lowP?.kpis.yoyFeeVariation ?? 'N/D', baseP?.kpis.yoyFeeVariation ?? 'N/D', highP?.kpis.yoyFeeVariation ?? 'N/D', customKPIs?.yoyFeeVariation ?? 'N/D'],
+        ['Índice Acumulado YoY (ref.)', getKpiVal(lowP, 'yoyAccumulatedIndex'), getKpiVal(baseP, 'yoyAccumulatedIndex'), getKpiVal(highP, 'yoyAccumulatedIndex'), getCustomVal('yoyAccumulatedIndex')],
+      ];
+      const ws3 = XLSX.utils.aoa_to_sheet(s3Data);
+      ws3['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 6 } }];
+      ws3['!cols'] = [{ wch: 32 }, { wch: 20 }, { wch: 20 }, { wch: 20 }, { wch: 20 }];
+      if (!ws3['!views']) ws3['!views'] = [{}];
+      (ws3['!views'] as any[])[0] = { state: 'frozen', ySplit: 12 };
+      XLSX.utils.book_append_sheet(wb, ws3, 'Propuestas de Aranceles');
+
+      // ========== Sheet 4: Mi Calculadora ==========
+      const s4Data: (string | number | null | { f: string })[][] = [
+        ['Mi Calculadora — Espacio de Trabajo', null, null, null, null, null],
+        [],
+        ['Usá esta hoja para tus propios cálculos. Los valores en azul son referencias traídas de la calculadora. Podés modificar cualquier celda.'],
+        [],
+        [],
+        ['REFERENCIAS (traídas de la calculadora)'],
+        ['CVS Trimestral %', selectedCVS],
+        ['Índice YoY Acumulado %', yoyAccumulated],
+        ['Arancel Estándar Actual', currentStdFee],
+        ['Arancel Solidaridad Actual', currentSolFee],
+        ['GL Estándar', glStdNum],
+        ['GL Solidaridad', glSolNum],
+        ['Miembros Estándar', stdMemberCount],
+        ['Miembros Solidaridad', solMemberCount],
+        [],
+        ['MI ESCENARIO'],
+        ['Mi Arancel Estándar', null],
+        ['Mi Arancel Solidaridad', null],
+        ['Ajuste adicional %', null],
+        ['Notas', null],
+        [],
+        ['CÁLCULOS AUTOMÁTICOS'],
+      ];
+      const ws4 = XLSX.utils.aoa_to_sheet(s4Data);
+      ws4['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 5 } }];
+      ws4['!cols'] = [{ wch: 30 }, { wch: 20 }, { wch: 20 }];
+
+      // Add formula rows
+      const formulaRows: [string, string][] = [
+        ['Ingreso Mensual Estándar', '=B13*B17'],
+        ['Ingreso Mensual Solidaridad', '=B14*B18'],
+        ['Ingreso Total Mensual', '=B23+B24'],
+        ['Costo GL Total', '=(B11*B13)+(B12*B14)'],
+        ['Ingreso Neto Mensual', '=B25-B26'],
+      ];
+      const formulaStartRow = 22; // 0-indexed
+      formulaRows.forEach(([label, formula], i) => {
+        const r = formulaStartRow + i;
+        XLSX.utils.sheet_add_aoa(ws4, [[label]], { origin: { r, c: 0 } });
+        ws4[XLSX.utils.encode_cell({ r, c: 1 })] = { f: formula.slice(1), t: 'n' };
+      });
+
+      // Comparison section
+      const compStart = formulaStartRow + formulaRows.length + 1;
+      XLSX.utils.sheet_add_aoa(ws4, [
+        [],
+        ['Comparación de incrementos'],
+        ['Incremento Propio (Std) %', null],
+        ['Incremento CVS (ref.) %', null],
+        ['Diferencia (delta) pp', null],
+      ], { origin: { r: compStart, c: 0 } });
+      // Add formulas for comparison
+      const compDataStart = compStart + 1;
+      ws4[XLSX.utils.encode_cell({ r: compDataStart + 1, c: 1 })] = { f: 'IF(B9>0,(B17-B9)/B9*100,0)', t: 'n' };
+      ws4[XLSX.utils.encode_cell({ r: compDataStart + 2, c: 1 })] = { f: 'B7', t: 'n' };
+      ws4[XLSX.utils.encode_cell({ r: compDataStart + 3, c: 1 })] = { f: `B${compDataStart + 2}-B${compDataStart + 3}`, t: 'n' };
+
+      XLSX.utils.book_append_sheet(wb, ws4, 'Mi Calculadora');
+
+      // ========== Write & Download ==========
+      const fileName = `aranceles-${selectedBaseMonth?.slice(0, 7) ?? 'calculadora'}-${new Date().toISOString().slice(0, 10)}.xlsx`;
+      XLSX.writeFile(wb, fileName);
+      toast.success('Planilla exportada correctamente');
+    } catch (err) {
+      console.error('Export error:', err);
+      toast.error('Error al exportar la planilla');
     }
-
-    const blob = new Blob([BOM + lines.join('\n')], { type: 'text/tab-separated-values;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `indice-salarios-cvs-${new Date().toISOString().slice(0, 10)}.xls`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success('Archivo descargado');
   };
 
   const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -438,7 +566,7 @@ export default function FeeCalculator() {
                   <Download className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Exportar CSV para Excel</TooltipContent>
+              <TooltipContent>Exportar planilla Excel (.xlsx)</TooltipContent>
             </Tooltip>
             <Button
               variant="ghost"
