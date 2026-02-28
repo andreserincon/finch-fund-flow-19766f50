@@ -468,6 +468,22 @@ Deno.serve(async (req) => {
     const totalLoanAmount = loans.reduce((sum: number, l: any) => sum + Number(l.amount), 0);
     const totalLoanDue = loans.reduce((sum: number, l: any) => sum + (Number(l.amount) - Number(l.amount_paid)), 0);
 
+    // Cambio 4: Rendimiento de cuenta (account_yield)
+    const yieldMonthARS = transactions
+      .filter((t: any) => t.category === 'account_yield' && t.account !== 'savings')
+      .reduce((sum: number, t: any) => sum + (t.transaction_type === 'income' ? Number(t.amount) : -Number(t.amount)), 0);
+    const yieldMonthUSD = transactions
+      .filter((t: any) => t.category === 'account_yield' && t.account === 'savings')
+      .reduce((sum: number, t: any) => sum + (t.transaction_type === 'income' ? Number(t.amount) : -Number(t.amount)), 0);
+
+    const yearStartStr = `${year}-01-01`;
+    const yieldYearARS = allTransactions
+      .filter((t: any) => t.category === 'account_yield' && t.account !== 'savings' && t.transaction_date >= yearStartStr)
+      .reduce((sum: number, t: any) => sum + (t.transaction_type === 'income' ? Number(t.amount) : -Number(t.amount)), 0);
+    const yieldYearUSD = allTransactions
+      .filter((t: any) => t.category === 'account_yield' && t.account === 'savings' && t.transaction_date >= yearStartStr)
+      .reduce((sum: number, t: any) => sum + (t.transaction_type === 'income' ? Number(t.amount) : -Number(t.amount)), 0);
+
     const reportData = {
       year,
       month,
@@ -493,6 +509,11 @@ Deno.serve(async (req) => {
       totalActiveLoans,
       totalLoanAmount,
       totalLoanDue,
+      // Yield KPIs
+      yieldMonthARS,
+      yieldMonthUSD,
+      yieldYearARS,
+      yieldYearUSD,
     };
 
     // Fetch logo as base64 for embedding in HTML
@@ -602,7 +623,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
   const statusLabels: Record<string, string> = {
     up_to_date: 'Al día',
     ahead: 'Adelantado',
-    overdue: 'Moroso',
+    overdue: 'Demorado',
     unpaid: 'Impago',
   };
 
@@ -992,6 +1013,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
       border-bottom: 1px solid #ccc;
       padding-bottom: 2px;
     }
+    .stat-subtext { font-size: 7px; color: #777; margin-top: 2px; }
   ` : `
     /* Comprehensive report - full styling */
     @media print {
@@ -1193,6 +1215,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
       border-bottom: 1px solid #ccc;
       padding-bottom: 5px;
     }
+    .stat-subtext { font-size: 10px; color: #777; margin-top: 3px; }
   `;
 
   return `<!DOCTYPE html>
@@ -1255,7 +1278,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
     </div>`}
 
     <h3 class="subsection-title">Flujo del Mes${isLite ? '' : ' (en ARS)'}</h3>
-    <div class="grid">
+    <div class="grid" style="grid-template-columns: repeat(4, 1fr);">
       <div class="stat-card success">
         <div class="stat-label">Ingresos</div>
         <div class="stat-value positive">${formatCurrency(data.totalInflows)}</div>
@@ -1268,10 +1291,17 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
         <div class="stat-label">Resultado Neto</div>
         <div class="stat-value ${data.netResult >= 0 ? 'positive' : 'negative'}">${formatCurrency(data.netResult)}</div>
       </div>
+      <div class="stat-card success">
+        <div class="stat-label">Rendimiento del Mes</div>
+        <div class="stat-value positive">
+          ${data.yieldMonthARS === 0 && data.yieldMonthUSD === 0 ? '$0' : `${formatCurrency(data.yieldMonthARS)}${data.yieldMonthUSD > 0 ? ` + ${formatCurrency(data.yieldMonthUSD, 'USD')}` : ''}`}
+        </div>
+        <div class="stat-subtext">${data.yieldMonthARS === 0 && data.yieldMonthUSD === 0 ? 'Sin rendimiento registrado' : `Acum. ${data.year}: ${formatCurrency(data.yieldYearARS)}${data.yieldYearUSD > 0 ? ` + ${formatCurrency(data.yieldYearUSD, 'USD')}` : ''}`}</div>
+      </div>
     </div>
 
     <h3 class="subsection-title">Posición de Miembros</h3>
-    <div class="grid" style="grid-template-columns: repeat(2, 1fr);">
+    <div class="grid" style="grid-template-columns: repeat(4, 1fr);">
       <div class="stat-card danger">
         <div class="stat-label">Deuda Pendiente</div>
         <div class="stat-value negative">${formatCurrency(data.outstandingMemberDebt)}</div>
@@ -1280,7 +1310,38 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
         <div class="stat-label">Crédito Prepagado</div>
         <div class="stat-value positive">${formatCurrency(data.prepaidMemberCredit)}</div>
       </div>
+      <div class="stat-card danger">
+        <div class="stat-label">Miembros Demorados</div>
+        <div class="stat-value negative">${data.memberSnapshots.filter((m: any) => m.status === 'overdue').length}</div>
+        <div class="stat-subtext">Más de 1 cuota pendiente</div>
+      </div>
+      <div class="stat-card warning">
+        <div class="stat-label">Miembros Impagos</div>
+        <div class="stat-value" style="color: #f39c12;">${data.memberSnapshots.filter((m: any) => m.status === 'unpaid').length}</div>
+        <div class="stat-subtext">Solo cuota del mes</div>
+      </div>
     </div>
+
+    ${(() => {
+      const pendingLoansARS = data.loanSnapshots
+        .filter((l: any) => l.account !== 'savings')
+        .reduce((s: number, l: any) => s + Number(l.outstanding_balance), 0);
+      const pendingLoansUSD = data.loanSnapshots
+        .filter((l: any) => l.account === 'savings')
+        .reduce((s: number, l: any) => s + Number(l.outstanding_balance), 0);
+      return (pendingLoansARS > 0 || pendingLoansUSD > 0) ? `
+    <h3 class="subsection-title">Deuda por Préstamos Activos</h3>
+    <div class="grid" style="grid-template-columns: repeat(2, 1fr);">
+      <div class="stat-card ${pendingLoansARS > 0 ? 'danger' : ''}">
+        <div class="stat-label">Pendiente en Pesos (ARS)</div>
+        <div class="stat-value ${pendingLoansARS > 0 ? 'negative' : ''}">${formatCurrency(pendingLoansARS)}</div>
+      </div>
+      <div class="stat-card ${pendingLoansUSD > 0 ? 'warning' : ''}">
+        <div class="stat-label">Pendiente en Dólares (USD)</div>
+        <div class="stat-value" style="${pendingLoansUSD > 0 ? 'color: #e67e22;' : ''}">${formatCurrency(pendingLoansUSD, 'USD')}</div>
+      </div>
+    </div>` : '';
+    })()}
   </div>
 
   ${isLite ? '' : `<div class="page-break"></div>
