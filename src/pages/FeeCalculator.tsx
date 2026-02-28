@@ -508,9 +508,9 @@ export default function FeeCalculator() {
     const targetDelta = feeOneYearAgoStd !== null && glStdOneYearAgo !== null && feeOneYearAgoStd > 0
       ? (glStdOneYearAgo / feeOneYearAgoStd) * 100
       : null;
-    const floor500 = (n: number) => Math.floor(n / 500) * 500;
-    const ratioStd = targetDelta && targetDelta > 0 ? floor500(projectedGlStd / (targetDelta / 100)) : baseStd;
-    const ratioSol = targetDelta && targetDelta > 0 ? floor500(projectedGlSol / (targetDelta / 100)) : baseSol;
+    const ceil500 = (n: number) => Math.ceil(n / 500) * 500;
+    const ratioStd = targetDelta && targetDelta > 0 ? ceil500(projectedGlStd / (targetDelta / 100)) : baseStd;
+    const ratioSol = targetDelta && targetDelta > 0 ? ceil500(projectedGlSol / (targetDelta / 100)) : baseSol;
 
     type ProposalItem = {
       name: string; color: string; isVariant: boolean;
@@ -532,9 +532,9 @@ export default function FeeCalculator() {
       {
         buffer: 0, name: 'GL 65%', color: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
         isVariant: false,
-        proposedStd: floor500(projectedGlStd / 0.65),
-        proposedSol: floor500(projectedGlSol / 0.65),
-        kpis: computeKPIs(floor500(projectedGlStd / 0.65), floor500(projectedGlSol / 0.65)),
+        proposedStd: ceil500(projectedGlStd / 0.65),
+        proposedSol: ceil500(projectedGlSol / 0.65),
+        kpis: computeKPIs(ceil500(projectedGlStd / 0.65), ceil500(projectedGlSol / 0.65)),
       },
     ];
 
