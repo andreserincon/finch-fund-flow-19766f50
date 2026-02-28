@@ -529,11 +529,11 @@ export default function FeeCalculator() {
         kpis: computeKPIs(baseStd, baseSol),
       },
       {
-        buffer: 2, name: t('feeCalculator.high'), color: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
+        buffer: 0, name: 'GL 65%', color: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
         isVariant: false,
-        proposedStd: round500(baseStd * (1 + 2 / 100)),
-        proposedSol: round500(baseSol * (1 + 2 / 100)),
-        kpis: computeKPIs(round500(baseStd * (1 + 2 / 100)), round500(baseSol * (1 + 2 / 100))),
+        proposedStd: round500(projectedGlStd / 0.65),
+        proposedSol: round500(projectedGlSol / 0.65),
+        kpis: computeKPIs(round500(projectedGlStd / 0.65), round500(projectedGlSol / 0.65)),
       },
     ];
 
