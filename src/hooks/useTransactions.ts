@@ -49,6 +49,8 @@ export function useTransactions() {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['member_balances'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard_stats'] });
+      queryClient.invalidateQueries({ queryKey: ['loans'] });
+      queryClient.invalidateQueries({ queryKey: ['loan_payments'] });
       toast.success('Transaction recorded successfully');
     },
     onError: (error: Error) => {
@@ -72,6 +74,8 @@ export function useTransactions() {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['member_balances'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard_stats'] });
+      queryClient.invalidateQueries({ queryKey: ['loans'] });
+      queryClient.invalidateQueries({ queryKey: ['loan_payments'] });
       toast.success('Transaction updated successfully');
     },
     onError: (error: Error) => {
@@ -88,6 +92,8 @@ export function useTransactions() {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['member_balances'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard_stats'] });
+      queryClient.invalidateQueries({ queryKey: ['loans'] });
+      queryClient.invalidateQueries({ queryKey: ['loan_payments'] });
       toast.success('Transaction deleted successfully');
     },
     onError: (error: Error) => {
