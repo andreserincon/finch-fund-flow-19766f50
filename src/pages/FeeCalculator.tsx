@@ -508,8 +508,9 @@ export default function FeeCalculator() {
     const targetDelta = feeOneYearAgoStd !== null && glStdOneYearAgo !== null && feeOneYearAgoStd > 0
       ? (glStdOneYearAgo / feeOneYearAgoStd) * 100
       : null;
-    const ratioStd = targetDelta && targetDelta > 0 ? round500(projectedGlStd / (targetDelta / 100)) : baseStd;
-    const ratioSol = targetDelta && targetDelta > 0 ? round500(projectedGlSol / (targetDelta / 100)) : baseSol;
+    const floor500 = (n: number) => Math.floor(n / 500) * 500;
+    const ratioStd = targetDelta && targetDelta > 0 ? floor500(projectedGlStd / (targetDelta / 100)) : baseStd;
+    const ratioSol = targetDelta && targetDelta > 0 ? floor500(projectedGlSol / (targetDelta / 100)) : baseSol;
 
     type ProposalItem = {
       name: string; color: string; isVariant: boolean;
