@@ -1301,7 +1301,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
     </div>
 
     <h3 class="subsection-title">Posición de Miembros</h3>
-    <div class="grid" style="grid-template-columns: repeat(3, 1fr);">
+    <div class="grid" style="grid-template-columns: repeat(4, 1fr);">
       <div class="stat-card danger">
         <div class="stat-label">Deuda Pendiente</div>
         <div class="stat-value negative">${formatCurrency(data.outstandingMemberDebt)}</div>
@@ -1314,6 +1314,11 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
         <div class="stat-label">Miembros Impagos</div>
         <div class="stat-value" style="color: #f39c12;">${data.memberSnapshots.filter((m: any) => m.status === 'unpaid' || m.status === 'overdue').length}</div>
         <div class="stat-subtext">Con cuotas pendientes</div>
+      </div>
+      <div class="stat-card danger">
+        <div class="stat-label">Miembros Demorados</div>
+        <div class="stat-value negative">${data.memberSnapshots.filter((m: any) => m.status === 'overdue').length}</div>
+        <div class="stat-subtext">Más de 1 cuota pendiente</div>
       </div>
     </div>
 
