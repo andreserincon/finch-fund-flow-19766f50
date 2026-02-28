@@ -532,9 +532,9 @@ export default function FeeCalculator() {
       {
         buffer: 0, name: 'GL 65%', color: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
         isVariant: false,
-        proposedStd: round500(projectedGlStd / 0.65),
-        proposedSol: round500(projectedGlSol / 0.65),
-        kpis: computeKPIs(round500(projectedGlStd / 0.65), round500(projectedGlSol / 0.65)),
+        proposedStd: floor500(projectedGlStd / 0.65),
+        proposedSol: floor500(projectedGlSol / 0.65),
+        kpis: computeKPIs(floor500(projectedGlStd / 0.65), floor500(projectedGlSol / 0.65)),
       },
     ];
 
