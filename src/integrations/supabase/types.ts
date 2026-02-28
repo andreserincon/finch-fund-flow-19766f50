@@ -374,13 +374,9 @@ export type Database = {
           great_lodge_balance: number
           id: string
           lite_pdf_path: string | null
-          members_late_payment: number
           members_missing_payment: number
-          members_overdue: number
           net_result: number
           net_treasury_position: number
-          outstanding_loans_ars: number
-          outstanding_loans_usd: number
           outstanding_member_debt: number
           pdf_path: string | null
           prepaid_member_credit: number
@@ -403,13 +399,9 @@ export type Database = {
           great_lodge_balance?: number
           id?: string
           lite_pdf_path?: string | null
-          members_late_payment?: number
           members_missing_payment?: number
-          members_overdue?: number
           net_result?: number
           net_treasury_position?: number
-          outstanding_loans_ars?: number
-          outstanding_loans_usd?: number
           outstanding_member_debt?: number
           pdf_path?: string | null
           prepaid_member_credit?: number
@@ -432,13 +424,9 @@ export type Database = {
           great_lodge_balance?: number
           id?: string
           lite_pdf_path?: string | null
-          members_late_payment?: number
           members_missing_payment?: number
-          members_overdue?: number
           net_result?: number
           net_treasury_position?: number
-          outstanding_loans_ars?: number
-          outstanding_loans_usd?: number
           outstanding_member_debt?: number
           pdf_path?: string | null
           prepaid_member_credit?: number

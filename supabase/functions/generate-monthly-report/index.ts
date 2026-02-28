@@ -433,18 +433,6 @@ Deno.serve(async (req) => {
       await supabase.from('report_loan_snapshots').insert(loanSnapshots);
     }
 
-    // Calculate loan debt split by currency
-    const outstandingLoansARS = loanSnapshots
-      .filter((l: any) => l.account !== 'savings')
-      .reduce((sum: number, l: any) => sum + Number(l.outstanding_balance), 0);
-    const outstandingLoansUSD = loanSnapshots
-      .filter((l: any) => l.account === 'savings')
-      .reduce((sum: number, l: any) => sum + Number(l.outstanding_balance), 0);
-
-    // Calculate member status counts
-    const membersOverdue = memberSnapshots.filter((m: any) => m.status === 'overdue').length;
-    const membersLatePayment = memberSnapshots.filter((m: any) => m.status === 'unpaid').length;
-
     // Create event snapshots
     const eventSnapshots = events.map((event: any) => {
       const eventPaymentsForEvent = eventPayments.filter((ep: any) => ep.event_id === event.id);
@@ -563,7 +551,7 @@ Deno.serve(async (req) => {
       throw liteUploadResult.error;
     }
 
-    // Update report with both PDF paths, new KPIs, and mark as generated
+    // Update report with both PDF paths and mark as generated
     await supabase
       .from('monthly_reports')
       .update({
@@ -571,10 +559,6 @@ Deno.serve(async (req) => {
         generated_at: new Date().toISOString(),
         pdf_path: pdfPath,
         lite_pdf_path: litePdfPath,
-        outstanding_loans_ars: outstandingLoansARS,
-        outstanding_loans_usd: outstandingLoansUSD,
-        members_overdue: membersOverdue,
-        members_late_payment: membersLatePayment,
       })
       .eq('id', reportId);
 
