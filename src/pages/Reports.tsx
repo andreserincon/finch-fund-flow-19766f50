@@ -138,7 +138,7 @@ export default function Reports() {
   };
 
   const formatCurrency = (amount: number, currency = 'ARS') => {
-    return new Intl.NumberFormat('es-AR', {
+    return new Intl.NumberFormat(currency === 'USD' ? 'en-US' : 'es-AR', {
       style: 'currency',
       currency: currency === 'USD' ? 'USD' : 'ARS',
       minimumFractionDigits: 0,
@@ -262,14 +262,17 @@ export default function Reports() {
           ) : (
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>{t('reports.period')}</TableHead>
-                  <TableHead>{t('reports.generatedAt')}</TableHead>
-                  <TableHead className="hidden md:table-cell">{t('common.status')}</TableHead>
-                  <TableHead className="hidden md:table-cell text-right">{t('reports.netResult')}</TableHead>
-                  <TableHead className="hidden md:table-cell text-right">{t('reports.collectionRate')}</TableHead>
-                  <TableHead className="text-right">{t('common.actions')}</TableHead>
-                </TableRow>
+                 <TableRow>
+                   <TableHead>{t('reports.period')}</TableHead>
+                   <TableHead>{t('reports.generatedAt')}</TableHead>
+                   <TableHead className="hidden md:table-cell">{t('common.status')}</TableHead>
+                   <TableHead className="hidden md:table-cell text-right">{t('reports.netResult')}</TableHead>
+                   <TableHead className="hidden md:table-cell text-right">Deuda Préstamos</TableHead>
+                   <TableHead className="hidden md:table-cell text-right">{t('reports.collectionRate')}</TableHead>
+                   <TableHead className="hidden md:table-cell text-center">Morosos</TableHead>
+                   <TableHead className="hidden md:table-cell text-center">Demorados</TableHead>
+                   <TableHead className="text-right">{t('common.actions')}</TableHead>
+                 </TableRow>
               </TableHeader>
               <TableBody>
                 {reports.map((report) => (
@@ -290,11 +293,31 @@ export default function Reports() {
                     <TableCell className={`hidden md:table-cell text-right font-medium ${report.net_result >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                       {formatCurrency(report.net_result)}
                     </TableCell>
-                    <TableCell className="hidden md:table-cell text-right">
-                      <span className={report.collection_percentage >= 80 ? 'text-green-600' : report.collection_percentage >= 50 ? 'text-yellow-600' : 'text-red-600'}>
-                        {report.collection_percentage}%
-                      </span>
-                    </TableCell>
+                     <TableCell className="hidden md:table-cell text-right">
+                       <div className="flex flex-col gap-0.5">
+                         <span className={report.outstanding_loans_ars > 0 ? 'text-red-600 font-medium' : 'text-muted-foreground'}>
+                           {formatCurrency(report.outstanding_loans_ars, 'ARS')}
+                         </span>
+                         <span className={report.outstanding_loans_usd > 0 ? 'text-amber-600 font-medium' : 'text-muted-foreground'}>
+                           {formatCurrency(report.outstanding_loans_usd, 'USD')}
+                         </span>
+                       </div>
+                     </TableCell>
+                     <TableCell className="hidden md:table-cell text-right">
+                       <span className={report.collection_percentage >= 80 ? 'text-green-600' : report.collection_percentage >= 50 ? 'text-yellow-600' : 'text-red-600'}>
+                         {report.collection_percentage}%
+                       </span>
+                     </TableCell>
+                     <TableCell className="hidden md:table-cell text-center">
+                       <span className={report.members_overdue > 0 ? 'text-red-600 font-medium' : 'text-green-600'}>
+                         {report.members_overdue}
+                       </span>
+                     </TableCell>
+                     <TableCell className="hidden md:table-cell text-center">
+                       <span className={report.members_late_payment > 0 ? 'text-amber-600 font-medium' : 'text-muted-foreground'}>
+                         {report.members_late_payment}
+                       </span>
+                     </TableCell>
                     <TableCell className="text-right">
                       {report.status === 'generated' && report.pdf_path && (
                         <DropdownMenu modal={false}>
@@ -349,7 +372,7 @@ export default function Reports() {
       </Card>
 
       {reports.length > 0 && (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           <Card>
             <CardHeader className="pb-2">
               <CardDescription>{t('reports.totalReports')}</CardDescription>
@@ -385,6 +408,28 @@ export default function Reports() {
                 )}
               </CardTitle>
             </CardHeader>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription>Miembros Morosos</CardDescription>
+              <CardTitle className={`text-2xl ${(reports[0]?.members_overdue ?? 0) > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                {reports[0]?.members_overdue ?? 0}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pb-3">
+              <p className="text-xs text-muted-foreground">Balance &lt; −1 cuota (último reporte)</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription>Pago Demorado</CardDescription>
+              <CardTitle className={`text-2xl ${(reports[0]?.members_late_payment ?? 0) > 0 ? 'text-amber-600' : 'text-green-600'}`}>
+                {reports[0]?.members_late_payment ?? 0}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pb-3">
+              <p className="text-xs text-muted-foreground">Balance negativo &lt; 1 cuota (último reporte)</p>
+            </CardContent>
           </Card>
         </div>
       )}
