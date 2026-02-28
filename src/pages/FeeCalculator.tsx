@@ -501,21 +501,43 @@ export default function FeeCalculator() {
     const round500 = (n: number) => Math.round(n / 500) * 500;
     const baseStd = round500(currentStdFee * (1 + selectedCVS / 100));
     const baseSol = round500(currentSolFee * (1 + selectedCVS / 100));
-    const raw = [
-      { buffer: -2, name: t('feeCalculator.low'), color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200', isVariant: true },
-      { buffer: 0, name: t('feeCalculator.baseline'), color: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200', isVariant: false },
-      { buffer: 2, name: t('feeCalculator.high'), color: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200', isVariant: true },
+
+    // "Ratio GL" proposal: proposedStd such that GL% of Capita = GL% of Capita 1 year ago
+    const projectedGlStd = Math.round(glStdNum * (1 + selectedCVS / 100));
+    const projectedGlSol = Math.round(glSolNum * (1 + selectedCVS / 100));
+    const targetDelta = feeOneYearAgoStd !== null && glStdOneYearAgo !== null && feeOneYearAgoStd > 0
+      ? (glStdOneYearAgo / feeOneYearAgoStd) * 100
+      : null;
+    const ratioStd = targetDelta && targetDelta > 0 ? round500(projectedGlStd / (targetDelta / 100)) : baseStd;
+    const ratioSol = targetDelta && targetDelta > 0 ? round500(projectedGlSol / (targetDelta / 100)) : baseSol;
+
+    type ProposalItem = {
+      name: string; color: string; isVariant: boolean;
+      proposedStd: number; proposedSol: number; kpis: ProposalKPIs;
+      baselineKpis?: ProposalKPIs; buffer: number;
+    };
+
+    const items: ProposalItem[] = [
+      {
+        buffer: 0, name: 'Ratio GL', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+        isVariant: false, proposedStd: ratioStd, proposedSol: ratioSol,
+        kpis: computeKPIs(ratioStd, ratioSol),
+      },
+      {
+        buffer: 0, name: t('feeCalculator.baseline'), color: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200',
+        isVariant: false, proposedStd: baseStd, proposedSol: baseSol,
+        kpis: computeKPIs(baseStd, baseSol),
+      },
+      {
+        buffer: 2, name: t('feeCalculator.high'), color: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
+        isVariant: false,
+        proposedStd: round500(baseStd * (1 + 2 / 100)),
+        proposedSol: round500(baseSol * (1 + 2 / 100)),
+        kpis: computeKPIs(round500(baseStd * (1 + 2 / 100)), round500(baseSol * (1 + 2 / 100))),
+      },
     ];
-    const items = raw.map((p) => {
-      const proposedStd = round500(baseStd * (1 + p.buffer / 100));
-      const proposedSol = round500(baseSol * (1 + p.buffer / 100));
-      return { ...p, proposedStd, proposedSol, kpis: computeKPIs(proposedStd, proposedSol) };
-    });
-    const bKpis = items.find((p) => !p.isVariant)?.kpis;
-    return items.map((p) => ({
-      ...p,
-      baselineKpis: p.isVariant ? bKpis : undefined,
-    }));
+
+    return items;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasCvs, selectedCVS, currentStdFee, currentSolFee, stdMemberCount, solMemberCount, glStdNum, glSolNum, yoyAccumulated, feeOneYearAgoStd, glStdOneYearAgo, t]);
 
@@ -686,9 +708,9 @@ export default function FeeCalculator() {
             </div>
           ) : (
             <div className="grid grid-cols-3 gap-2 md:gap-4">
-              {proposals.map((p) => (
+              {proposals.map((p, idx) => (
                 <ProposalCard
-                  key={p.buffer}
+                  key={idx}
                   name={p.name}
                   badgeColor={p.color}
                   bufferPct={p.buffer}
@@ -697,8 +719,6 @@ export default function FeeCalculator() {
                   kpis={p.kpis}
                   t={t}
                   noGlData={noGlData}
-                  baselineKpis={p.baselineKpis}
-                  isVariant={p.isVariant}
                 />
               ))}
             </div>
