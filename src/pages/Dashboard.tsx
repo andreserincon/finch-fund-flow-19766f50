@@ -22,6 +22,7 @@ import {
   HandCoins
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { parseLocalDate } from '@/lib/utils';
 import { es, enUS } from 'date-fns/locale';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -100,16 +101,16 @@ export default function Dashboard() {
 
   // Calculate account yield (monthly and annual)
   const monthlyYieldARS = transactions
-    .filter(t => new Date(t.transaction_date) >= monthStart && t.category === 'account_yield' && t.account !== 'savings')
+    .filter(t => parseLocalDate(t.transaction_date) >= monthStart && t.category === 'account_yield' && t.account !== 'savings')
     .reduce((sum, t) => sum + (t.transaction_type === 'income' ? t.amount : -t.amount), 0);
   const monthlyYieldUSD = transactions
-    .filter(t => new Date(t.transaction_date) >= monthStart && t.category === 'account_yield' && t.account === 'savings')
+    .filter(t => parseLocalDate(t.transaction_date) >= monthStart && t.category === 'account_yield' && t.account === 'savings')
     .reduce((sum, t) => sum + (t.transaction_type === 'income' ? t.amount : -t.amount), 0);
   const annualYieldARS = transactions
-    .filter(t => new Date(t.transaction_date) >= yearStart && t.category === 'account_yield' && t.account !== 'savings')
+    .filter(t => parseLocalDate(t.transaction_date) >= yearStart && t.category === 'account_yield' && t.account !== 'savings')
     .reduce((sum, t) => sum + (t.transaction_type === 'income' ? t.amount : -t.amount), 0);
   const annualYieldUSD = transactions
-    .filter(t => new Date(t.transaction_date) >= yearStart && t.category === 'account_yield' && t.account === 'savings')
+    .filter(t => parseLocalDate(t.transaction_date) >= yearStart && t.category === 'account_yield' && t.account === 'savings')
     .reduce((sum, t) => sum + (t.transaction_type === 'income' ? t.amount : -t.amount), 0);
 
   const totalMonthlyYield = monthlyYieldARS + (monthlyYieldUSD * exchangeRate);
@@ -132,22 +133,22 @@ export default function Dashboard() {
   
   // Calculate monthly income (ARS accounts + savings converted to ARS)
   const monthlyIncomeARS = transactions
-    .filter(t => new Date(t.transaction_date) >= monthStart && t.transaction_type === 'income' && t.account !== 'savings')
+    .filter(t => parseLocalDate(t.transaction_date) >= monthStart && t.transaction_type === 'income' && t.account !== 'savings')
     .reduce((sum, t) => sum + t.amount, 0);
   
   const monthlyIncomeUSD = transactions
-    .filter(t => new Date(t.transaction_date) >= monthStart && t.transaction_type === 'income' && t.account === 'savings')
+    .filter(t => parseLocalDate(t.transaction_date) >= monthStart && t.transaction_type === 'income' && t.account === 'savings')
     .reduce((sum, t) => sum + t.amount, 0);
   
   const monthlyIncome = monthlyIncomeARS + (monthlyIncomeUSD * exchangeRate);
 
   // Calculate monthly expenses (ARS accounts + savings converted to ARS)
   const monthlyExpensesARS = transactions
-    .filter(t => new Date(t.transaction_date) >= monthStart && t.transaction_type === 'expense' && t.account !== 'savings')
+    .filter(t => parseLocalDate(t.transaction_date) >= monthStart && t.transaction_type === 'expense' && t.account !== 'savings')
     .reduce((sum, t) => sum + t.amount, 0);
   
   const monthlyExpensesUSD = transactions
-    .filter(t => new Date(t.transaction_date) >= monthStart && t.transaction_type === 'expense' && t.account === 'savings')
+    .filter(t => parseLocalDate(t.transaction_date) >= monthStart && t.transaction_type === 'expense' && t.account === 'savings')
     .reduce((sum, t) => sum + t.amount, 0);
   
   const monthlyExpenses = monthlyExpensesARS + (monthlyExpensesUSD * exchangeRate);

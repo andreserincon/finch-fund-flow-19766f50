@@ -9,7 +9,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { useLoans } from '@/hooks/useLoans';
 import { Loan, ACCOUNT_LABELS } from '@/lib/types';
-import { formatCurrency, getCurrencyForAccount } from '@/lib/utils';
+import { formatCurrency, getCurrencyForAccount, parseLocalDate } from '@/lib/utils';
 import { format } from 'date-fns';
 import { AlertTriangle } from 'lucide-react';
 
@@ -51,7 +51,7 @@ export function RevertPaidDialog({ loan, open, onOpenChange }: RevertPaidDialogP
         <div className="p-4 rounded-lg bg-muted">
           <p className="font-medium">{loan.member?.full_name}</p>
           <p className="text-sm text-muted-foreground">
-            {ACCOUNT_LABELS[loan.account]} • {format(new Date(loan.loan_date), 'MMM d, yyyy')}
+            {ACCOUNT_LABELS[loan.account]} • {format(parseLocalDate(loan.loan_date), 'MMM d, yyyy')}
           </p>
           <div className="mt-3 pt-3 border-t">
             <p className="text-xs text-muted-foreground">Loan Amount</p>

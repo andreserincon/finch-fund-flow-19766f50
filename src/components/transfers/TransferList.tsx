@@ -21,7 +21,7 @@ import {
 import { MoreHorizontal, Pencil, Trash2, ArrowRight } from 'lucide-react';
 import { format } from 'date-fns';
 import { AccountTransfer, ACCOUNT_LABELS } from '@/lib/types';
-import { formatCurrency, getCurrencyForAccount } from '@/lib/utils';
+import { formatCurrency, getCurrencyForAccount, parseLocalDate } from '@/lib/utils';
 
 export function TransferList() {
   const { transfers, isLoading } = useAccountTransfers();
@@ -60,7 +60,7 @@ export function TransferList() {
                     <Badge variant="outline">{ACCOUNT_LABELS[transfer.to_account]}</Badge>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    {format(new Date(transfer.transfer_date), 'MMM d, yyyy')}
+                    {format(parseLocalDate(transfer.transfer_date), 'MMM d, yyyy')}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -118,7 +118,7 @@ export function TransferList() {
               return (
                 <TableRow key={transfer.id}>
                   <TableCell className="font-medium">
-                    {format(new Date(transfer.transfer_date), 'MMM d, yyyy')}
+                    {format(parseLocalDate(transfer.transfer_date), 'MMM d, yyyy')}
                   </TableCell>
                   <TableCell>
                     <Badge variant="outline">{ACCOUNT_LABELS[transfer.from_account]}</Badge>

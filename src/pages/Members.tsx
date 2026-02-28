@@ -34,6 +34,7 @@ import {
 import { Search, Phone, MoreHorizontal, Pencil, Trash2, Filter, X, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { format } from 'date-fns';
 import { FEE_TYPE_LABELS, MemberBalance } from '@/lib/types';
+import { parseLocalDate } from '@/lib/utils';
 
 const STATUS_OPTIONS = [
   { value: 'active', label: 'Active' },
@@ -227,7 +228,7 @@ export default function Members() {
         return direction * (statusA - statusB);
       }
       case 'joined':
-        return direction * (new Date(a.join_date).getTime() - new Date(b.join_date).getTime());
+        return direction * (parseLocalDate(a.join_date).getTime() - parseLocalDate(b.join_date).getTime());
       default:
         return 0;
     }
@@ -370,7 +371,7 @@ export default function Members() {
                 </div>
                 <div>
                   <p className="text-muted-foreground text-xs">Joined</p>
-                  <p className="font-mono text-sm">{format(new Date(member.join_date), 'MMM d, yyyy')}</p>
+                  <p className="font-mono text-sm">{format(parseLocalDate(member.join_date), 'MMM d, yyyy')}</p>
                 </div>
                 <div>
                   <p className="text-muted-foreground text-xs">Balance</p>
@@ -493,7 +494,7 @@ export default function Members() {
                     )}
                   </TableCell>
                   <TableCell className="text-muted-foreground">
-                    {format(new Date(member.join_date), 'MMM d, yyyy')}
+                    {format(parseLocalDate(member.join_date), 'MMM d, yyyy')}
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">
