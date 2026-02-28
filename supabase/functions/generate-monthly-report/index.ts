@@ -335,6 +335,8 @@ Deno.serve(async (req) => {
           collected_monthly_fees: collectedMonthlyFees,
           collection_percentage: collectionPercentage,
           members_missing_payment: membersMissingPayment,
+          outstanding_loans_ars: loans.filter((l: any) => l.account !== 'savings').reduce((s: number, l: any) => s + (Number(l.amount) - Number(l.amount_paid)), 0),
+          outstanding_loans_usd: loans.filter((l: any) => l.account === 'savings').reduce((s: number, l: any) => s + (Number(l.amount) - Number(l.amount_paid)), 0),
         })
         .eq('id', existingReport.id);
 
@@ -361,6 +363,8 @@ Deno.serve(async (req) => {
           collected_monthly_fees: collectedMonthlyFees,
           collection_percentage: collectionPercentage,
           members_missing_payment: membersMissingPayment,
+          outstanding_loans_ars: loans.filter((l: any) => l.account !== 'savings').reduce((s: number, l: any) => s + (Number(l.amount) - Number(l.amount_paid)), 0),
+          outstanding_loans_usd: loans.filter((l: any) => l.account === 'savings').reduce((s: number, l: any) => s + (Number(l.amount) - Number(l.amount_paid)), 0),
         })
         .select()
         .single();
@@ -463,10 +467,14 @@ Deno.serve(async (req) => {
                         'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
     const monthName = monthNames[month - 1];
 
-    // Calculate loan KPIs for lite report
+    // Calculate loan KPIs for lite report (separate by currency, convert USD to ARS)
     const totalActiveLoans = loans.length;
-    const totalLoanAmount = loans.reduce((sum: number, l: any) => sum + Number(l.amount), 0);
-    const totalLoanDue = loans.reduce((sum: number, l: any) => sum + (Number(l.amount) - Number(l.amount_paid)), 0);
+    const totalLoanAmountARS = loans.filter((l: any) => l.account !== 'savings').reduce((sum: number, l: any) => sum + Number(l.amount), 0);
+    const totalLoanAmountUSD = loans.filter((l: any) => l.account === 'savings').reduce((sum: number, l: any) => sum + Number(l.amount), 0);
+    const totalLoanAmount = totalLoanAmountARS + (totalLoanAmountUSD * exchangeRate);
+    const totalLoanDueARS = loans.filter((l: any) => l.account !== 'savings').reduce((sum: number, l: any) => sum + (Number(l.amount) - Number(l.amount_paid)), 0);
+    const totalLoanDueUSD = loans.filter((l: any) => l.account === 'savings').reduce((sum: number, l: any) => sum + (Number(l.amount) - Number(l.amount_paid)), 0);
+    const totalLoanDue = totalLoanDueARS + (totalLoanDueUSD * exchangeRate);
 
     // Cambio 4: Rendimiento de cuenta (account_yield)
     const yieldMonthARS = transactions
@@ -509,6 +517,8 @@ Deno.serve(async (req) => {
       totalActiveLoans,
       totalLoanAmount,
       totalLoanDue,
+      totalLoanAmountUSD,
+      totalLoanDueUSD,
       // Yield KPIs
       yieldMonthARS,
       yieldMonthUSD,
@@ -702,6 +712,8 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
   let loansSection = '';
   if (isLite) {
     if (data.totalActiveLoans > 0) {
+      const usdNoteAmount = data.totalLoanAmountUSD > 0 ? `<div style="font-size: 8px; color: #666; margin-top: 2px;">Incluye USD ${formatCurrency(data.totalLoanAmountUSD, 'USD')} × ${data.exchangeRate}</div>` : '';
+      const usdNoteDue = data.totalLoanDueUSD > 0 ? `<div style="font-size: 8px; color: #666; margin-top: 2px;">Incluye USD ${formatCurrency(data.totalLoanDueUSD, 'USD')} × ${data.exchangeRate}</div>` : '';
       loansSection = `
         <div class="section">
           <h2 class="section-title">${loansSectionNum}. Préstamos Activos (Resumen)</h2>
@@ -713,10 +725,12 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
             <div class="stat-card warning">
               <div class="stat-label">Monto Total en Préstamos</div>
               <div class="stat-value">${formatCurrency(data.totalLoanAmount)}</div>
+              ${usdNoteAmount}
             </div>
             <div class="stat-card danger">
               <div class="stat-label">Monto Pendiente de Cobro</div>
               <div class="stat-value negative">${formatCurrency(data.totalLoanDue)}</div>
+              ${usdNoteDue}
             </div>
           </div>
         </div>
