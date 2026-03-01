@@ -13,6 +13,7 @@ export interface Book {
   current_holder_id: string | null;
   held_since: string | null;
   status: BookStatus;
+  is_approved: boolean;
   owner_id: string | null;
   created_at: string;
   updated_at: string;

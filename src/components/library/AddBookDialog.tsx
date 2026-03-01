@@ -71,6 +71,7 @@ export function AddBookDialog({ open, onClose }: AddBookDialogProps) {
         held_since: null,
         status: 'available',
         owner_id: ownerId,
+        is_approved: isBibliotecario ? true : undefined,
       },
       {
         onSuccess: () => {

@@ -115,6 +115,7 @@ export type Database = {
           grade_level: Database["public"]["Enums"]["masonic_grade"]
           held_since: string | null
           id: string
+          is_approved: boolean
           owner_id: string | null
           publication_date: string | null
           status: Database["public"]["Enums"]["book_status"]
@@ -130,6 +131,7 @@ export type Database = {
           grade_level?: Database["public"]["Enums"]["masonic_grade"]
           held_since?: string | null
           id?: string
+          is_approved?: boolean
           owner_id?: string | null
           publication_date?: string | null
           status?: Database["public"]["Enums"]["book_status"]
@@ -145,6 +147,7 @@ export type Database = {
           grade_level?: Database["public"]["Enums"]["masonic_grade"]
           held_since?: string | null
           id?: string
+          is_approved?: boolean
           owner_id?: string | null
           publication_date?: string | null
           status?: Database["public"]["Enums"]["book_status"]

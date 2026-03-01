@@ -492,6 +492,8 @@ export default {
       ownerMember: 'Miembro',
       selectOwner: 'Seleccionar propietario...',
       myBooks: 'Mis Libros',
+      pendingApproval: 'Pendientes de Aprobación',
+      bookApproved: 'Libro aprobado correctamente',
       bookAdded: 'Libro agregado correctamente',
       bookAddError: 'Error al agregar libro',
       bookUpdated: 'Libro actualizado correctamente',
