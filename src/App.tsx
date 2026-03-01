@@ -18,6 +18,7 @@ import FeeCalculator from "./pages/FeeCalculator";
 import AccountTransfer from "./pages/AccountTransfer";
 import UserManagement from "./pages/UserManagement";
 import Reports from "./pages/Reports";
+import Library from "./pages/Library";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
@@ -101,6 +102,7 @@ const App = () => (
         <Route path="/expense-categories" element={<ProtectedRoute><ExtraordinaryExpenses /></ProtectedRoute>} />
         <Route path="/fee-calculator" element={<ProtectedRoute><FeeCalculator /></ProtectedRoute>} />
         <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
+        <Route path="/library" element={<ProtectedRoute><Library /></ProtectedRoute>} />
         <Route path="/user-management" element={<AdminRoute><UserManagement /></AdminRoute>} />
         <Route path="*" element={<NotFound />} />
       </Routes>

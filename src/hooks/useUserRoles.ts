@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 
-export type AppRole = 'treasurer' | 'vm' | 'member';
+export type AppRole = 'treasurer' | 'vm' | 'member' | 'bibliotecario';
 
 export interface UserWithRole {
   user_id: string;
