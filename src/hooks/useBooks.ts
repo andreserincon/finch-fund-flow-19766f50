@@ -34,7 +34,7 @@ export function useBooks(userGrade: MasonicGrade = 'aprendiz') {
   });
 
   const addBook = useMutation({
-    mutationFn: async (book: Omit<Book, 'id' | 'created_at' | 'updated_at' | 'holder_name' | 'owner_name'>) => {
+    mutationFn: async (book: Omit<Book, 'id' | 'created_at' | 'updated_at' | 'holder_name' | 'owner_name' | 'is_approved'> & { is_approved?: boolean }) => {
       const { error } = await supabase.from('books').insert(book as any);
       if (error) throw error;
     },

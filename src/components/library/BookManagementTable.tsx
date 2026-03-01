@@ -4,7 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, Pencil, Trash2, QrCode } from 'lucide-react';
+import { MoreHorizontal, Pencil, Trash2, QrCode, CheckCircle2, XCircle } from 'lucide-react';
 import { useBooks } from '@/hooks/useBooks';
 import { EditBookDialog } from './EditBookDialog';
 import { DeleteBookDialog } from './DeleteBookDialog';
@@ -14,15 +14,76 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 
 export function BookManagementTable() {
   const { t } = useTranslation();
-  const { books, isLoading } = useBooks('maestro');
+  const { books, isLoading, updateBook } = useBooks('maestro');
   const [editBook, setEditBook] = useState<Book | null>(null);
   const [deleteBook, setDeleteBook] = useState<Book | null>(null);
   const [qrBook, setQrBook] = useState<Book | null>(null);
 
   if (isLoading) return <p className="text-muted-foreground p-4">{t('common.loading')}</p>;
 
+  const pendingBooks = books.filter(b => !b.is_approved);
+  const approvedBooks = books.filter(b => b.is_approved);
+
+  const handleApprove = (book: Book) => {
+    updateBook.mutate({ id: book.id, is_approved: true } as any);
+  };
+
   return (
     <>
+      {pendingBooks.length > 0 && (
+        <div className="space-y-3 mb-6">
+          <h3 className="text-sm font-semibold text-amber-700 dark:text-amber-400 flex items-center gap-2">
+            <XCircle className="h-4 w-4" />
+            {t('library.pendingApproval')} ({pendingBooks.length})
+          </h3>
+          <div className="border border-amber-500/30 rounded-lg">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t('library.bookTitle')}</TableHead>
+                  <TableHead>{t('library.author')}</TableHead>
+                  <TableHead>{t('library.gradeLevel')}</TableHead>
+                  <TableHead>{t('library.owner')}</TableHead>
+                  <TableHead className="w-24">{t('common.actions')}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {pendingBooks.map((book) => (
+                  <TableRow key={book.id}>
+                    <TableCell className="font-medium">{book.title}</TableCell>
+                    <TableCell>{book.author}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{t(`library.grades.${book.grade_level}`)}</Badge>
+                    </TableCell>
+                    <TableCell className="text-sm">{book.owner_name || t('library.ownerLodge')}</TableCell>
+                    <TableCell>
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                          onClick={() => handleApprove(book)}
+                        >
+                          <CheckCircle2 className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-destructive hover:bg-destructive/10"
+                          onClick={() => setDeleteBook(book)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+      )}
+
       <div className="border rounded-lg">
         <Table>
           <TableHeader>
@@ -37,7 +98,7 @@ export function BookManagementTable() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {books.map((book) => (
+            {approvedBooks.map((book) => (
               <TableRow key={book.id}>
                 <TableCell className="font-medium">{book.title}</TableCell>
                 <TableCell>{book.author}</TableCell>
@@ -71,7 +132,7 @@ export function BookManagementTable() {
                 </TableCell>
               </TableRow>
             ))}
-            {books.length === 0 && (
+            {approvedBooks.length === 0 && (
               <TableRow>
                 <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                   {t('library.noBooks')}

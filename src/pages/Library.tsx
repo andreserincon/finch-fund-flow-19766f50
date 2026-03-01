@@ -46,7 +46,8 @@ export default function Library() {
       b.author.toLowerCase().includes(search.toLowerCase());
     const matchGrade = gradeFilter === 'all' || b.grade_level === gradeFilter;
     const matchStatus = statusFilter === 'all' || b.status === statusFilter;
-    return matchSearch && matchGrade && matchStatus;
+    const isApproved = b.is_approved;
+    return matchSearch && matchGrade && matchStatus && isApproved;
   });
 
   return (
