@@ -359,6 +359,7 @@ export default {
         vm: 'VM',
         member: 'Member',
         bibliotecario: 'Librarian',
+        admin: 'Administrator',
       },
       permissions: {
         title: 'Permissions',
@@ -366,6 +367,7 @@ export default {
         vm: 'View only: read information',
         member: 'Limited access to own data',
         bibliotecario: 'Full library management access',
+        admin: 'Full access to all modules and functions',
         none: 'No access',
       },
     },

@@ -13,7 +13,7 @@ export function useIsBibliotecario() {
         .from('user_roles')
         .select('role')
         .eq('user_id', user.id)
-        .eq('role', 'bibliotecario' as any)
+        .in('role', ['bibliotecario', 'admin'] as any[])
         .maybeSingle();
       if (error) {
         console.error('Error checking bibliotecario status:', error);
