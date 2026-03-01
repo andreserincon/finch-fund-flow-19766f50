@@ -11,11 +11,15 @@ import {
   HandCoins,
   UserCog,
   FileText,
-  BookOpen
+  BookOpen,
+  ClipboardList,
+  ChevronDown
 } from 'lucide-react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { NavLink } from '@/components/NavLink';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
+import { useIsBibliotecario } from '@/hooks/useIsBibliotecario';
 import {
   Sidebar,
   SidebarContent,
@@ -28,21 +32,38 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
+
+type AppModule = 'treasury' | 'library';
 
 export function AppSidebar() {
   const { signOut, user } = useAuth();
   const { t } = useTranslation();
   const { isAdmin } = useIsAdmin();
+  const { isBibliotecario } = useIsBibliotecario();
+  const [activeModule, setActiveModule] = useState<AppModule>('treasury');
 
+  const modules = [
+    { key: 'treasury' as AppModule, label: t('nav.treasury'), sublabel: t('nav.managementSystem'), icon: Wallet },
+    { key: 'library' as AppModule, label: t('nav.library'), sublabel: t('library.subtitle'), icon: BookOpen },
+  ];
+
+  const currentModule = modules.find(m => m.key === activeModule)!;
+
+  // Treasury nav items
   const mainNavItems = [
     { title: t('nav.dashboard'), url: '/', icon: LayoutDashboard },
     { title: t('nav.members'), url: '/members', icon: Users },
     { title: t('nav.transactions'), url: '/transactions', icon: Receipt },
     { title: t('nav.loans'), url: '/loans', icon: HandCoins },
     { title: t('nav.reports'), url: '/reports', icon: FileText },
-    { title: t('nav.library'), url: '/library', icon: BookOpen },
   ];
 
   const actionItems = [
@@ -61,113 +82,204 @@ export function AppSidebar() {
     { title: t('nav.userManagement'), url: '/user-management', icon: UserCog },
   ];
 
+  // Library nav items
+  const libraryNavItems = [
+    { title: t('library.browse'), url: '/library', icon: BookOpen },
+  ];
+
+  const libraryAdminItems = [
+    { title: t('library.manage'), url: '/library?tab=manage', icon: Settings },
+    { title: t('library.requests'), url: '/library?tab=requests', icon: ClipboardList },
+  ];
+
   const handleSignOut = async () => {
     await signOut();
   };
 
   return (
     <Sidebar className="border-r border-sidebar-border">
-      <SidebarHeader className="p-6">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg gradient-primary">
-            <Wallet className="h-5 w-5 text-primary-foreground" />
-          </div>
-          <div>
-            <h1 className="text-lg font-semibold text-sidebar-foreground">{t('nav.treasury')}</h1>
-            <p className="text-xs text-sidebar-foreground/60">{t('nav.managementSystem')}</p>
-          </div>
-        </div>
+      <SidebarHeader className="p-4">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="flex items-center gap-3 w-full rounded-lg p-2 hover:bg-sidebar-accent transition-colors text-left">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg gradient-primary shrink-0">
+                <currentModule.icon className="h-5 w-5 text-primary-foreground" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h1 className="text-sm font-semibold text-sidebar-foreground truncate">{currentModule.label}</h1>
+                <p className="text-xs text-sidebar-foreground/60 truncate">{currentModule.sublabel}</p>
+              </div>
+              <ChevronDown className="h-4 w-4 text-sidebar-foreground/40 shrink-0" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-[220px]">
+            {modules.map((mod) => (
+              <DropdownMenuItem
+                key={mod.key}
+                onClick={() => setActiveModule(mod.key)}
+                className="flex items-center gap-3 p-2"
+              >
+                <div className={`flex h-8 w-8 items-center justify-center rounded-md ${mod.key === activeModule ? 'gradient-primary' : 'bg-muted'}`}>
+                  <mod.icon className={`h-4 w-4 ${mod.key === activeModule ? 'text-primary-foreground' : 'text-muted-foreground'}`} />
+                </div>
+                <div>
+                  <p className="text-sm font-medium">{mod.label}</p>
+                  <p className="text-xs text-muted-foreground">{mod.sublabel}</p>
+                </div>
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </SidebarHeader>
 
       <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-sidebar-foreground/50 text-xs uppercase tracking-wider px-3">
-            {t('nav.overview')}
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {mainNavItems.map((item) => (
-                <SidebarMenuItem key={item.url}>
-                  <SidebarMenuButton asChild>
-                    <NavLink 
-                      to={item.url} 
-                      end={item.url === '/'}
-                      className="sidebar-nav-item"
-                      activeClassName="active"
-                    >
-                      <item.icon className="h-5 w-5" />
-                      <span>{item.title}</span>
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {activeModule === 'treasury' && (
+          <>
+            <SidebarGroup>
+              <SidebarGroupLabel className="text-sidebar-foreground/50 text-xs uppercase tracking-wider px-3">
+                {t('nav.overview')}
+              </SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {mainNavItems.map((item) => (
+                    <SidebarMenuItem key={item.url}>
+                      <SidebarMenuButton asChild>
+                        <NavLink 
+                          to={item.url} 
+                          end={item.url === '/'}
+                          className="sidebar-nav-item"
+                          activeClassName="active"
+                        >
+                          <item.icon className="h-5 w-5" />
+                          <span>{item.title}</span>
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
 
-        {isAdmin && (
-          <SidebarGroup>
-            <SidebarGroupLabel className="text-sidebar-foreground/50 text-xs uppercase tracking-wider px-3">
-              {t('nav.quickActions')}
-            </SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {actionItems.map((item) => (
-                  <SidebarMenuItem key={item.url}>
-                    <SidebarMenuButton asChild>
-                      <NavLink 
-                        to={item.url} 
-                        className="sidebar-nav-item"
-                        activeClassName="active"
-                      >
-                        <item.icon className="h-5 w-5" />
-                        <span>{item.title}</span>
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
+            {isAdmin && (
+              <SidebarGroup>
+                <SidebarGroupLabel className="text-sidebar-foreground/50 text-xs uppercase tracking-wider px-3">
+                  {t('nav.quickActions')}
+                </SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {actionItems.map((item) => (
+                      <SidebarMenuItem key={item.url}>
+                        <SidebarMenuButton asChild>
+                          <NavLink 
+                            to={item.url} 
+                            className="sidebar-nav-item"
+                            activeClassName="active"
+                          >
+                            <item.icon className="h-5 w-5" />
+                            <span>{item.title}</span>
+                          </NavLink>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            )}
+
+            <SidebarGroup>
+              <SidebarGroupLabel className="text-sidebar-foreground/50 text-xs uppercase tracking-wider px-3">
+                {t('nav.settings')}
+              </SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {settingsItems.map((item) => (
+                    <SidebarMenuItem key={item.url}>
+                      <SidebarMenuButton asChild>
+                        <NavLink 
+                          to={item.url} 
+                          className="sidebar-nav-item"
+                          activeClassName="active"
+                        >
+                          <item.icon className="h-5 w-5" />
+                          <span>{item.title}</span>
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                  {isAdmin && adminSettingsItems.map((item) => (
+                    <SidebarMenuItem key={item.url}>
+                      <SidebarMenuButton asChild>
+                        <NavLink 
+                          to={item.url} 
+                          className="sidebar-nav-item"
+                          activeClassName="active"
+                        >
+                          <item.icon className="h-5 w-5" />
+                          <span>{item.title}</span>
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </>
         )}
 
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-sidebar-foreground/50 text-xs uppercase tracking-wider px-3">
-            {t('nav.settings')}
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {settingsItems.map((item) => (
-                <SidebarMenuItem key={item.url}>
-                  <SidebarMenuButton asChild>
-                    <NavLink 
-                      to={item.url} 
-                      className="sidebar-nav-item"
-                      activeClassName="active"
-                    >
-                      <item.icon className="h-5 w-5" />
-                      <span>{item.title}</span>
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-              {isAdmin && adminSettingsItems.map((item) => (
-                <SidebarMenuItem key={item.url}>
-                  <SidebarMenuButton asChild>
-                    <NavLink 
-                      to={item.url} 
-                      className="sidebar-nav-item"
-                      activeClassName="active"
-                    >
-                      <item.icon className="h-5 w-5" />
-                      <span>{item.title}</span>
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {activeModule === 'library' && (
+          <>
+            <SidebarGroup>
+              <SidebarGroupLabel className="text-sidebar-foreground/50 text-xs uppercase tracking-wider px-3">
+                {t('library.title')}
+              </SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {libraryNavItems.map((item) => (
+                    <SidebarMenuItem key={item.url}>
+                      <SidebarMenuButton asChild>
+                        <NavLink 
+                          to={item.url} 
+                          end
+                          className="sidebar-nav-item"
+                          activeClassName="active"
+                        >
+                          <item.icon className="h-5 w-5" />
+                          <span>{item.title}</span>
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+
+            {isBibliotecario && (
+              <SidebarGroup>
+                <SidebarGroupLabel className="text-sidebar-foreground/50 text-xs uppercase tracking-wider px-3">
+                  {t('nav.settings')}
+                </SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {libraryAdminItems.map((item) => (
+                      <SidebarMenuItem key={item.url}>
+                        <SidebarMenuButton asChild>
+                          <NavLink 
+                            to={item.url} 
+                            className="sidebar-nav-item"
+                            activeClassName="active"
+                          >
+                            <item.icon className="h-5 w-5" />
+                            <span>{item.title}</span>
+                          </NavLink>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            )}
+          </>
+        )}
       </SidebarContent>
 
       <SidebarFooter className="p-4 border-t border-sidebar-border">
