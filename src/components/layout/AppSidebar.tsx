@@ -15,7 +15,7 @@ import {
   ClipboardList,
   ChevronDown
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { NavLink } from '@/components/NavLink';
@@ -49,7 +49,13 @@ export function AppSidebar() {
   const { t } = useTranslation();
   const { isAdmin } = useIsAdmin();
   const { isBibliotecario } = useIsBibliotecario();
-  const [activeModule, setActiveModule] = useState<AppModule>('treasury');
+  const location = useLocation();
+  const deriveModule = (): AppModule => location.pathname.startsWith('/library') ? 'library' : 'treasury';
+  const [activeModule, setActiveModule] = useState<AppModule>(deriveModule);
+
+  useEffect(() => {
+    setActiveModule(deriveModule());
+  }, [location.pathname]);
 
   const modules = [
     { key: 'treasury' as AppModule, label: t('nav.treasury'), sublabel: t('nav.managementSystem'), icon: Wallet },
@@ -94,7 +100,6 @@ export function AppSidebar() {
   ];
 
   const navigate = useNavigate();
-  const location = useLocation();
 
   const handleSignOut = async () => {
     await signOut();
