@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useUserRoles, AppRole } from '@/hooks/useUserRoles';
 import { CreateUserDialog } from '@/components/users/CreateUserDialog';
-import { Users, Shield, Eye, User, X, UserPlus, BookOpen } from 'lucide-react';
+import { Users, Shield, Eye, User, X, UserPlus, BookOpen, Crown } from 'lucide-react';
 
 export default function UserManagement() {
   const { t } = useTranslation();
@@ -50,6 +50,13 @@ export default function UserManagement() {
             {t('userManagement.roles.bibliotecario')}
           </Badge>
         );
+      case 'admin':
+        return (
+          <Badge className="bg-emerald-600">
+            <Crown className="h-3 w-3 mr-1" />
+            {t('userManagement.roles.admin')}
+          </Badge>
+        );
       default:
         return <Badge variant="outline">{role}</Badge>;
     }
@@ -65,6 +72,8 @@ export default function UserManagement() {
         return t('userManagement.permissions.member');
       case 'bibliotecario':
         return t('userManagement.permissions.bibliotecario');
+      case 'admin':
+        return t('userManagement.permissions.admin');
       default:
         return t('userManagement.permissions.none');
     }
@@ -201,6 +210,7 @@ export default function UserManagement() {
                               <SelectItem value="vm">{t('userManagement.roles.vm')}</SelectItem>
                               <SelectItem value="member">{t('userManagement.roles.member')}</SelectItem>
                               <SelectItem value="bibliotecario">{t('userManagement.roles.bibliotecario')}</SelectItem>
+                              <SelectItem value="admin">{t('userManagement.roles.admin')}</SelectItem>
                             </SelectContent>
                           </Select>
                           {user.role && (

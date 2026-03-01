@@ -917,7 +917,7 @@ export type Database = {
     }
     Enums: {
       account_type: "bank" | "great_lodge" | "savings"
-      app_role: "treasurer" | "vm" | "member" | "bibliotecario"
+      app_role: "treasurer" | "vm" | "member" | "bibliotecario" | "admin"
       book_status: "available" | "on_loan"
       fee_type: "standard" | "solidarity"
       loan_status: "active" | "paid" | "cancelled"
@@ -1066,7 +1066,7 @@ export const Constants = {
   public: {
     Enums: {
       account_type: ["bank", "great_lodge", "savings"],
-      app_role: ["treasurer", "vm", "member", "bibliotecario"],
+      app_role: ["treasurer", "vm", "member", "bibliotecario", "admin"],
       book_status: ["available", "on_loan"],
       fee_type: ["standard", "solidarity"],
       loan_status: ["active", "paid", "cancelled"],

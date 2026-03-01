@@ -14,7 +14,7 @@ export function useIsAdmin() {
         .from('user_roles')
         .select('role')
         .eq('user_id', user.id)
-        .eq('role', 'treasurer')
+        .in('role', ['treasurer', 'admin'])
         .maybeSingle();
       
       if (error) {
