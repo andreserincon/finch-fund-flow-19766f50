@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
+import { useIsSuperAdmin } from "@/hooks/useIsSuperAdmin";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { InstallPrompt } from "@/components/pwa/InstallPrompt";
 import Dashboard from "./pages/Dashboard";
@@ -65,6 +66,29 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
   return <MainLayout>{children}</MainLayout>;
 }
 
+function SuperAdminRoute({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+  const { isSuperAdmin, isLoading: adminLoading } = useIsSuperAdmin();
+
+  if (loading || adminLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-pulse text-muted-foreground">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/auth" replace />;
+  }
+
+  if (!isSuperAdmin) {
+    return <Navigate to="/" replace />;
+  }
+
+  return <MainLayout>{children}</MainLayout>;
+}
+
 function AuthRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
 
@@ -103,7 +127,7 @@ const App = () => (
         <Route path="/fee-calculator" element={<ProtectedRoute><FeeCalculator /></ProtectedRoute>} />
         <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
         <Route path="/library" element={<ProtectedRoute><Library /></ProtectedRoute>} />
-        <Route path="/user-management" element={<AdminRoute><UserManagement /></AdminRoute>} />
+        <Route path="/user-management" element={<SuperAdminRoute><UserManagement /></SuperAdminRoute>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>

@@ -21,6 +21,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { NavLink } from '@/components/NavLink';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
+import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
 import { useIsBibliotecario } from '@/hooks/useIsBibliotecario';
 import {
   Sidebar,
@@ -49,6 +50,7 @@ export function AppSidebar() {
   const { signOut, user } = useAuth();
   const { t } = useTranslation();
   const { isAdmin } = useIsAdmin();
+  const { isSuperAdmin } = useIsSuperAdmin();
   const { isBibliotecario } = useIsBibliotecario();
   const location = useLocation();
   const deriveModule = (): AppModule => {
@@ -130,7 +132,7 @@ export function AppSidebar() {
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-[220px]">
-            {modules.filter(mod => !mod.adminOnly || isAdmin).map((mod) => (
+            {modules.filter(mod => !mod.adminOnly || isSuperAdmin).map((mod) => (
               <DropdownMenuItem
                 key={mod.key}
                 onClick={() => {
