@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { BookOpen, Plus, ClipboardList, Search, Filter } from 'lucide-react';
+import { BookOpen, Plus, ClipboardList, Search, Filter, Settings } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -14,19 +15,30 @@ import { AddBookDialog } from '@/components/library/AddBookDialog';
 import { BookDetailDrawer } from '@/components/library/BookDetailDrawer';
 import { PendingRequestsPanel } from '@/components/library/PendingRequestsPanel';
 import { BookManagementTable } from '@/components/library/BookManagementTable';
-import type { Book, MasonicGrade } from '@/lib/library-types';
+import type { Book } from '@/lib/library-types';
 
 export default function Library() {
   const { t } = useTranslation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { grade } = useUserGrade();
-  const { isBibliotecario } = useIsBibliotecario();
+  const { isBibliotecario, isLoading: biblioLoading } = useIsBibliotecario();
   const { books, isLoading } = useBooks(isBibliotecario ? 'maestro' : grade);
+
+  const activeTab = searchParams.get('tab') || 'browse';
 
   const [search, setSearch] = useState('');
   const [gradeFilter, setGradeFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const [showAddBook, setShowAddBook] = useState(false);
+
+  const handleTabChange = (value: string) => {
+    if (value === 'browse') {
+      setSearchParams({});
+    } else {
+      setSearchParams({ tab: value });
+    }
+  };
 
   const filtered = books.filter((b) => {
     const matchSearch =
@@ -55,7 +67,7 @@ export default function Library() {
         )}
       </div>
 
-      <Tabs defaultValue="browse">
+      <Tabs value={activeTab} onValueChange={handleTabChange}>
         <TabsList>
           <TabsTrigger value="browse">
             <Search className="h-4 w-4 mr-1" />
@@ -64,7 +76,7 @@ export default function Library() {
           {isBibliotecario && (
             <>
               <TabsTrigger value="manage">
-                <BookOpen className="h-4 w-4 mr-1" />
+                <Settings className="h-4 w-4 mr-1" />
                 {t('library.manage')}
               </TabsTrigger>
               <TabsTrigger value="requests">
@@ -76,7 +88,6 @@ export default function Library() {
         </TabsList>
 
         <TabsContent value="browse" className="space-y-4">
-          {/* Filters */}
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -111,7 +122,6 @@ export default function Library() {
             </Select>
           </div>
 
-          {/* Book Grid */}
           {isLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {[...Array(6)].map((_, i) => (

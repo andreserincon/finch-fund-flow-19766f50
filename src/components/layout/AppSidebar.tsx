@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { NavLink } from '@/components/NavLink';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { useIsBibliotecario } from '@/hooks/useIsBibliotecario';
@@ -88,9 +89,12 @@ export function AppSidebar() {
   ];
 
   const libraryAdminItems = [
-    { title: t('library.manage'), url: '/library?tab=manage', icon: Settings },
-    { title: t('library.requests'), url: '/library?tab=requests', icon: ClipboardList },
+    { title: t('library.manage'), tab: 'manage', icon: Settings },
+    { title: t('library.requests'), tab: 'requests', icon: ClipboardList },
   ];
+
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const handleSignOut = async () => {
     await signOut();
@@ -260,20 +264,23 @@ export function AppSidebar() {
                 </SidebarGroupLabel>
                 <SidebarGroupContent>
                   <SidebarMenu>
-                    {libraryAdminItems.map((item) => (
-                      <SidebarMenuItem key={item.url}>
-                        <SidebarMenuButton asChild>
-                          <NavLink 
-                            to={item.url} 
-                            className="sidebar-nav-item"
-                            activeClassName="active"
-                          >
-                            <item.icon className="h-5 w-5" />
-                            <span>{item.title}</span>
-                          </NavLink>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    ))}
+                    {libraryAdminItems.map((item) => {
+                      const isActive = location.pathname === '/library' && 
+                        new URLSearchParams(location.search).get('tab') === item.tab;
+                      return (
+                        <SidebarMenuItem key={item.tab}>
+                          <SidebarMenuButton asChild>
+                            <button
+                              onClick={() => navigate(`/library?tab=${item.tab}`)}
+                              className={`sidebar-nav-item w-full flex items-center gap-2 ${isActive ? 'active' : ''}`}
+                            >
+                              <item.icon className="h-5 w-5" />
+                              <span>{item.title}</span>
+                            </button>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      );
+                    })}
                   </SidebarMenu>
                 </SidebarGroupContent>
               </SidebarGroup>
