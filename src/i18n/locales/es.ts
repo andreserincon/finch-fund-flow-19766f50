@@ -55,6 +55,8 @@ export default {
       userManagement: 'Gestión de Usuarios',
       feeCalculator: 'Calculadora de Capitas',
       library: 'Biblioteca',
+      administration: 'Administración',
+      adminSubtitle: 'Gestión del sistema',
     },
 
     // Dashboard
@@ -370,6 +372,11 @@ export default {
         admin: 'Acceso total a todos los módulos y funciones',
         none: 'Sin acceso',
       },
+      editUser: 'Editar Usuario',
+      newPassword: 'Nueva Contraseña',
+      passwordMinLength: 'La contraseña debe tener al menos 6 caracteres',
+      passwordUpdated: 'Contraseña actualizada',
+      passwordUpdateError: 'Error al actualizar contraseña',
     },
 
     // Fee Calculator
