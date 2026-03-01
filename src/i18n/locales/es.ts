@@ -488,7 +488,7 @@ export default {
       rejected: 'Rechazada',
       generateLabel: 'Generar Etiqueta',
       owner: 'Propietario',
-      ownerLodge: 'La Logia',
+      ownerLodge: 'RL SB 646',
       ownerMember: 'Miembro',
       selectOwner: 'Seleccionar propietario...',
       myBooks: 'Mis Libros',

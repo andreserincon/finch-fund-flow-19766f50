@@ -27,16 +27,22 @@ export function AddBookDialog({ open, onClose }: AddBookDialogProps) {
   const { members } = useMembers();
 
   // Get current user's member_id
-  const { data: userMemberId } = useQuery({
-    queryKey: ['user-member-id', user?.id],
+  const { data: userProfile } = useQuery({
+    queryKey: ['user-profile-member', user?.id],
     queryFn: async () => {
       if (!user?.id) return null;
-      const { data } = await supabase
+      const { data: profile } = await supabase
         .from('profiles')
         .select('member_id')
         .eq('id', user.id)
         .maybeSingle();
-      return data?.member_id || null;
+      if (!profile?.member_id) return null;
+      const { data: member } = await supabase
+        .from('members')
+        .select('id, full_name')
+        .eq('id', profile.member_id)
+        .maybeSingle();
+      return member;
     },
     enabled: !!user?.id,
   });
@@ -57,7 +63,7 @@ export function AddBookDialog({ open, onClose }: AddBookDialogProps) {
 
     const ownerId = form.owner_type === 'lodge'
       ? null
-      : (isBibliotecario ? (form.owner_id || null) : userMemberId);
+      : (isBibliotecario ? (form.owner_id || userProfile?.id || null) : (userProfile?.id || null));
 
     addBook.mutate(
       {
@@ -118,13 +124,17 @@ export function AddBookDialog({ open, onClose }: AddBookDialogProps) {
           </div>
           <div>
             <Label>{t('library.owner')}</Label>
-            <Select value={form.owner_type} onValueChange={(v) => setForm(f => ({ ...f, owner_type: v as 'lodge' | 'member', owner_id: '' }))}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {isBibliotecario && <SelectItem value="lodge">{t('library.ownerLodge')}</SelectItem>}
-                <SelectItem value="member">{t('library.ownerMember')}</SelectItem>
-              </SelectContent>
-            </Select>
+            {isBibliotecario ? (
+              <Select value={form.owner_type} onValueChange={(v) => setForm(f => ({ ...f, owner_type: v as 'lodge' | 'member', owner_id: '' }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="lodge">{t('library.ownerLodge')}</SelectItem>
+                  <SelectItem value="member">{t('library.ownerMember')}</SelectItem>
+                </SelectContent>
+              </Select>
+            ) : (
+              <Input value={userProfile?.full_name || ''} disabled className="bg-muted" />
+            )}
           </div>
           {form.owner_type === 'member' && isBibliotecario && (
             <div>
