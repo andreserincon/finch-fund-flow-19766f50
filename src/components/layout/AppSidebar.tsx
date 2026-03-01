@@ -13,7 +13,8 @@ import {
   FileText,
   BookOpen,
   ClipboardList,
-  ChevronDown
+  ChevronDown,
+  Plus
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -92,6 +93,7 @@ export function AppSidebar() {
   // Library nav items
   const libraryNavItems = [
     { title: t('library.browse'), url: '/library', icon: BookOpen },
+    { title: t('library.addBook'), url: '/library?tab=add', icon: Plus },
   ];
 
   const libraryAdminItems = [
@@ -125,7 +127,10 @@ export function AppSidebar() {
             {modules.map((mod) => (
               <DropdownMenuItem
                 key={mod.key}
-                onClick={() => setActiveModule(mod.key)}
+                onClick={() => {
+                  setActiveModule(mod.key);
+                  navigate(mod.key === 'library' ? '/library' : '/');
+                }}
                 className="flex items-center gap-3 p-2"
               >
                 <div className={`flex h-8 w-8 items-center justify-center rounded-md ${mod.key === activeModule ? 'gradient-primary' : 'bg-muted'}`}>
@@ -243,21 +248,24 @@ export function AppSidebar() {
               </SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
-                  {libraryNavItems.map((item) => (
-                    <SidebarMenuItem key={item.url}>
-                      <SidebarMenuButton asChild>
-                        <NavLink 
-                          to={item.url} 
-                          end
-                          className="sidebar-nav-item"
-                          activeClassName="active"
-                        >
-                          <item.icon className="h-5 w-5" />
-                          <span>{item.title}</span>
-                        </NavLink>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
+                  {libraryNavItems.map((item) => {
+                    const isActive = item.url === '/library'
+                      ? location.pathname === '/library' && !location.search
+                      : location.pathname + location.search === item.url;
+                    return (
+                      <SidebarMenuItem key={item.url}>
+                        <SidebarMenuButton asChild>
+                          <button
+                            onClick={() => navigate(item.url)}
+                            className={`sidebar-nav-item w-full flex items-center gap-2 ${isActive ? 'active' : ''}`}
+                          >
+                            <item.icon className="h-5 w-5" />
+                            <span>{item.title}</span>
+                          </button>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    );
+                  })}
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>

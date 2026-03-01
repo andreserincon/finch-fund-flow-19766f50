@@ -32,6 +32,14 @@ export default function Library() {
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const [showAddBook, setShowAddBook] = useState(false);
 
+  // Handle ?tab=add from sidebar
+  useEffect(() => {
+    if (activeTab === 'add') {
+      setShowAddBook(true);
+      setSearchParams({});
+    }
+  }, [activeTab]);
+
   const handleTabChange = (value: string) => {
     if (value === 'browse') {
       setSearchParams({});
