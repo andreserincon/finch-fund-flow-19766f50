@@ -43,7 +43,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 
-type AppModule = 'treasury' | 'library';
+type AppModule = 'treasury' | 'library' | 'admin';
 
 export function AppSidebar() {
   const { signOut, user } = useAuth();
@@ -51,16 +51,21 @@ export function AppSidebar() {
   const { isAdmin } = useIsAdmin();
   const { isBibliotecario } = useIsBibliotecario();
   const location = useLocation();
-  const deriveModule = (): AppModule => location.pathname.startsWith('/library') ? 'library' : 'treasury';
+  const deriveModule = (): AppModule => {
+    if (location.pathname.startsWith('/library')) return 'library';
+    if (location.pathname.startsWith('/user-management')) return 'admin';
+    return 'treasury';
+  };
   const [activeModule, setActiveModule] = useState<AppModule>(deriveModule);
 
   useEffect(() => {
     setActiveModule(deriveModule());
   }, [location.pathname]);
 
-  const modules = [
-    { key: 'treasury' as AppModule, label: t('nav.treasury'), sublabel: t('nav.managementSystem'), icon: Wallet },
-    { key: 'library' as AppModule, label: t('nav.library'), sublabel: t('library.subtitle'), icon: BookOpen },
+  const modules: { key: AppModule; label: string; sublabel: string; icon: any; adminOnly?: boolean }[] = [
+    { key: 'treasury', label: t('nav.treasury'), sublabel: t('nav.managementSystem'), icon: Wallet },
+    { key: 'library', label: t('nav.library'), sublabel: t('library.subtitle'), icon: BookOpen },
+    { key: 'admin', label: t('nav.administration'), sublabel: t('nav.adminSubtitle'), icon: UserCog, adminOnly: true },
   ];
 
   const currentModule = modules.find(m => m.key === activeModule)!;
@@ -86,8 +91,9 @@ export function AppSidebar() {
     { title: t('nav.feeCalculator'), url: '/fee-calculator', icon: Calculator },
   ];
 
-  const adminSettingsItems = [
-    { title: t('nav.userManagement'), url: '/user-management', icon: UserCog },
+  // Admin module nav items
+  const adminNavItems = [
+    { title: t('nav.userManagement'), url: '/user-management', icon: Users },
   ];
 
   // Library nav items
@@ -124,12 +130,13 @@ export function AppSidebar() {
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-[220px]">
-            {modules.map((mod) => (
+            {modules.filter(mod => !mod.adminOnly || isAdmin).map((mod) => (
               <DropdownMenuItem
                 key={mod.key}
                 onClick={() => {
                   setActiveModule(mod.key);
-                  navigate(mod.key === 'library' ? '/library' : '/');
+                  const dest = mod.key === 'library' ? '/library' : mod.key === 'admin' ? '/user-management' : '/';
+                  navigate(dest);
                 }}
                 className="flex items-center gap-3 p-2"
               >
@@ -220,24 +227,36 @@ export function AppSidebar() {
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   ))}
-                  {isAdmin && adminSettingsItems.map((item) => (
-                    <SidebarMenuItem key={item.url}>
-                      <SidebarMenuButton asChild>
-                        <NavLink 
-                          to={item.url} 
-                          className="sidebar-nav-item"
-                          activeClassName="active"
-                        >
-                          <item.icon className="h-5 w-5" />
-                          <span>{item.title}</span>
-                        </NavLink>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>
           </>
+        )}
+
+        {activeModule === 'admin' && (
+          <SidebarGroup>
+            <SidebarGroupLabel className="text-sidebar-foreground/50 text-xs uppercase tracking-wider px-3">
+              {t('nav.administration')}
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {adminNavItems.map((item) => (
+                  <SidebarMenuItem key={item.url}>
+                    <SidebarMenuButton asChild>
+                      <NavLink 
+                        to={item.url} 
+                        className="sidebar-nav-item"
+                        activeClassName="active"
+                      >
+                        <item.icon className="h-5 w-5" />
+                        <span>{item.title}</span>
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
         )}
 
         {activeModule === 'library' && (

@@ -55,6 +55,8 @@ export default {
       userManagement: 'User Management',
       feeCalculator: 'Fee Calculator',
       library: 'Library',
+      administration: 'Administration',
+      adminSubtitle: 'System management',
     },
 
     // Dashboard
@@ -370,6 +372,11 @@ export default {
         admin: 'Full access to all modules and functions',
         none: 'No access',
       },
+      editUser: 'Edit User',
+      newPassword: 'New Password',
+      passwordMinLength: 'Password must be at least 6 characters',
+      passwordUpdated: 'Password updated',
+      passwordUpdateError: 'Error updating password',
     },
 
     // Fee Calculator
