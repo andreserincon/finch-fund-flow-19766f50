@@ -59,12 +59,10 @@ export default function Library() {
           </h1>
           <p className="text-sm text-muted-foreground">{t('library.subtitle')}</p>
         </div>
-        {isBibliotecario && (
-          <Button onClick={() => setShowAddBook(true)} className="gap-2">
-            <Plus className="h-4 w-4" />
-            {t('library.addBook')}
-          </Button>
-        )}
+        <Button onClick={() => setShowAddBook(true)} className="gap-2">
+          <Plus className="h-4 w-4" />
+          {t('library.addBook')}
+        </Button>
       </div>
 
       <Tabs value={activeTab} onValueChange={handleTabChange}>

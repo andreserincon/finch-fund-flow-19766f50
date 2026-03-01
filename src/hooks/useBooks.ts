@@ -19,7 +19,7 @@ export function useBooks(userGrade: MasonicGrade = 'aprendiz') {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('books')
-        .select('*, members!books_current_holder_id_fkey(full_name)')
+        .select('*, holder:members!books_current_holder_id_fkey(full_name), owner:members!books_owner_id_fkey(full_name)')
         .in('grade_level', visibleGrades)
         .order('title');
 
@@ -27,13 +27,14 @@ export function useBooks(userGrade: MasonicGrade = 'aprendiz') {
 
       return (data || []).map((book: any) => ({
         ...book,
-        holder_name: book.members?.full_name || null,
+        holder_name: book.holder?.full_name || null,
+        owner_name: book.owner?.full_name || null,
       })) as Book[];
     },
   });
 
   const addBook = useMutation({
-    mutationFn: async (book: Omit<Book, 'id' | 'created_at' | 'updated_at' | 'holder_name'>) => {
+    mutationFn: async (book: Omit<Book, 'id' | 'created_at' | 'updated_at' | 'holder_name' | 'owner_name'>) => {
       const { error } = await supabase.from('books').insert(book as any);
       if (error) throw error;
     },

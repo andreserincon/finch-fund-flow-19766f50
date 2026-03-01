@@ -13,10 +13,12 @@ export interface Book {
   current_holder_id: string | null;
   held_since: string | null;
   status: BookStatus;
+  owner_id: string | null;
   created_at: string;
   updated_at: string;
   // joined
   holder_name?: string | null;
+  owner_name?: string | null;
 }
 
 export interface BookTransferRequest {

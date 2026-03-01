@@ -30,6 +30,7 @@ export function BookManagementTable() {
               <TableHead>{t('library.bookTitle')}</TableHead>
               <TableHead>{t('library.author')}</TableHead>
               <TableHead>{t('library.gradeLevel')}</TableHead>
+              <TableHead>{t('library.owner')}</TableHead>
               <TableHead>{t('common.status')}</TableHead>
               <TableHead>{t('library.holder')}</TableHead>
               <TableHead className="w-10" />
@@ -43,6 +44,7 @@ export function BookManagementTable() {
                 <TableCell>
                   <Badge variant="outline">{t(`library.grades.${book.grade_level}`)}</Badge>
                 </TableCell>
+                <TableCell className="text-sm">{book.owner_name || t('library.ownerLodge')}</TableCell>
                 <TableCell>
                   <Badge variant={book.status === 'available' ? 'default' : 'secondary'}>
                     {book.status === 'available' ? t('library.available') : t('library.onLoan')}
@@ -71,7 +73,7 @@ export function BookManagementTable() {
             ))}
             {books.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                   {t('library.noBooks')}
                 </TableCell>
               </TableRow>

@@ -115,6 +115,7 @@ export type Database = {
           grade_level: Database["public"]["Enums"]["masonic_grade"]
           held_since: string | null
           id: string
+          owner_id: string | null
           publication_date: string | null
           status: Database["public"]["Enums"]["book_status"]
           title: string
@@ -129,6 +130,7 @@ export type Database = {
           grade_level?: Database["public"]["Enums"]["masonic_grade"]
           held_since?: string | null
           id?: string
+          owner_id?: string | null
           publication_date?: string | null
           status?: Database["public"]["Enums"]["book_status"]
           title: string
@@ -143,6 +145,7 @@ export type Database = {
           grade_level?: Database["public"]["Enums"]["masonic_grade"]
           held_since?: string | null
           id?: string
+          owner_id?: string | null
           publication_date?: string | null
           status?: Database["public"]["Enums"]["book_status"]
           title?: string
@@ -159,6 +162,20 @@ export type Database = {
           {
             foreignKeyName: "books_current_holder_id_fkey"
             columns: ["current_holder_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "books_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "member_balances"
+            referencedColumns: ["member_id"]
+          },
+          {
+            foreignKeyName: "books_owner_id_fkey"
+            columns: ["owner_id"]
             isOneToOne: false
             referencedRelation: "members"
             referencedColumns: ["id"]

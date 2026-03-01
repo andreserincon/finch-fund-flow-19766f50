@@ -7,6 +7,11 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useBooks } from '@/hooks/useBooks';
+import { useMembers } from '@/hooks/useMembers';
+import { useIsBibliotecario } from '@/hooks/useIsBibliotecario';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from '@tanstack/react-query';
 import type { MasonicGrade } from '@/lib/library-types';
 
 interface AddBookDialogProps {
@@ -16,7 +21,26 @@ interface AddBookDialogProps {
 
 export function AddBookDialog({ open, onClose }: AddBookDialogProps) {
   const { t } = useTranslation();
+  const { user } = useAuth();
   const { addBook } = useBooks('maestro');
+  const { isBibliotecario } = useIsBibliotecario();
+  const { members } = useMembers();
+
+  // Get current user's member_id
+  const { data: userMemberId } = useQuery({
+    queryKey: ['user-member-id', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data } = await supabase
+        .from('profiles')
+        .select('member_id')
+        .eq('id', user.id)
+        .maybeSingle();
+      return data?.member_id || null;
+    },
+    enabled: !!user?.id,
+  });
+
   const [form, setForm] = useState({
     title: '',
     author: '',
@@ -24,10 +48,17 @@ export function AddBookDialog({ open, onClose }: AddBookDialogProps) {
     publication_date: '',
     description: '',
     grade_level: 'aprendiz' as MasonicGrade,
+    owner_type: 'lodge' as 'lodge' | 'member',
+    owner_id: '' as string,
   });
 
   const handleSubmit = () => {
     if (!form.title.trim() || !form.author.trim()) return;
+
+    const ownerId = form.owner_type === 'lodge'
+      ? null
+      : (isBibliotecario ? (form.owner_id || null) : userMemberId);
+
     addBook.mutate(
       {
         title: form.title.trim(),
@@ -39,11 +70,12 @@ export function AddBookDialog({ open, onClose }: AddBookDialogProps) {
         current_holder_id: null,
         held_since: null,
         status: 'available',
+        owner_id: ownerId,
       },
       {
         onSuccess: () => {
           onClose();
-          setForm({ title: '', author: '', edition: '', publication_date: '', description: '', grade_level: 'aprendiz' });
+          setForm({ title: '', author: '', edition: '', publication_date: '', description: '', grade_level: 'aprendiz', owner_type: 'lodge', owner_id: '' });
         },
       }
     );
@@ -83,6 +115,29 @@ export function AddBookDialog({ open, onClose }: AddBookDialogProps) {
               </SelectContent>
             </Select>
           </div>
+          <div>
+            <Label>{t('library.owner')}</Label>
+            <Select value={form.owner_type} onValueChange={(v) => setForm(f => ({ ...f, owner_type: v as 'lodge' | 'member', owner_id: '' }))}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {isBibliotecario && <SelectItem value="lodge">{t('library.ownerLodge')}</SelectItem>}
+                <SelectItem value="member">{t('library.ownerMember')}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          {form.owner_type === 'member' && isBibliotecario && (
+            <div>
+              <Label>{t('library.selectOwner')}</Label>
+              <Select value={form.owner_id} onValueChange={(v) => setForm(f => ({ ...f, owner_id: v }))}>
+                <SelectTrigger><SelectValue placeholder={t('library.selectOwner')} /></SelectTrigger>
+                <SelectContent>
+                  {(members || []).filter(m => m.is_active).map((m) => (
+                    <SelectItem key={m.id} value={m.id}>{m.full_name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <div>
             <Label>{t('common.description')}</Label>
             <Textarea value={form.description} onChange={(e) => setForm(f => ({ ...f, description: e.target.value }))} rows={3} />
