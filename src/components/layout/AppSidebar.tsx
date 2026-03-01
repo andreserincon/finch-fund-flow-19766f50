@@ -10,7 +10,8 @@ import {
   ArrowLeftRight,
   HandCoins,
   UserCog,
-  FileText
+  FileText,
+  BookOpen
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { NavLink } from '@/components/NavLink';
@@ -41,6 +42,7 @@ export function AppSidebar() {
     { title: t('nav.transactions'), url: '/transactions', icon: Receipt },
     { title: t('nav.loans'), url: '/loans', icon: HandCoins },
     { title: t('nav.reports'), url: '/reports', icon: FileText },
+    { title: t('nav.library'), url: '/library', icon: BookOpen },
   ];
 
   const actionItems = [

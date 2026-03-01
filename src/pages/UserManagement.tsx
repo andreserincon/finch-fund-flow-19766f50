@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useUserRoles, AppRole } from '@/hooks/useUserRoles';
 import { CreateUserDialog } from '@/components/users/CreateUserDialog';
-import { Users, Shield, Eye, User, X, UserPlus } from 'lucide-react';
+import { Users, Shield, Eye, User, X, UserPlus, BookOpen } from 'lucide-react';
 
 export default function UserManagement() {
   const { t } = useTranslation();
@@ -43,6 +43,13 @@ export default function UserManagement() {
             {t('userManagement.roles.member')}
           </Badge>
         );
+      case 'bibliotecario':
+        return (
+          <Badge className="bg-amber-600">
+            <BookOpen className="h-3 w-3 mr-1" />
+            {t('userManagement.roles.bibliotecario')}
+          </Badge>
+        );
       default:
         return <Badge variant="outline">{role}</Badge>;
     }
@@ -56,6 +63,8 @@ export default function UserManagement() {
         return t('userManagement.permissions.vm');
       case 'member':
         return t('userManagement.permissions.member');
+      case 'bibliotecario':
+        return t('userManagement.permissions.bibliotecario');
       default:
         return t('userManagement.permissions.none');
     }
@@ -128,6 +137,19 @@ export default function UserManagement() {
               </p>
             </CardContent>
           </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                {t('userManagement.roles.bibliotecario')}
+              </CardTitle>
+              <BookOpen className="h-4 w-4 text-amber-600" />
+            </CardHeader>
+            <CardContent>
+              <p className="text-xs text-muted-foreground">
+                {t('userManagement.permissions.bibliotecario')}
+              </p>
+            </CardContent>
+          </Card>
         </div>
 
         <Card>
@@ -178,6 +200,7 @@ export default function UserManagement() {
                               <SelectItem value="treasurer">{t('userManagement.roles.treasurer')}</SelectItem>
                               <SelectItem value="vm">{t('userManagement.roles.vm')}</SelectItem>
                               <SelectItem value="member">{t('userManagement.roles.member')}</SelectItem>
+                              <SelectItem value="bibliotecario">{t('userManagement.roles.bibliotecario')}</SelectItem>
                             </SelectContent>
                           </Select>
                           {user.role && (

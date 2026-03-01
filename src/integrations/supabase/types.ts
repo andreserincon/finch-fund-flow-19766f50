@@ -47,6 +47,124 @@ export type Database = {
         }
         Relationships: []
       }
+      book_transfer_requests: {
+        Row: {
+          book_id: string
+          created_at: string
+          id: string
+          new_holder_id: string
+          notes: string | null
+          requested_by: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: Database["public"]["Enums"]["transfer_request_status"]
+        }
+        Insert: {
+          book_id: string
+          created_at?: string
+          id?: string
+          new_holder_id: string
+          notes?: string | null
+          requested_by: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["transfer_request_status"]
+        }
+        Update: {
+          book_id?: string
+          created_at?: string
+          id?: string
+          new_holder_id?: string
+          notes?: string | null
+          requested_by?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["transfer_request_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "book_transfer_requests_book_id_fkey"
+            columns: ["book_id"]
+            isOneToOne: false
+            referencedRelation: "books"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "book_transfer_requests_new_holder_id_fkey"
+            columns: ["new_holder_id"]
+            isOneToOne: false
+            referencedRelation: "member_balances"
+            referencedColumns: ["member_id"]
+          },
+          {
+            foreignKeyName: "book_transfer_requests_new_holder_id_fkey"
+            columns: ["new_holder_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      books: {
+        Row: {
+          author: string
+          created_at: string
+          current_holder_id: string | null
+          description: string | null
+          edition: string | null
+          grade_level: Database["public"]["Enums"]["masonic_grade"]
+          held_since: string | null
+          id: string
+          publication_date: string | null
+          status: Database["public"]["Enums"]["book_status"]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          author: string
+          created_at?: string
+          current_holder_id?: string | null
+          description?: string | null
+          edition?: string | null
+          grade_level?: Database["public"]["Enums"]["masonic_grade"]
+          held_since?: string | null
+          id?: string
+          publication_date?: string | null
+          status?: Database["public"]["Enums"]["book_status"]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          author?: string
+          created_at?: string
+          current_holder_id?: string | null
+          description?: string | null
+          edition?: string | null
+          grade_level?: Database["public"]["Enums"]["masonic_grade"]
+          held_since?: string | null
+          id?: string
+          publication_date?: string | null
+          status?: Database["public"]["Enums"]["book_status"]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "books_current_holder_id_fkey"
+            columns: ["current_holder_id"]
+            isOneToOne: false
+            referencedRelation: "member_balances"
+            referencedColumns: ["member_id"]
+          },
+          {
+            foreignKeyName: "books_current_holder_id_fkey"
+            columns: ["current_holder_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_member_payments: {
         Row: {
           amount_owed: number
@@ -301,6 +419,7 @@ export type Database = {
           id: string
           is_active: boolean
           join_date: string
+          masonic_grade: Database["public"]["Enums"]["masonic_grade"]
           monthly_fee_amount: number
           phone_number: string
           updated_at: string
@@ -312,6 +431,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           join_date?: string
+          masonic_grade?: Database["public"]["Enums"]["masonic_grade"]
           monthly_fee_amount?: number
           phone_number: string
           updated_at?: string
@@ -323,6 +443,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           join_date?: string
+          masonic_grade?: Database["public"]["Enums"]["masonic_grade"]
           monthly_fee_amount?: number
           phone_number?: string
           updated_at?: string
@@ -768,6 +889,10 @@ export type Database = {
         Args: { p_member_id: string; p_month: string }
         Returns: Database["public"]["Enums"]["fee_type"]
       }
+      get_user_masonic_grade: {
+        Args: { _user_id: string }
+        Returns: Database["public"]["Enums"]["masonic_grade"]
+      }
       get_user_member_id: { Args: { _user_id: string }; Returns: string }
       get_users_with_roles: {
         Args: never
@@ -787,13 +912,16 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
+      is_bibliotecario: { Args: { _user_id: string }; Returns: boolean }
       is_treasurer: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
       account_type: "bank" | "great_lodge" | "savings"
-      app_role: "treasurer" | "vm" | "member"
+      app_role: "treasurer" | "vm" | "member" | "bibliotecario"
+      book_status: "available" | "on_loan"
       fee_type: "standard" | "solidarity"
       loan_status: "active" | "paid" | "cancelled"
+      masonic_grade: "aprendiz" | "companero" | "maestro"
       report_status: "generating" | "generated" | "failed"
       transaction_category:
         | "monthly_fee"
@@ -809,6 +937,7 @@ export type Database = {
         | "loan_repayment"
         | "account_yield"
       transaction_type: "income" | "expense"
+      transfer_request_status: "pending" | "approved" | "rejected"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -937,9 +1066,11 @@ export const Constants = {
   public: {
     Enums: {
       account_type: ["bank", "great_lodge", "savings"],
-      app_role: ["treasurer", "vm", "member"],
+      app_role: ["treasurer", "vm", "member", "bibliotecario"],
+      book_status: ["available", "on_loan"],
       fee_type: ["standard", "solidarity"],
       loan_status: ["active", "paid", "cancelled"],
+      masonic_grade: ["aprendiz", "companero", "maestro"],
       report_status: ["generating", "generated", "failed"],
       transaction_category: [
         "monthly_fee",
@@ -956,6 +1087,7 @@ export const Constants = {
         "account_yield",
       ],
       transaction_type: ["income", "expense"],
+      transfer_request_status: ["pending", "approved", "rejected"],
     },
   },
 } as const
