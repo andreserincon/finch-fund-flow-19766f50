@@ -488,7 +488,7 @@ export default {
       rejected: 'Rejected',
       generateLabel: 'Generate Label',
       owner: 'Owner',
-      ownerLodge: 'The Lodge',
+      ownerLodge: 'RL SB 646',
       ownerMember: 'Member',
       selectOwner: 'Select owner...',
       myBooks: 'My Books',
