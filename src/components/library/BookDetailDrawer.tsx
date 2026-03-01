@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { ArrowRightLeft, User, Calendar, QrCode } from 'lucide-react';
+import { ArrowRightLeft, User, Calendar, QrCode, Building2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useMembers } from '@/hooks/useMembers';
 import { useTransferRequests } from '@/hooks/useTransferRequests';
@@ -57,6 +57,12 @@ export function BookDetailDrawer({ book, open, onClose, isBibliotecario }: BookD
             <Badge variant={book.status === 'available' ? 'default' : 'secondary'}>
               {book.status === 'available' ? t('library.available') : t('library.onLoan')}
             </Badge>
+          </div>
+
+          <div className="flex items-center gap-2 text-sm bg-muted/30 rounded-lg p-2">
+            {book.owner_id ? <User className="h-4 w-4 text-muted-foreground" /> : <Building2 className="h-4 w-4 text-muted-foreground" />}
+            <span className="font-medium">{t('library.owner')}:</span>
+            <span>{book.owner_name || t('library.ownerLodge')}</span>
           </div>
 
           {book.status === 'on_loan' && book.holder_name && (

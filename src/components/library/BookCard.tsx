@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { BookOpen, User } from 'lucide-react';
+import { BookOpen, User, Building2 } from 'lucide-react';
 import type { Book } from '@/lib/library-types';
 import { format } from 'date-fns';
 
@@ -50,6 +50,10 @@ export function BookCard({ book, onClick }: BookCardProps) {
           </Badge>
         </div>
 
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          {book.owner_id ? <User className="h-3 w-3" /> : <Building2 className="h-3 w-3" />}
+          <span>{book.owner_name || t('library.ownerLodge')}</span>
+        </div>
         {book.status === 'on_loan' && book.holder_name && (
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/50 rounded-md px-2 py-1.5">
             <User className="h-3 w-3" />
