@@ -406,12 +406,6 @@ export default function Members() {
                   {getSortIcon('fee_type')}
                 </Button>
               </TableHead>
-              <TableHead>
-                <Button variant="ghost" size="sm" className="-ml-3 h-8" onClick={() => handleSort('joined')}>
-                  Joined
-                  {getSortIcon('joined')}
-                </Button>
-              </TableHead>
               <TableHead className="text-right">Monthly Fee</TableHead>
               <TableHead className="text-right">Monthly Balance</TableHead>
               <TableHead className="text-right">Events Balance</TableHead>
@@ -423,7 +417,7 @@ export default function Members() {
           <TableBody>
             {filteredMembers.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                   No members found
                 </TableCell>
               </TableRow>
@@ -443,9 +437,6 @@ export default function Members() {
                     <Badge variant="secondary">
                       {FEE_TYPE_LABELS[member.fee_type]}
                     </Badge>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {format(parseLocalDate(member.join_date), 'MMM d, yyyy')}
                   </TableCell>
                   <TableCell className="text-right font-mono">
                     {formatCurrency(getMonthlyFeeForMember(member.fee_type))}
