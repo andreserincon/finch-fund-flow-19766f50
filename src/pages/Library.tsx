@@ -118,9 +118,11 @@ export default function Library() {
 
   const filtered = browseItems.filter((item) => {
     const d = item.data;
+    const searchLower = search.toLowerCase();
     const matchSearch =
-      d.title.toLowerCase().includes(search.toLowerCase()) ||
-      d.author.toLowerCase().includes(search.toLowerCase());
+      d.title.toLowerCase().includes(searchLower) ||
+      d.author.toLowerCase().includes(searchLower) ||
+      d.id.toLowerCase().includes(searchLower);
     const matchGrade = gradeFilter === 'all' || d.grade_level === gradeFilter;
     const matchType = typeFilter === 'all' || item.type === typeFilter;
     const matchStatus =
