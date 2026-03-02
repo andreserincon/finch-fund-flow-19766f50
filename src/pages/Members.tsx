@@ -340,10 +340,12 @@ export default function Members() {
                   {!member.is_active && (
                     <Badge variant="outline">Inactive</Badge>
                   )}
-                    <FeeTypeHistoryDialog
-                      memberId={member.member_id}
-                      memberName={member.full_name}
-                    />
+                    {!isMemberOnly && (
+                      <FeeTypeHistoryDialog
+                        memberId={member.member_id}
+                        memberName={member.full_name}
+                      />
+                    )}
                     {isAdmin && (
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -463,10 +465,12 @@ export default function Members() {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">
-                      <FeeTypeHistoryDialog
-                        memberId={member.member_id}
-                        memberName={member.full_name}
-                      />
+                      {!isMemberOnly && (
+                        <FeeTypeHistoryDialog
+                          memberId={member.member_id}
+                          memberName={member.full_name}
+                        />
+                      )}
                       {isAdmin && (
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
