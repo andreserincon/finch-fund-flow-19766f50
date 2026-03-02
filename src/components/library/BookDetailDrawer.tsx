@@ -1,5 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -29,6 +31,28 @@ export function BookDetailDrawer({ book, open, onClose, isBibliotecario }: BookD
   const [newHolderId, setNewHolderId] = useState('');
   const [showTransfer, setShowTransfer] = useState(false);
   const [showQR, setShowQR] = useState(false);
+
+  // Get the current user's member_id from their profile
+  const { data: userMemberId } = useQuery({
+    queryKey: ['user-member-id', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data } = await supabase
+        .from('profiles')
+        .select('member_id')
+        .eq('id', user.id)
+        .maybeSingle();
+      return data?.member_id ?? null;
+    },
+    enabled: !!user?.id,
+  });
+
+  // When transfer form opens, default to the current user's member
+  useEffect(() => {
+    if (showTransfer && userMemberId && !newHolderId) {
+      setNewHolderId(userMemberId);
+    }
+  }, [showTransfer, userMemberId]);
 
   const handleSubmitTransfer = () => {
     if (!user?.id || !newHolderId) return;
