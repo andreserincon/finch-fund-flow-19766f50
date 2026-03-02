@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { BookOpen, Plus, ClipboardList, Search, Filter, Settings } from 'lucide-react';
+import { BookOpen, Plus, ClipboardList, Search, Filter, Settings, User } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -15,6 +15,7 @@ import { AddBookDialog } from '@/components/library/AddBookDialog';
 import { BookDetailDrawer } from '@/components/library/BookDetailDrawer';
 import { PendingRequestsPanel } from '@/components/library/PendingRequestsPanel';
 import { BookManagementTable } from '@/components/library/BookManagementTable';
+import { MyBooksPanel } from '@/components/library/MyBooksPanel';
 import type { Book } from '@/lib/library-types';
 
 export default function Library() {
@@ -79,6 +80,10 @@ export default function Library() {
           <TabsTrigger value="browse">
             <Search className="h-4 w-4 mr-1" />
             {t('library.browse')}
+          </TabsTrigger>
+          <TabsTrigger value="mybooks">
+            <User className="h-4 w-4 mr-1" />
+            {t('library.myBooks')}
           </TabsTrigger>
           {isBibliotecario && (
             <>
@@ -147,6 +152,10 @@ export default function Library() {
               ))}
             </div>
           )}
+        </TabsContent>
+
+        <TabsContent value="mybooks" className="space-y-4">
+          <MyBooksPanel onSelectBook={setSelectedBook} />
         </TabsContent>
 
         {isBibliotecario && (
