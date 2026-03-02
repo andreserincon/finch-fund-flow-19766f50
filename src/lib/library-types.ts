@@ -1,4 +1,4 @@
-export type MasonicGrade = 'aprendiz' | 'companero' | 'maestro';
+export type MasonicGrade = 'profano' | 'aprendiz' | 'companero' | 'maestro';
 export type BookStatus = 'available' | 'on_loan';
 export type TransferRequestStatus = 'pending' | 'approved' | 'rejected';
 
@@ -40,12 +40,14 @@ export interface BookTransferRequest {
 }
 
 export const GRADE_HIERARCHY: Record<MasonicGrade, number> = {
+  profano: 0,
   aprendiz: 1,
   companero: 2,
   maestro: 3,
 };
 
 export const GRADE_LABELS: Record<MasonicGrade, { es: string; en: string }> = {
+  profano: { es: 'Profano', en: 'Profane' },
   aprendiz: { es: 'Aprendiz', en: 'Apprentice' },
   companero: { es: 'Compañero', en: 'Fellow Craft' },
   maestro: { es: 'Maestro', en: 'Master' },

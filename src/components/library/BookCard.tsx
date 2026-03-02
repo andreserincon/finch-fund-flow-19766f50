@@ -6,6 +6,7 @@ import type { Book } from '@/lib/library-types';
 import { format } from 'date-fns';
 
 const gradeColors: Record<string, string> = {
+  profano: 'bg-gray-500/10 text-gray-700 border-gray-500/30',
   aprendiz: 'bg-blue-500/10 text-blue-700 border-blue-500/30',
   companero: 'bg-amber-500/10 text-amber-700 border-amber-500/30',
   maestro: 'bg-red-500/10 text-red-700 border-red-500/30',

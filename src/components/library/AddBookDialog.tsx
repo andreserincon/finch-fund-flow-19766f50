@@ -54,7 +54,7 @@ export function AddBookDialog({ open, onClose }: AddBookDialogProps) {
     copy_number: 1,
     publication_date: '',
     description: '',
-    grade_level: 'aprendiz' as MasonicGrade,
+    grade_level: 'profano' as MasonicGrade,
     owner_type: 'lodge' as 'lodge' | 'member',
     owner_id: '' as string,
   });
@@ -84,7 +84,7 @@ export function AddBookDialog({ open, onClose }: AddBookDialogProps) {
       {
         onSuccess: () => {
           onClose();
-          setForm({ title: '', author: '', edition: '', copy_number: 1, publication_date: '', description: '', grade_level: 'aprendiz', owner_type: 'lodge', owner_id: '' });
+          setForm({ title: '', author: '', edition: '', copy_number: 1, publication_date: '', description: '', grade_level: 'profano', owner_type: 'lodge', owner_id: '' });
         },
       }
     );
@@ -124,6 +124,7 @@ export function AddBookDialog({ open, onClose }: AddBookDialogProps) {
             <Select value={form.grade_level} onValueChange={(v) => setForm(f => ({ ...f, grade_level: v as MasonicGrade }))}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
+                <SelectItem value="profano">{t('library.grades.profano')}</SelectItem>
                 <SelectItem value="aprendiz">{t('library.grades.aprendiz')}</SelectItem>
                 <SelectItem value="companero">{t('library.grades.companero')}</SelectItem>
                 <SelectItem value="maestro">{t('library.grades.maestro')}</SelectItem>

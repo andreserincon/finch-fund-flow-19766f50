@@ -995,7 +995,7 @@ export type Database = {
       book_status: "available" | "on_loan"
       fee_type: "standard" | "solidarity"
       loan_status: "active" | "paid" | "cancelled"
-      masonic_grade: "aprendiz" | "companero" | "maestro"
+      masonic_grade: "profano" | "aprendiz" | "companero" | "maestro"
       report_status: "generating" | "generated" | "failed"
       transaction_category:
         | "monthly_fee"
@@ -1144,7 +1144,7 @@ export const Constants = {
       book_status: ["available", "on_loan"],
       fee_type: ["standard", "solidarity"],
       loan_status: ["active", "paid", "cancelled"],
-      masonic_grade: ["aprendiz", "companero", "maestro"],
+      masonic_grade: ["profano", "aprendiz", "companero", "maestro"],
       report_status: ["generating", "generated", "failed"],
       transaction_category: [
         "monthly_fee",

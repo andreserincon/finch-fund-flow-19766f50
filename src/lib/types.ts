@@ -18,7 +18,7 @@ export type TransactionCategory =
 
 export type PaymentStatus = 'up_to_date' | 'ahead' | 'overdue';
 
-export type MasonicGrade = 'aprendiz' | 'companero' | 'maestro';
+export type MasonicGrade = 'profano' | 'aprendiz' | 'companero' | 'maestro';
 
 export interface Member {
   id: string;

@@ -207,6 +207,7 @@ export default function Library() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">{t('library.allGrades')}</SelectItem>
+                <SelectItem value="profano">{t('library.grades.profano')}</SelectItem>
                 <SelectItem value="aprendiz">{t('library.grades.aprendiz')}</SelectItem>
                 <SelectItem value="companero">{t('library.grades.companero')}</SelectItem>
                 <SelectItem value="maestro">{t('library.grades.maestro')}</SelectItem>
