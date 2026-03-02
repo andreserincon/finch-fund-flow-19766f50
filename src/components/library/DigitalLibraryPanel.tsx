@@ -12,6 +12,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useUserGrade } from '@/hooks/useUserGrade';
 import { useIsBibliotecario } from '@/hooks/useIsBibliotecario';
 import { UploadDigitalBookDialog } from './UploadDigitalBookDialog';
+import { DigitalBookDetailDrawer } from './DigitalBookDetailDrawer';
 import { toast } from 'sonner';
 
 const gradeColors: Record<string, string> = {
@@ -39,6 +40,7 @@ export function DigitalLibraryPanel() {
   const [gradeFilter, setGradeFilter] = useState('all');
   const [showUpload, setShowUpload] = useState(false);
   const [showPending, setShowPending] = useState(false);
+  const [selectedBook, setSelectedBook] = useState<DigitalBook | null>(null);
 
   const approvedBooks = digitalBooks.filter((b) => b.is_approved);
   const pendingBooks = digitalBooks.filter((b) => !b.is_approved);
@@ -143,7 +145,11 @@ export function DigitalLibraryPanel() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map((book) => (
-            <Card key={book.id} className="border-border/60 hover:border-primary/30 transition-colors">
+            <Card
+              key={book.id}
+              className="border-border/60 hover:border-primary/30 transition-colors cursor-pointer hover:shadow-md"
+              onClick={() => book.is_approved && setSelectedBook(book)}
+            >
               <CardContent className="p-4 space-y-3">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
@@ -216,6 +222,14 @@ export function DigitalLibraryPanel() {
 
       {showUpload && (
         <UploadDigitalBookDialog open={showUpload} onClose={() => setShowUpload(false)} />
+      )}
+
+      {selectedBook && (
+        <DigitalBookDetailDrawer
+          book={selectedBook}
+          open={!!selectedBook}
+          onClose={() => setSelectedBook(null)}
+        />
       )}
     </div>
   );
