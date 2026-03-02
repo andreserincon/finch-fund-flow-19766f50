@@ -31,13 +31,16 @@ export function DigitalBookDetailDrawer({ book, open, onClose }: DigitalBookDeta
   const handleDownload = async () => {
     try {
       const url = await getDownloadUrl(book.file_path);
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = url;
+      a.href = blobUrl;
       a.download = `${book.title}.pdf`;
-      a.target = '_blank';
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
+      URL.revokeObjectURL(blobUrl);
     } catch {
       toast.error(t('digitalLibrary.downloadError'));
     }
