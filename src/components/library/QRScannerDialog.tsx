@@ -1,9 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Html5Qrcode } from 'html5-qrcode';
-import { X } from 'lucide-react';
+import { X, Camera, Loader2 } from 'lucide-react';
 
 interface QRScannerDialogProps {
   open: boolean;
@@ -13,49 +12,74 @@ interface QRScannerDialogProps {
 
 export function QRScannerDialog({ open, onClose, onScan }: QRScannerDialogProps) {
   const { t } = useTranslation();
-  const scannerRef = useRef<Html5Qrcode | null>(null);
+  const scannerRef = useRef<any>(null);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!open) return;
+
+    setError(null);
+    setLoading(true);
 
     const scannerId = 'qr-reader';
     let stopped = false;
 
     const startScanner = async () => {
       try {
+        // Dynamic import to avoid loading the heavy library upfront
+        const { Html5Qrcode } = await import('html5-qrcode');
+        if (stopped) return;
+
+        const el = document.getElementById(scannerId);
+        if (!el) {
+          setError(t('library.cameraError', 'No se pudo iniciar el escáner'));
+          setLoading(false);
+          return;
+        }
+
         const scanner = new Html5Qrcode(scannerId);
         scannerRef.current = scanner;
 
         await scanner.start(
           { facingMode: 'environment' },
-          { fps: 10, qrbox: { width: 250, height: 250 } },
+          { fps: 10, qrbox: { width: 220, height: 220 } },
           (decodedText) => {
-            // Extract book ID from URL or use raw value
             try {
               const url = new URL(decodedText);
               const bookParam = url.searchParams.get('book');
               if (bookParam) {
                 onScan(bookParam);
+              } else {
+                onScan(decodedText);
               }
             } catch {
-              // Not a URL, try as raw ID
               onScan(decodedText);
             }
             scanner.stop().catch(() => {});
             onClose();
           },
-          () => {} // ignore scan failures
+          () => {} // ignore per-frame scan failures
         );
-      } catch (err) {
+
+        if (!stopped) setLoading(false);
+      } catch (err: any) {
+        console.error('QR Scanner error:', err);
         if (!stopped) {
-          setError(t('library.cameraError', 'No se pudo acceder a la cámara'));
+          const msg = err?.message || '';
+          if (msg.includes('NotAllowedError') || msg.includes('Permission')) {
+            setError(t('library.cameraPermissionDenied', 'Permiso de cámara denegado. Habilitalo en los ajustes del navegador.'));
+          } else if (msg.includes('NotFoundError') || msg.includes('Requested device not found')) {
+            setError(t('library.noCameraFound', 'No se encontró ninguna cámara disponible.'));
+          } else {
+            setError(t('library.cameraError', 'No se pudo acceder a la cámara'));
+          }
+          setLoading(false);
         }
       }
     };
 
-    // Small delay to ensure DOM element exists
-    const timer = setTimeout(startScanner, 300);
+    const timer = setTimeout(startScanner, 500);
 
     return () => {
       stopped = true;
@@ -72,11 +96,25 @@ export function QRScannerDialog({ open, onClose, onScan }: QRScannerDialogProps)
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{t('library.scanQR', 'Escanear QR del libro')}</DialogTitle>
+          <DialogDescription>
+            {t('library.scanQRDesc', 'Apuntá la cámara al código QR de la etiqueta del libro.')}
+          </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
-          <div id="qr-reader" className="w-full rounded-lg overflow-hidden" />
+          <div className="relative min-h-[260px]">
+            <div id="qr-reader" className="w-full rounded-lg overflow-hidden" />
+            {loading && !error && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-muted/50 rounded-lg">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">{t('library.startingCamera', 'Iniciando cámara…')}</p>
+              </div>
+            )}
+          </div>
           {error && (
-            <p className="text-sm text-destructive text-center">{error}</p>
+            <div className="flex flex-col items-center gap-2 py-4">
+              <Camera className="h-10 w-10 text-muted-foreground/50" />
+              <p className="text-sm text-destructive text-center">{error}</p>
+            </div>
           )}
           <Button variant="outline" className="w-full" onClick={onClose}>
             <X className="h-4 w-4 mr-1" />
