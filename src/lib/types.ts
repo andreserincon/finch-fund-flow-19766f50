@@ -18,12 +18,15 @@ export type TransactionCategory =
 
 export type PaymentStatus = 'up_to_date' | 'ahead' | 'overdue';
 
+export type MasonicGrade = 'aprendiz' | 'companero' | 'maestro';
+
 export interface Member {
   id: string;
   full_name: string;
   phone_number: string;
   monthly_fee_amount: number;
   fee_type: FeeType;
+  masonic_grade: MasonicGrade;
   is_active: boolean;
   join_date: string;
   created_at: string;
