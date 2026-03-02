@@ -1,0 +1,1 @@
+ALTER TABLE public.books ADD COLUMN copy_number smallint NOT NULL DEFAULT 1;

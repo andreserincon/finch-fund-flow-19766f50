@@ -173,8 +173,9 @@ export function BookManagementTable() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>{t('library.bookTitle')}</TableHead>
-                <TableHead>{t('library.author')}</TableHead>
+                 <TableHead>{t('library.bookTitle')}</TableHead>
+                 <TableHead>{t('library.copyNumber')}</TableHead>
+                 <TableHead>{t('library.author')}</TableHead>
                 <TableHead>{t('library.gradeLevel')}</TableHead>
                 <TableHead>{t('library.owner')}</TableHead>
                 <TableHead>{t('common.status')}</TableHead>
@@ -186,6 +187,7 @@ export function BookManagementTable() {
               {approvedPhysical.map((book) => (
                 <TableRow key={book.id}>
                   <TableCell className="font-medium">{book.title}</TableCell>
+                  <TableCell className="text-center">{book.copy_number || 1}</TableCell>
                   <TableCell>{book.author}</TableCell>
                   <TableCell>
                     <Badge variant="outline">{t(`library.grades.${book.grade_level}`)}</Badge>
@@ -219,8 +221,8 @@ export function BookManagementTable() {
               ))}
               {approvedPhysical.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                    {t('library.noBooks')}
+                  <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                     {t('library.noBooks')}
                   </TableCell>
                 </TableRow>
               )}

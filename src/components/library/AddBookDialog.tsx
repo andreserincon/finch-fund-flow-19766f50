@@ -51,6 +51,7 @@ export function AddBookDialog({ open, onClose }: AddBookDialogProps) {
     title: '',
     author: '',
     edition: '',
+    copy_number: 1,
     publication_date: '',
     description: '',
     grade_level: 'aprendiz' as MasonicGrade,
@@ -70,6 +71,7 @@ export function AddBookDialog({ open, onClose }: AddBookDialogProps) {
         title: form.title.trim(),
         author: form.author.trim(),
         edition: form.edition.trim() || null,
+        copy_number: form.copy_number,
         publication_date: form.publication_date || null,
         description: form.description.trim() || null,
         grade_level: form.grade_level,
@@ -82,7 +84,7 @@ export function AddBookDialog({ open, onClose }: AddBookDialogProps) {
       {
         onSuccess: () => {
           onClose();
-          setForm({ title: '', author: '', edition: '', publication_date: '', description: '', grade_level: 'aprendiz', owner_type: 'lodge', owner_id: '' });
+          setForm({ title: '', author: '', edition: '', copy_number: 1, publication_date: '', description: '', grade_level: 'aprendiz', owner_type: 'lodge', owner_id: '' });
         },
       }
     );
@@ -103,9 +105,15 @@ export function AddBookDialog({ open, onClose }: AddBookDialogProps) {
             <Label>{t('library.author')} *</Label>
             <Input value={form.author} onChange={(e) => setForm(f => ({ ...f, author: e.target.value }))} />
           </div>
-          <div>
-            <Label>{t('library.edition')}</Label>
-            <Input value={form.edition} onChange={(e) => setForm(f => ({ ...f, edition: e.target.value }))} />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>{t('library.edition')}</Label>
+              <Input value={form.edition} onChange={(e) => setForm(f => ({ ...f, edition: e.target.value }))} />
+            </div>
+            <div>
+              <Label>{t('library.copyNumber')}</Label>
+              <Input type="number" min={1} value={form.copy_number} onChange={(e) => setForm(f => ({ ...f, copy_number: parseInt(e.target.value) || 1 }))} />
+            </div>
           </div>
           <div>
             <Label>{t('library.pubDate')}</Label>
