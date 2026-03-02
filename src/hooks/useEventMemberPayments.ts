@@ -1,7 +1,18 @@
+/**
+ * @file useEventMemberPayments.ts
+ * @description Hook for managing per-member payment tracking within
+ *   an extraordinary expense event. Supports:
+ *   - Bulk-assigning fees to all active members
+ *   - Adding/removing individual members from an event
+ *   - Updating payment amounts (amount_owed, amount_paid)
+ *   - Bulk-deleting all payments for an event
+ */
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
+/** Row shape for the `event_member_payments` table */
 export interface EventMemberPayment {
   id: string;
   event_id: string;
@@ -12,10 +23,14 @@ export interface EventMemberPayment {
   updated_at: string;
 }
 
+/**
+ * @param eventId - Filter payments by this event. Query is disabled if undefined.
+ */
 export function useEventMemberPayments(eventId?: string) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
+  /** Fetch payments for the selected event (with member names) */
   const { data: payments = [], isLoading } = useQuery({
     queryKey: ['event-member-payments', eventId],
     queryFn: async () => {
@@ -23,7 +38,7 @@ export function useEventMemberPayments(eventId?: string) {
         .from('event_member_payments')
         .select('*, member:members(id, full_name)')
         .order('created_at');
-      
+
       if (eventId) {
         query = query.eq('event_id', eventId);
       }
@@ -35,6 +50,7 @@ export function useEventMemberPayments(eventId?: string) {
     enabled: !!eventId,
   });
 
+  /** Assign fee records to ALL active members for a given event */
   const createPaymentsForAllMembers = useMutation({
     mutationFn: async ({ eventId, amountPerMember }: { eventId: string; amountPerMember: number }) => {
       // Get all active members
@@ -44,11 +60,9 @@ export function useEventMemberPayments(eventId?: string) {
         .eq('is_active', true);
 
       if (membersError) throw membersError;
-      if (!members || members.length === 0) {
-        throw new Error('No active members found');
-      }
+      if (!members || members.length === 0) throw new Error('No active members found');
 
-      // Create payment records for all members
+      // Bulk-insert payment records
       const paymentRecords = members.map(member => ({
         event_id: eventId,
         member_id: member.id,
@@ -72,6 +86,7 @@ export function useEventMemberPayments(eventId?: string) {
     },
   });
 
+  /** Update a single member's payment (amount_paid or amount_owed) */
   const updatePayment = useMutation({
     mutationFn: async ({ id, amount_paid, amount_owed }: { id: string; amount_paid?: number; amount_owed?: number }) => {
       const updateData: { amount_paid?: number; amount_owed?: number } = {};
@@ -96,6 +111,7 @@ export function useEventMemberPayments(eventId?: string) {
     },
   });
 
+  /** Add a single member to an event */
   const addMemberToEvent = useMutation({
     mutationFn: async ({ eventId, memberId, amountOwed }: { eventId: string; memberId: string; amountOwed: number }) => {
       const { error } = await supabase
@@ -120,6 +136,7 @@ export function useEventMemberPayments(eventId?: string) {
     },
   });
 
+  /** Remove a single member's payment from an event */
   const removeMemberFromEvent = useMutation({
     mutationFn: async (paymentId: string) => {
       const { error } = await supabase
@@ -140,6 +157,7 @@ export function useEventMemberPayments(eventId?: string) {
     },
   });
 
+  /** Delete ALL payment records for a given event */
   const deletePaymentsForEvent = useMutation({
     mutationFn: async (eventId: string) => {
       const { error } = await supabase

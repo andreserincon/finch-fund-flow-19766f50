@@ -1,7 +1,15 @@
-import { 
-  LayoutDashboard, 
-  Users, 
-  Receipt, 
+/**
+ * @file AppSidebar.tsx
+ * @description Main navigation sidebar. Renders different nav groups
+ *   depending on the active module (Treasury / Library / Admin).
+ *   The module switcher dropdown in the header lets users jump
+ *   between modules. Visibility of modules and items is role-gated.
+ */
+
+import {
+  LayoutDashboard,
+  Users,
+  Receipt,
   PlusCircle,
   LogOut,
   Wallet,
@@ -47,6 +55,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 
+/** The three top-level application modules */
 type AppModule = 'treasury' | 'library' | 'admin';
 
 export function AppSidebar() {
@@ -58,18 +67,23 @@ export function AppSidebar() {
   const { canViewTreasury } = useCanViewTreasury();
   const { isMemberOnly } = useIsMemberOnly();
   const location = useLocation();
+
+  /** Derive the active module from the current URL path */
   const deriveModule = (): AppModule => {
     if (location.pathname.startsWith('/library')) return 'library';
     if (location.pathname.startsWith('/user-management') || location.pathname.startsWith('/admin/members')) return 'admin';
     if (canViewTreasury) return 'treasury';
     return 'library';
   };
+
   const [activeModule, setActiveModule] = useState<AppModule>(deriveModule);
 
+  // Re-derive on route or permission changes
   useEffect(() => {
     setActiveModule(deriveModule());
   }, [location.pathname, canViewTreasury]);
 
+  /* ── Module definitions for the switcher dropdown ── */
   const modules: { key: AppModule; label: string; sublabel: string; icon: any; show: boolean }[] = [
     { key: 'treasury', label: t('nav.treasury'), sublabel: t('nav.managementSystem'), icon: Wallet, show: canViewTreasury },
     { key: 'library', label: t('nav.library'), sublabel: t('library.subtitle'), icon: BookOpen, show: true },
@@ -77,13 +91,13 @@ export function AppSidebar() {
   ];
 
   const visibleModules = modules.filter(m => m.show);
-
   const currentModule = visibleModules.find(m => m.key === activeModule) || visibleModules[0];
 
-  // Treasury nav items - members only see Dashboard and Members
+  /* ── Treasury nav items ── */
   const mainNavItems = [
     { title: t('nav.dashboard'), url: '/', icon: LayoutDashboard },
     { title: t('nav.members'), url: '/members', icon: Users },
+    // Staff-only items (hidden from member-only users)
     ...(!isMemberOnly ? [
       { title: t('nav.transactions'), url: '/transactions', icon: Receipt },
       { title: t('nav.loans'), url: '/loans', icon: HandCoins },
@@ -91,31 +105,34 @@ export function AppSidebar() {
     ] : []),
   ];
 
+  /** Admin-only quick actions (log payment, expense, transfer) */
   const actionItems = [
     { title: t('nav.logPayment'), url: '/log-payment', icon: PlusCircle },
     { title: t('nav.logExpense'), url: '/log-expense', icon: Wallet },
     { title: t('nav.transferFunds'), url: '/account-transfer', icon: ArrowLeftRight },
   ];
 
+  /** Treasury settings pages (fees, events, calculator) */
   const settingsItems = [
     { title: t('nav.monthlyFees'), url: '/monthly-fees', icon: Settings },
     { title: t('nav.events'), url: '/expense-categories', icon: Wallet },
     { title: t('nav.feeCalculator'), url: '/fee-calculator', icon: Calculator },
   ];
 
-  // Admin module nav items
+  /* ── Admin module nav items ── */
   const adminNavItems = [
     { title: t('nav.userManagement'), url: '/user-management', icon: UserCog },
     { title: t('nav.members'), url: '/admin/members', icon: Users },
   ];
 
-  // Library nav items
+  /* ── Library module nav items ── */
   const libraryNavItems = [
     { title: t('library.browse'), url: '/library', icon: BookOpen },
     { title: t('digitalLibrary.title'), url: '/library?tab=digital', icon: FileText },
     { title: t('library.addBook'), url: '/library?tab=add', icon: Plus },
   ];
 
+  /** Librarian-only management items */
   const libraryAdminItems = [
     { title: t('library.manage'), tab: 'manage', icon: Settings },
     { title: t('library.requests'), tab: 'requests', icon: ClipboardList },
@@ -129,6 +146,7 @@ export function AppSidebar() {
 
   return (
     <Sidebar className="border-r border-sidebar-border">
+      {/* ── Header: module switcher dropdown ── */}
       <SidebarHeader className="p-4">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -167,9 +185,12 @@ export function AppSidebar() {
         </DropdownMenu>
       </SidebarHeader>
 
+      {/* ── Content: module-specific navigation ── */}
       <SidebarContent>
+        {/* Treasury module */}
         {activeModule === 'treasury' && (
           <>
+            {/* Overview section */}
             <SidebarGroup>
               <SidebarGroupLabel className="text-sidebar-foreground/50 text-xs uppercase tracking-wider px-3">
                 {t('nav.overview')}
@@ -179,8 +200,8 @@ export function AppSidebar() {
                   {mainNavItems.map((item) => (
                     <SidebarMenuItem key={item.url}>
                       <SidebarMenuButton asChild>
-                        <NavLink 
-                          to={item.url} 
+                        <NavLink
+                          to={item.url}
                           end={item.url === '/'}
                           className="sidebar-nav-item"
                           activeClassName="active"
@@ -195,6 +216,7 @@ export function AppSidebar() {
               </SidebarGroupContent>
             </SidebarGroup>
 
+            {/* Quick actions (admin only) */}
             {isAdmin && (
               <SidebarGroup>
                 <SidebarGroupLabel className="text-sidebar-foreground/50 text-xs uppercase tracking-wider px-3">
@@ -205,8 +227,8 @@ export function AppSidebar() {
                     {actionItems.map((item) => (
                       <SidebarMenuItem key={item.url}>
                         <SidebarMenuButton asChild>
-                          <NavLink 
-                            to={item.url} 
+                          <NavLink
+                            to={item.url}
                             className="sidebar-nav-item"
                             activeClassName="active"
                           >
@@ -221,6 +243,7 @@ export function AppSidebar() {
               </SidebarGroup>
             )}
 
+            {/* Settings (staff, not member-only) */}
             {!isMemberOnly && (
               <SidebarGroup>
                 <SidebarGroupLabel className="text-sidebar-foreground/50 text-xs uppercase tracking-wider px-3">
@@ -231,8 +254,8 @@ export function AppSidebar() {
                     {settingsItems.map((item) => (
                       <SidebarMenuItem key={item.url}>
                         <SidebarMenuButton asChild>
-                          <NavLink 
-                            to={item.url} 
+                          <NavLink
+                            to={item.url}
                             className="sidebar-nav-item"
                             activeClassName="active"
                           >
@@ -249,6 +272,7 @@ export function AppSidebar() {
           </>
         )}
 
+        {/* Admin module */}
         {activeModule === 'admin' && (
           <SidebarGroup>
             <SidebarGroupLabel className="text-sidebar-foreground/50 text-xs uppercase tracking-wider px-3">
@@ -259,8 +283,8 @@ export function AppSidebar() {
                 {adminNavItems.map((item) => (
                   <SidebarMenuItem key={item.url}>
                     <SidebarMenuButton asChild>
-                      <NavLink 
-                        to={item.url} 
+                      <NavLink
+                        to={item.url}
                         className="sidebar-nav-item"
                         activeClassName="active"
                       >
@@ -275,6 +299,7 @@ export function AppSidebar() {
           </SidebarGroup>
         )}
 
+        {/* Library module */}
         {activeModule === 'library' && (
           <>
             <SidebarGroup>
@@ -305,6 +330,7 @@ export function AppSidebar() {
               </SidebarGroupContent>
             </SidebarGroup>
 
+            {/* Librarian admin items */}
             {isBibliotecario && (
               <SidebarGroup>
                 <SidebarGroupLabel className="text-sidebar-foreground/50 text-xs uppercase tracking-wider px-3">
@@ -313,7 +339,7 @@ export function AppSidebar() {
                 <SidebarGroupContent>
                   <SidebarMenu>
                     {libraryAdminItems.map((item) => {
-                      const isActive = location.pathname === '/library' && 
+                      const isActive = location.pathname === '/library' &&
                         new URLSearchParams(location.search).get('tab') === item.tab;
                       return (
                         <SidebarMenuItem key={item.tab}>
@@ -337,6 +363,7 @@ export function AppSidebar() {
         )}
       </SidebarContent>
 
+      {/* ── Footer: home link, user info, sign-out ── */}
       <SidebarFooter className="p-4 border-t border-sidebar-border space-y-2">
         <Button
           variant="ghost"

@@ -1,3 +1,9 @@
+/**
+ * @file LanguageSwitcher.tsx
+ * @description Dropdown button that lets users switch the UI language
+ *   between Spanish (ES) and English (EN). Rendered in the top toolbar.
+ */
+
 import { useTranslation } from 'react-i18next';
 import { Globe } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -11,6 +17,7 @@ import {
 export function LanguageSwitcher() {
   const { i18n, t } = useTranslation();
 
+  /** Change the active language and persist in localStorage */
   const changeLanguage = (lng: string) => {
     i18n.changeLanguage(lng);
   };

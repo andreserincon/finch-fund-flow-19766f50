@@ -1,8 +1,27 @@
+/**
+ * @file types.ts
+ * @description Shared TypeScript type definitions and constants
+ *   used across the treasury management module.
+ */
+
+/* ================================================================== */
+/*  Enums / union types                                               */
+/* ================================================================== */
+
+/** Member fee category */
 export type FeeType = 'standard' | 'solidarity';
+
+/** Transaction direction */
 export type TransactionType = 'income' | 'expense';
+
+/** Financial account the transaction belongs to */
 export type AccountType = 'bank' | 'great_lodge' | 'savings';
+
+/** Current state of a loan */
 export type LoanStatus = 'active' | 'paid' | 'cancelled';
-export type TransactionCategory = 
+
+/** Category tag for a transaction (used for reporting) */
+export type TransactionCategory =
   | 'monthly_fee'
   | 'extraordinary_income'
   | 'donation'
@@ -16,10 +35,17 @@ export type TransactionCategory =
   | 'loan_repayment'
   | 'account_yield';
 
+/** Derived payment status for dashboard badges */
 export type PaymentStatus = 'up_to_date' | 'ahead' | 'overdue';
 
+/** Masonic degree level */
 export type MasonicGrade = 'profano' | 'aprendiz' | 'companero' | 'maestro';
 
+/* ================================================================== */
+/*  Interfaces                                                        */
+/* ================================================================== */
+
+/** A lodge member */
 export interface Member {
   id: string;
   full_name: string;
@@ -33,6 +59,7 @@ export interface Member {
   updated_at: string;
 }
 
+/** A financial transaction (income or expense) */
 export interface Transaction {
   id: string;
   transaction_date: string;
@@ -44,9 +71,11 @@ export interface Transaction {
   account: AccountType;
   created_at: string;
   updated_at: string;
+  /** Joined member data (optional, populated by queries) */
   member?: Member;
 }
 
+/** A transfer between internal accounts */
 export interface AccountTransfer {
   id: string;
   transfer_date: string;
@@ -58,6 +87,7 @@ export interface AccountTransfer {
   updated_at: string;
 }
 
+/** A loan issued to a member */
 export interface Loan {
   id: string;
   member_id: string;
@@ -72,9 +102,11 @@ export interface Loan {
   repayment_transaction_id: string | null;
   created_at: string;
   updated_at: string;
+  /** Joined member data (optional) */
   member?: Member;
 }
 
+/** Computed view showing a member's payment balance */
 export interface MemberBalance {
   member_id: string;
   full_name: string;
@@ -89,6 +121,7 @@ export interface MemberBalance {
   total_paid: number;
 }
 
+/** Global organisation settings (key-value numbers) */
 export interface OrganizationSetting {
   id: string;
   setting_key: string;
@@ -97,6 +130,7 @@ export interface OrganizationSetting {
   updated_at: string;
 }
 
+/** User profile row from the `profiles` table */
 export interface Profile {
   id: string;
   role: 'treasurer' | 'member';
@@ -105,6 +139,7 @@ export interface Profile {
   updated_at: string;
 }
 
+/** Aggregated stats shown on the dashboard */
 export interface DashboardStats {
   totalBalance: number;
   bankBalance: number;
@@ -115,6 +150,10 @@ export interface DashboardStats {
   monthlyIncome: number;
   monthlyExpenses: number;
 }
+
+/* ================================================================== */
+/*  Label maps (used in UI dropdowns and tables)                      */
+/* ================================================================== */
 
 export const CATEGORY_LABELS: Record<TransactionCategory, string> = {
   monthly_fee: 'Monthly Fee',

@@ -1,3 +1,10 @@
+/**
+ * @file useIsMemberOnly.ts
+ * @description Hook that checks if the current user has only the
+ *   'member' role (read-only treasury access). Member-only users
+ *   can view dashboards but cannot modify financial data.
+ */
+
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';

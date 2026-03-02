@@ -1,7 +1,16 @@
+/**
+ * @file useExtraordinaryExpenses.ts
+ * @description CRUD hook for extraordinary expense categories.
+ *   These are one-off or recurring non-monthly events (e.g. special
+ *   dinners, building repairs) with per-member payment tracking via
+ *   `event_member_payments`.
+ */
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
+/** Row shape for the `extraordinary_expenses` table */
 export interface ExtraordinaryExpense {
   id: string;
   name: string;
@@ -16,6 +25,7 @@ export function useExtraordinaryExpenses() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
+  /** Fetch all expense categories ordered by name */
   const { data: expenses = [], isLoading } = useQuery({
     queryKey: ['extraordinary-expenses'],
     queryFn: async () => {
@@ -29,6 +39,7 @@ export function useExtraordinaryExpenses() {
     },
   });
 
+  /** Create a new expense category */
   const addExpense = useMutation({
     mutationFn: async (expense: { name: string; description?: string; default_amount: number }) => {
       const { data, error } = await supabase
@@ -53,6 +64,7 @@ export function useExtraordinaryExpenses() {
     },
   });
 
+  /** Update an existing expense category */
   const updateExpense = useMutation({
     mutationFn: async ({ id, ...updates }: Partial<ExtraordinaryExpense> & { id: string }) => {
       const { data, error } = await supabase
@@ -74,6 +86,7 @@ export function useExtraordinaryExpenses() {
     },
   });
 
+  /** Delete an expense category */
   const deleteExpense = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
@@ -92,11 +105,5 @@ export function useExtraordinaryExpenses() {
     },
   });
 
-  return {
-    expenses,
-    isLoading,
-    addExpense,
-    updateExpense,
-    deleteExpense,
-  };
+  return { expenses, isLoading, addExpense, updateExpense, deleteExpense };
 }

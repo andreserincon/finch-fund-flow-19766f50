@@ -1,5 +1,16 @@
+/**
+ * @file useCVSIndex.ts
+ * @description Hook that fetches the CVS (Coeficiente de Variación Salarial)
+ *   index data from INDEC via a Supabase edge-function proxy.
+ *   Returns monthly % variations and computed quarterly compounded values.
+ *   Cached for 1 hour; retries once on failure.
+ */
+
 import { useQuery } from '@tanstack/react-query';
 
+/* ── Types ── */
+
+/** A single monthly data point with variation and raw index value */
 export interface MonthlyIndexPoint {
   monthKey: string;   // "2025-01"
   monthLabel: string; // "Ene 2025"
@@ -7,6 +18,7 @@ export interface MonthlyIndexPoint {
   indexValue: number; // raw index value e.g. 7969.6
 }
 
+/** A quarterly aggregate with compounded CVS and per-month breakdown */
 export interface QuarterlyIndex {
   quarterId: string;    // "Q1-2025"
   quarterLabel: string; // "Q1 2025 (Ene–Mar)"
@@ -17,11 +29,16 @@ export interface QuarterlyIndex {
   monthlyBreakdown: { label: string; variation: number }[];
 }
 
+/* ── Constants ── */
+
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+/** Edge function that proxies INDEC's CVS endpoint */
 const PROXY_URL = `${SUPABASE_URL}/functions/v1/cvs-proxy`;
 
-const MONTH_NAMES_ES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+const MONTH_NAMES_ES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 const QUARTER_RANGES: Record<number, string> = { 1: 'Ene–Mar', 2: 'Abr–Jun', 3: 'Jul–Sep', 4: 'Oct–Dic' };
+
+/* ── Hook ── */
 
 export function useCVSIndex() {
   return useQuery({
@@ -34,32 +51,34 @@ export function useCVSIndex() {
       try {
         const res = await fetch(PROXY_URL, { cache: 'no-cache' });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
         const contentType = res.headers.get('content-type') || '';
         if (!contentType.includes('application/json')) {
           const text = await res.text();
           console.error('CVS proxy returned non-JSON:', text.substring(0, 100));
           return { monthly: [], quarterly: [], fetchError: true };
         }
+
         const json = await res.json();
 
-        // json.data is an array of [date, value] pairs sorted desc
+        // json.data is an array of [date, value] pairs (desc)
         const dataPoints: [string, number][] = json.data;
         if (!dataPoints || dataPoints.length < 2) {
           return { monthly: [], quarterly: [], fetchError: true };
         }
 
-        // Sort ascending by date
+        // Sort ascending by date for sequential variation calculation
         const sorted = [...dataPoints]
           .filter(([, v]) => v != null)
           .sort((a, b) => a[0].localeCompare(b[0]));
 
-        // Compute monthly % variations
+        // Compute month-over-month % variations
         const monthly: MonthlyIndexPoint[] = [];
         for (let i = 1; i < sorted.length; i++) {
           const prev = sorted[i - 1][1];
           const curr = sorted[i][1];
           const dateStr = sorted[i][0]; // "YYYY-MM-DD"
-          const monthKey = dateStr.slice(0, 7); // "YYYY-MM"
+          const monthKey = dateStr.slice(0, 7);
           const [year, month] = monthKey.split('-').map(Number);
           const variation = parseFloat(((curr / prev - 1) * 100).toFixed(2));
           monthly.push({
@@ -70,7 +89,7 @@ export function useCVSIndex() {
           });
         }
 
-        // Group into complete quarters
+        // Group into quarters and compute compounded quarterly rate
         const quarterMap: Record<string, MonthlyIndexPoint[]> = {};
         for (const point of monthly) {
           const [year, month] = point.monthKey.split('-').map(Number);
@@ -81,11 +100,12 @@ export function useCVSIndex() {
         }
 
         const quarterly: QuarterlyIndex[] = Object.entries(quarterMap)
-          .filter(([, pts]) => pts.length === 3)
+          .filter(([, pts]) => pts.length === 3) // Only complete quarters
           .map(([key, pts]) => {
             const [qStr, yearStr] = key.split('-');
             const q = parseInt(qStr.replace('Q', ''));
             const year = parseInt(yearStr);
+            // Compound: (1+r₁)(1+r₂)(1+r₃) - 1
             const cvs = parseFloat(
               ((pts.reduce((acc, p) => acc * (1 + p.variation / 100), 1) - 1) * 100).toFixed(2)
             );
@@ -96,14 +116,11 @@ export function useCVSIndex() {
               quarter: q,
               months: pts.map((p) => p.monthKey),
               cvs,
-              monthlyBreakdown: pts.map((p) => ({
-                label: p.monthLabel,
-                variation: p.variation,
-              })),
+              monthlyBreakdown: pts.map((p) => ({ label: p.monthLabel, variation: p.variation })),
             };
           })
           .sort((a, b) => b.year - a.year || b.quarter - a.quarter)
-          .slice(0, 8);
+          .slice(0, 8); // Keep last 8 quarters
 
         return { monthly: monthly.slice(-24), quarterly, fetchError: false };
       } catch (err) {
@@ -111,7 +128,7 @@ export function useCVSIndex() {
         return { monthly: [], quarterly: [], fetchError: true };
       }
     },
-    staleTime: 1000 * 60 * 60,
+    staleTime: 1000 * 60 * 60, // 1 hour
     retry: 1,
   });
 }

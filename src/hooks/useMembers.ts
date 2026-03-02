@@ -1,3 +1,10 @@
+/**
+ * @file useMembers.ts
+ * @description CRUD hook for the `members` and `member_balances` tables.
+ *   Provides reactive queries (React Query) and mutation helpers for
+ *   adding, updating, and deleting lodge members.
+ */
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Member, MemberBalance, FeeType } from '@/lib/types';
@@ -6,6 +13,9 @@ import { toast } from 'sonner';
 export function useMembers() {
   const queryClient = useQueryClient();
 
+  /* ── Queries ── */
+
+  /** Fetch all members ordered alphabetically */
   const membersQuery = useQuery({
     queryKey: ['members'],
     queryFn: async () => {
@@ -13,12 +23,12 @@ export function useMembers() {
         .from('members')
         .select('*')
         .order('full_name');
-
       if (error) throw error;
       return data as Member[];
     },
   });
 
+  /** Fetch the computed member_balances view (includes payment status) */
   const memberBalancesQuery = useQuery({
     queryKey: ['member_balances'],
     queryFn: async () => {
@@ -26,12 +36,14 @@ export function useMembers() {
         .from('member_balances')
         .select('*')
         .order('full_name');
-
       if (error) throw error;
       return data as MemberBalance[];
     },
   });
 
+  /* ── Mutations ── */
+
+  /** Insert a new member */
   const addMember = useMutation({
     mutationFn: async (member: {
       full_name: string;
@@ -45,7 +57,6 @@ export function useMembers() {
         .insert(member)
         .select()
         .single();
-
       if (error) throw error;
       return data;
     },
@@ -59,6 +70,7 @@ export function useMembers() {
     },
   });
 
+  /** Update an existing member by ID */
   const updateMember = useMutation({
     mutationFn: async ({ id, ...updates }: Partial<Member> & { id: string }) => {
       const { data, error } = await supabase
@@ -67,7 +79,6 @@ export function useMembers() {
         .eq('id', id)
         .select()
         .single();
-
       if (error) throw error;
       return data;
     },
@@ -81,6 +92,7 @@ export function useMembers() {
     },
   });
 
+  /** Delete a member by ID */
   const deleteMember = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from('members').delete().eq('id', id);
