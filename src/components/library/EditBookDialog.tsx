@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useBooks } from '@/hooks/useBooks';
 import type { Book, MasonicGrade } from '@/lib/library-types';
+import { BOOK_LANGUAGES } from '@/lib/library-types';
 
 interface EditBookDialogProps {
   book: Book;
@@ -26,6 +27,7 @@ export function EditBookDialog({ book, open, onClose }: EditBookDialogProps) {
     publication_date: book.publication_date || '',
     description: book.description || '',
     grade_level: book.grade_level,
+    language: book.language || 'es',
   });
 
   const handleSubmit = () => {
@@ -40,6 +42,7 @@ export function EditBookDialog({ book, open, onClose }: EditBookDialogProps) {
         publication_date: form.publication_date || null,
         description: form.description.trim() || null,
         grade_level: form.grade_level,
+        language: form.language,
       },
       { onSuccess: onClose }
     );
@@ -83,6 +86,18 @@ export function EditBookDialog({ book, open, onClose }: EditBookDialogProps) {
                 <SelectItem value="aprendiz">{t('library.grades.aprendiz')}</SelectItem>
                 <SelectItem value="companero">{t('library.grades.companero')}</SelectItem>
                 <SelectItem value="maestro">{t('library.grades.maestro')}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label>{t('library.language')}</Label>
+            <Select value={form.language} onValueChange={(v) => setForm(f => ({ ...f, language: v }))}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {BOOK_LANGUAGES.map((lang) => (
+                  <SelectItem key={lang} value={lang}>{t(`library.languages.${lang}`)}</SelectItem>
+                ))}
+                <SelectItem value="other">{t('library.languages.other')}</SelectItem>
               </SelectContent>
             </Select>
           </div>

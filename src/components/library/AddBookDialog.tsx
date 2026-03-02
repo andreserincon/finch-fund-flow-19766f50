@@ -13,6 +13,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import type { MasonicGrade } from '@/lib/library-types';
+import { BOOK_LANGUAGES } from '@/lib/library-types';
 
 interface AddBookDialogProps {
   open: boolean;
@@ -55,6 +56,7 @@ export function AddBookDialog({ open, onClose }: AddBookDialogProps) {
     publication_date: '',
     description: '',
     grade_level: 'profano' as MasonicGrade,
+    language: 'es',
     owner_type: 'lodge' as 'lodge' | 'member',
     owner_id: '' as string,
   });
@@ -75,6 +77,7 @@ export function AddBookDialog({ open, onClose }: AddBookDialogProps) {
         publication_date: form.publication_date || null,
         description: form.description.trim() || null,
         grade_level: form.grade_level,
+        language: form.language,
         current_holder_id: null,
         held_since: null,
         status: 'available',
@@ -84,7 +87,7 @@ export function AddBookDialog({ open, onClose }: AddBookDialogProps) {
       {
         onSuccess: () => {
           onClose();
-          setForm({ title: '', author: '', edition: '', copy_number: 1, publication_date: '', description: '', grade_level: 'profano', owner_type: 'lodge', owner_id: '' });
+          setForm({ title: '', author: '', edition: '', copy_number: 1, publication_date: '', description: '', grade_level: 'profano', language: 'es', owner_type: 'lodge', owner_id: '' });
         },
       }
     );
@@ -128,6 +131,18 @@ export function AddBookDialog({ open, onClose }: AddBookDialogProps) {
                 <SelectItem value="aprendiz">{t('library.grades.aprendiz')}</SelectItem>
                 <SelectItem value="companero">{t('library.grades.companero')}</SelectItem>
                 <SelectItem value="maestro">{t('library.grades.maestro')}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label>{t('library.language')}</Label>
+            <Select value={form.language} onValueChange={(v) => setForm(f => ({ ...f, language: v }))}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {BOOK_LANGUAGES.map((lang) => (
+                  <SelectItem key={lang} value={lang}>{t(`library.languages.${lang}`)}</SelectItem>
+                ))}
+                <SelectItem value="other">{t('library.languages.other')}</SelectItem>
               </SelectContent>
             </Select>
           </div>

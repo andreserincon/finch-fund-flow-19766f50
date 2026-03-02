@@ -570,6 +570,17 @@ export default {
         companero: 'Fellow Craft',
         maestro: 'Master',
       },
+      language: 'Language',
+      languages: {
+        es: 'Spanish',
+        en: 'English',
+        pt: 'Portuguese',
+        fr: 'French',
+        de: 'German',
+        it: 'Italian',
+        la: 'Latin',
+        other: 'Other',
+      },
     },
   },
 };

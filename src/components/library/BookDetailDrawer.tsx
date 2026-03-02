@@ -59,6 +59,7 @@ export function BookDetailDrawer({ book, open, onClose, isBibliotecario }: BookD
             <p className="text-sm"><span className="font-medium">{t('library.author')}:</span> {book.author}</p>
             {book.edition && <p className="text-sm"><span className="font-medium">{t('library.edition')}:</span> {book.edition}</p>}
             <p className="text-sm"><span className="font-medium">{t('library.copyNumber')}:</span> {book.copy_number || 1}</p>
+            <p className="text-sm"><span className="font-medium">{t('library.language')}:</span> {t(`library.languages.${book.language}`, book.language || 'es')}</p>
             {book.publication_date && <p className="text-sm"><span className="font-medium">{t('library.pubDate')}:</span> {format(new Date(book.publication_date), 'dd/MM/yyyy')}</p>}
             {book.description && <p className="text-sm text-muted-foreground mt-2">{book.description}</p>}
           </div>

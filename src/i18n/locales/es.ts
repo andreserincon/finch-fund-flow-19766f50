@@ -570,6 +570,17 @@ export default {
         companero: 'Compañero',
         maestro: 'Maestro',
       },
+      language: 'Idioma',
+      languages: {
+        es: 'Español',
+        en: 'Inglés',
+        pt: 'Portugués',
+        fr: 'Francés',
+        de: 'Alemán',
+        it: 'Italiano',
+        la: 'Latín',
+        other: 'Otro',
+      },
     },
   },
 };

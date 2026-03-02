@@ -2,6 +2,21 @@ export type MasonicGrade = 'profano' | 'aprendiz' | 'companero' | 'maestro';
 export type BookStatus = 'available' | 'on_loan';
 export type TransferRequestStatus = 'pending' | 'approved' | 'rejected';
 
+export const BOOK_LANGUAGES = [
+  'es', 'en', 'pt', 'fr', 'de', 'it', 'la',
+] as const;
+export type BookLanguage = typeof BOOK_LANGUAGES[number];
+
+export const LANGUAGE_LABELS: Record<BookLanguage, { es: string; en: string }> = {
+  es: { es: 'Español', en: 'Spanish' },
+  en: { es: 'Inglés', en: 'English' },
+  pt: { es: 'Portugués', en: 'Portuguese' },
+  fr: { es: 'Francés', en: 'French' },
+  de: { es: 'Alemán', en: 'German' },
+  it: { es: 'Italiano', en: 'Italian' },
+  la: { es: 'Latín', en: 'Latin' },
+};
+
 export interface Book {
   id: string;
   title: string;
@@ -16,6 +31,7 @@ export interface Book {
   status: BookStatus;
   is_approved: boolean;
   owner_id: string | null;
+  language: string;
   created_at: string;
   updated_at: string;
   // joined

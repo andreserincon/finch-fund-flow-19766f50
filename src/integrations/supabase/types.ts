@@ -117,6 +117,7 @@ export type Database = {
           held_since: string | null
           id: string
           is_approved: boolean
+          language: string
           owner_id: string | null
           publication_date: string | null
           status: Database["public"]["Enums"]["book_status"]
@@ -134,6 +135,7 @@ export type Database = {
           held_since?: string | null
           id?: string
           is_approved?: boolean
+          language?: string
           owner_id?: string | null
           publication_date?: string | null
           status?: Database["public"]["Enums"]["book_status"]
@@ -151,6 +153,7 @@ export type Database = {
           held_since?: string | null
           id?: string
           is_approved?: boolean
+          language?: string
           owner_id?: string | null
           publication_date?: string | null
           status?: Database["public"]["Enums"]["book_status"]
