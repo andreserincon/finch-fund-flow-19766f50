@@ -21,6 +21,7 @@ export default defineConfig(({ mode }) => ({
       includeAssets: ["favicon.ico", "robots.txt"],
       manifest: false, // Use public/manifest.json
       workbox: {
+        maximumFileSizeToCacheInBytes: 3 * 1024 * 1024, // 3 MB
         cleanupOutdatedCaches: true,
         clientsClaim: true,
         skipWaiting: true,
