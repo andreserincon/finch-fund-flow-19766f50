@@ -52,6 +52,7 @@ export interface BookTransferRequest {
   // joined
   book_title?: string;
   requester_email?: string;
+  current_holder_name?: string | null;
   new_holder_name?: string;
 }
 

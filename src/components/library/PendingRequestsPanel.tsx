@@ -102,6 +102,11 @@ export function PendingRequestsPanel() {
                       <BookOpen className="h-4 w-4 text-primary/70 shrink-0" />
                       <p className="font-medium text-sm truncate">{req.book_title}</p>
                     </div>
+                    {req.current_holder_name && (
+                      <p className="text-xs text-muted-foreground">
+                        {t('library.currentHolder')}: {req.current_holder_name}
+                      </p>
+                    )}
                     <p className="text-xs text-muted-foreground">
                       {t('library.newHolder')}: {req.new_holder_name}
                     </p>

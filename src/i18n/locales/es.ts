@@ -535,6 +535,8 @@ export default {
       noBooks: 'No se encontraron libros',
       requestTransfer: 'Solicitar Cambio',
       newHolder: 'Nuevo Poseedor',
+      currentHolder: 'Poseedor Actual',
+      alreadyHolder: 'Ya lo poseés',
       selectMember: 'Seleccionar miembro...',
       submitRequest: 'Enviar Solicitud',
       pendingRequests: 'Solicitudes Pendientes',

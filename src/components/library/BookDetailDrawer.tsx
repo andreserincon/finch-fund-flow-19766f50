@@ -98,10 +98,14 @@ export function BookDetailDrawer({ book, open, onClose, isBibliotecario }: BookD
               variant="outline"
               className="flex-1"
               onClick={handleRequestTransfer}
-              disabled={!userMemberId || createRequest.isPending}
+              disabled={!userMemberId || createRequest.isPending || (!!userMemberId && book.current_holder_id === userMemberId)}
             >
               <ArrowRightLeft className="h-4 w-4 mr-1" />
-              {createRequest.isPending ? t('common.processing') : t('library.requestTransfer')}
+              {(!!userMemberId && book.current_holder_id === userMemberId)
+                ? t('library.alreadyHolder')
+                : createRequest.isPending
+                  ? t('common.processing')
+                  : t('library.requestTransfer')}
             </Button>
             {isBibliotecario && (
               <Button variant="outline" onClick={() => setShowQR(!showQR)}>
