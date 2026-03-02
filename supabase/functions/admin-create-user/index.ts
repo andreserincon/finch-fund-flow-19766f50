@@ -39,13 +39,12 @@ serve(async (req: Request) => {
       global: { headers: { Authorization: authHeader } },
     });
 
-    const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsError } = await userClient.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims) {
+    const { data: { user: callingUser }, error: userError } = await userClient.auth.getUser();
+    if (userError || !callingUser) {
       throw new Error("Unauthorized: Invalid token");
     }
 
-    const requestingUserId = claimsData.claims.sub;
+    const requestingUserId = callingUser.id;
 
     const adminClient = createClient(supabaseUrl, supabaseServiceKey, {
       auth: { autoRefreshToken: false, persistSession: false },
