@@ -165,7 +165,7 @@ export default function Dashboard() {
   const overdueMembers = memberBalances
     .filter(m => {
       if (!m.is_active) return false;
-      if (isMemberOnly && m.member_id !== userMemberId) return false;
+      if (isMemberOnly && (!userMemberId || m.member_id !== userMemberId)) return false;
       
       const amountOwed = m.total_fees_owed - m.total_paid;
       const monthlyFeeRate = currentMonthFees[m.fee_type] || 0;
@@ -349,7 +349,7 @@ export default function Dashboard() {
         </div>
 
       {/* Member Fee Matrix */}
-      <MemberFeeMatrix filterMemberId={isMemberOnly ? userMemberId : undefined} />
+      <MemberFeeMatrix filterMemberId={isMemberOnly ? (userMemberId ?? null) : undefined} />
     </div>
   );
 }

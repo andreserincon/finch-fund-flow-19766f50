@@ -19,7 +19,7 @@ import { cn } from '@/lib/utils';
 
 type PaymentStatus = 'paid' | 'overdue' | 'current_unpaid' | 'future' | 'not_member';
 
-export function MemberFeeMatrix({ filterMemberId }: { filterMemberId?: string | null }) {
+export function MemberFeeMatrix({ filterMemberId }: { filterMemberId?: string | null | undefined }) {
   const [showAllMembers, setShowAllMembers] = useState(false);
   const isMobile = useIsMobile();
   const { memberBalances, isLoading: membersLoading } = useMembers();
@@ -171,7 +171,9 @@ export function MemberFeeMatrix({ filterMemberId }: { filterMemberId?: string | 
   const displayedMembers = useMemo(() => {
     let filtered = memberBalances.filter((m) => {
       if (!m.is_active) return false;
-      if (filterMemberId && m.member_id !== filterMemberId) return false;
+      if (filterMemberId !== undefined) {
+        if (!filterMemberId || m.member_id !== filterMemberId) return false;
+      }
       if (!showAllMembers) {
         return memberHasUnpaidOrOverdue(m);
       }
@@ -191,7 +193,7 @@ export function MemberFeeMatrix({ filterMemberId }: { filterMemberId?: string | 
       // Members with unpaid/overdue come first
       return aHasUnpaid ? -1 : 1;
     });
-  }, [memberBalances, showAllMembers, months]);
+  }, [memberBalances, showAllMembers, months, filterMemberId]);
 
   const paidMembersCount = memberBalances.filter(m => m.is_active && !memberHasUnpaidOrOverdue(m)).length;
 
