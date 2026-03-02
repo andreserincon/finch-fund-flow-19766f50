@@ -955,6 +955,7 @@ export type Database = {
       }
     }
     Functions: {
+      auto_release_overdue_books: { Args: never; Returns: undefined }
       can_view: { Args: { _user_id: string }; Returns: boolean }
       get_member_fee_type_for_month: {
         Args: { p_member_id: string; p_month: string }
