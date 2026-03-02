@@ -6,10 +6,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Upload, FileText } from 'lucide-react';
+import { Upload, FileText, Sparkles, Loader2 } from 'lucide-react';
 import { useDigitalBooks } from '@/hooks/useDigitalBooks';
 import { useAuth } from '@/hooks/useAuth';
 import { useIsBibliotecario } from '@/hooks/useIsBibliotecario';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 import type { MasonicGrade } from '@/lib/library-types';
 
 interface Props {
@@ -32,10 +34,13 @@ export function UploadDigitalBookDialog({ open, onClose }: Props) {
   const [gradeLevel, setGradeLevel] = useState<MasonicGrade>('aprendiz');
   const [file, setFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState('');
+  const [generatingDesc, setGeneratingDesc] = useState(false);
+  const [tempFilePath, setTempFilePath] = useState<string | null>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0];
     setFileError('');
+    setTempFilePath(null);
     if (!selected) return;
     if (selected.type !== 'application/pdf') {
       setFileError(t('digitalLibrary.onlyPdf'));
@@ -48,8 +53,59 @@ export function UploadDigitalBookDialog({ open, onClose }: Props) {
     setFile(selected);
   };
 
+  const handleGenerateDescription = async () => {
+    if (!file || !user?.id) return;
+    setGeneratingDesc(true);
+
+    try {
+      // Upload file temporarily to generate description
+      let filePath = tempFilePath;
+      if (!filePath) {
+        filePath = `${user.id}/temp_${Date.now()}_${file.name}`;
+        const { error: uploadError } = await supabase.storage
+          .from('digital-books')
+          .upload(filePath, file, { contentType: 'application/pdf' });
+        if (uploadError) throw uploadError;
+        setTempFilePath(filePath);
+      }
+
+      const { data, error } = await supabase.functions.invoke('describe-pdf', {
+        body: { file_path: filePath },
+      });
+
+      if (error) throw error;
+      if (data?.error === 'rate_limited') {
+        toast.error(t('digitalLibrary.rateLimited'));
+        return;
+      }
+      if (data?.error === 'payment_required') {
+        toast.error(t('digitalLibrary.paymentRequired'));
+        return;
+      }
+
+      if (data?.description) {
+        setDescription(data.description);
+        toast.success(t('digitalLibrary.descriptionGenerated'));
+      }
+    } catch (err) {
+      console.error('Generate description error:', err);
+      toast.error(t('digitalLibrary.descriptionError'));
+    } finally {
+      setGeneratingDesc(false);
+    }
+  };
+
   const handleSubmit = () => {
     if (!user?.id || !file || !title.trim() || !author.trim()) return;
+
+    // If we already uploaded a temp file, we could reuse it, but the hook
+    // handles its own upload, so we just let it proceed normally.
+    // Clean up temp file if it exists and is different from what will be uploaded.
+    if (tempFilePath) {
+      // Clean up temp file asynchronously
+      supabase.storage.from('digital-books').remove([tempFilePath]).catch(() => {});
+    }
+
     uploadBook.mutate(
       {
         file,
@@ -87,11 +143,31 @@ export function UploadDigitalBookDialog({ open, onClose }: Props) {
           </div>
 
           <div className="space-y-2">
-            <Label>{t('common.description')} ({t('common.optional')})</Label>
+            <div className="flex items-center justify-between">
+              <Label>{t('common.description')} ({t('common.optional')})</Label>
+              {file && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="gap-1 text-xs h-7"
+                  onClick={handleGenerateDescription}
+                  disabled={generatingDesc}
+                >
+                  {generatingDesc ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <Sparkles className="h-3 w-3" />
+                  )}
+                  {t('digitalLibrary.generateDescription')}
+                </Button>
+              )}
+            </div>
             <Textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              rows={2}
+              rows={3}
+              placeholder={file ? t('digitalLibrary.descriptionPlaceholder') : ''}
             />
           </div>
 

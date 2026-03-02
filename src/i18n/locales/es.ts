@@ -488,6 +488,12 @@ export default {
       onlyPdf: 'Solo se permiten archivos PDF',
       fileTooLarge: 'El archivo excede el límite de 20 MB',
       approvalNotice: 'Tu libro será revisado por el Bibliotecario antes de estar disponible para otros usuarios.',
+      generateDescription: 'Generar con IA',
+      descriptionPlaceholder: 'Podés escribir una descripción o generarla automáticamente con IA...',
+      descriptionGenerated: 'Descripción generada exitosamente',
+      descriptionError: 'Error al generar la descripción',
+      rateLimited: 'Demasiadas solicitudes, intentá de nuevo en unos momentos',
+      paymentRequired: 'Créditos de IA agotados',
     },
 
     // Library
