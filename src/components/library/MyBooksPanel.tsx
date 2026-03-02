@@ -1,15 +1,21 @@
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { BookCard } from './BookCard';
+import { EditBookDialog } from './EditBookDialog';
+import { DeleteBookDialog } from './DeleteBookDialog';
 import { Skeleton } from '@/components/ui/skeleton';
-import { BookOpen, Package, HandHelping } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { BookOpen, Package, HandHelping, Pencil, Trash2 } from 'lucide-react';
 import type { Book } from '@/lib/library-types';
 
 export function MyBooksPanel({ onSelectBook }: { onSelectBook: (book: Book) => void }) {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const [editBook, setEditBook] = useState<Book | null>(null);
+  const [deleteBook, setDeleteBook] = useState<Book | null>(null);
 
   const { data: memberId } = useQuery({
     queryKey: ['user-member-id', user?.id],
@@ -85,7 +91,27 @@ export function MyBooksPanel({ onSelectBook }: { onSelectBook: (book: Book) => v
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {owned.map((book) => (
-              <BookCard key={book.id} book={book} onClick={() => onSelectBook(book)} />
+              <div key={book.id} className="relative group">
+                <BookCard book={book} onClick={() => onSelectBook(book)} />
+                <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Button
+                    variant="secondary"
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={(e) => { e.stopPropagation(); setEditBook(book); }}
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={(e) => { e.stopPropagation(); setDeleteBook(book); }}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </div>
             ))}
           </div>
         </div>
@@ -103,6 +129,14 @@ export function MyBooksPanel({ onSelectBook }: { onSelectBook: (book: Book) => v
             ))}
           </div>
         </div>
+      )}
+
+      {editBook && (
+        <EditBookDialog book={editBook} open={!!editBook} onClose={() => setEditBook(null)} />
+      )}
+
+      {deleteBook && (
+        <DeleteBookDialog book={deleteBook} open={!!deleteBook} onClose={() => setDeleteBook(null)} />
       )}
     </div>
   );
