@@ -488,6 +488,12 @@ export default {
       onlyPdf: 'Only PDF files are allowed',
       fileTooLarge: 'File exceeds 20 MB limit',
       approvalNotice: 'Your book will be reviewed by the Librarian before being available to other users.',
+      generateDescription: 'Generate with AI',
+      descriptionPlaceholder: 'Write a description or auto-generate it with AI...',
+      descriptionGenerated: 'Description generated successfully',
+      descriptionError: 'Error generating description',
+      rateLimited: 'Too many requests, try again in a moment',
+      paymentRequired: 'AI credits exhausted',
     },
 
     // Library
