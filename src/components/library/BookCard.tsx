@@ -56,9 +56,12 @@ export function BookCard({ book, onClick }: BookCardProps) {
           </Badge>
         </div>
 
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          {book.owner_id ? <User className="h-3 w-3" /> : <Building2 className="h-3 w-3" />}
-          <span>{book.owner_name || t('library.ownerLodge')}</span>
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <div className="flex items-center gap-1.5">
+            {book.owner_id ? <User className="h-3 w-3" /> : <Building2 className="h-3 w-3" />}
+            <span>{book.owner_name || t('library.ownerLodge')}</span>
+          </div>
+          <span className="font-mono text-[10px] opacity-60">{book.id.slice(0, 8)}</span>
         </div>
         {book.status === 'on_loan' && book.holder_name && (
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/50 rounded-md px-2 py-1.5">

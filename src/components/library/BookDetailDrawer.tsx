@@ -55,14 +55,15 @@ export function BookDetailDrawer({ book, open, onClose, isBibliotecario }: BookD
         </SheetHeader>
 
         <div className="space-y-4 mt-4">
-          <div className="space-y-2">
-            <p className="text-sm"><span className="font-medium">{t('library.author')}:</span> {book.author}</p>
-            {book.edition && <p className="text-sm"><span className="font-medium">{t('library.edition')}:</span> {book.edition}</p>}
-            <p className="text-sm"><span className="font-medium">{t('library.copyNumber')}:</span> {book.copy_number || 1}</p>
-            <p className="text-sm"><span className="font-medium">{t('library.language')}:</span> {t(`library.languages.${book.language}`, book.language || 'es')}</p>
-            {book.publication_date && <p className="text-sm"><span className="font-medium">{t('library.pubDate')}:</span> {format(new Date(book.publication_date), 'dd/MM/yyyy')}</p>}
-            {book.description && <p className="text-sm text-muted-foreground mt-2">{book.description}</p>}
-          </div>
+        <div className="space-y-2">
+          <p className="text-xs font-mono text-muted-foreground bg-muted/40 rounded px-2 py-1 inline-block">ID: {book.id.slice(0, 8)}</p>
+          <p className="text-sm"><span className="font-medium">{t('library.author')}:</span> {book.author}</p>
+          {book.edition && <p className="text-sm"><span className="font-medium">{t('library.edition')}:</span> {book.edition}</p>}
+          <p className="text-sm"><span className="font-medium">{t('library.copyNumber')}:</span> {book.copy_number || 1}</p>
+          <p className="text-sm"><span className="font-medium">{t('library.language')}:</span> {t(`library.languages.${book.language}`, book.language || 'es')}</p>
+          {book.publication_date && <p className="text-sm"><span className="font-medium">{t('library.pubDate')}:</span> {format(new Date(book.publication_date), 'dd/MM/yyyy')}</p>}
+          {book.description && <p className="text-sm text-muted-foreground mt-2">{book.description}</p>}
+        </div>
 
           <div className="flex gap-2">
             <Badge variant="outline">{t(`library.grades.${book.grade_level}`)}</Badge>
