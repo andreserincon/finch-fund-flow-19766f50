@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { BookOpen, Plus, ClipboardList, Search, Filter, Settings, User } from 'lucide-react';
+import { BookOpen, Plus, ClipboardList, Search, Filter, Settings, User, FileText } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -16,6 +16,7 @@ import { BookDetailDrawer } from '@/components/library/BookDetailDrawer';
 import { PendingRequestsPanel } from '@/components/library/PendingRequestsPanel';
 import { BookManagementTable } from '@/components/library/BookManagementTable';
 import { MyBooksPanel } from '@/components/library/MyBooksPanel';
+import { DigitalLibraryPanel } from '@/components/library/DigitalLibraryPanel';
 import type { Book } from '@/lib/library-types';
 
 export default function Library() {
@@ -80,6 +81,10 @@ export default function Library() {
           <TabsTrigger value="browse">
             <Search className="h-4 w-4 mr-1" />
             {t('library.browse')}
+          </TabsTrigger>
+          <TabsTrigger value="digital">
+            <FileText className="h-4 w-4 mr-1" />
+            {t('digitalLibrary.title')}
           </TabsTrigger>
           <TabsTrigger value="mybooks">
             <User className="h-4 w-4 mr-1" />
@@ -152,6 +157,10 @@ export default function Library() {
               ))}
             </div>
           )}
+        </TabsContent>
+
+        <TabsContent value="digital" className="space-y-4">
+          <DigitalLibraryPanel />
         </TabsContent>
 
         <TabsContent value="mybooks" className="space-y-4">
