@@ -25,6 +25,7 @@ import Reports from "./pages/Reports";
 import Library from "./pages/Library";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
+import Home from "./pages/Home";
 
 const queryClient = new QueryClient();
 
@@ -151,7 +152,7 @@ function AuthRoute({ children }: { children: React.ReactNode }) {
   }
 
   if (user) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/home" replace />;
   }
 
   return <>{children}</>;
@@ -165,6 +166,7 @@ const App = () => (
     <BrowserRouter>
       <Routes>
         <Route path="/auth" element={<AuthRoute><Auth /></AuthRoute>} />
+        <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
         <Route path="/" element={<TreasuryRoute><Dashboard /></TreasuryRoute>} />
         <Route path="/members" element={<TreasuryRoute><Members /></TreasuryRoute>} />
         <Route path="/transactions" element={<TreasuryStaffRoute><Transactions /></TreasuryStaffRoute>} />
