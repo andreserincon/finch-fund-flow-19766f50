@@ -24,6 +24,7 @@ import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
 import { useIsBibliotecario } from '@/hooks/useIsBibliotecario';
 import { useCanViewTreasury } from '@/hooks/useCanViewTreasury';
+import { useIsMemberOnly } from '@/hooks/useIsMemberOnly';
 import {
   Sidebar,
   SidebarContent,
@@ -54,6 +55,7 @@ export function AppSidebar() {
   const { isSuperAdmin } = useIsSuperAdmin();
   const { isBibliotecario } = useIsBibliotecario();
   const { canViewTreasury } = useCanViewTreasury();
+  const { isMemberOnly } = useIsMemberOnly();
   const location = useLocation();
   const deriveModule = (): AppModule => {
     if (location.pathname.startsWith('/library')) return 'library';
@@ -77,13 +79,15 @@ export function AppSidebar() {
 
   const currentModule = visibleModules.find(m => m.key === activeModule) || visibleModules[0];
 
-  // Treasury nav items
+  // Treasury nav items - members only see Dashboard and Members
   const mainNavItems = [
     { title: t('nav.dashboard'), url: '/', icon: LayoutDashboard },
     { title: t('nav.members'), url: '/members', icon: Users },
-    { title: t('nav.transactions'), url: '/transactions', icon: Receipt },
-    { title: t('nav.loans'), url: '/loans', icon: HandCoins },
-    { title: t('nav.reports'), url: '/reports', icon: FileText },
+    ...(!isMemberOnly ? [
+      { title: t('nav.transactions'), url: '/transactions', icon: Receipt },
+      { title: t('nav.loans'), url: '/loans', icon: HandCoins },
+      { title: t('nav.reports'), url: '/reports', icon: FileText },
+    ] : []),
   ];
 
   const actionItems = [
@@ -216,29 +220,31 @@ export function AppSidebar() {
               </SidebarGroup>
             )}
 
-            <SidebarGroup>
-              <SidebarGroupLabel className="text-sidebar-foreground/50 text-xs uppercase tracking-wider px-3">
-                {t('nav.settings')}
-              </SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {settingsItems.map((item) => (
-                    <SidebarMenuItem key={item.url}>
-                      <SidebarMenuButton asChild>
-                        <NavLink 
-                          to={item.url} 
-                          className="sidebar-nav-item"
-                          activeClassName="active"
-                        >
-                          <item.icon className="h-5 w-5" />
-                          <span>{item.title}</span>
-                        </NavLink>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
+            {!isMemberOnly && (
+              <SidebarGroup>
+                <SidebarGroupLabel className="text-sidebar-foreground/50 text-xs uppercase tracking-wider px-3">
+                  {t('nav.settings')}
+                </SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {settingsItems.map((item) => (
+                      <SidebarMenuItem key={item.url}>
+                        <SidebarMenuButton asChild>
+                          <NavLink 
+                            to={item.url} 
+                            className="sidebar-nav-item"
+                            activeClassName="active"
+                          >
+                            <item.icon className="h-5 w-5" />
+                            <span>{item.title}</span>
+                          </NavLink>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            )}
           </>
         )}
 

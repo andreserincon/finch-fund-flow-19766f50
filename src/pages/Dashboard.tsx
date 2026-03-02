@@ -12,6 +12,8 @@ import { useAccountTransfers } from '@/hooks/useAccountTransfers';
 import { useLoans } from '@/hooks/useLoans';
 import { AddTransactionForm } from '@/components/forms/AddTransactionForm';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
+import { useIsMemberOnly } from '@/hooks/useIsMemberOnly';
+import { useAuth } from '@/hooks/useAuth';
 import { 
   Wallet, 
   Users, 
@@ -36,6 +38,9 @@ export default function Dashboard() {
   const { transfers, isLoading: transfersLoading } = useAccountTransfers();
   const { loans, isLoading: loansLoading } = useLoans();
   const { isAdmin } = useIsAdmin();
+  const { isMemberOnly } = useIsMemberOnly();
+  const { profile } = useAuth();
+  const userMemberId = profile?.member_id;
   const { exchangeRate } = useExchangeRate();
   
   const dateLocale = i18n.language === 'es' ? es : enUS;
@@ -156,9 +161,11 @@ export default function Dashboard() {
 
 
   // Filter members: owe more than 1 monthly fee OR have unpaid events
+  // For member-only users, show only their own data
   const overdueMembers = memberBalances
     .filter(m => {
       if (!m.is_active) return false;
+      if (isMemberOnly && m.member_id !== userMemberId) return false;
       
       const amountOwed = m.total_fees_owed - m.total_paid;
       const monthlyFeeRate = currentMonthFees[m.fee_type] || 0;
@@ -342,7 +349,7 @@ export default function Dashboard() {
         </div>
 
       {/* Member Fee Matrix */}
-      <MemberFeeMatrix />
+      <MemberFeeMatrix filterMemberId={isMemberOnly ? userMemberId : undefined} />
     </div>
   );
 }

@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useMembers } from '@/hooks/useMembers';
 import { useMonthlyFees } from '@/hooks/useMonthlyFees';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
+import { useIsMemberOnly } from '@/hooks/useIsMemberOnly';
+import { useAuth } from '@/hooks/useAuth';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { AddMemberForm } from '@/components/forms/AddMemberForm';
@@ -57,6 +59,9 @@ export default function Members() {
   const { memberBalances, isLoading } = useMembers();
   const { currentMonthFees, isLoading: feesLoading } = useMonthlyFees();
   const { isAdmin } = useIsAdmin();
+  const { isMemberOnly } = useIsMemberOnly();
+  const { profile } = useAuth();
+  const userMemberId = profile?.member_id;
   const [search, setSearch] = useState('');
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
   const [sortConfig, setSortConfig] = useState<SortConfig>({ column: null, direction: 'asc' });
@@ -185,6 +190,9 @@ export default function Members() {
   };
 
   const filteredMembers = memberBalances.filter((member) => {
+    // Member-only users can only see their own data
+    if (isMemberOnly && member.member_id !== userMemberId) return false;
+
     const matchesSearch =
       member.full_name.toLowerCase().includes(search.toLowerCase()) ||
       member.phone_number.includes(search);
@@ -252,7 +260,7 @@ export default function Members() {
             {memberBalances.filter((m) => m.is_active).length} active members
           </p>
         </div>
-        {isAdmin && <AddMemberForm />}
+        {isAdmin && !isMemberOnly && <AddMemberForm />}
       </div>
 
       {/* Filters */}
