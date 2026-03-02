@@ -521,6 +521,8 @@ export default {
       allTypes: 'All Types',
       physical: 'Physical',
       digital: 'Digital',
+      physicalBooks: 'Physical Books',
+      type: 'Type',
       searchPlaceholder: 'Search by title or author...',
       noBooks: 'No books found',
       requestTransfer: 'Request Transfer',

@@ -521,6 +521,8 @@ export default {
       allTypes: 'Todos los Tipos',
       physical: 'Físico',
       digital: 'Digital',
+      physicalBooks: 'Libros Físicos',
+      type: 'Tipo',
       searchPlaceholder: 'Buscar por título o autor...',
       noBooks: 'No se encontraron libros',
       requestTransfer: 'Solicitar Cambio',
