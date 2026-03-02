@@ -517,6 +517,7 @@ export default {
       bookTitle: 'Title',
       author: 'Author',
       edition: 'Edition',
+      copyNumber: 'Copy #',
       pubDate: 'Publication Date',
       gradeLevel: 'Grade',
       holder: 'Current Holder',

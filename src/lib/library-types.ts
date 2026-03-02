@@ -10,6 +10,7 @@ export interface Book {
   publication_date: string | null;
   description: string | null;
   grade_level: MasonicGrade;
+  copy_number: number;
   current_holder_id: string | null;
   held_since: string | null;
   status: BookStatus;

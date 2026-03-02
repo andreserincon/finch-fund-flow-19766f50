@@ -49,7 +49,7 @@ export function BookQRLabel({ book }: BookQRLabelProps) {
               <p className="text-[10px] text-gray-600 mt-0.5 truncate">{book.author}</p>
             </div>
             <div>
-              <p className="text-[8px] text-gray-400 font-mono truncate">ID: {book.id.slice(0, 8)}</p>
+              <p className="text-[8px] text-gray-400 font-mono truncate">ID: {book.id.slice(0, 8)} · #{book.copy_number || 1}</p>
               <p className="text-[8px] text-gray-500 font-semibold mt-0.5">⊞ Biblioteca de la Logia</p>
             </div>
           </div>

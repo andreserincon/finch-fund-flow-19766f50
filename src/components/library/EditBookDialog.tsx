@@ -22,6 +22,7 @@ export function EditBookDialog({ book, open, onClose }: EditBookDialogProps) {
     title: book.title,
     author: book.author,
     edition: book.edition || '',
+    copy_number: book.copy_number || 1,
     publication_date: book.publication_date || '',
     description: book.description || '',
     grade_level: book.grade_level,
@@ -35,6 +36,7 @@ export function EditBookDialog({ book, open, onClose }: EditBookDialogProps) {
         title: form.title.trim(),
         author: form.author.trim(),
         edition: form.edition.trim() || null,
+        copy_number: form.copy_number,
         publication_date: form.publication_date || null,
         description: form.description.trim() || null,
         grade_level: form.grade_level,
@@ -58,9 +60,15 @@ export function EditBookDialog({ book, open, onClose }: EditBookDialogProps) {
             <Label>{t('library.author')} *</Label>
             <Input value={form.author} onChange={(e) => setForm(f => ({ ...f, author: e.target.value }))} />
           </div>
-          <div>
-            <Label>{t('library.edition')}</Label>
-            <Input value={form.edition} onChange={(e) => setForm(f => ({ ...f, edition: e.target.value }))} />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>{t('library.edition')}</Label>
+              <Input value={form.edition} onChange={(e) => setForm(f => ({ ...f, edition: e.target.value }))} />
+            </div>
+            <div>
+              <Label>{t('library.copyNumber')}</Label>
+              <Input type="number" min={1} value={form.copy_number} onChange={(e) => setForm(f => ({ ...f, copy_number: parseInt(e.target.value) || 1 }))} />
+            </div>
           </div>
           <div>
             <Label>{t('library.pubDate')}</Label>
