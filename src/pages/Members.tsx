@@ -329,9 +329,7 @@ export default function Members() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  {member.is_active ? (
-                    getStatusBadge(getPaymentStatus(member))
-                  ) : (
+                  {!member.is_active && (
                     <Badge variant="outline">Inactive</Badge>
                   )}
                     <FeeTypeHistoryDialog
@@ -373,12 +371,6 @@ export default function Members() {
                   <p className="text-muted-foreground text-xs">Joined</p>
                   <p className="font-mono text-sm">{format(parseLocalDate(member.join_date), 'MMM d, yyyy')}</p>
                 </div>
-                <div>
-                  <p className="text-muted-foreground text-xs">Balance</p>
-                  <p className={`font-mono font-semibold ${getOverallBalance(member) >= 0 ? 'amount-positive' : 'amount-negative'}`}>
-                    {formatCurrency(getOverallBalance(member))}
-                  </p>
-                </div>
               </div>
             </div>
           ))
@@ -402,21 +394,6 @@ export default function Members() {
                   {getSortIcon('fee_type')}
                 </Button>
               </TableHead>
-              <TableHead className="text-right">Monthly Fee</TableHead>
-              <TableHead className="text-right">Monthly Balance</TableHead>
-              <TableHead className="text-right">Events Balance</TableHead>
-              <TableHead className="text-right">
-                <Button variant="ghost" size="sm" className="-mr-3 h-8" onClick={() => handleSort('balance')}>
-                  Overall Balance
-                  {getSortIcon('balance')}
-                </Button>
-              </TableHead>
-              <TableHead>
-                <Button variant="ghost" size="sm" className="-ml-3 h-8" onClick={() => handleSort('status')}>
-                  Status
-                  {getSortIcon('status')}
-                </Button>
-              </TableHead>
               <TableHead>
                 <Button variant="ghost" size="sm" className="-ml-3 h-8" onClick={() => handleSort('joined')}>
                   Joined
@@ -429,7 +406,7 @@ export default function Members() {
           <TableBody>
             {filteredMembers.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                   No members found
                 </TableCell>
               </TableRow>
@@ -449,49 +426,6 @@ export default function Members() {
                     <Badge variant="secondary">
                       {FEE_TYPE_LABELS[member.fee_type]}
                     </Badge>
-                  </TableCell>
-                  <TableCell className="text-right font-mono">
-                    {formatCurrency(getMonthlyFeeForMember(member.fee_type))}
-                  </TableCell>
-                  <TableCell className="text-right font-mono">
-                    <span
-                      className={
-                        getMonthlyBalance(member) >= 0
-                          ? 'amount-positive'
-                          : 'amount-negative'
-                      }
-                    >
-                      {formatCurrency(getMonthlyBalance(member))}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-right font-mono">
-                    <span
-                      className={
-                        getEventsBalance(member.member_id) >= 0
-                          ? 'amount-positive'
-                          : 'amount-negative'
-                      }
-                    >
-                      {formatCurrency(getEventsBalance(member.member_id))}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-right font-mono">
-                    <span
-                      className={
-                        getOverallBalance(member) >= 0
-                          ? 'amount-positive'
-                          : 'amount-negative'
-                      }
-                    >
-                      {formatCurrency(getOverallBalance(member))}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    {member.is_active ? (
-                      getStatusBadge(getPaymentStatus(member))
-                    ) : (
-                      <Badge variant="outline">Inactive</Badge>
-                    )}
                   </TableCell>
                   <TableCell className="text-muted-foreground">
                     {format(parseLocalDate(member.join_date), 'MMM d, yyyy')}
