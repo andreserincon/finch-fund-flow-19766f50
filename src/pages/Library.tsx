@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { BookOpen, Plus, ClipboardList, Search, Filter, Settings, User, FileText, Download, Upload, ScanLine } from 'lucide-react';
@@ -24,6 +24,7 @@ import { MyBooksPanel } from '@/components/library/MyBooksPanel';
 import { DigitalLibraryPanel } from '@/components/library/DigitalLibraryPanel';
 import { UploadDigitalBookDialog } from '@/components/library/UploadDigitalBookDialog';
 import { QRScannerDialog } from '@/components/library/QRScannerDialog';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import type { Book } from '@/lib/library-types';
 import { format } from 'date-fns';
@@ -68,27 +69,56 @@ export default function Library() {
   const [showUploadDigital, setShowUploadDigital] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
 
-  const handleQRScan = (bookId: string) => {
-    const found = books.find((b) => b.id === bookId);
-    if (found) {
-      setSelectedBook(found);
+  // Fetch a book directly from DB when not found in local list (grade-restricted, etc.)
+  const fetchBookById = useCallback(async (bookId: string): Promise<Book | null> => {
+    try {
+      const { data } = await supabase
+        .from('books')
+        .select('*, owner:members!books_owner_id_fkey(full_name), holder:members!books_current_holder_id_fkey(full_name)')
+        .eq('id', bookId)
+        .maybeSingle();
+      if (!data) return null;
+      return {
+        ...data,
+        owner_name: (data.owner as any)?.full_name ?? null,
+        holder_name: (data.holder as any)?.full_name ?? null,
+      } as Book;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const openBookById = useCallback(async (bookId: string) => {
+    // First try local list
+    const local = books.find((b) => b.id === bookId);
+    if (local) {
+      setSelectedBook(local);
+      return;
+    }
+    // Fallback: fetch directly from DB
+    const fetched = await fetchBookById(bookId);
+    if (fetched) {
+      setSelectedBook(fetched);
     } else {
       toast.error(t('library.bookNotFound', 'Libro no encontrado'));
     }
-  };
+  }, [books, fetchBookById, t]);
 
-  // Handle ?book=<id> from QR scan
+  const handleQRScan = useCallback((bookId: string) => {
+    openBookById(bookId);
+  }, [openBookById]);
+
+  // Handle ?book=<id> from QR scan / deep link
   const bookIdFromQR = searchParams.get('book');
   useEffect(() => {
-    if (bookIdFromQR && !isLoading && books.length > 0) {
-      const found = books.find((b) => b.id === bookIdFromQR);
-      if (found) {
-        setSelectedBook(found);
-        searchParams.delete('book');
-        setSearchParams(searchParams, { replace: true });
-      }
-    }
-  }, [bookIdFromQR, isLoading, books]);
+    if (!bookIdFromQR) return;
+    // Wait until auth + hooks have settled
+    if (biblioLoading || gradeLoading) return;
+
+    openBookById(bookIdFromQR);
+    searchParams.delete('book');
+    setSearchParams(searchParams, { replace: true });
+  }, [bookIdFromQR, biblioLoading, gradeLoading, books]);
 
   useEffect(() => {
     if (activeTab === 'add') {
