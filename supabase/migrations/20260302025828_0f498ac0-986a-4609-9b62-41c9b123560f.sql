@@ -1,0 +1,1 @@
+ALTER TABLE public.books ADD COLUMN language text NOT NULL DEFAULT 'es';

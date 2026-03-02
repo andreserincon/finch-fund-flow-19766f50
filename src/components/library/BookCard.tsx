@@ -34,9 +34,12 @@ export function BookCard({ book, onClick }: BookCardProps) {
           <BookOpen className="h-5 w-5 text-muted-foreground/40 shrink-0" />
         </div>
 
-        {(book.edition || book.copy_number > 1) && (
+        {(book.edition || book.copy_number > 1 || (book.language && book.language !== 'es')) && (
           <p className="text-xs text-muted-foreground">
-            {book.edition}{book.edition && book.copy_number > 1 ? ' · ' : ''}{book.copy_number > 1 ? `${t('library.copyNumber')} ${book.copy_number}` : ''}
+            {book.edition}{book.edition && (book.copy_number > 1 || (book.language && book.language !== 'es')) ? ' · ' : ''}
+            {book.copy_number > 1 ? `${t('library.copyNumber')} ${book.copy_number}` : ''}
+            {book.copy_number > 1 && book.language && book.language !== 'es' ? ' · ' : ''}
+            {book.language && book.language !== 'es' ? t(`library.languages.${book.language}`, book.language) : ''}
           </p>
         )}
 
