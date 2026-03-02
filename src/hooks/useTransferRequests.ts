@@ -13,7 +13,7 @@ export function useTransferRequests() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('book_transfer_requests')
-        .select('*, books(title), members!book_transfer_requests_new_holder_id_fkey(full_name)')
+        .select('*, books(title, current_holder_id, holder:members!books_current_holder_id_fkey(full_name)), members!book_transfer_requests_new_holder_id_fkey(full_name)')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -21,8 +21,10 @@ export function useTransferRequests() {
       return (data || []).map((req: any) => ({
         ...req,
         book_title: req.books?.title || '',
+        current_holder_name: req.books?.holder?.full_name || null,
         new_holder_name: req.members?.full_name || '',
       })) as BookTransferRequest[];
+
     },
   });
 

@@ -535,6 +535,8 @@ export default {
       noBooks: 'No books found',
       requestTransfer: 'Request Transfer',
       newHolder: 'New Holder',
+      currentHolder: 'Current Holder',
+      alreadyHolder: 'You already hold this',
       selectMember: 'Select member...',
       submitRequest: 'Submit Request',
       pendingRequests: 'Pending Requests',
