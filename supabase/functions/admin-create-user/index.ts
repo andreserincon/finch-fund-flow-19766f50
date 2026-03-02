@@ -9,6 +9,8 @@ const corsHeaders = {
 interface CreateUserRequest {
   email: string;
   role?: "treasurer" | "vm" | "member" | "bibliotecario" | "admin";
+  memberId?: string;
+  masonicGrade?: "aprendiz" | "companero" | "maestro";
 }
 
 function generatePassword(length = 12): string {
@@ -37,7 +39,6 @@ serve(async (req: Request) => {
       global: { headers: { Authorization: authHeader } },
     });
 
-    // Verify requesting user is authenticated
     const token = authHeader.replace("Bearer ", "");
     const { data: claimsData, error: claimsError } = await userClient.auth.getClaims(token);
     if (claimsError || !claimsData?.claims) {
@@ -46,7 +47,6 @@ serve(async (req: Request) => {
 
     const requestingUserId = claimsData.claims.sub;
 
-    // Check if requesting user has 'admin' role (not treasurer)
     const adminClient = createClient(supabaseUrl, supabaseServiceKey, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
@@ -62,16 +62,14 @@ serve(async (req: Request) => {
       throw new Error("Unauthorized: Only administrators can create users");
     }
 
-    const { email, role }: CreateUserRequest = await req.json();
+    const { email, role, memberId, masonicGrade }: CreateUserRequest = await req.json();
 
     if (!email) {
       throw new Error("Email is required");
     }
 
-    // Auto-generate password
     const generatedPassword = generatePassword();
 
-    // Create the user
     const { data: newUser, error: createError } = await adminClient.auth.admin.createUser({
       email,
       password: generatedPassword,
@@ -93,8 +91,30 @@ serve(async (req: Request) => {
 
       if (roleError) {
         console.error("Error assigning role:", roleError);
-      } else {
-        console.log("Role assigned successfully:", role);
+      }
+    }
+
+    // Associate member if provided
+    if (memberId && newUser.user) {
+      const { error: profileError } = await adminClient
+        .from("profiles")
+        .update({ member_id: memberId })
+        .eq("id", newUser.user.id);
+
+      if (profileError) {
+        console.error("Error associating member:", profileError);
+      }
+
+      // Update masonic grade on the member if provided
+      if (masonicGrade) {
+        const { error: gradeError } = await adminClient
+          .from("members")
+          .update({ masonic_grade: masonicGrade })
+          .eq("id", memberId);
+
+        if (gradeError) {
+          console.error("Error updating grade:", gradeError);
+        }
       }
     }
 
