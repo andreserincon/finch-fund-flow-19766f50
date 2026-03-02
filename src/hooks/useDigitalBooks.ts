@@ -114,6 +114,21 @@ export function useDigitalBooks(userGrade: MasonicGrade = 'aprendiz') {
     onError: () => toast.error(t('digitalLibrary.approveError')),
   });
 
+  const updateDigitalBook = useMutation({
+    mutationFn: async ({ id, grade_level }: { id: string; grade_level: MasonicGrade }) => {
+      const { error } = await supabase
+        .from('digital_books')
+        .update({ grade_level } as any)
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['digital-books'] });
+      toast.success(t('common.saved'));
+    },
+    onError: () => toast.error(t('common.error')),
+  });
+
   const rejectBook = useMutation({
     mutationFn: async (book: DigitalBook) => {
       // Delete file from storage
@@ -143,6 +158,7 @@ export function useDigitalBooks(userGrade: MasonicGrade = 'aprendiz') {
     uploadBook,
     approveBook,
     rejectBook,
+    updateDigitalBook,
     getDownloadUrl,
   };
 }
