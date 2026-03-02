@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Upload, FileText, Sparkles, Loader2 } from 'lucide-react';
+import { Upload, FileText, Loader2, Sparkles, ArrowLeft } from 'lucide-react';
 import { useDigitalBooks } from '@/hooks/useDigitalBooks';
 import { useAuth } from '@/hooks/useAuth';
 import { useIsBibliotecario } from '@/hooks/useIsBibliotecario';
@@ -21,6 +21,8 @@ interface Props {
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
 
+type Step = 'upload' | 'analyzing' | 'review';
+
 export function UploadDigitalBookDialog({ open, onClose }: Props) {
   const { t } = useTranslation();
   const { user } = useAuth();
@@ -28,19 +30,20 @@ export function UploadDigitalBookDialog({ open, onClose }: Props) {
   const { uploadBook } = useDigitalBooks();
   const fileRef = useRef<HTMLInputElement>(null);
 
+  const [step, setStep] = useState<Step>('upload');
+  const [file, setFile] = useState<File | null>(null);
+  const [fileError, setFileError] = useState('');
+  const [tempFilePath, setTempFilePath] = useState<string | null>(null);
+
+  // Metadata fields (populated by AI, editable by user)
   const [title, setTitle] = useState('');
   const [author, setAuthor] = useState('');
   const [description, setDescription] = useState('');
   const [gradeLevel, setGradeLevel] = useState<MasonicGrade>('aprendiz');
-  const [file, setFile] = useState<File | null>(null);
-  const [fileError, setFileError] = useState('');
-  const [generatingDesc, setGeneratingDesc] = useState(false);
-  const [tempFilePath, setTempFilePath] = useState<string | null>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0];
     setFileError('');
-    setTempFilePath(null);
     if (!selected) return;
     if (selected.type !== 'application/pdf') {
       setFileError(t('digitalLibrary.onlyPdf'));
@@ -53,22 +56,20 @@ export function UploadDigitalBookDialog({ open, onClose }: Props) {
     setFile(selected);
   };
 
-  const handleGenerateDescription = async () => {
+  const handleAnalyze = async () => {
     if (!file || !user?.id) return;
-    setGeneratingDesc(true);
+    setStep('analyzing');
 
     try {
-      // Upload file temporarily to generate description
-      let filePath = tempFilePath;
-      if (!filePath) {
-        filePath = `${user.id}/temp_${Date.now()}_${file.name}`;
-        const { error: uploadError } = await supabase.storage
-          .from('digital-books')
-          .upload(filePath, file, { contentType: 'application/pdf' });
-        if (uploadError) throw uploadError;
-        setTempFilePath(filePath);
-      }
+      // Upload file temporarily
+      const filePath = `${user.id}/temp_${Date.now()}_${file.name}`;
+      const { error: uploadError } = await supabase.storage
+        .from('digital-books')
+        .upload(filePath, file, { contentType: 'application/pdf' });
+      if (uploadError) throw uploadError;
+      setTempFilePath(filePath);
 
+      // Call AI to extract metadata
       const { data, error } = await supabase.functions.invoke('describe-pdf', {
         body: { file_path: filePath },
       });
@@ -76,33 +77,43 @@ export function UploadDigitalBookDialog({ open, onClose }: Props) {
       if (error) throw error;
       if (data?.error === 'rate_limited') {
         toast.error(t('digitalLibrary.rateLimited'));
+        setStep('upload');
         return;
       }
       if (data?.error === 'payment_required') {
         toast.error(t('digitalLibrary.paymentRequired'));
+        setStep('upload');
         return;
       }
 
-      if (data?.description) {
-        setDescription(data.description);
-        toast.success(t('digitalLibrary.descriptionGenerated'));
-      }
+      setTitle(data?.title || '');
+      setAuthor(data?.author || '');
+      setDescription(data?.description || '');
+      setStep('review');
     } catch (err) {
-      console.error('Generate description error:', err);
-      toast.error(t('digitalLibrary.descriptionError'));
-    } finally {
-      setGeneratingDesc(false);
+      console.error('Analyze PDF error:', err);
+      toast.error(t('digitalLibrary.analyzeError'));
+      setStep('upload');
+    }
+  };
+
+  const handleBack = () => {
+    setStep('upload');
+    setTitle('');
+    setAuthor('');
+    setDescription('');
+    // Clean up temp file
+    if (tempFilePath) {
+      supabase.storage.from('digital-books').remove([tempFilePath]).catch(() => {});
+      setTempFilePath(null);
     }
   };
 
   const handleSubmit = () => {
     if (!user?.id || !file || !title.trim() || !author.trim()) return;
 
-    // If we already uploaded a temp file, we could reuse it, but the hook
-    // handles its own upload, so we just let it proceed normally.
-    // Clean up temp file if it exists and is different from what will be uploaded.
+    // Clean up temp file
     if (tempFilePath) {
-      // Clean up temp file asynchronously
       supabase.storage.from('digital-books').remove([tempFilePath]).catch(() => {});
     }
 
@@ -119,10 +130,17 @@ export function UploadDigitalBookDialog({ open, onClose }: Props) {
     );
   };
 
+  const handleClose = () => {
+    if (tempFilePath) {
+      supabase.storage.from('digital-books').remove([tempFilePath]).catch(() => {});
+    }
+    onClose();
+  };
+
   const canSubmit = !!file && !!title.trim() && !!author.trim() && !fileError;
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+    <Dialog open={open} onOpenChange={(o) => !o && handleClose()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -131,107 +149,141 @@ export function UploadDigitalBookDialog({ open, onClose }: Props) {
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label>{t('library.bookTitle')} *</Label>
-            <Input value={title} onChange={(e) => setTitle(e.target.value)} />
-          </div>
-
-          <div className="space-y-2">
-            <Label>{t('library.author')} *</Label>
-            <Input value={author} onChange={(e) => setAuthor(e.target.value)} />
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label>{t('common.description')} ({t('common.optional')})</Label>
-              {file && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="gap-1 text-xs h-7"
-                  onClick={handleGenerateDescription}
-                  disabled={generatingDesc}
-                >
-                  {generatingDesc ? (
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                  ) : (
-                    <Sparkles className="h-3 w-3" />
-                  )}
-                  {t('digitalLibrary.generateDescription')}
-                </Button>
-              )}
-            </div>
-            <Textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={3}
-              placeholder={file ? t('digitalLibrary.descriptionPlaceholder') : ''}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label>{t('library.gradeLevel')}</Label>
-            <Select value={gradeLevel} onValueChange={(v) => setGradeLevel(v as MasonicGrade)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="aprendiz">{t('library.grades.aprendiz')}</SelectItem>
-                <SelectItem value="companero">{t('library.grades.companero')}</SelectItem>
-                <SelectItem value="maestro">{t('library.grades.maestro')}</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label>PDF *</Label>
-            <div
-              className="border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:border-primary/50 transition-colors"
-              onClick={() => fileRef.current?.click()}
-            >
-              <input
-                ref={fileRef}
-                type="file"
-                accept=".pdf"
-                className="hidden"
-                onChange={handleFileChange}
-              />
-              {file ? (
-                <div className="flex items-center gap-2 justify-center">
-                  <FileText className="h-5 w-5 text-red-500" />
-                  <span className="text-sm font-medium">{file.name}</span>
-                  <span className="text-xs text-muted-foreground">
-                    ({(file.size / (1024 * 1024)).toFixed(1)} MB)
-                  </span>
-                </div>
-              ) : (
-                <div className="text-muted-foreground">
-                  <Upload className="h-8 w-8 mx-auto mb-1 opacity-40" />
-                  <p className="text-sm">{t('digitalLibrary.clickToUpload')}</p>
-                  <p className="text-xs">{t('digitalLibrary.maxSize')}</p>
-                </div>
-              )}
-            </div>
-            {fileError && <p className="text-xs text-destructive">{fileError}</p>}
-          </div>
-
-          {!isBibliotecario && (
-            <p className="text-xs text-muted-foreground bg-muted/50 rounded-md p-2">
-              {t('digitalLibrary.approvalNotice')}
+        {/* Step 1: Upload PDF */}
+        {step === 'upload' && (
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              {t('digitalLibrary.uploadStep1')}
             </p>
-          )}
-        </div>
+            <div className="space-y-2">
+              <Label>PDF *</Label>
+              <div
+                className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer hover:border-primary/50 transition-colors"
+                onClick={() => fileRef.current?.click()}
+              >
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept=".pdf"
+                  className="hidden"
+                  onChange={handleFileChange}
+                />
+                {file ? (
+                  <div className="flex items-center gap-2 justify-center">
+                    <FileText className="h-6 w-6 text-destructive/70" />
+                    <div className="text-left">
+                      <p className="text-sm font-medium">{file.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {(file.size / (1024 * 1024)).toFixed(1)} MB
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-muted-foreground">
+                    <Upload className="h-10 w-10 mx-auto mb-2 opacity-40" />
+                    <p className="text-sm font-medium">{t('digitalLibrary.clickToUpload')}</p>
+                    <p className="text-xs">{t('digitalLibrary.maxSize')}</p>
+                  </div>
+                )}
+              </div>
+              {fileError && <p className="text-xs text-destructive">{fileError}</p>}
+            </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
-            {t('common.cancel')}
-          </Button>
-          <Button onClick={handleSubmit} disabled={!canSubmit || uploadBook.isPending}>
-            {uploadBook.isPending ? t('common.processing') : t('digitalLibrary.upload')}
-          </Button>
-        </DialogFooter>
+            <DialogFooter>
+              <Button variant="outline" onClick={handleClose}>
+                {t('common.cancel')}
+              </Button>
+              <Button
+                onClick={handleAnalyze}
+                disabled={!file || !!fileError}
+                className="gap-2"
+              >
+                <Sparkles className="h-4 w-4" />
+                {t('digitalLibrary.analyzeWithAI')}
+              </Button>
+            </DialogFooter>
+          </div>
+        )}
+
+        {/* Step 2: Analyzing */}
+        {step === 'analyzing' && (
+          <div className="flex flex-col items-center py-10 gap-4">
+            <Loader2 className="h-10 w-10 animate-spin text-primary" />
+            <div className="text-center">
+              <p className="font-medium text-foreground">{t('digitalLibrary.analyzing')}</p>
+              <p className="text-sm text-muted-foreground">{t('digitalLibrary.analyzingHint')}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Step 3: Review metadata */}
+        {step === 'review' && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 rounded-md p-2">
+              <Sparkles className="h-4 w-4 text-primary shrink-0" />
+              {t('digitalLibrary.aiExtracted')}
+            </div>
+
+            <div className="space-y-2">
+              <Label>{t('library.bookTitle')} *</Label>
+              <Input value={title} onChange={(e) => setTitle(e.target.value)} />
+            </div>
+
+            <div className="space-y-2">
+              <Label>{t('library.author')} *</Label>
+              <Input value={author} onChange={(e) => setAuthor(e.target.value)} />
+            </div>
+
+            <div className="space-y-2">
+              <Label>{t('common.description')}</Label>
+              <Textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={3}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>{t('library.gradeLevel')} *</Label>
+              <Select value={gradeLevel} onValueChange={(v) => setGradeLevel(v as MasonicGrade)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="aprendiz">{t('library.grades.aprendiz')}</SelectItem>
+                  <SelectItem value="companero">{t('library.grades.companero')}</SelectItem>
+                  <SelectItem value="maestro">{t('library.grades.maestro')}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {file && (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <FileText className="h-4 w-4 text-destructive/70" />
+                {file.name} ({(file.size / (1024 * 1024)).toFixed(1)} MB)
+              </div>
+            )}
+
+            {!isBibliotecario && (
+              <p className="text-xs text-muted-foreground bg-muted/50 rounded-md p-2">
+                {t('digitalLibrary.approvalNotice')}
+              </p>
+            )}
+
+            <DialogFooter className="gap-2 sm:gap-0">
+              <Button variant="ghost" onClick={handleBack} className="gap-1 mr-auto">
+                <ArrowLeft className="h-4 w-4" />
+                {t('common.back')}
+              </Button>
+              <Button variant="outline" onClick={handleClose}>
+                {t('common.cancel')}
+              </Button>
+              <Button onClick={handleSubmit} disabled={!canSubmit || uploadBook.isPending}>
+                {uploadBook.isPending ? t('common.processing') : t('digitalLibrary.upload')}
+              </Button>
+            </DialogFooter>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );

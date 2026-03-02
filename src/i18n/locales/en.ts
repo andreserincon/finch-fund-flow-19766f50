@@ -33,6 +33,7 @@ export default {
       optional: 'Optional',
       copy: 'Copy',
       copied: 'Copied',
+      back: 'Back',
     },
 
     // Sidebar & Navigation
@@ -494,6 +495,12 @@ export default {
       descriptionError: 'Error generating description',
       rateLimited: 'Too many requests, try again in a moment',
       paymentRequired: 'AI credits exhausted',
+      uploadStep1: 'Attach the PDF file. AI will analyze the content to automatically extract the title, author, and description.',
+      analyzeWithAI: 'Analyze with AI',
+      analyzing: 'Analyzing the document...',
+      analyzingHint: 'AI is extracting title, author and description from the PDF',
+      aiExtracted: 'AI filled in the fields. Review and edit as needed before confirming.',
+      analyzeError: 'Error analyzing the PDF. Try again.',
     },
 
     // Library

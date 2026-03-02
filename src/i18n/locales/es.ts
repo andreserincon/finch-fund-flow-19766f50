@@ -33,6 +33,7 @@ export default {
       optional: 'Opcional',
       copy: 'Copiar',
       copied: 'Copiado',
+      back: 'Volver',
     },
 
     // Sidebar & Navigation
@@ -494,6 +495,12 @@ export default {
       descriptionError: 'Error al generar la descripción',
       rateLimited: 'Demasiadas solicitudes, intentá de nuevo en unos momentos',
       paymentRequired: 'Créditos de IA agotados',
+      uploadStep1: 'Adjuntá el archivo PDF. La IA analizará el contenido para extraer título, autor y descripción automáticamente.',
+      analyzeWithAI: 'Analizar con IA',
+      analyzing: 'Analizando el documento...',
+      analyzingHint: 'La IA está extrayendo título, autor y descripción del PDF',
+      aiExtracted: 'La IA completó los campos. Revisá y editá lo que necesites antes de confirmar.',
+      analyzeError: 'Error al analizar el PDF. Intentá de nuevo.',
     },
 
     // Library

@@ -63,7 +63,7 @@ serve(async (req) => {
       new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), "")
     );
 
-    // Call Lovable AI with the PDF as inline data
+    // Call Lovable AI with tool calling to extract structured metadata
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -76,7 +76,7 @@ serve(async (req) => {
           {
             role: "system",
             content:
-              "Eres un bibliotecario experto. Dada la imagen/contenido de un documento PDF, genera una descripción concisa en español (máximo 3 oraciones) que resuma el contenido, tema principal y utilidad del material. Solo devuelve la descripción, sin comillas ni etiquetas adicionales.",
+              "Eres un bibliotecario experto. Analiza el documento PDF proporcionado y extrae el título, autor y una descripción concisa (máximo 3 oraciones en español). Si no puedes determinar el autor, usa 'Desconocido'.",
           },
           {
             role: "user",
@@ -89,11 +89,34 @@ serve(async (req) => {
               },
               {
                 type: "text",
-                text: "Genera una descripción breve de este documento PDF.",
+                text: "Extrae el título, autor y descripción de este documento PDF.",
               },
             ],
           },
         ],
+        tools: [
+          {
+            type: "function",
+            function: {
+              name: "extract_book_metadata",
+              description: "Extract title, author and description from a PDF document.",
+              parameters: {
+                type: "object",
+                properties: {
+                  title: { type: "string", description: "The book/document title" },
+                  author: { type: "string", description: "The author name" },
+                  description: {
+                    type: "string",
+                    description: "A concise description in Spanish (max 3 sentences)",
+                  },
+                },
+                required: ["title", "author", "description"],
+                additionalProperties: false,
+              },
+            },
+          },
+        ],
+        tool_choice: { type: "function", function: { name: "extract_book_metadata" } },
       }),
     });
 
@@ -122,12 +145,37 @@ serve(async (req) => {
     }
 
     const aiData = await aiResponse.json();
-    const description = aiData.choices?.[0]?.message?.content?.trim() || "";
 
-    return new Response(JSON.stringify({ description }), {
-      status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    // Extract from tool call response
+    const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
+    if (toolCall?.function?.arguments) {
+      try {
+        const metadata = JSON.parse(toolCall.function.arguments);
+        return new Response(
+          JSON.stringify({
+            title: metadata.title || "",
+            author: metadata.author || "Desconocido",
+            description: metadata.description || "",
+          }),
+          {
+            status: 200,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
+      } catch {
+        console.error("Failed to parse tool call arguments");
+      }
+    }
+
+    // Fallback: try to get from message content
+    const content = aiData.choices?.[0]?.message?.content?.trim() || "";
+    return new Response(
+      JSON.stringify({ title: "", author: "", description: content }),
+      {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    );
   } catch (e) {
     console.error("describe-pdf error:", e);
     return new Response(
