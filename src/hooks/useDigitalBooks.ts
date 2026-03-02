@@ -60,8 +60,9 @@ export function useDigitalBooks(userGrade: MasonicGrade = 'aprendiz') {
       gradeLevel: MasonicGrade;
       userId: string;
     }) => {
-      // Upload file to storage
-      const filePath = `${userId}/${Date.now()}_${file.name}`;
+      // Sanitize filename for storage
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const filePath = `${userId}/${Date.now()}_${safeName}`;
       const { error: uploadError } = await supabase.storage
         .from('digital-books')
         .upload(filePath, file, { contentType: 'application/pdf' });
