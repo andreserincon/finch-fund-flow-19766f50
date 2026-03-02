@@ -565,6 +565,7 @@ export default {
       requestReviewed: 'Solicitud revisada correctamente',
       requestReviewError: 'Error al revisar solicitud',
       grades: {
+        profano: 'Profano',
         aprendiz: 'Aprendiz',
         companero: 'Compañero',
         maestro: 'Maestro',

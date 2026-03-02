@@ -1,0 +1,1 @@
+ALTER TYPE public.masonic_grade ADD VALUE IF NOT EXISTS 'profano' BEFORE 'aprendiz';
