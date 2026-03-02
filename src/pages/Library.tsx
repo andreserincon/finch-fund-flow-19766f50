@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { BookOpen, Plus, ClipboardList, Search, Filter, Settings, User, FileText, Download, Upload } from 'lucide-react';
+import { BookOpen, Plus, ClipboardList, Search, Filter, Settings, User, FileText, Download, Upload, ScanLine } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -23,6 +23,7 @@ import { BookManagementTable } from '@/components/library/BookManagementTable';
 import { MyBooksPanel } from '@/components/library/MyBooksPanel';
 import { DigitalLibraryPanel } from '@/components/library/DigitalLibraryPanel';
 import { UploadDigitalBookDialog } from '@/components/library/UploadDigitalBookDialog';
+import { QRScannerDialog } from '@/components/library/QRScannerDialog';
 import { toast } from 'sonner';
 import type { Book } from '@/lib/library-types';
 import { format } from 'date-fns';
@@ -65,6 +66,16 @@ export default function Library() {
   const [selectedDigitalBook, setSelectedDigitalBook] = useState<DigitalBook | null>(null);
   const [showAddBook, setShowAddBook] = useState(false);
   const [showUploadDigital, setShowUploadDigital] = useState(false);
+  const [showScanner, setShowScanner] = useState(false);
+
+  const handleQRScan = (bookId: string) => {
+    const found = books.find((b) => b.id === bookId);
+    if (found) {
+      setSelectedBook(found);
+    } else {
+      toast.error(t('library.bookNotFound', 'Libro no encontrado'));
+    }
+  };
 
   // Handle ?book=<id> from QR scan
   const bookIdFromQR = searchParams.get('book');
@@ -201,6 +212,10 @@ export default function Library() {
                 className="pl-9"
               />
             </div>
+            <Button variant="outline" className="sm:hidden gap-2" onClick={() => setShowScanner(true)}>
+              <ScanLine className="h-4 w-4" />
+              {t('library.scanQR', 'Escanear QR')}
+            </Button>
             <Select value={typeFilter} onValueChange={setTypeFilter}>
               <SelectTrigger className="w-[160px]">
                 <SelectValue />
@@ -353,6 +368,8 @@ export default function Library() {
       {showUploadDigital && (
         <UploadDigitalBookDialog open={showUploadDigital} onClose={() => setShowUploadDigital(false)} />
       )}
+
+      <QRScannerDialog open={showScanner} onClose={() => setShowScanner(false)} onScan={handleQRScan} />
     </div>
   );
 }
