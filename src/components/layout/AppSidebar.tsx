@@ -95,7 +95,8 @@ export function AppSidebar() {
 
   // Admin module nav items
   const adminNavItems = [
-    { title: t('nav.userManagement'), url: '/user-management', icon: Users },
+    { title: t('nav.userManagement'), url: '/user-management', icon: UserCog },
+    { title: t('nav.members'), url: '/members', icon: Users },
   ];
 
   // Library nav items
