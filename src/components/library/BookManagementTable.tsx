@@ -11,18 +11,22 @@ import { useAuth } from '@/hooks/useAuth';
 import { EditBookDialog } from './EditBookDialog';
 import { DeleteBookDialog } from './DeleteBookDialog';
 import { BookQRLabel } from './BookQRLabel';
-import type { Book } from '@/lib/library-types';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import type { Book, MasonicGrade } from '@/lib/library-types';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 
 export function BookManagementTable() {
   const { t } = useTranslation();
   const { user } = useAuth();
   const { books, isLoading, updateBook } = useBooks('maestro');
-  const { digitalBooks, isLoading: digitalLoading, approveBook, rejectBook, getDownloadUrl } = useDigitalBooks('maestro');
+  const { digitalBooks, isLoading: digitalLoading, approveBook, rejectBook, updateDigitalBook, getDownloadUrl } = useDigitalBooks('maestro');
   const [editBook, setEditBook] = useState<Book | null>(null);
   const [deleteBook, setDeleteBook] = useState<Book | null>(null);
   const [qrBook, setQrBook] = useState<Book | null>(null);
+  const [editDigitalBook, setEditDigitalBook] = useState<DigitalBook | null>(null);
+  const [editGrade, setEditGrade] = useState<MasonicGrade>('aprendiz');
 
   if (isLoading || digitalLoading) return <p className="text-muted-foreground p-4">{t('common.loading')}</p>;
 
@@ -262,6 +266,9 @@ export function BookManagementTable() {
                         <DropdownMenuItem onClick={() => handleDownloadDigital(book)}>
                           <Download className="h-4 w-4 mr-2" />{t('digitalLibrary.download')}
                         </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => { setEditDigitalBook(book); setEditGrade(book.grade_level); }}>
+                          <Pencil className="h-4 w-4 mr-2" />{t('library.editGrade')}
+                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleRejectDigital(book)} className="text-destructive">
                           <Trash2 className="h-4 w-4 mr-2" />{t('common.delete')}
                         </DropdownMenuItem>
@@ -288,6 +295,44 @@ export function BookManagementTable() {
         <Dialog open={!!qrBook} onOpenChange={(o) => !o && setQrBook(null)}>
           <DialogContent className="sm:max-w-sm">
             <BookQRLabel book={qrBook} />
+          </DialogContent>
+        </Dialog>
+      )}
+      {editDigitalBook && (
+        <Dialog open={!!editDigitalBook} onOpenChange={(o) => !o && setEditDigitalBook(null)}>
+          <DialogContent className="sm:max-w-sm">
+            <DialogHeader>
+              <DialogTitle>{t('library.editGrade')}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3 py-2">
+              <p className="text-sm text-muted-foreground">{editDigitalBook.title}</p>
+              <div className="space-y-2">
+                <Label>{t('library.gradeLevel')}</Label>
+                <Select value={editGrade} onValueChange={(v) => setEditGrade(v as MasonicGrade)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="aprendiz">{t('library.grades.aprendiz')}</SelectItem>
+                    <SelectItem value="companero">{t('library.grades.companero')}</SelectItem>
+                    <SelectItem value="maestro">{t('library.grades.maestro')}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setEditDigitalBook(null)}>{t('common.cancel')}</Button>
+              <Button
+                onClick={() => {
+                  updateDigitalBook.mutate({ id: editDigitalBook.id, grade_level: editGrade }, {
+                    onSuccess: () => setEditDigitalBook(null),
+                  });
+                }}
+                disabled={updateDigitalBook.isPending}
+              >
+                {t('common.save')}
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
       )}

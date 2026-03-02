@@ -542,6 +542,7 @@ export default {
       approved: 'Approved',
       rejected: 'Rejected',
       generateLabel: 'Generate Label',
+      editGrade: 'Edit Grade',
       owner: 'Owner',
       ownerLodge: 'RL SB 646',
       ownerMember: 'Member',
