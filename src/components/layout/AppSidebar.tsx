@@ -14,7 +14,8 @@ import {
   BookOpen,
   ClipboardList,
   ChevronDown,
-  Plus
+  Plus,
+  Home
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -336,7 +337,16 @@ export function AppSidebar() {
         )}
       </SidebarContent>
 
-      <SidebarFooter className="p-4 border-t border-sidebar-border">
+      <SidebarFooter className="p-4 border-t border-sidebar-border space-y-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => navigate('/home')}
+          className="w-full justify-start text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+        >
+          <Home className="mr-2 h-4 w-4" />
+          {t('home.title', 'Inicio')}
+        </Button>
         <div className="flex items-center justify-between">
           <div className="flex-1 truncate">
             <p className="text-sm font-medium text-sidebar-foreground truncate">

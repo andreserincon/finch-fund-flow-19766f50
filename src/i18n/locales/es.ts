@@ -36,6 +36,13 @@ export default {
       back: 'Volver',
     },
 
+    // Home
+    home: {
+      title: 'Inicio',
+      welcome: 'Bienvenido',
+      selectModule: 'Seleccioná un módulo para comenzar',
+    },
+
     // Sidebar & Navigation
     nav: {
       treasury: 'Tesorería',
