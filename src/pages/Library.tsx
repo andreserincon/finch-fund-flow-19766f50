@@ -48,9 +48,9 @@ export default function Library() {
   const { t } = useTranslation();
   const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { grade } = useUserGrade();
+  const { grade, isLoading: gradeLoading } = useUserGrade();
   const { isBibliotecario, isLoading: biblioLoading } = useIsBibliotecario();
-  const { books, isLoading } = useBooks(isBibliotecario ? 'maestro' : grade);
+  const { books, isLoading } = useBooks(isBibliotecario ? 'maestro' : grade, !biblioLoading && !gradeLoading);
   const { digitalBooks, isLoading: digitalLoading, getDownloadUrl } = useDigitalBooks(
     isBibliotecario ? 'maestro' : grade
   );
