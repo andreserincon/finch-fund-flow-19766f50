@@ -57,14 +57,15 @@ export function AppSidebar() {
   const location = useLocation();
   const deriveModule = (): AppModule => {
     if (location.pathname.startsWith('/library')) return 'library';
-    if (location.pathname.startsWith('/user-management')) return 'admin';
-    return 'treasury';
+    if (location.pathname.startsWith('/user-management') || location.pathname.startsWith('/members')) return 'admin';
+    if (canViewTreasury) return 'treasury';
+    return 'library';
   };
   const [activeModule, setActiveModule] = useState<AppModule>(deriveModule);
 
   useEffect(() => {
     setActiveModule(deriveModule());
-  }, [location.pathname]);
+  }, [location.pathname, canViewTreasury]);
 
   const modules: { key: AppModule; label: string; sublabel: string; icon: any; show: boolean }[] = [
     { key: 'treasury', label: t('nav.treasury'), sublabel: t('nav.managementSystem'), icon: Wallet, show: canViewTreasury },
@@ -74,7 +75,7 @@ export function AppSidebar() {
 
   const visibleModules = modules.filter(m => m.show);
 
-  const currentModule = modules.find(m => m.key === activeModule)!;
+  const currentModule = visibleModules.find(m => m.key === activeModule) || visibleModules[0];
 
   // Treasury nav items
   const mainNavItems = [
