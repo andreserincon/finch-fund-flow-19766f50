@@ -23,6 +23,7 @@ import { NavLink } from '@/components/NavLink';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
 import { useIsBibliotecario } from '@/hooks/useIsBibliotecario';
+import { useCanViewTreasury } from '@/hooks/useCanViewTreasury';
 import {
   Sidebar,
   SidebarContent,
@@ -52,6 +53,7 @@ export function AppSidebar() {
   const { isAdmin } = useIsAdmin();
   const { isSuperAdmin } = useIsSuperAdmin();
   const { isBibliotecario } = useIsBibliotecario();
+  const { canViewTreasury } = useCanViewTreasury();
   const location = useLocation();
   const deriveModule = (): AppModule => {
     if (location.pathname.startsWith('/library')) return 'library';
@@ -64,11 +66,13 @@ export function AppSidebar() {
     setActiveModule(deriveModule());
   }, [location.pathname]);
 
-  const modules: { key: AppModule; label: string; sublabel: string; icon: any; adminOnly?: boolean }[] = [
-    { key: 'treasury', label: t('nav.treasury'), sublabel: t('nav.managementSystem'), icon: Wallet },
-    { key: 'library', label: t('nav.library'), sublabel: t('library.subtitle'), icon: BookOpen },
-    { key: 'admin', label: t('nav.administration'), sublabel: t('nav.adminSubtitle'), icon: UserCog, adminOnly: true },
+  const modules: { key: AppModule; label: string; sublabel: string; icon: any; show: boolean }[] = [
+    { key: 'treasury', label: t('nav.treasury'), sublabel: t('nav.managementSystem'), icon: Wallet, show: canViewTreasury },
+    { key: 'library', label: t('nav.library'), sublabel: t('library.subtitle'), icon: BookOpen, show: true },
+    { key: 'admin', label: t('nav.administration'), sublabel: t('nav.adminSubtitle'), icon: UserCog, show: isSuperAdmin },
   ];
+
+  const visibleModules = modules.filter(m => m.show);
 
   const currentModule = modules.find(m => m.key === activeModule)!;
 
@@ -133,7 +137,7 @@ export function AppSidebar() {
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-[220px]">
-            {modules.filter(mod => !mod.adminOnly || isSuperAdmin).map((mod) => (
+            {visibleModules.map((mod) => (
               <DropdownMenuItem
                 key={mod.key}
                 onClick={() => {
