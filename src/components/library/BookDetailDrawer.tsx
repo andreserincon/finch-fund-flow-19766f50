@@ -1,20 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
 import { ArrowRightLeft, User, Calendar, QrCode, Building2 } from 'lucide-react';
 import { format } from 'date-fns';
-import { useMembers } from '@/hooks/useMembers';
 import { useTransferRequests } from '@/hooks/useTransferRequests';
 import { useAuth } from '@/hooks/useAuth';
 import { BookQRLabel } from './BookQRLabel';
 import type { Book } from '@/lib/library-types';
-import { GRADE_HIERARCHY } from '@/lib/library-types';
 
 interface BookDetailDrawerProps {
   book: Book;
@@ -26,10 +22,7 @@ interface BookDetailDrawerProps {
 export function BookDetailDrawer({ book, open, onClose, isBibliotecario }: BookDetailDrawerProps) {
   const { t } = useTranslation();
   const { user } = useAuth();
-  const { members } = useMembers();
   const { createRequest } = useTransferRequests();
-  const [newHolderId, setNewHolderId] = useState('');
-  const [showTransfer, setShowTransfer] = useState(false);
   const [showQR, setShowQR] = useState(false);
 
   // Get the current user's member_id from their profile
@@ -47,18 +40,10 @@ export function BookDetailDrawer({ book, open, onClose, isBibliotecario }: BookD
     enabled: !!user?.id,
   });
 
-  // When transfer form opens, default to the current user's member
-  useEffect(() => {
-    if (showTransfer && userMemberId && !newHolderId) {
-      setNewHolderId(userMemberId);
-    }
-  }, [showTransfer, userMemberId]);
-
-  const handleSubmitTransfer = () => {
-    if (!user?.id || !newHolderId) return;
+  const handleRequestTransfer = () => {
+    if (!user?.id || !userMemberId) return;
     createRequest.mutate(
-      { book_id: book.id, requested_by: user.id, new_holder_id: newHolderId },
-      { onSuccess: () => { setShowTransfer(false); setNewHolderId(''); } }
+      { book_id: book.id, requested_by: user.id, new_holder_id: userMemberId },
     );
   };
 
@@ -106,9 +91,14 @@ export function BookDetailDrawer({ book, open, onClose, isBibliotecario }: BookD
           )}
 
           <div className="flex gap-2">
-            <Button variant="outline" className="flex-1" onClick={() => setShowTransfer(!showTransfer)}>
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={handleRequestTransfer}
+              disabled={!userMemberId || createRequest.isPending}
+            >
               <ArrowRightLeft className="h-4 w-4 mr-1" />
-              {t('library.requestTransfer')}
+              {createRequest.isPending ? t('common.processing') : t('library.requestTransfer')}
             </Button>
             {isBibliotecario && (
               <Button variant="outline" onClick={() => setShowQR(!showQR)}>
@@ -117,27 +107,10 @@ export function BookDetailDrawer({ book, open, onClose, isBibliotecario }: BookD
             )}
           </div>
 
-          {showTransfer && (
-            <div className="space-y-3 border rounded-lg p-3">
-              <Label>{t('library.newHolder')}</Label>
-              <Select value={newHolderId} onValueChange={setNewHolderId}>
-                <SelectTrigger>
-                  <SelectValue placeholder={t('library.selectMember')} />
-                </SelectTrigger>
-                <SelectContent>
-                  {(members || []).filter(m => m.is_active && GRADE_HIERARCHY[m.masonic_grade as keyof typeof GRADE_HIERARCHY] >= GRADE_HIERARCHY[book.grade_level]).map((m) => (
-                    <SelectItem key={m.id} value={m.id}>{m.full_name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button
-                onClick={handleSubmitTransfer}
-                disabled={!newHolderId || createRequest.isPending}
-                className="w-full"
-              >
-                {createRequest.isPending ? t('common.processing') : t('library.submitRequest')}
-              </Button>
-            </div>
+          {!userMemberId && (
+            <p className="text-xs text-muted-foreground">
+              {t('library.noMemberLinked', 'Necesitás tener un miembro asociado para solicitar libros.')}
+            </p>
           )}
 
           {showQR && <BookQRLabel book={book} />}
