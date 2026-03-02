@@ -61,8 +61,9 @@ export function UploadDigitalBookDialog({ open, onClose }: Props) {
     setStep('analyzing');
 
     try {
-      // Upload file temporarily
-      const filePath = `${user.id}/temp_${Date.now()}_${file.name}`;
+      // Upload file temporarily - sanitize filename for storage
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const filePath = `${user.id}/temp_${Date.now()}_${safeName}`;
       const { error: uploadError } = await supabase.storage
         .from('digital-books')
         .upload(filePath, file, { contentType: 'application/pdf' });
