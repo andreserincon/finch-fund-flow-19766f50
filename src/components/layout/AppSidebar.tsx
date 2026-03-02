@@ -57,7 +57,7 @@ export function AppSidebar() {
   const location = useLocation();
   const deriveModule = (): AppModule => {
     if (location.pathname.startsWith('/library')) return 'library';
-    if (location.pathname.startsWith('/user-management') || location.pathname.startsWith('/members')) return 'admin';
+    if (location.pathname.startsWith('/user-management') || location.pathname.startsWith('/admin/members')) return 'admin';
     if (canViewTreasury) return 'treasury';
     return 'library';
   };
@@ -101,7 +101,7 @@ export function AppSidebar() {
   // Admin module nav items
   const adminNavItems = [
     { title: t('nav.userManagement'), url: '/user-management', icon: UserCog },
-    { title: t('nav.members'), url: '/members', icon: Users },
+    { title: t('nav.members'), url: '/admin/members', icon: Users },
   ];
 
   // Library nav items
