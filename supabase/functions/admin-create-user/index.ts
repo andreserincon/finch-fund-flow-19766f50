@@ -8,18 +8,22 @@ const corsHeaders = {
 
 interface CreateUserRequest {
   email: string;
-  password: string;
-  role?: "treasurer" | "vm" | "member";
+  role?: "treasurer" | "vm" | "member" | "bibliotecario" | "admin";
+}
+
+function generatePassword(length = 12): string {
+  const charset = "abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789!@#$%";
+  const array = new Uint8Array(length);
+  crypto.getRandomValues(array);
+  return Array.from(array, (b) => charset[b % charset.length]).join("");
 }
 
 serve(async (req: Request) => {
-  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    // Verify the requesting user is an admin
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       throw new Error("No authorization header");
@@ -29,50 +33,49 @@ serve(async (req: Request) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 
-    // Create client with user's token to verify they're an admin
     const userClient = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } },
     });
 
-    const { data: { user: requestingUser }, error: userError } = await userClient.auth.getUser();
-    if (userError || !requestingUser) {
+    // Verify requesting user is authenticated
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: claimsError } = await userClient.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims) {
       throw new Error("Unauthorized: Invalid token");
     }
 
-    // Check if requesting user is an admin (treasurer)
-    const { data: isAdmin, error: adminCheckError } = await userClient.rpc("is_admin", {
-      _user_id: requestingUser.id,
+    const requestingUserId = claimsData.claims.sub;
+
+    // Check if requesting user has 'admin' role (not treasurer)
+    const adminClient = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    if (adminCheckError || !isAdmin) {
-      console.error("Admin check error:", adminCheckError);
+    const { data: roleData } = await adminClient
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", requestingUserId)
+      .eq("role", "admin")
+      .maybeSingle();
+
+    if (!roleData) {
       throw new Error("Unauthorized: Only administrators can create users");
     }
 
-    // Parse request body
-    const { email, password, role }: CreateUserRequest = await req.json();
+    const { email, role }: CreateUserRequest = await req.json();
 
-    if (!email || !password) {
-      throw new Error("Email and password are required");
+    if (!email) {
+      throw new Error("Email is required");
     }
 
-    if (password.length < 6) {
-      throw new Error("Password must be at least 6 characters");
-    }
-
-    // Create admin client with service role key
-    const adminClient = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    });
+    // Auto-generate password
+    const generatedPassword = generatePassword();
 
     // Create the user
     const { data: newUser, error: createError } = await adminClient.auth.admin.createUser({
       email,
-      password,
-      email_confirm: true, // Auto-confirm email
+      password: generatedPassword,
+      email_confirm: true,
     });
 
     if (createError) {
@@ -90,7 +93,6 @@ serve(async (req: Request) => {
 
       if (roleError) {
         console.error("Error assigning role:", roleError);
-        // User was created but role assignment failed - log but don't fail
       } else {
         console.log("Role assigned successfully:", role);
       }
@@ -103,6 +105,7 @@ serve(async (req: Request) => {
           id: newUser.user?.id,
           email: newUser.user?.email,
         },
+        generatedPassword,
       }),
       {
         status: 200,
