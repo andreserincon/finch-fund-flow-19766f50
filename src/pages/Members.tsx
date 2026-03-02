@@ -368,6 +368,18 @@ export default function Members() {
                   </Badge>
                 </div>
                 <div>
+                  <p className="text-muted-foreground text-xs">Overall Balance</p>
+                  <p className={`font-mono text-sm font-semibold ${getOverallBalance(member) < 0 ? 'text-destructive' : 'text-emerald-600'}`}>
+                    {formatCurrency(getOverallBalance(member))}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground text-xs">Status</p>
+                  <div className="mt-1">
+                    {member.is_active ? getStatusBadge(getPaymentStatus(member)) : <Badge variant="outline">Inactive</Badge>}
+                  </div>
+                </div>
+                <div>
                   <p className="text-muted-foreground text-xs">Joined</p>
                   <p className="font-mono text-sm">{format(parseLocalDate(member.join_date), 'MMM d, yyyy')}</p>
                 </div>
@@ -400,13 +412,18 @@ export default function Members() {
                   {getSortIcon('joined')}
                 </Button>
               </TableHead>
+              <TableHead className="text-right">Monthly Fee</TableHead>
+              <TableHead className="text-right">Monthly Balance</TableHead>
+              <TableHead className="text-right">Events Balance</TableHead>
+              <TableHead className="text-right">Overall Balance</TableHead>
+              <TableHead>Status</TableHead>
               <TableHead className="w-[50px]"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredMembers.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
                   No members found
                 </TableCell>
               </TableRow>
@@ -429,6 +446,21 @@ export default function Members() {
                   </TableCell>
                   <TableCell className="text-muted-foreground">
                     {format(parseLocalDate(member.join_date), 'MMM d, yyyy')}
+                  </TableCell>
+                  <TableCell className="text-right font-mono">
+                    {formatCurrency(getMonthlyFeeForMember(member.fee_type))}
+                  </TableCell>
+                  <TableCell className={`text-right font-mono ${getMonthlyBalance(member) < 0 ? 'text-destructive' : ''}`}>
+                    {formatCurrency(getMonthlyBalance(member))}
+                  </TableCell>
+                  <TableCell className={`text-right font-mono ${getEventsBalance(member.member_id) < 0 ? 'text-destructive' : ''}`}>
+                    {formatCurrency(getEventsBalance(member.member_id))}
+                  </TableCell>
+                  <TableCell className={`text-right font-mono ${getOverallBalance(member) < 0 ? 'text-destructive' : ''}`}>
+                    {formatCurrency(getOverallBalance(member))}
+                  </TableCell>
+                  <TableCell>
+                    {member.is_active ? getStatusBadge(getPaymentStatus(member)) : <Badge variant="outline">Inactive</Badge>}
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">

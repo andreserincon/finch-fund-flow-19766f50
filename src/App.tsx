@@ -10,6 +10,7 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import { InstallPrompt } from "@/components/pwa/InstallPrompt";
 import Dashboard from "./pages/Dashboard";
 import Members from "./pages/Members";
+import AdminMembers from "./pages/AdminMembers";
 import Transactions from "./pages/Transactions";
 import Loans from "./pages/Loans";
 import LogPayment from "./pages/LogPayment";
@@ -151,6 +152,7 @@ const App = () => (
         <Route path="/fee-calculator" element={<TreasuryRoute><FeeCalculator /></TreasuryRoute>} />
         <Route path="/reports" element={<TreasuryRoute><Reports /></TreasuryRoute>} />
         <Route path="/library" element={<ProtectedRoute><Library /></ProtectedRoute>} />
+        <Route path="/admin/members" element={<SuperAdminRoute><AdminMembers /></SuperAdminRoute>} />
         <Route path="/user-management" element={<SuperAdminRoute><UserManagement /></SuperAdminRoute>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
