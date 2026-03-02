@@ -24,10 +24,10 @@ import {
 } from '@/components/ui/select';
 import { Loader2, Copy, Check } from 'lucide-react';
 import type { AppRole } from '@/hooks/useUserRoles';
+import { useMembers } from '@/hooks/useMembers';
 
 const createUserSchema = z.object({
   email: z.string().trim().email({ message: 'Email inválido' }),
-  role: z.enum(['treasurer', 'vm', 'member', 'bibliotecario', 'admin', 'none']).optional(),
 });
 
 interface CreatedUserInfo {
@@ -43,16 +43,23 @@ interface CreateUserDialogProps {
 export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const { members } = useMembers();
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<string>('none');
+  const [memberId, setMemberId] = useState<string>('none');
+  const [grade, setGrade] = useState<string>('aprendiz');
   const [errors, setErrors] = useState<{ email?: string }>({});
   const [createdUser, setCreatedUser] = useState<CreatedUserInfo | null>(null);
   const [copied, setCopied] = useState(false);
 
+  const activeMembers = members?.filter((m) => m.is_active) || [];
+
   const resetForm = () => {
     setEmail('');
     setRole('none');
+    setMemberId('none');
+    setGrade('aprendiz');
     setErrors({});
     setCreatedUser(null);
     setCopied(false);
@@ -71,11 +78,21 @@ export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) 
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleMemberChange = (newMemberId: string) => {
+    setMemberId(newMemberId);
+    if (newMemberId !== 'none') {
+      const selectedMember = members?.find((m) => m.id === newMemberId);
+      if (selectedMember) {
+        setGrade(selectedMember.masonic_grade || 'aprendiz');
+      }
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrors({});
 
-    const result = createUserSchema.safeParse({ email, role });
+    const result = createUserSchema.safeParse({ email });
     if (!result.success) {
       const fieldErrors: { email?: string } = {};
       result.error.errors.forEach((err) => {
@@ -92,13 +109,14 @@ export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) 
         body: {
           email: email.trim(),
           role: role !== 'none' ? role : undefined,
+          memberId: memberId !== 'none' ? memberId : undefined,
+          masonicGrade: memberId !== 'none' ? grade : undefined,
         },
       });
 
       if (error) throw new Error(error.message);
       if (data?.error) throw new Error(data.error);
 
-      // Show generated credentials
       setCreatedUser({
         email: email.trim(),
         password: data.generatedPassword,
@@ -106,23 +124,23 @@ export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) 
 
       toast.success(t('userManagement.userCreated', 'Usuario creado exitosamente'));
       queryClient.invalidateQueries({ queryKey: ['users-with-roles'] });
+      queryClient.invalidateQueries({ queryKey: ['members'] });
     } catch (error: any) {
       console.error('Error creating user:', error);
-      
+
       let errorMessage = t('userManagement.createError', 'Error al crear usuario');
       if (error.message?.includes('already been registered')) {
         errorMessage = t('userManagement.emailExists', 'Este email ya está registrado');
       } else if (error.message?.includes('Unauthorized')) {
         errorMessage = t('userManagement.unauthorized', 'No tienes permisos para crear usuarios');
       }
-      
+
       toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Show credentials after creation
   if (createdUser) {
     return (
       <Dialog open={open} onOpenChange={handleClose}>
@@ -186,7 +204,7 @@ export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) 
               )}
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="role">{t('userManagement.role', 'Rol')}</Label>
+              <Label>{t('userManagement.role', 'Rol')}</Label>
               <Select value={role} onValueChange={setRole} disabled={isLoading}>
                 <SelectTrigger>
                   <SelectValue />
@@ -200,6 +218,40 @@ export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) 
                   <SelectItem value="admin">{t('userManagement.roles.admin', 'Administrador')}</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label>{t('userManagement.associatedMember', 'Miembro Asociado')}</Label>
+              <Select value={memberId} onValueChange={handleMemberChange} disabled={isLoading}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">{t('userManagement.noMember', 'Sin miembro')}</SelectItem>
+                  {activeMembers.map((m) => (
+                    <SelectItem key={m.id} value={m.id}>
+                      {m.full_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label>{t('userManagement.grade', 'Grado')}</Label>
+              <Select value={grade} onValueChange={setGrade} disabled={isLoading || memberId === 'none'}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="aprendiz">{t('userManagement.grades.aprendiz', 'Aprendiz')}</SelectItem>
+                  <SelectItem value="companero">{t('userManagement.grades.companero', 'Compañero')}</SelectItem>
+                  <SelectItem value="maestro">{t('userManagement.grades.maestro', 'Maestro')}</SelectItem>
+                </SelectContent>
+              </Select>
+              {memberId === 'none' && (
+                <p className="text-xs text-muted-foreground">
+                  {t('userManagement.gradeRequiresMember', 'Asociá un miembro para editar el grado.')}
+                </p>
+              )}
             </div>
           </div>
           <DialogFooter>
