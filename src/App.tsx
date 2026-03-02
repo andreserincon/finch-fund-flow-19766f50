@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { useIsSuperAdmin } from "@/hooks/useIsSuperAdmin";
 import { useCanViewTreasury } from "@/hooks/useCanViewTreasury";
+import { useIsMemberOnly } from "@/hooks/useIsMemberOnly";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { InstallPrompt } from "@/components/pwa/InstallPrompt";
 import Dashboard from "./pages/Dashboard";
@@ -63,6 +64,30 @@ function TreasuryRoute({ children }: { children: React.ReactNode }) {
 
   if (!canViewTreasury) {
     return <Navigate to="/library" replace />;
+  }
+
+  return <MainLayout>{children}</MainLayout>;
+}
+
+function TreasuryStaffRoute({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+  const { canViewTreasury, isLoading } = useCanViewTreasury();
+  const { isMemberOnly, isLoading: memberLoading } = useIsMemberOnly();
+
+  if (loading || isLoading || memberLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-pulse text-muted-foreground">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/auth" replace />;
+  }
+
+  if (!canViewTreasury || isMemberOnly) {
+    return <Navigate to="/" replace />;
   }
 
   return <MainLayout>{children}</MainLayout>;
@@ -142,15 +167,15 @@ const App = () => (
         <Route path="/auth" element={<AuthRoute><Auth /></AuthRoute>} />
         <Route path="/" element={<TreasuryRoute><Dashboard /></TreasuryRoute>} />
         <Route path="/members" element={<TreasuryRoute><Members /></TreasuryRoute>} />
-        <Route path="/transactions" element={<TreasuryRoute><Transactions /></TreasuryRoute>} />
-        <Route path="/loans" element={<TreasuryRoute><Loans /></TreasuryRoute>} />
+        <Route path="/transactions" element={<TreasuryStaffRoute><Transactions /></TreasuryStaffRoute>} />
+        <Route path="/loans" element={<TreasuryStaffRoute><Loans /></TreasuryStaffRoute>} />
         <Route path="/log-payment" element={<AdminRoute><LogPayment /></AdminRoute>} />
         <Route path="/log-expense" element={<AdminRoute><LogExpense /></AdminRoute>} />
         <Route path="/account-transfer" element={<AdminRoute><AccountTransfer /></AdminRoute>} />
-        <Route path="/monthly-fees" element={<TreasuryRoute><MonthlyFees /></TreasuryRoute>} />
-        <Route path="/expense-categories" element={<TreasuryRoute><ExtraordinaryExpenses /></TreasuryRoute>} />
-        <Route path="/fee-calculator" element={<TreasuryRoute><FeeCalculator /></TreasuryRoute>} />
-        <Route path="/reports" element={<TreasuryRoute><Reports /></TreasuryRoute>} />
+        <Route path="/monthly-fees" element={<TreasuryStaffRoute><MonthlyFees /></TreasuryStaffRoute>} />
+        <Route path="/expense-categories" element={<TreasuryStaffRoute><ExtraordinaryExpenses /></TreasuryStaffRoute>} />
+        <Route path="/fee-calculator" element={<TreasuryStaffRoute><FeeCalculator /></TreasuryStaffRoute>} />
+        <Route path="/reports" element={<TreasuryStaffRoute><Reports /></TreasuryStaffRoute>} />
         <Route path="/library" element={<ProtectedRoute><Library /></ProtectedRoute>} />
         <Route path="/admin/members" element={<SuperAdminRoute><AdminMembers /></SuperAdminRoute>} />
         <Route path="/user-management" element={<SuperAdminRoute><UserManagement /></SuperAdminRoute>} />
