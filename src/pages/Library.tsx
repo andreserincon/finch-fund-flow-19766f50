@@ -42,6 +42,7 @@ type BrowseItem =
   | { type: 'physical'; data: Book }
   | { type: 'digital'; data: DigitalBook };
 
+// Library page component
 export default function Library() {
   const { t } = useTranslation();
   const { user } = useAuth();
