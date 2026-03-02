@@ -149,7 +149,7 @@ export default function Home() {
           title={t('nav.library')}
           subtitle={t('library.subtitle')}
           icon={<BookOpen className="h-7 w-7 text-primary-foreground" />}
-          gradient="bg-gradient-to-br from-amber-700 to-amber-900"
+          gradient="bg-gradient-to-br from-amber-600 to-amber-800"
           shortcuts={libraryShortcuts}
           onClick={() => navigate('/library')}
         />
@@ -159,7 +159,7 @@ export default function Home() {
             title={t('nav.administration')}
             subtitle={t('nav.adminSubtitle')}
             icon={<UserCog className="h-7 w-7 text-primary-foreground" />}
-            gradient="bg-gradient-to-br from-slate-700 to-slate-900"
+            gradient="bg-gradient-to-br from-slate-600 to-slate-800"
             shortcuts={adminShortcuts}
             onClick={() => navigate('/user-management')}
           />
