@@ -79,13 +79,16 @@ export default function Library() {
   };
 
   // Merge physical + approved digital books for browse tab
+  // Digital books only visible in browse for bibliotecario/admin
   const browseItems: BrowseItem[] = [
     ...books
       .filter((b) => b.is_approved)
       .map((b) => ({ type: 'physical' as const, data: b })),
-    ...digitalBooks
-      .filter((b) => b.is_approved)
-      .map((b) => ({ type: 'digital' as const, data: b })),
+    ...(isBibliotecario
+      ? digitalBooks
+          .filter((b) => b.is_approved)
+          .map((b) => ({ type: 'digital' as const, data: b }))
+      : []),
   ];
 
   const filtered = browseItems.filter((item) => {
@@ -130,10 +133,12 @@ export default function Library() {
           <p className="text-sm text-muted-foreground">{t('library.subtitle')}</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setShowUploadDigital(true)} className="gap-2">
-            <Upload className="h-4 w-4" />
-            {t('digitalLibrary.uploadBook')}
-          </Button>
+          {isBibliotecario && (
+            <Button variant="outline" onClick={() => setShowUploadDigital(true)} className="gap-2">
+              <Upload className="h-4 w-4" />
+              {t('digitalLibrary.uploadBook')}
+            </Button>
+          )}
           <Button onClick={() => setShowAddBook(true)} className="gap-2">
             <Plus className="h-4 w-4" />
             {t('library.addBook')}
@@ -147,10 +152,12 @@ export default function Library() {
             <Search className="h-4 w-4 mr-1" />
             {t('library.browse')}
           </TabsTrigger>
-          <TabsTrigger value="digital">
-            <FileText className="h-4 w-4 mr-1" />
-            {t('digitalLibrary.title')}
-          </TabsTrigger>
+          {isBibliotecario && (
+            <TabsTrigger value="digital">
+              <FileText className="h-4 w-4 mr-1" />
+              {t('digitalLibrary.title')}
+            </TabsTrigger>
+          )}
           <TabsTrigger value="mybooks">
             <User className="h-4 w-4 mr-1" />
             {t('library.myBooks')}
@@ -284,9 +291,11 @@ export default function Library() {
           )}
         </TabsContent>
 
-        <TabsContent value="digital" className="space-y-4">
-          <DigitalLibraryPanel />
-        </TabsContent>
+        {isBibliotecario && (
+          <TabsContent value="digital" className="space-y-4">
+            <DigitalLibraryPanel />
+          </TabsContent>
+        )}
 
         <TabsContent value="mybooks" className="space-y-4">
           <MyBooksPanel onSelectBook={setSelectedBook} />
