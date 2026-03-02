@@ -202,8 +202,9 @@ export default function Library() {
         </TabsList>
 
         <TabsContent value="browse" className="space-y-4">
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="relative flex-1">
+          {/* Search row */}
+          <div className="flex gap-2">
+            <div className="relative flex-1 min-w-0">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder={t('library.searchPlaceholder')}
@@ -212,12 +213,14 @@ export default function Library() {
                 className="pl-9"
               />
             </div>
-            <Button variant="outline" className="sm:hidden gap-2" onClick={() => setShowScanner(true)}>
+            <Button variant="outline" size="icon" className="sm:hidden shrink-0" onClick={() => setShowScanner(true)}>
               <ScanLine className="h-4 w-4" />
-              {t('library.scanQR', 'Escanear QR')}
             </Button>
+          </div>
+          {/* Filters row - always single row */}
+          <div className="flex gap-2 overflow-x-auto">
             <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="w-[160px]">
+              <SelectTrigger className="w-auto min-w-[100px] shrink-0">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -227,7 +230,7 @@ export default function Library() {
               </SelectContent>
             </Select>
             <Select value={gradeFilter} onValueChange={setGradeFilter}>
-              <SelectTrigger className="w-[160px]">
+              <SelectTrigger className="w-auto min-w-[100px] shrink-0">
                 <Filter className="h-4 w-4 mr-1" />
                 <SelectValue />
               </SelectTrigger>
@@ -240,7 +243,7 @@ export default function Library() {
               </SelectContent>
             </Select>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[160px]">
+              <SelectTrigger className="w-auto min-w-[100px] shrink-0">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
