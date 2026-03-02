@@ -66,6 +66,19 @@ export default function Library() {
   const [showAddBook, setShowAddBook] = useState(false);
   const [showUploadDigital, setShowUploadDigital] = useState(false);
 
+  // Handle ?book=<id> from QR scan
+  const bookIdFromQR = searchParams.get('book');
+  useEffect(() => {
+    if (bookIdFromQR && !isLoading && books.length > 0) {
+      const found = books.find((b) => b.id === bookIdFromQR);
+      if (found) {
+        setSelectedBook(found);
+        searchParams.delete('book');
+        setSearchParams(searchParams, { replace: true });
+      }
+    }
+  }, [bookIdFromQR, isLoading, books]);
+
   useEffect(() => {
     if (activeTab === 'add') {
       setShowAddBook(true);
