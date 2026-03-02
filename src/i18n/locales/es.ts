@@ -31,6 +31,8 @@ export default {
       description: 'Descripción',
       member: 'Miembro',
       optional: 'Opcional',
+      copy: 'Copiar',
+      copied: 'Copiado',
     },
 
     // Sidebar & Navigation
@@ -377,6 +379,9 @@ export default {
       passwordMinLength: 'La contraseña debe tener al menos 6 caracteres',
       passwordUpdated: 'Contraseña actualizada',
       passwordUpdateError: 'Error al actualizar contraseña',
+      createUserAutoPassword: 'Ingresá el email. La contraseña se generará automáticamente.',
+      credentialsWarning: 'Copiá estas credenciales ahora. La contraseña no se podrá ver de nuevo.',
+      password: 'Contraseña',
     },
 
     // Fee Calculator

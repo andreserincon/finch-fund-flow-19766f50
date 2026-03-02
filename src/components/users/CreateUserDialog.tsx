@@ -22,14 +22,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Copy, Check } from 'lucide-react';
 import type { AppRole } from '@/hooks/useUserRoles';
 
 const createUserSchema = z.object({
   email: z.string().trim().email({ message: 'Email inválido' }),
-  password: z.string().min(6, { message: 'La contraseña debe tener al menos 6 caracteres' }),
-  role: z.enum(['treasurer', 'vm', 'member', 'none']).optional(),
+  role: z.enum(['treasurer', 'vm', 'member', 'bibliotecario', 'admin', 'none']).optional(),
 });
+
+interface CreatedUserInfo {
+  email: string;
+  password: string;
+}
 
 interface CreateUserDialogProps {
   open: boolean;
@@ -41,15 +45,17 @@ export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) 
   const queryClient = useQueryClient();
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [role, setRole] = useState<string>('none');
-  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [errors, setErrors] = useState<{ email?: string }>({});
+  const [createdUser, setCreatedUser] = useState<CreatedUserInfo | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const resetForm = () => {
     setEmail('');
-    setPassword('');
     setRole('none');
     setErrors({});
+    setCreatedUser(null);
+    setCopied(false);
   };
 
   const handleClose = () => {
@@ -57,17 +63,23 @@ export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) 
     onOpenChange(false);
   };
 
+  const handleCopy = async () => {
+    if (!createdUser) return;
+    const text = `Email: ${createdUser.email}\n${t('userManagement.password', 'Contraseña')}: ${createdUser.password}`;
+    await navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrors({});
 
-    // Validate input
-    const result = createUserSchema.safeParse({ email, password, role });
+    const result = createUserSchema.safeParse({ email, role });
     if (!result.success) {
-      const fieldErrors: { email?: string; password?: string } = {};
+      const fieldErrors: { email?: string } = {};
       result.error.errors.forEach((err) => {
         if (err.path[0] === 'email') fieldErrors.email = err.message;
-        if (err.path[0] === 'password') fieldErrors.password = err.message;
       });
       setErrors(fieldErrors);
       return;
@@ -79,26 +91,24 @@ export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) 
       const { data, error } = await supabase.functions.invoke('admin-create-user', {
         body: {
           email: email.trim(),
-          password,
           role: role !== 'none' ? role : undefined,
         },
       });
 
-      if (error) {
-        throw new Error(error.message);
-      }
+      if (error) throw new Error(error.message);
+      if (data?.error) throw new Error(data.error);
 
-      if (data?.error) {
-        throw new Error(data.error);
-      }
+      // Show generated credentials
+      setCreatedUser({
+        email: email.trim(),
+        password: data.generatedPassword,
+      });
 
       toast.success(t('userManagement.userCreated', 'Usuario creado exitosamente'));
       queryClient.invalidateQueries({ queryKey: ['users-with-roles'] });
-      handleClose();
     } catch (error: any) {
       console.error('Error creating user:', error);
       
-      // Handle specific error messages
       let errorMessage = t('userManagement.createError', 'Error al crear usuario');
       if (error.message?.includes('already been registered')) {
         errorMessage = t('userManagement.emailExists', 'Este email ya está registrado');
@@ -112,13 +122,50 @@ export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) 
     }
   };
 
+  // Show credentials after creation
+  if (createdUser) {
+    return (
+      <Dialog open={open} onOpenChange={handleClose}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>{t('userManagement.userCreated', 'Usuario Creado')}</DialogTitle>
+            <DialogDescription>
+              {t('userManagement.credentialsWarning', 'Copiá estas credenciales ahora. La contraseña no se podrá ver de nuevo.')}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="rounded-lg border bg-muted/50 p-4 space-y-3">
+              <div>
+                <Label className="text-xs text-muted-foreground">{t('userManagement.email', 'Email')}</Label>
+                <p className="font-mono text-sm">{createdUser.email}</p>
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground">{t('userManagement.password', 'Contraseña')}</Label>
+                <p className="font-mono text-sm">{createdUser.password}</p>
+              </div>
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={handleCopy}>
+              {copied ? <Check className="h-4 w-4 mr-2" /> : <Copy className="h-4 w-4 mr-2" />}
+              {copied ? t('common.copied', 'Copiado') : t('common.copy', 'Copiar')}
+            </Button>
+            <Button onClick={handleClose}>
+              {t('common.close', 'Cerrar')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>{t('userManagement.createUser', 'Crear Usuario')}</DialogTitle>
           <DialogDescription>
-            {t('userManagement.createUserDescription', 'Crea una nueva cuenta de usuario con credenciales de acceso.')}
+            {t('userManagement.createUserAutoPassword', 'Ingresá el email. La contraseña se generará automáticamente.')}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
@@ -139,21 +186,6 @@ export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) 
               )}
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="password">{t('userManagement.password', 'Contraseña')}</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                disabled={isLoading}
-                className={errors.password ? 'border-destructive' : ''}
-              />
-              {errors.password && (
-                <p className="text-sm text-destructive">{errors.password}</p>
-              )}
-            </div>
-            <div className="grid gap-2">
               <Label htmlFor="role">{t('userManagement.role', 'Rol')}</Label>
               <Select value={role} onValueChange={setRole} disabled={isLoading}>
                 <SelectTrigger>
@@ -164,6 +196,8 @@ export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) 
                   <SelectItem value="treasurer">{t('userManagement.roles.treasurer', 'Tesorero')}</SelectItem>
                   <SelectItem value="vm">{t('userManagement.roles.vm', 'VM')}</SelectItem>
                   <SelectItem value="member">{t('userManagement.roles.member', 'Miembro')}</SelectItem>
+                  <SelectItem value="bibliotecario">{t('userManagement.roles.bibliotecario', 'Bibliotecario')}</SelectItem>
+                  <SelectItem value="admin">{t('userManagement.roles.admin', 'Administrador')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
