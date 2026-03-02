@@ -9,7 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useUserRoles, AppRole } from '@/hooks/useUserRoles';
 import { CreateUserDialog } from '@/components/users/CreateUserDialog';
 import { EditUserDialog } from '@/components/users/EditUserDialog';
-import { Users, Shield, Eye, User, X, UserPlus, BookOpen, Crown, Pencil } from 'lucide-react';
+import { Users, Shield, Eye, User, X, UserPlus, BookOpen, Crown, Pencil, GraduationCap } from 'lucide-react';
 
 export default function UserManagement() {
   const { t } = useTranslation();
@@ -39,6 +39,18 @@ export default function UserManagement() {
   const getPermissionDescription = (role: AppRole | null) => {
     if (!role) return t('userManagement.permissions.none');
     return t(`userManagement.permissions.${role}`);
+  };
+
+  const getGradeBadge = (grade: string | null) => {
+    if (!grade) return <span className="text-muted-foreground text-sm">—</span>;
+    const gradeConfig: Record<string, { label: string; className: string }> = {
+      aprendiz: { label: t('userManagement.grades.aprendiz', 'Aprendiz'), className: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' },
+      companero: { label: t('userManagement.grades.companero', 'Compañero'), className: 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200' },
+      maestro: { label: t('userManagement.grades.maestro', 'Maestro'), className: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200' },
+    };
+    const c = gradeConfig[grade];
+    if (!c) return <Badge variant="outline">{grade}</Badge>;
+    return <Badge variant="outline" className={c.className}>{c.label}</Badge>;
   };
 
   const handleRoleChange = (userId: string, newRole: string) => {
@@ -103,6 +115,8 @@ export default function UserManagement() {
               <TableHeader>
                 <TableRow>
                   <TableHead>{t('userManagement.email')}</TableHead>
+                  <TableHead>{t('userManagement.associatedMember', 'Miembro')}</TableHead>
+                  <TableHead>{t('userManagement.grade', 'Grado')}</TableHead>
                   <TableHead>{t('userManagement.currentRole')}</TableHead>
                   <TableHead>{t('userManagement.permissions.title')}</TableHead>
                   <TableHead className="text-right">{t('common.actions')}</TableHead>
@@ -112,6 +126,8 @@ export default function UserManagement() {
                 {users?.map((user) => (
                   <TableRow key={user.user_id}>
                     <TableCell className="font-medium">{user.email}</TableCell>
+                    <TableCell>{user.member_name || <span className="text-muted-foreground text-sm">—</span>}</TableCell>
+                    <TableCell>{getGradeBadge(user.masonic_grade)}</TableCell>
                     <TableCell>{getRoleBadge(user.role)}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {getPermissionDescription(user.role)}
@@ -158,7 +174,7 @@ export default function UserManagement() {
                 ))}
                 {(!users || users.length === 0) && (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center text-muted-foreground">
+                    <TableCell colSpan={6} className="text-center text-muted-foreground">
                       {t('userManagement.noUsers')}
                     </TableCell>
                   </TableRow>

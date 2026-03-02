@@ -5,12 +5,16 @@ import { useTranslation } from 'react-i18next';
 
 export type AppRole = 'treasurer' | 'vm' | 'member' | 'bibliotecario' | 'admin';
 
+export type MasonicGrade = 'aprendiz' | 'companero' | 'maestro';
+
 export interface UserWithRole {
   user_id: string;
   email: string;
   role: AppRole | null;
   role_assigned_at: string | null;
   member_id: string | null;
+  member_name: string | null;
+  masonic_grade: MasonicGrade | null;
 }
 
 export function useUserRoles() {

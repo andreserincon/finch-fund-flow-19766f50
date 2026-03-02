@@ -918,7 +918,9 @@ export type Database = {
         Args: never
         Returns: {
           email: string
+          masonic_grade: Database["public"]["Enums"]["masonic_grade"]
           member_id: string
+          member_name: string
           role: Database["public"]["Enums"]["app_role"]
           role_assigned_at: string
           user_id: string
