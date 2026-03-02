@@ -1,7 +1,16 @@
+/**
+ * @file useMonthlyReports.ts
+ * @description Hook for generating and viewing monthly treasury reports.
+ *   Reports are generated server-side via an edge function that
+ *   computes balances, collection rates, and snapshots.
+ *   PDF download URLs are created via signed Supabase Storage links.
+ */
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
+/** Shape of a row in the `monthly_reports` table */
 export interface MonthlyReport {
   id: string;
   report_year: number;
@@ -33,6 +42,7 @@ export interface MonthlyReport {
 export function useMonthlyReports() {
   const queryClient = useQueryClient();
 
+  /** Fetch all reports ordered by date (newest first) */
   const reportsQuery = useQuery({
     queryKey: ['monthly_reports'],
     queryFn: async () => {
@@ -47,10 +57,11 @@ export function useMonthlyReports() {
     },
   });
 
+  /** Trigger report generation via edge function */
   const generateReport = useMutation({
-    mutationFn: async ({ year, month, forceRegenerate = false }: { 
-      year: number; 
-      month: number; 
+    mutationFn: async ({ year, month, forceRegenerate = false }: {
+      year: number;
+      month: number;
       forceRegenerate?: boolean;
     }) => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -79,10 +90,14 @@ export function useMonthlyReports() {
     },
   });
 
+  /**
+   * Create a 1-hour signed URL for downloading a report PDF.
+   * Handles both absolute and relative URLs returned by Supabase.
+   */
   const getReportPdfUrl = async (pdfPath: string): Promise<string | null> => {
     const { data, error } = await supabase.storage
       .from('reports')
-      .createSignedUrl(pdfPath, 3600); // 1 hour expiry
+      .createSignedUrl(pdfPath, 3600);
 
     if (error) {
       console.error('Error creating signed URL:', error);
@@ -90,16 +105,15 @@ export function useMonthlyReports() {
       return null;
     }
 
-    // Supabase SDK returns full URL in signedUrl property
     if (data?.signedUrl) {
-      // If it's a relative URL, prepend the Supabase storage URL
+      // Prepend the base URL if the SDK returns a relative path
       if (data.signedUrl.startsWith('/')) {
         const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
         return `${supabaseUrl}/storage/v1${data.signedUrl}`;
       }
       return data.signedUrl;
     }
-    
+
     return null;
   };
 

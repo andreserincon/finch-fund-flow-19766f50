@@ -1,3 +1,10 @@
+/**
+ * @file Home.tsx
+ * @description Authenticated landing page. Displays module cards
+ *   (Treasury, Library, Administration) with role-based visibility
+ *   and quick-access shortcut buttons for each module.
+ */
+
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useCanViewTreasury } from '@/hooks/useCanViewTreasury';
@@ -18,24 +25,40 @@ import {
   Settings,
 } from 'lucide-react';
 
+/* ------------------------------------------------------------------ */
+/*  ModuleCard – reusable card component for each module              */
+/* ------------------------------------------------------------------ */
+
+/** Props for the ModuleCard component */
 interface ModuleCardProps {
+  /** Card title displayed next to the icon */
   title: string;
+  /** Short description below the title */
   subtitle: string;
+  /** Icon rendered inside the coloured badge */
   icon: React.ReactNode;
+  /** Tailwind gradient class for the icon badge */
   gradient: string;
+  /** Quick-access links rendered at the bottom of the card */
   shortcuts: { label: string; icon: React.ReactNode; onClick: () => void }[];
+  /** Callback when the card header area is clicked */
   onClick: () => void;
 }
 
+/**
+ * ModuleCard – renders a single module entry with icon, title,
+ * description, and an optional grid of shortcut buttons.
+ */
 function ModuleCard({ title, subtitle, icon, gradient, shortcuts, onClick }: ModuleCardProps) {
   return (
     <div className="group relative overflow-hidden rounded-2xl border bg-card shadow-sm hover:shadow-lg transition-all duration-300">
-      {/* Header */}
+      {/* ── Card header (clickable) ── */}
       <button
         onClick={onClick}
         className="w-full text-left p-6 pb-4 focus:outline-none"
       >
         <div className="flex items-start gap-4">
+          {/* Icon badge with gradient background */}
           <div className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-xl ${gradient} shadow-md group-hover:scale-105 transition-transform duration-300`}>
             {icon}
           </div>
@@ -50,7 +73,7 @@ function ModuleCard({ title, subtitle, icon, gradient, shortcuts, onClick }: Mod
         </div>
       </button>
 
-      {/* Shortcuts */}
+      {/* ── Shortcut buttons ── */}
       {shortcuts.length > 0 && (
         <div className="px-6 pb-5 pt-1">
           <div className="border-t border-border/60 pt-4">
@@ -62,7 +85,7 @@ function ModuleCard({ title, subtitle, icon, gradient, shortcuts, onClick }: Mod
                 <button
                   key={i}
                   onClick={(e) => {
-                    e.stopPropagation();
+                    e.stopPropagation(); // Prevent card-level click
                     shortcut.onClick();
                   }}
                   className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-xs font-medium text-muted-foreground bg-muted/50 hover:bg-primary/10 hover:text-primary transition-all duration-200 text-left"
@@ -79,14 +102,21 @@ function ModuleCard({ title, subtitle, icon, gradient, shortcuts, onClick }: Mod
   );
 }
 
+/* ================================================================== */
+/*  Home page component                                               */
+/* ================================================================== */
+
 export default function Home() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+
+  // Role-based flags to conditionally render modules
   const { canViewTreasury } = useCanViewTreasury();
   const { isSuperAdmin } = useIsSuperAdmin();
   const { isMemberOnly } = useIsMemberOnly();
   const { user } = useAuth();
 
+  /* ── Treasury shortcuts (differ for member-only vs staff) ── */
   const treasuryShortcuts = isMemberOnly
     ? [
         { label: t('nav.dashboard'), icon: <LayoutDashboard className="h-4 w-4" />, onClick: () => navigate('/') },
@@ -101,6 +131,7 @@ export default function Home() {
         { label: t('nav.monthlyFees'), icon: <Settings className="h-4 w-4" />, onClick: () => navigate('/monthly-fees') },
       ];
 
+  /* ── Library shortcuts ── */
   const libraryShortcuts = [
     { label: t('library.browse'), icon: <BookOpen className="h-4 w-4" />, onClick: () => navigate('/library') },
     { label: t('digitalLibrary.title'), icon: <FileText className="h-4 w-4" />, onClick: () => navigate('/library?tab=digital') },
@@ -108,6 +139,7 @@ export default function Home() {
     { label: t('library.requests'), icon: <ClipboardList className="h-4 w-4" />, onClick: () => navigate('/library?tab=requests') },
   ];
 
+  /* ── Admin shortcuts ── */
   const adminShortcuts = [
     { label: t('nav.userManagement'), icon: <UserCog className="h-4 w-4" />, onClick: () => navigate('/user-management') },
     { label: t('nav.members'), icon: <Users className="h-4 w-4" />, onClick: () => navigate('/admin/members') },
@@ -115,7 +147,7 @@ export default function Home() {
 
   return (
     <div className="min-h-[80vh] flex flex-col items-center justify-center px-4 py-8 animate-fade-in">
-      {/* Welcome header */}
+      {/* ── Welcome header ── */}
       <div className="text-center mb-10 max-w-lg">
         <div className="flex justify-center mb-4">
           <img
@@ -132,8 +164,9 @@ export default function Home() {
         </p>
       </div>
 
-      {/* Module cards */}
+      {/* ── Module cards grid ── */}
       <div className="w-full max-w-3xl grid gap-5 md:grid-cols-2 lg:grid-cols-2">
+        {/* Treasury module – visible only to users with treasury access */}
         {canViewTreasury && (
           <ModuleCard
             title={t('nav.treasury')}
@@ -145,6 +178,7 @@ export default function Home() {
           />
         )}
 
+        {/* Library module – visible to all authenticated users */}
         <ModuleCard
           title={t('nav.library')}
           subtitle={t('library.subtitle')}
@@ -154,6 +188,7 @@ export default function Home() {
           onClick={() => navigate('/library')}
         />
 
+        {/* Administration module – super-admin only */}
         {isSuperAdmin && (
           <ModuleCard
             title={t('nav.administration')}
@@ -166,7 +201,7 @@ export default function Home() {
         )}
       </div>
 
-      {/* Footer hint */}
+      {/* ── Footer with logged-in user email ── */}
       <p className="text-xs text-muted-foreground/50 mt-10">
         {user?.email}
       </p>

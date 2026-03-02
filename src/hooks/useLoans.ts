@@ -1,3 +1,16 @@
+/**
+ * @file useLoans.ts
+ * @description Full lifecycle management for member loans.
+ *
+ * Key operations:
+ *   - createLoan      → creates a loan + disbursement expense transaction
+ *   - addLoanPayment  → records a partial repayment + income transaction
+ *   - markLoanAsPaid  → pays remaining balance in full
+ *   - revertLoanToPending → undo the last full-pay, returning loan to active
+ *   - cancelLoan      → cancel and delete the disbursement transaction
+ *   - deleteLoan      → hard-delete loan + associated transactions
+ */
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Loan, AccountType, LoanStatus } from '@/lib/types';
@@ -6,6 +19,15 @@ import { toast } from 'sonner';
 export function useLoans() {
   const queryClient = useQueryClient();
 
+  /** Invalidate all loan-related caches */
+  const invalidateRelated = () => {
+    queryClient.invalidateQueries({ queryKey: ['loans'] });
+    queryClient.invalidateQueries({ queryKey: ['loan-payments'] });
+    queryClient.invalidateQueries({ queryKey: ['transactions'] });
+    queryClient.invalidateQueries({ queryKey: ['dashboard_stats'] });
+  };
+
+  /* ── Query: all loans with member names ── */
   const loansQuery = useQuery({
     queryKey: ['loans'],
     queryFn: async () => {
@@ -20,6 +42,7 @@ export function useLoans() {
     },
   });
 
+  /* ── Mutation: create a new loan ── */
   const createLoan = useMutation({
     mutationFn: async (loan: {
       member_id: string;
@@ -28,7 +51,7 @@ export function useLoans() {
       loan_date: string;
       notes?: string | null;
     }) => {
-      // First, create the disbursement transaction (expense)
+      // Step 1: create the disbursement transaction (expense)
       const { data: transaction, error: transactionError } = await supabase
         .from('transactions')
         .insert({
@@ -45,7 +68,7 @@ export function useLoans() {
 
       if (transactionError) throw transactionError;
 
-      // Then create the loan record with the transaction reference
+      // Step 2: create the loan record linked to the transaction
       const { data: loanData, error: loanError } = await supabase
         .from('loans')
         .insert({
@@ -63,9 +86,7 @@ export function useLoans() {
       return loanData;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['loans'] });
-      queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard_stats'] });
+      invalidateRelated();
       toast.success('Loan created successfully');
     },
     onError: (error: Error) => {
@@ -73,17 +94,18 @@ export function useLoans() {
     },
   });
 
+  /* ── Mutation: record a partial loan repayment ── */
   const addLoanPayment = useMutation({
-    mutationFn: async ({ 
-      loanId, 
-      paymentAmount, 
-      paymentDate 
-    }: { 
-      loanId: string; 
-      paymentAmount: number; 
+    mutationFn: async ({
+      loanId,
+      paymentAmount,
+      paymentDate,
+    }: {
+      loanId: string;
+      paymentAmount: number;
       paymentDate: string;
     }) => {
-      // Get the loan details first
+      // Fetch current loan state
       const { data: loan, error: loanFetchError } = await supabase
         .from('loans')
         .select('*')
@@ -93,12 +115,13 @@ export function useLoans() {
       if (loanFetchError) throw loanFetchError;
       if (!loan) throw new Error('Loan not found');
 
+      // Validate amount
       const remainingDue = loan.amount - loan.amount_paid;
       if (paymentAmount > remainingDue) {
         throw new Error(`Payment amount cannot exceed remaining balance of ${remainingDue}`);
       }
 
-      // Create the repayment transaction (income)
+      // Create the repayment income transaction
       const { data: transaction, error: transactionError } = await supabase
         .from('transactions')
         .insert({
@@ -115,7 +138,7 @@ export function useLoans() {
 
       if (transactionError) throw transactionError;
 
-      // Create loan payment record
+      // Record the loan_payment entry
       const { error: paymentError } = await supabase
         .from('loan_payments')
         .insert({
@@ -127,10 +150,10 @@ export function useLoans() {
 
       if (paymentError) throw paymentError;
 
+      // Update running total on the loan
       const newAmountPaid = loan.amount_paid + paymentAmount;
       const isFullyPaid = newAmountPaid >= loan.amount;
 
-      // Update the loan
       const { data: updatedLoan, error: updateError } = await supabase
         .from('loans')
         .update({
@@ -145,10 +168,8 @@ export function useLoans() {
       if (updateError) throw updateError;
       return updatedLoan;
     },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['loans'] });
-      queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard_stats'] });
+    onSuccess: () => {
+      invalidateRelated();
       toast.success('Payment recorded successfully');
     },
     onError: (error: Error) => {
@@ -156,9 +177,9 @@ export function useLoans() {
     },
   });
 
+  /* ── Mutation: mark loan as fully paid ── */
   const markLoanAsPaid = useMutation({
     mutationFn: async ({ loanId, paidDate }: { loanId: string; paidDate: string }) => {
-      // Get the loan details first
       const { data: loan, error: loanFetchError } = await supabase
         .from('loans')
         .select('*')
@@ -170,7 +191,7 @@ export function useLoans() {
 
       const remainingDue = loan.amount - loan.amount_paid;
 
-      // Create the repayment transaction for remaining amount (income)
+      // Create final repayment transaction for the remaining balance
       const { data: transaction, error: transactionError } = await supabase
         .from('transactions')
         .insert({
@@ -187,7 +208,7 @@ export function useLoans() {
 
       if (transactionError) throw transactionError;
 
-      // Create loan payment record for full payment
+      // Record the payment entry
       const { error: paymentError } = await supabase
         .from('loan_payments')
         .insert({
@@ -200,7 +221,7 @@ export function useLoans() {
 
       if (paymentError) throw paymentError;
 
-      // Update the loan status
+      // Mark loan as paid
       const { data: updatedLoan, error: updateError } = await supabase
         .from('loans')
         .update({
@@ -217,9 +238,7 @@ export function useLoans() {
       return updatedLoan;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['loans'] });
-      queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard_stats'] });
+      invalidateRelated();
       toast.success('Loan marked as fully paid');
     },
     onError: (error: Error) => {
@@ -227,9 +246,9 @@ export function useLoans() {
     },
   });
 
+  /* ── Mutation: revert a paid loan back to active ── */
   const revertLoanToPending = useMutation({
     mutationFn: async (loanId: string) => {
-      // Get the loan details
       const { data: loan, error: loanFetchError } = await supabase
         .from('loans')
         .select('*')
@@ -240,7 +259,7 @@ export function useLoans() {
       if (!loan) throw new Error('Loan not found');
       if (loan.status !== 'paid') throw new Error('Loan is not in paid status');
 
-      // Find the last payment (the one that marked it as fully paid)
+      // Find the most recent payment (the one that finalised the loan)
       const { data: lastPayment, error: paymentFetchError } = await supabase
         .from('loan_payments')
         .select('*')
@@ -253,10 +272,9 @@ export function useLoans() {
       if (paymentFetchError) throw paymentFetchError;
       if (!lastPayment) throw new Error('No payment record found to revert');
 
-      // Calculate new amount_paid
       const newAmountPaid = Math.max(0, loan.amount_paid - lastPayment.amount);
 
-      // First, update the loan to clear foreign key references and revert status
+      // Clear FK references and revert status
       const { error: loanUpdateError } = await supabase
         .from('loans')
         .update({
@@ -277,7 +295,7 @@ export function useLoans() {
 
       if (paymentDeleteError) throw paymentDeleteError;
 
-      // Now delete the associated transaction (after FK reference is cleared)
+      // Delete the associated transaction
       if (lastPayment.transaction_id) {
         const { error: transactionError } = await supabase
           .from('transactions')
@@ -287,7 +305,7 @@ export function useLoans() {
         if (transactionError) throw transactionError;
       }
 
-      // Fetch and return updated loan
+      // Return the updated loan
       const { data: updatedLoan, error: fetchError } = await supabase
         .from('loans')
         .select('*, member:members(id, full_name)')
@@ -298,10 +316,7 @@ export function useLoans() {
       return updatedLoan;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['loans'] });
-      queryClient.invalidateQueries({ queryKey: ['loan-payments'] });
-      queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard_stats'] });
+      invalidateRelated();
       toast.success('Loan reverted to active status');
     },
     onError: (error: Error) => {
@@ -309,9 +324,9 @@ export function useLoans() {
     },
   });
 
+  /* ── Mutation: cancel a loan (delete disbursement, mark cancelled) ── */
   const cancelLoan = useMutation({
     mutationFn: async (loanId: string) => {
-      // Get the loan details
       const { data: loan, error: loanFetchError } = await supabase
         .from('loans')
         .select('*')
@@ -321,17 +336,16 @@ export function useLoans() {
       if (loanFetchError) throw loanFetchError;
       if (!loan) throw new Error('Loan not found');
 
-      // Delete the disbursement transaction if exists
+      // Remove the disbursement transaction
       if (loan.disbursement_transaction_id) {
         const { error: deleteTransactionError } = await supabase
           .from('transactions')
           .delete()
           .eq('id', loan.disbursement_transaction_id);
-
         if (deleteTransactionError) throw deleteTransactionError;
       }
 
-      // Update loan status to cancelled
+      // Set status to cancelled
       const { data: updatedLoan, error: updateError } = await supabase
         .from('loans')
         .update({
@@ -346,9 +360,7 @@ export function useLoans() {
       return updatedLoan;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['loans'] });
-      queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard_stats'] });
+      invalidateRelated();
       toast.success('Loan cancelled');
     },
     onError: (error: Error) => {
@@ -356,9 +368,9 @@ export function useLoans() {
     },
   });
 
+  /* ── Mutation: hard-delete a loan and its transactions ── */
   const deleteLoan = useMutation({
     mutationFn: async (loanId: string) => {
-      // Get the loan to check for associated transactions
       const { data: loan, error: loanFetchError } = await supabase
         .from('loans')
         .select('*')
@@ -367,7 +379,7 @@ export function useLoans() {
 
       if (loanFetchError) throw loanFetchError;
 
-      // Delete associated transactions
+      // Clean up linked transactions
       if (loan?.disbursement_transaction_id) {
         await supabase.from('transactions').delete().eq('id', loan.disbursement_transaction_id);
       }
@@ -375,14 +387,11 @@ export function useLoans() {
         await supabase.from('transactions').delete().eq('id', loan.repayment_transaction_id);
       }
 
-      // Delete the loan
       const { error } = await supabase.from('loans').delete().eq('id', loanId);
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['loans'] });
-      queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard_stats'] });
+      invalidateRelated();
       toast.success('Loan deleted successfully');
     },
     onError: (error: Error) => {

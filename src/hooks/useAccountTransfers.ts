@@ -1,3 +1,10 @@
+/**
+ * @file useAccountTransfers.ts
+ * @description CRUD hook for inter-account transfers (bank ↔ great_lodge ↔ savings).
+ *   Transfers are standalone records separate from transactions,
+ *   used to move funds between the organisation's accounts.
+ */
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { AccountTransfer, AccountType } from '@/lib/types';
@@ -6,6 +13,7 @@ import { toast } from 'sonner';
 export function useAccountTransfers() {
   const queryClient = useQueryClient();
 
+  /** Fetch all transfers, newest first */
   const transfersQuery = useQuery({
     queryKey: ['account_transfers'],
     queryFn: async () => {
@@ -20,6 +28,7 @@ export function useAccountTransfers() {
     },
   });
 
+  /** Record a new transfer between accounts */
   const addTransfer = useMutation({
     mutationFn: async (transfer: {
       transfer_date: string;
@@ -48,6 +57,7 @@ export function useAccountTransfers() {
     },
   });
 
+  /** Edit an existing transfer */
   const updateTransfer = useMutation({
     mutationFn: async (transfer: {
       id: string;
@@ -78,6 +88,7 @@ export function useAccountTransfers() {
     },
   });
 
+  /** Delete a transfer */
   const deleteTransfer = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from('account_transfers').delete().eq('id', id);

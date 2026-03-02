@@ -1,3 +1,10 @@
+/**
+ * @file useCanViewTreasury.ts
+ * @description Hook that determines whether the current user is
+ *   allowed to view treasury data (dashboard, members, etc.).
+ *   Permitted roles: treasurer, vm, admin, member.
+ */
+
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';

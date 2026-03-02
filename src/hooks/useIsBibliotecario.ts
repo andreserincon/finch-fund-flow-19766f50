@@ -1,3 +1,10 @@
+/**
+ * @file useIsBibliotecario.ts
+ * @description Hook that checks if the current user has the
+ *   'bibliotecario' (librarian) or 'admin' role, granting them
+ *   permission to manage the physical and digital book catalogue.
+ */
+
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
