@@ -2,20 +2,21 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useUserRoles, AppRole } from '@/hooks/useUserRoles';
+import { useUserRoles, AppRole, type UserWithRole } from '@/hooks/useUserRoles';
 import { CreateUserDialog } from '@/components/users/CreateUserDialog';
 import { EditUserDialog } from '@/components/users/EditUserDialog';
-import { Users, Shield, Eye, User, X, UserPlus, BookOpen, Crown, Pencil, GraduationCap } from 'lucide-react';
+import { ResetPasswordDialog } from '@/components/users/ResetPasswordDialog';
+import { Users, Shield, Eye, User, UserPlus, BookOpen, Crown, Pencil, KeyRound } from 'lucide-react';
 
 export default function UserManagement() {
   const { t } = useTranslation();
-  const { users, isLoading, assignRole, removeRole } = useUserRoles();
+  const { users, isLoading } = useUserRoles();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState<string | null>(null);
+  const [editingUser, setEditingUser] = useState<UserWithRole | null>(null);
+  const [resetPasswordEmail, setResetPasswordEmail] = useState<string | null>(null);
 
   const getRoleBadge = (role: AppRole | null) => {
     if (!role) return <Badge variant="outline">{t('userManagement.noRole')}</Badge>;
@@ -36,11 +37,6 @@ export default function UserManagement() {
     );
   };
 
-  const getPermissionDescription = (role: AppRole | null) => {
-    if (!role) return t('userManagement.permissions.none');
-    return t(`userManagement.permissions.${role}`);
-  };
-
   const getGradeBadge = (grade: string | null) => {
     if (!grade) return <span className="text-muted-foreground text-sm">—</span>;
     const gradeConfig: Record<string, { label: string; className: string }> = {
@@ -51,14 +47,6 @@ export default function UserManagement() {
     const c = gradeConfig[grade];
     if (!c) return <Badge variant="outline">{grade}</Badge>;
     return <Badge variant="outline" className={c.className}>{c.label}</Badge>;
-  };
-
-  const handleRoleChange = (userId: string, newRole: string) => {
-    if (newRole === 'none') {
-      removeRole.mutate(userId);
-    } else {
-      assignRole.mutate({ userId, role: newRole as AppRole });
-    }
   };
 
   return (
@@ -118,7 +106,6 @@ export default function UserManagement() {
                   <TableHead>{t('userManagement.associatedMember', 'Miembro')}</TableHead>
                   <TableHead>{t('userManagement.grade', 'Grado')}</TableHead>
                   <TableHead>{t('userManagement.currentRole')}</TableHead>
-                  <TableHead>{t('userManagement.permissions.title')}</TableHead>
                   <TableHead className="text-right">{t('common.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
@@ -129,52 +116,31 @@ export default function UserManagement() {
                     <TableCell>{user.member_name || <span className="text-muted-foreground text-sm">—</span>}</TableCell>
                     <TableCell>{getGradeBadge(user.masonic_grade)}</TableCell>
                     <TableCell>{getRoleBadge(user.role)}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {getPermissionDescription(user.role)}
-                    </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Select
-                          value={user.role || 'none'}
-                          onValueChange={(value) => handleRoleChange(user.user_id, value)}
-                        >
-                          <SelectTrigger className="w-[140px]">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">{t('userManagement.noRole')}</SelectItem>
-                            <SelectItem value="treasurer">{t('userManagement.roles.treasurer')}</SelectItem>
-                            <SelectItem value="vm">{t('userManagement.roles.vm')}</SelectItem>
-                            <SelectItem value="member">{t('userManagement.roles.member')}</SelectItem>
-                            <SelectItem value="bibliotecario">{t('userManagement.roles.bibliotecario')}</SelectItem>
-                            <SelectItem value="admin">{t('userManagement.roles.admin')}</SelectItem>
-                          </SelectContent>
-                        </Select>
+                      <div className="flex items-center justify-end gap-1">
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => setEditingUser(user.email)}
+                          onClick={() => setEditingUser(user)}
                           title={t('userManagement.editUser', 'Editar Usuario')}
                         >
                           <Pencil className="h-4 w-4" />
                         </Button>
-                        {user.role && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => removeRole.mutate(user.user_id)}
-                            disabled={removeRole.isPending}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setResetPasswordEmail(user.email)}
+                          title={t('userManagement.resetPassword', 'Cambiar Contraseña')}
+                        >
+                          <KeyRound className="h-4 w-4" />
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
                 ))}
                 {(!users || users.length === 0) && (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center text-muted-foreground">
+                    <TableCell colSpan={5} className="text-center text-muted-foreground">
                       {t('userManagement.noUsers')}
                     </TableCell>
                   </TableRow>
@@ -186,10 +152,20 @@ export default function UserManagement() {
       </Card>
 
       <CreateUserDialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen} />
-      <EditUserDialog
-        open={!!editingUser}
-        onOpenChange={(open) => !open && setEditingUser(null)}
-        userEmail={editingUser || ''}
+      {editingUser && (
+        <EditUserDialog
+          open={!!editingUser}
+          onOpenChange={(open) => !open && setEditingUser(null)}
+          userId={editingUser.user_id}
+          userEmail={editingUser.email}
+          currentRole={editingUser.role}
+          currentMemberId={editingUser.member_id}
+        />
+      )}
+      <ResetPasswordDialog
+        open={!!resetPasswordEmail}
+        onOpenChange={(open) => !open && setResetPasswordEmail(null)}
+        userEmail={resetPasswordEmail || ''}
       />
     </div>
   );
