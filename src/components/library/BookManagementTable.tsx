@@ -1,11 +1,13 @@
 import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, Pencil, Trash2, QrCode, CheckCircle2, XCircle, FileText, BookOpen, Download } from 'lucide-react';
+import { MoreHorizontal, Pencil, Trash2, QrCode, CheckCircle2, XCircle, FileText, BookOpen, Download, Copy } from 'lucide-react';
 import { useBooks } from '@/hooks/useBooks';
+import { supabase } from '@/integrations/supabase/client';
 import { useDigitalBooks, type DigitalBook } from '@/hooks/useDigitalBooks';
 import { useAuth } from '@/hooks/useAuth';
 import { EditBookDialog } from './EditBookDialog';
@@ -20,6 +22,7 @@ import { toast } from 'sonner';
 export function BookManagementTable() {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const { books, isLoading, updateBook } = useBooks('maestro');
   const { digitalBooks, isLoading: digitalLoading, approveBook, rejectBook, updateDigitalBook, getDownloadUrl } = useDigitalBooks('maestro');
   const [editBook, setEditBook] = useState<Book | null>(null);
@@ -60,6 +63,36 @@ export function BookManagementTable() {
       document.body.removeChild(a);
     } catch {
       toast.error(t('digitalLibrary.downloadError'));
+    }
+  };
+
+  const handleCreateCopy = async (book: Book) => {
+    try {
+      // Find the max copy_number for books with the same title+author
+      const siblings = books.filter(
+        (b) => b.title === book.title && b.author === book.author
+      );
+      const maxCopy = Math.max(...siblings.map((b) => b.copy_number || 1), 0);
+      const newCopyNumber = maxCopy + 1;
+
+      const { error } = await supabase.from('books').insert({
+        title: book.title,
+        author: book.author,
+        description: book.description,
+        edition: book.edition,
+        language: book.language,
+        publication_date: book.publication_date,
+        grade_level: book.grade_level,
+        owner_id: book.owner_id,
+        copy_number: newCopyNumber,
+        is_approved: true,
+        status: 'available' as const,
+      });
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ['books'] });
+      toast.success(t('library.copyCreated', { number: newCopyNumber }));
+    } catch {
+      toast.error(t('library.copyCreateError'));
     }
   };
 
@@ -210,6 +243,9 @@ export function BookManagementTable() {
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => setQrBook(book)}>
                           <QrCode className="h-4 w-4 mr-2" />{t('library.generateLabel')}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleCreateCopy(book)}>
+                          <Copy className="h-4 w-4 mr-2" />{t('library.createCopy')}
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => setDeleteBook(book)} className="text-destructive">
                           <Trash2 className="h-4 w-4 mr-2" />{t('common.delete')}
