@@ -107,6 +107,7 @@ export function AppSidebar() {
   // Library nav items
   const libraryNavItems = [
     { title: t('library.browse'), url: '/library', icon: BookOpen },
+    { title: t('digitalLibrary.title'), url: '/library?tab=digital', icon: FileText },
     { title: t('library.addBook'), url: '/library?tab=add', icon: Plus },
   ];
 

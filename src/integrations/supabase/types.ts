@@ -185,6 +185,54 @@ export type Database = {
           },
         ]
       }
+      digital_books: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          author: string
+          created_at: string
+          description: string | null
+          file_path: string
+          file_size_bytes: number | null
+          grade_level: Database["public"]["Enums"]["masonic_grade"]
+          id: string
+          is_approved: boolean
+          title: string
+          updated_at: string
+          uploaded_by: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          author: string
+          created_at?: string
+          description?: string | null
+          file_path: string
+          file_size_bytes?: number | null
+          grade_level?: Database["public"]["Enums"]["masonic_grade"]
+          id?: string
+          is_approved?: boolean
+          title: string
+          updated_at?: string
+          uploaded_by: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          author?: string
+          created_at?: string
+          description?: string | null
+          file_path?: string
+          file_size_bytes?: number | null
+          grade_level?: Database["public"]["Enums"]["masonic_grade"]
+          id?: string
+          is_approved?: boolean
+          title?: string
+          updated_at?: string
+          uploaded_by?: string
+        }
+        Relationships: []
+      }
       event_member_payments: {
         Row: {
           amount_owed: number

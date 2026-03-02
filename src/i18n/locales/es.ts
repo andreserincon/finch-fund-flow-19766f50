@@ -465,6 +465,31 @@ export default {
         failed: 'Error',
       },
     },
+    // Digital Library
+    digitalLibrary: {
+      title: 'Repositorio Digital',
+      uploadBook: 'Subir PDF',
+      upload: 'Subir',
+      download: 'Descargar',
+      approve: 'Aprobar',
+      approved: 'Aprobado',
+      rejected: 'Rechazado',
+      pending: 'Pendientes',
+      pendingApproval: 'Pendiente',
+      noPending: 'No hay libros pendientes de aprobación',
+      noBooks: 'No hay libros digitales disponibles',
+      uploadSuccess: 'Libro subido correctamente',
+      uploadError: 'Error al subir el libro',
+      downloadError: 'Error al descargar el libro',
+      approveError: 'Error al aprobar el libro',
+      rejectError: 'Error al rechazar el libro',
+      clickToUpload: 'Hacé clic para seleccionar un archivo PDF',
+      maxSize: 'Máximo 20 MB',
+      onlyPdf: 'Solo se permiten archivos PDF',
+      fileTooLarge: 'El archivo excede el límite de 20 MB',
+      approvalNotice: 'Tu libro será revisado por el Bibliotecario antes de estar disponible para otros usuarios.',
+    },
+
     // Library
     library: {
       title: 'Biblioteca',
