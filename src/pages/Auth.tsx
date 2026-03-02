@@ -109,7 +109,7 @@ export default function Auth() {
       }
 
       reset();
-      navigate('/');
+      navigate('/home');
     } catch (err) {
       setError('An unexpected error occurred. Please try again.');
     } finally {
@@ -171,7 +171,7 @@ export default function Auth() {
       
       // Redirect to home after successful password update
       setTimeout(() => {
-        navigate('/');
+        navigate('/home');
       }, 2000);
     } catch (err) {
       setPasswordUpdateError('An unexpected error occurred. Please try again.');
