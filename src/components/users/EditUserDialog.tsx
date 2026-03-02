@@ -60,6 +60,17 @@ export function EditUserDialog({
     }
   }, [open, currentRole, currentMemberId, currentGrade]);
 
+  // When member changes in the form, load that member's grade
+  const handleMemberChange = (newMemberId: string) => {
+    setMemberId(newMemberId);
+    if (newMemberId !== 'none') {
+      const selectedMember = members?.find((m) => m.id === newMemberId);
+      if (selectedMember) {
+        setGrade(selectedMember.masonic_grade || 'aprendiz');
+      }
+    }
+  };
+
   const handleClose = () => {
     onOpenChange(false);
   };
@@ -153,7 +164,7 @@ export function EditUserDialog({
             </div>
             <div className="grid gap-2">
               <Label>{t('userManagement.associatedMember', 'Miembro Asociado')}</Label>
-              <Select value={memberId} onValueChange={setMemberId} disabled={isLoading}>
+              <Select value={memberId} onValueChange={handleMemberChange} disabled={isLoading}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
