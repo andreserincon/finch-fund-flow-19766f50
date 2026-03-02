@@ -36,7 +36,6 @@ import { cn } from '@/lib/utils';
 const memberSchema = z.object({
   full_name: z.string().min(1, 'Name is required').max(100),
   phone_number: z.string().min(1, 'Phone number is required').max(20),
-  monthly_fee_amount: z.number().min(0, 'Fee must be positive'),
   fee_type: z.enum(['standard', 'solidarity']),
   is_active: z.boolean(),
   join_date: z.string().min(1, 'Join date is required'),
@@ -75,7 +74,6 @@ export function EditMemberForm({ member, open, onOpenChange }: EditMemberFormPro
       reset({
         full_name: member.full_name,
         phone_number: member.phone_number,
-        monthly_fee_amount: member.monthly_fee_amount,
         fee_type: member.fee_type,
         is_active: member.is_active,
         join_date: member.join_date,
@@ -90,7 +88,6 @@ export function EditMemberForm({ member, open, onOpenChange }: EditMemberFormPro
       id: member.member_id,
       full_name: data.full_name,
       phone_number: data.phone_number,
-      monthly_fee_amount: data.monthly_fee_amount,
       fee_type: data.fee_type,
       is_active: data.is_active,
       join_date: data.join_date,
@@ -139,39 +136,23 @@ export function EditMemberForm({ member, open, onOpenChange }: EditMemberFormPro
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="edit_monthly_fee_amount">Monthly Fee</Label>
-              <Input
-                id="edit_monthly_fee_amount"
-                type="number"
-                step="0.01"
-                {...register('monthly_fee_amount', { valueAsNumber: true })}
-                placeholder="0.00"
-              />
-              {errors.monthly_fee_amount && (
-                <p className="text-sm text-destructive">{errors.monthly_fee_amount.message}</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label>Fee Type</Label>
-              <Select
-                value={feeType}
-                onValueChange={(value: FeeType) => setValue('fee_type', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(FEE_TYPE_LABELS).map(([value, label]) => (
-                    <SelectItem key={value} value={value}>
-                      {label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="space-y-2">
+            <Label>Fee Type</Label>
+            <Select
+              value={feeType}
+              onValueChange={(value: FeeType) => setValue('fee_type', value)}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(FEE_TYPE_LABELS).map(([value, label]) => (
+                  <SelectItem key={value} value={value}>
+                    {label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">
