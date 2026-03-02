@@ -41,7 +41,7 @@ export function BookQRLabel({ book }: BookQRLabelProps) {
       >
         <div className="flex gap-3 h-full">
           <div className="flex-shrink-0 flex items-center justify-center">
-            <QRCodeSVG value={book.id} size={100} level="M" />
+            <QRCodeSVG value={`${window.location.origin}/library?book=${book.id}`} size={100} level="M" />
           </div>
           <div className="flex-1 flex flex-col justify-between min-w-0 overflow-hidden">
             <div>
