@@ -1,15 +1,19 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { BookOpen, Plus, ClipboardList, Search, Filter, Settings, User, FileText } from 'lucide-react';
+import { BookOpen, Plus, ClipboardList, Search, Filter, Settings, User, FileText, Download, Upload } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
 import { useBooks } from '@/hooks/useBooks';
+import { useDigitalBooks, type DigitalBook } from '@/hooks/useDigitalBooks';
 import { useIsBibliotecario } from '@/hooks/useIsBibliotecario';
 import { useUserGrade } from '@/hooks/useUserGrade';
+import { useAuth } from '@/hooks/useAuth';
 import { BookCard } from '@/components/library/BookCard';
 import { AddBookDialog } from '@/components/library/AddBookDialog';
 import { BookDetailDrawer } from '@/components/library/BookDetailDrawer';
@@ -17,24 +21,48 @@ import { PendingRequestsPanel } from '@/components/library/PendingRequestsPanel'
 import { BookManagementTable } from '@/components/library/BookManagementTable';
 import { MyBooksPanel } from '@/components/library/MyBooksPanel';
 import { DigitalLibraryPanel } from '@/components/library/DigitalLibraryPanel';
+import { UploadDigitalBookDialog } from '@/components/library/UploadDigitalBookDialog';
+import { toast } from 'sonner';
 import type { Book } from '@/lib/library-types';
+import { format } from 'date-fns';
+
+const gradeColors: Record<string, string> = {
+  aprendiz: 'bg-blue-500/10 text-blue-700 border-blue-500/30',
+  companero: 'bg-amber-500/10 text-amber-700 border-amber-500/30',
+  maestro: 'bg-red-500/10 text-red-700 border-red-500/30',
+};
+
+function formatFileSize(bytes: number | null): string {
+  if (!bytes) return '';
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+type BrowseItem =
+  | { type: 'physical'; data: Book }
+  | { type: 'digital'; data: DigitalBook };
 
 export default function Library() {
   const { t } = useTranslation();
+  const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const { grade } = useUserGrade();
   const { isBibliotecario, isLoading: biblioLoading } = useIsBibliotecario();
   const { books, isLoading } = useBooks(isBibliotecario ? 'maestro' : grade);
+  const { digitalBooks, isLoading: digitalLoading, getDownloadUrl } = useDigitalBooks(
+    isBibliotecario ? 'maestro' : grade
+  );
 
   const activeTab = searchParams.get('tab') || 'browse';
 
   const [search, setSearch] = useState('');
   const [gradeFilter, setGradeFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [typeFilter, setTypeFilter] = useState<string>('all');
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const [showAddBook, setShowAddBook] = useState(false);
+  const [showUploadDigital, setShowUploadDigital] = useState(false);
 
-  // Handle ?tab=add from sidebar
   useEffect(() => {
     if (activeTab === 'add') {
       setShowAddBook(true);
@@ -50,15 +78,46 @@ export default function Library() {
     }
   };
 
-  const filtered = books.filter((b) => {
+  // Merge physical + approved digital books for browse tab
+  const browseItems: BrowseItem[] = [
+    ...books
+      .filter((b) => b.is_approved)
+      .map((b) => ({ type: 'physical' as const, data: b })),
+    ...digitalBooks
+      .filter((b) => b.is_approved)
+      .map((b) => ({ type: 'digital' as const, data: b })),
+  ];
+
+  const filtered = browseItems.filter((item) => {
+    const d = item.data;
     const matchSearch =
-      b.title.toLowerCase().includes(search.toLowerCase()) ||
-      b.author.toLowerCase().includes(search.toLowerCase());
-    const matchGrade = gradeFilter === 'all' || b.grade_level === gradeFilter;
-    const matchStatus = statusFilter === 'all' || b.status === statusFilter;
-    const isApproved = b.is_approved;
-    return matchSearch && matchGrade && matchStatus && isApproved;
+      d.title.toLowerCase().includes(search.toLowerCase()) ||
+      d.author.toLowerCase().includes(search.toLowerCase());
+    const matchGrade = gradeFilter === 'all' || d.grade_level === gradeFilter;
+    const matchType = typeFilter === 'all' || item.type === typeFilter;
+    const matchStatus =
+      statusFilter === 'all' ||
+      (item.type === 'physical' && (item.data as Book).status === statusFilter) ||
+      (item.type === 'digital' && statusFilter === 'available');
+    return matchSearch && matchGrade && matchType && matchStatus;
   });
+
+  const handleDownloadDigital = async (book: DigitalBook) => {
+    try {
+      const url = await getDownloadUrl(book.file_path);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${book.title}.pdf`;
+      a.target = '_blank';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } catch {
+      toast.error(t('digitalLibrary.downloadError'));
+    }
+  };
+
+  const browseLoading = isLoading || digitalLoading;
 
   return (
     <div className="space-y-6">
@@ -70,10 +129,16 @@ export default function Library() {
           </h1>
           <p className="text-sm text-muted-foreground">{t('library.subtitle')}</p>
         </div>
-        <Button onClick={() => setShowAddBook(true)} className="gap-2">
-          <Plus className="h-4 w-4" />
-          {t('library.addBook')}
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setShowUploadDigital(true)} className="gap-2">
+            <Upload className="h-4 w-4" />
+            {t('digitalLibrary.uploadBook')}
+          </Button>
+          <Button onClick={() => setShowAddBook(true)} className="gap-2">
+            <Plus className="h-4 w-4" />
+            {t('library.addBook')}
+          </Button>
+        </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={handleTabChange}>
@@ -115,6 +180,16 @@ export default function Library() {
                 className="pl-9"
               />
             </div>
+            <Select value={typeFilter} onValueChange={setTypeFilter}>
+              <SelectTrigger className="w-[160px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t('library.allTypes')}</SelectItem>
+                <SelectItem value="physical">{t('library.physical')}</SelectItem>
+                <SelectItem value="digital">{t('library.digital')}</SelectItem>
+              </SelectContent>
+            </Select>
             <Select value={gradeFilter} onValueChange={setGradeFilter}>
               <SelectTrigger className="w-[160px]">
                 <Filter className="h-4 w-4 mr-1" />
@@ -139,7 +214,7 @@ export default function Library() {
             </Select>
           </div>
 
-          {isLoading ? (
+          {browseLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {[...Array(6)].map((_, i) => (
                 <Skeleton key={i} className="h-48 rounded-xl" />
@@ -152,9 +227,59 @@ export default function Library() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filtered.map((book) => (
-                <BookCard key={book.id} book={book} onClick={() => setSelectedBook(book)} />
-              ))}
+              {filtered.map((item) =>
+                item.type === 'physical' ? (
+                  <BookCard
+                    key={`p-${item.data.id}`}
+                    book={item.data as Book}
+                    onClick={() => setSelectedBook(item.data as Book)}
+                  />
+                ) : (
+                  <Card
+                    key={`d-${item.data.id}`}
+                    className="cursor-pointer hover:shadow-md transition-shadow border-border/60 hover:border-primary/30"
+                    onClick={() => handleDownloadDigital(item.data as DigitalBook)}
+                  >
+                    <CardContent className="p-4 space-y-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold text-foreground truncate">
+                            {item.data.title}
+                          </h3>
+                          <p className="text-sm text-muted-foreground truncate">
+                            {item.data.author}
+                          </p>
+                        </div>
+                        <FileText className="h-5 w-5 text-red-500/60 shrink-0" />
+                      </div>
+
+                      {item.data.description && (
+                        <p className="text-sm text-muted-foreground line-clamp-2">
+                          {item.data.description}
+                        </p>
+                      )}
+
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Badge variant="outline" className={gradeColors[item.data.grade_level]}>
+                          {t(`library.grades.${item.data.grade_level}`)}
+                        </Badge>
+                        <Badge variant="secondary" className="gap-1">
+                          <FileText className="h-3 w-3" />
+                          PDF
+                        </Badge>
+                        <span className="text-xs text-muted-foreground">
+                          {formatFileSize((item.data as DigitalBook).file_size_bytes)}
+                        </span>
+                      </div>
+
+                      <Button variant="outline" size="sm" className="w-full gap-1">
+                        <Download className="h-4 w-4" />
+                        {t('digitalLibrary.download')}
+                      </Button>
+                    </CardContent>
+                  </Card>
+                )
+              )}
             </div>
           )}
         </TabsContent>
@@ -191,6 +316,10 @@ export default function Library() {
 
       {showAddBook && (
         <AddBookDialog open={showAddBook} onClose={() => setShowAddBook(false)} />
+      )}
+
+      {showUploadDigital && (
+        <UploadDigitalBookDialog open={showUploadDigital} onClose={() => setShowUploadDigital(false)} />
       )}
     </div>
   );
