@@ -17,6 +17,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { BookCard } from '@/components/library/BookCard';
 import { AddBookDialog } from '@/components/library/AddBookDialog';
 import { BookDetailDrawer } from '@/components/library/BookDetailDrawer';
+import { DigitalBookDetailDrawer } from '@/components/library/DigitalBookDetailDrawer';
 import { PendingRequestsPanel } from '@/components/library/PendingRequestsPanel';
 import { BookManagementTable } from '@/components/library/BookManagementTable';
 import { MyBooksPanel } from '@/components/library/MyBooksPanel';
@@ -61,6 +62,7 @@ export default function Library() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
+  const [selectedDigitalBook, setSelectedDigitalBook] = useState<DigitalBook | null>(null);
   const [showAddBook, setShowAddBook] = useState(false);
   const [showUploadDigital, setShowUploadDigital] = useState(false);
 
@@ -246,7 +248,7 @@ export default function Library() {
                   <Card
                     key={`d-${item.data.id}`}
                     className="cursor-pointer hover:shadow-md transition-shadow border-border/60 hover:border-primary/30"
-                    onClick={() => handleDownloadDigital(item.data as DigitalBook)}
+                    onClick={() => setSelectedDigitalBook(item.data as DigitalBook)}
                   >
                     <CardContent className="p-4 space-y-3">
                       <div className="flex items-start justify-between gap-2">
@@ -321,6 +323,14 @@ export default function Library() {
           open={!!selectedBook}
           onClose={() => setSelectedBook(null)}
           isBibliotecario={isBibliotecario}
+        />
+      )}
+
+      {selectedDigitalBook && (
+        <DigitalBookDetailDrawer
+          book={selectedDigitalBook}
+          open={!!selectedDigitalBook}
+          onClose={() => setSelectedDigitalBook(null)}
         />
       )}
 
