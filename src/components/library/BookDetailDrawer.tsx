@@ -12,6 +12,7 @@ import { useTransferRequests } from '@/hooks/useTransferRequests';
 import { useAuth } from '@/hooks/useAuth';
 import { BookQRLabel } from './BookQRLabel';
 import type { Book } from '@/lib/library-types';
+import { GRADE_HIERARCHY } from '@/lib/library-types';
 
 interface BookDetailDrawerProps {
   book: Book;
@@ -100,7 +101,7 @@ export function BookDetailDrawer({ book, open, onClose, isBibliotecario }: BookD
                   <SelectValue placeholder={t('library.selectMember')} />
                 </SelectTrigger>
                 <SelectContent>
-                  {(members || []).filter(m => m.is_active).map((m) => (
+                  {(members || []).filter(m => m.is_active && GRADE_HIERARCHY[m.masonic_grade as keyof typeof GRADE_HIERARCHY] >= GRADE_HIERARCHY[book.grade_level]).map((m) => (
                     <SelectItem key={m.id} value={m.id}>{m.full_name}</SelectItem>
                   ))}
                 </SelectContent>
