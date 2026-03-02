@@ -51,5 +51,3 @@ if (isLovablePreview && "serviceWorker" in navigator) {
 }
 
 createRoot(document.getElementById("root")!).render(<App />);
-
-createRoot(document.getElementById("root")!).render(<App />);
