@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import type { Book, MasonicGrade } from '@/lib/library-types';
 import { GRADE_HIERARCHY } from '@/lib/library-types';
 
-export function useBooks(userGrade: MasonicGrade = 'aprendiz') {
+export function useBooks(userGrade: MasonicGrade = 'aprendiz', gradeLoaded: boolean = true) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const maxGradeLevel = GRADE_HIERARCHY[userGrade];
@@ -15,7 +15,8 @@ export function useBooks(userGrade: MasonicGrade = 'aprendiz') {
     .map(([grade]) => grade) as MasonicGrade[];
 
   const { data: books, isLoading, error } = useQuery({
-    queryKey: ['books', userGrade],
+    queryKey: ['books', userGrade, gradeLoaded],
+    enabled: gradeLoaded,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('books')
