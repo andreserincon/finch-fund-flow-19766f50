@@ -280,8 +280,9 @@ export default function Dashboard() {
         />
       </div>
 
-      {/* Overdue Members */}
-      <div className="stat-card">
+      {/* Overdue Members - hidden for member-only users */}
+      {!isMemberOnly && (
+        <div className="stat-card">
           <div className="flex items-center justify-between mb-4">
             <h2 className="section-header mb-0">{t('dashboard.membersRequiringAttention')}</h2>
             <Link to="/members">
@@ -347,6 +348,7 @@ export default function Dashboard() {
             </div>
           )}
         </div>
+      )}
 
       {/* Member Fee Matrix */}
       <MemberFeeMatrix filterMemberId={isMemberOnly ? (userMemberId ?? null) : undefined} />
