@@ -21,7 +21,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Loader2 } from 'lucide-react';
-import { useUserRoles, type AppRole } from '@/hooks/useUserRoles';
+import { useUserRoles, type AppRole, type MasonicGrade } from '@/hooks/useUserRoles';
 import { useMembers } from '@/hooks/useMembers';
 
 interface EditUserDialogProps {
@@ -31,6 +31,7 @@ interface EditUserDialogProps {
   userEmail: string;
   currentRole: AppRole | null;
   currentMemberId: string | null;
+  currentGrade: MasonicGrade | null;
 }
 
 export function EditUserDialog({
@@ -40,6 +41,7 @@ export function EditUserDialog({
   userEmail,
   currentRole,
   currentMemberId,
+  currentGrade,
 }: EditUserDialogProps) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -48,13 +50,15 @@ export function EditUserDialog({
   const [isLoading, setIsLoading] = useState(false);
   const [role, setRole] = useState<string>('none');
   const [memberId, setMemberId] = useState<string>('none');
+  const [grade, setGrade] = useState<string>('aprendiz');
 
   useEffect(() => {
     if (open) {
       setRole(currentRole || 'none');
       setMemberId(currentMemberId || 'none');
+      setGrade(currentGrade || 'aprendiz');
     }
-  }, [open, currentRole, currentMemberId]);
+  }, [open, currentRole, currentMemberId, currentGrade]);
 
   const handleClose = () => {
     onOpenChange(false);
@@ -94,6 +98,17 @@ export function EditUserDialog({
           .from('profiles')
           .update({ member_id: newMemberId })
           .eq('id', userId);
+
+        if (error) throw error;
+      }
+
+      // Update masonic grade on the associated member
+      const effectiveMemberId = newMemberId || currentMemberId;
+      if (effectiveMemberId && grade !== (currentGrade || 'aprendiz')) {
+        const { error } = await supabase
+          .from('members')
+          .update({ masonic_grade: grade as MasonicGrade })
+          .eq('id', effectiveMemberId);
 
         if (error) throw error;
       }
@@ -151,9 +166,24 @@ export function EditUserDialog({
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-muted-foreground">
-                {t('userManagement.memberAssociationHint', 'El grado se hereda del miembro asociado.')}
-              </p>
+            </div>
+            <div className="grid gap-2">
+              <Label>{t('userManagement.grade', 'Grado')}</Label>
+              <Select value={grade} onValueChange={setGrade} disabled={isLoading || memberId === 'none'}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="aprendiz">{t('userManagement.grades.aprendiz', 'Aprendiz')}</SelectItem>
+                  <SelectItem value="companero">{t('userManagement.grades.companero', 'Compañero')}</SelectItem>
+                  <SelectItem value="maestro">{t('userManagement.grades.maestro', 'Maestro')}</SelectItem>
+                </SelectContent>
+              </Select>
+              {memberId === 'none' && (
+                <p className="text-xs text-muted-foreground">
+                  {t('userManagement.gradeRequiresMember', 'Asociá un miembro para editar el grado.')}
+                </p>
+              )}
             </div>
           </div>
           <DialogFooter>

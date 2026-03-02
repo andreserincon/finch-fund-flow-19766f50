@@ -160,6 +160,7 @@ export default function UserManagement() {
           userEmail={editingUser.email}
           currentRole={editingUser.role}
           currentMemberId={editingUser.member_id}
+          currentGrade={editingUser.masonic_grade}
         />
       )}
       <ResetPasswordDialog
