@@ -87,11 +87,9 @@ export default function Library() {
     ...books
       .filter((b) => b.is_approved)
       .map((b) => ({ type: 'physical' as const, data: b })),
-    ...(isBibliotecario
-      ? digitalBooks
-          .filter((b) => b.is_approved)
-          .map((b) => ({ type: 'digital' as const, data: b }))
-      : []),
+    ...digitalBooks
+      .filter((b) => b.is_approved)
+      .map((b) => ({ type: 'digital' as const, data: b })),
   ];
 
   const filtered = browseItems.filter((item) => {
