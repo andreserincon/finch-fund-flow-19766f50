@@ -48,12 +48,12 @@ Deno.serve(async (req) => {
 
     const userId = claimsData.claims.sub;
 
-    // Check if user is treasurer
+    // Check if user is treasurer or admin
     const { data: roleData } = await supabase
       .from('user_roles')
       .select('role')
       .eq('user_id', userId)
-      .eq('role', 'treasurer')
+      .in('role', ['treasurer', 'admin'])
       .maybeSingle();
 
     if (!roleData) {
