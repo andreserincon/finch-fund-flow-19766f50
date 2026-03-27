@@ -24,13 +24,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { MoreHorizontal, Plus, CheckCircle, XCircle, Trash2, DollarSign, History, Undo2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { Loan, ACCOUNT_LABELS, LOAN_STATUS_LABELS, LoanStatus } from '@/lib/types';
@@ -39,7 +34,7 @@ import { formatCurrency, getCurrencyForAccount, cn, parseLocalDate } from '@/lib
 export default function Loans() {
   const { loans, isLoading, cancelLoan } = useLoans();
   const { isAdmin } = useIsAdmin();
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [showPaid, setShowPaid] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [markingPaidLoan, setMarkingPaidLoan] = useState<Loan | null>(null);
   const [deletingLoan, setDeletingLoan] = useState<Loan | null>(null);
@@ -47,10 +42,17 @@ export default function Loans() {
   const [viewingHistoryLoan, setViewingHistoryLoan] = useState<Loan | null>(null);
   const [revertingLoan, setRevertingLoan] = useState<Loan | null>(null);
 
-  const filteredLoans = loans.filter((loan) => {
-    if (statusFilter === 'all') return true;
-    return loan.status === statusFilter;
-  });
+  const filteredLoans = showPaid
+    ? loans
+        .filter((loan) => loan.status === 'paid')
+        .sort((a, b) => {
+          const dateA = a.paid_date ? new Date(a.paid_date).getTime() : 0;
+          const dateB = b.paid_date ? new Date(b.paid_date).getTime() : 0;
+          return dateB - dateA;
+        })
+    : loans
+        .filter((loan) => loan.status === 'active')
+        .sort((a, b) => b.amount - a.amount);
 
   // Calculate totals for active loans
   const activeLoansARS = loans.filter((l) => l.status === 'active' && l.account !== 'savings');
@@ -152,18 +154,15 @@ export default function Loans() {
       </div>
 
       {/* Filters */}
-      <div className="flex gap-2">
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Filter by status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="active">Active</SelectItem>
-            <SelectItem value="paid">Paid</SelectItem>
-            <SelectItem value="cancelled">Cancelled</SelectItem>
-          </SelectContent>
-        </Select>
+      <div className="flex items-center gap-3">
+        <Switch
+          id="show-paid"
+          checked={showPaid}
+          onCheckedChange={setShowPaid}
+        />
+        <Label htmlFor="show-paid" className="text-sm cursor-pointer">
+          Show paid loans
+        </Label>
       </div>
 
       {/* Mobile Card View */}
