@@ -271,7 +271,7 @@ export function MemberFeeMatrix({ filterMemberId }: { filterMemberId?: string | 
                 displayedMembers.map((member) => (
                   <TableRow key={member.member_id}>
                     <TableCell className="sticky left-0 bg-card z-10 font-medium">
-                      {member.full_name}
+                      {displayName(member.full_name, member.phone_number)}
                     </TableCell>
                     {months.map((month) => {
                       const { status, amount } = getMemberMonthStatus(

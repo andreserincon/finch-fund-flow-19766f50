@@ -33,6 +33,7 @@ import { Button } from '@/components/ui/button';
 
 export default function Dashboard() {
   const { t, i18n } = useTranslation();
+  const { displayName } = useHiddenMode();
   const { memberBalances, isLoading: membersLoading } = useMembers();
   const { transactions, isLoading: transactionsLoading } = useTransactions();
   const { currentMonthFees, isLoading: feesLoading } = useMonthlyFees();
