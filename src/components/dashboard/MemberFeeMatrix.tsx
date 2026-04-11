@@ -109,6 +109,9 @@ export function MemberFeeMatrix({ filterMemberId }: { filterMemberId?: string | 
       cumulativeOwed += getFeeForMonth(mKey, monthFeeType);
     }
 
+    // Calculate cumulative owed up to the PREVIOUS month to determine partial payments
+    const prevMonthOwed = cumulativeOwed - feeAmount;
+
     // If total paid covers cumulative owed, this month is paid (even if future)
     const isPaid = member.total_paid >= cumulativeOwed;
 
@@ -116,16 +119,21 @@ export function MemberFeeMatrix({ filterMemberId }: { filterMemberId?: string | 
       return { status: 'paid', amount: feeAmount };
     }
 
+    // Calculate the display amount: if partially paid into this month, show remaining
+    const pendingAmount = member.total_paid >= prevMonthOwed
+      ? cumulativeOwed - member.total_paid  // partially paid → show remaining
+      : feeAmount;                           // fully unpaid → show full fee
+
     // Future month - not due yet but not paid in advance
     if (isFuture) {
-      return { status: 'future', amount: feeAmount };
+      return { status: 'future', amount: pendingAmount };
     }
 
     if (isCurrent) {
-      return { status: 'current_unpaid', amount: feeAmount };
+      return { status: 'current_unpaid', amount: pendingAmount };
     }
 
-    return { status: 'overdue', amount: feeAmount };
+    return { status: 'overdue', amount: pendingAmount };
   };
 
   const formatCurrency = (amount: number) => {
