@@ -723,13 +723,6 @@ function buildFlowTable(data: any, formatCurrency: (amount: number, currency?: s
   const finalARS = data.initialARS + totalIncARS - totalExpARS;
   const finalUSD = data.initialUSD + totalIncUSD - totalExpUSD;
 
-  const yieldDisplay = data.yieldMonthARS === 0 && data.yieldMonthUSD === 0
-    ? '$0'
-    : formatCurrency(data.yieldMonthARS) + (data.yieldMonthUSD > 0 ? ' + ' + formatCurrency(data.yieldMonthUSD, 'USD') : '');
-  const yieldSubtext = data.yieldMonthARS === 0 && data.yieldMonthUSD === 0
-    ? 'Sin rendimiento registrado'
-    : 'Acum. ' + data.year + ': ' + formatCurrency(data.yieldYearARS) + (data.yieldYearUSD > 0 ? ' + ' + formatCurrency(data.yieldYearUSD, 'USD') : '');
-
   return '<table>'
     + '<thead><tr>'
     + '<th>Concepto</th>'
@@ -762,13 +755,7 @@ function buildFlowTable(data: any, formatCurrency: (amount: number, currency?: s
     + '<td class="text-right">-</td>'
     + '<td class="text-right">-</td>'
     + '</tr>'
-    + '</tbody></table>'
-    + '<div class="grid" style="margin-top: 8px; grid-template-columns: repeat(2, 1fr);">'
-    + '<div class="stat-card success">'
-    + '<div class="stat-label">Rendimiento del Mes</div>'
-    + '<div class="stat-value positive">' + yieldDisplay + '</div>'
-    + '<div class="stat-subtext">' + yieldSubtext + '</div>'
-    + '</div></div>';
+    + '</tbody></table>';
 }
 
 function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comprehensive', logoBase64?: string): string {
