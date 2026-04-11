@@ -1178,19 +1178,20 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
       body { margin: 0; padding: 10px; }
       .page-break { page-break-before: always; }
       .no-print { display: none; }
-      @page { margin: 10mm 12mm; }
+      @page { margin: 12mm 15mm; size: A4; }
     }
     
     * { box-sizing: border-box; }
     
     body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      line-height: 1.6;
+      line-height: 1.5;
       color: #1a1a1a;
       max-width: 210mm;
       margin: 0 auto;
-      padding: 20px;
+      padding: 15px;
       background: #fff;
+      font-size: 12px;
     }
     
     .header {
