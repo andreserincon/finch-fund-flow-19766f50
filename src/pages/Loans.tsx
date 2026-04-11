@@ -353,6 +353,7 @@ export default function Loans() {
       {addingPaymentLoan && <AddPaymentDialog loan={addingPaymentLoan} open={!!addingPaymentLoan} onOpenChange={(open) => !open && setAddingPaymentLoan(null)} />}
       {viewingHistoryLoan && <PaymentHistoryDialog loan={viewingHistoryLoan} open={!!viewingHistoryLoan} onOpenChange={(open) => !open && setViewingHistoryLoan(null)} />}
       {revertingLoan && <RevertPaidDialog loan={revertingLoan} open={!!revertingLoan} onOpenChange={(open) => !open && setRevertingLoan(null)} />}
+      {editingLoan && <EditLoanDialog loan={editingLoan} open={!!editingLoan} onOpenChange={(open) => !open && setEditingLoan(null)} />}
     </div>
   );
 }
