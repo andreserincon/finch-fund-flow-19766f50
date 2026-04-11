@@ -1330,20 +1330,12 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
     .negative { color: #e74c3c; }
     
     .footer {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
       text-align: center;
       font-size: 10px;
       color: #666;
       padding: 10px;
       border-top: 1px solid #999;
-      background: white;
-    }
-    
-    @media print {
-      .footer { position: fixed; bottom: 10px; }
+      margin-top: 20px;
     }
     
     .print-button {
