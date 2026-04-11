@@ -399,6 +399,71 @@ export function useLoans() {
     },
   });
 
+  /* ── Mutation: update loan details ── */
+  const updateLoan = useMutation({
+    mutationFn: async ({
+      loanId,
+      member_id,
+      amount,
+      account,
+      loan_date,
+      notes,
+    }: {
+      loanId: string;
+      member_id: string;
+      amount: number;
+      account: AccountType;
+      loan_date: string;
+      notes?: string | null;
+    }) => {
+      const { data: loan, error: fetchErr } = await supabase
+        .from('loans')
+        .select('*')
+        .eq('id', loanId)
+        .single();
+      if (fetchErr) throw fetchErr;
+      if (!loan) throw new Error('Loan not found');
+
+      // Update the disbursement transaction to keep them in sync
+      if (loan.disbursement_transaction_id) {
+        const { error: txErr } = await supabase
+          .from('transactions')
+          .update({
+            transaction_date: loan_date,
+            amount,
+            account,
+            member_id,
+            notes: notes ? `Loan: ${notes}` : 'Loan disbursement',
+          })
+          .eq('id', loan.disbursement_transaction_id);
+        if (txErr) throw txErr;
+      }
+
+      const { data: updated, error: updateErr } = await supabase
+        .from('loans')
+        .update({
+          member_id,
+          amount,
+          account,
+          loan_date,
+          notes: notes || null,
+        })
+        .eq('id', loanId)
+        .select('*, member:members(id, full_name)')
+        .single();
+
+      if (updateErr) throw updateErr;
+      return updated;
+    },
+    onSuccess: () => {
+      invalidateRelated();
+      toast.success('Préstamo actualizado correctamente');
+    },
+    onError: (error: Error) => {
+      toast.error(`Error al actualizar préstamo: ${error.message}`);
+    },
+  });
+
   return {
     loans: loansQuery.data ?? [],
     isLoading: loansQuery.isLoading,
@@ -409,5 +474,6 @@ export function useLoans() {
     revertLoanToPending,
     cancelLoan,
     deleteLoan,
+    updateLoan,
   };
 }
