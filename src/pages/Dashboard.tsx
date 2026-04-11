@@ -25,7 +25,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { parseLocalDate } from '@/lib/utils';
-import { es, enUS } from 'date-fns/locale';
+import { es } from 'date-fns/locale';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 
@@ -43,7 +43,7 @@ export default function Dashboard() {
   const userMemberId = profile?.member_id;
   const { exchangeRate } = useExchangeRate();
   
-  const dateLocale = i18n.language === 'es' ? es : enUS;
+  const dateLocale = es;
 
   // Query unpaid event amounts per member
   const { data: memberEventDebts = {} } = useQuery({

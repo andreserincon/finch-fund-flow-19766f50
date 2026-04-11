@@ -31,7 +31,7 @@ export function TransferList() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-32">
-        <div className="animate-pulse text-muted-foreground">Loading transfers...</div>
+        <div className="animate-pulse text-muted-foreground">Cargando transferencias...</div>
       </div>
     );
   }
@@ -39,7 +39,7 @@ export function TransferList() {
   if (transfers.length === 0) {
     return (
       <div className="text-center py-8 text-muted-foreground bg-card rounded-lg border">
-        No transfers recorded yet
+        No hay transferencias registradas
       </div>
     );
   }
