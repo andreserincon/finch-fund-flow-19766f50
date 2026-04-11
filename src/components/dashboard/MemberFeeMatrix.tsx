@@ -235,7 +235,7 @@ export function MemberFeeMatrix({ filterMemberId }: { filterMemberId?: string | 
             <Table>
               <TableHeader>
               <TableRow>
-                <TableHead className="sticky left-0 bg-card z-10">Member</TableHead>
+                <TableHead className="sticky left-0 bg-card z-10">Miembro</TableHead>
                 {months.map((month) => (
                   <TableHead
                     key={month.key}
