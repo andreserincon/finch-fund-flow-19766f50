@@ -29,6 +29,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Search, TrendingUp, TrendingDown, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 import { cn, formatCurrency, getCurrencyForAccount, parseLocalDate } from '@/lib/utils';
 import { CATEGORY_LABELS, ACCOUNT_LABELS, Transaction, AccountType } from '@/lib/types';
 
@@ -65,7 +66,6 @@ export default function Transactions() {
     return matchesSearch && matchesType && matchesCategory && matchesAccount;
   });
 
-  // Calculate totals by currency (ARS only for now since totals would need conversion)
   const arsTransactions = filteredTransactions.filter(t => t.account !== 'savings');
   const usdTransactions = filteredTransactions.filter(t => t.account === 'savings');
 
@@ -88,18 +88,17 @@ export default function Transactions() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-pulse text-muted-foreground">Loading...</div>
+        <div className="animate-pulse text-muted-foreground">Cargando...</div>
       </div>
     );
   }
 
   return (
     <div className="space-y-4 md:space-y-6 animate-fade-in">
-      {/* Header */}
       <div>
-        <h1 className="text-xl md:text-2xl font-bold text-foreground">Transactions</h1>
+        <h1 className="text-xl md:text-2xl font-bold text-foreground">Transacciones</h1>
         <p className="text-sm text-muted-foreground">
-          {transactions.length} total transactions
+          {transactions.length} transacciones totales
         </p>
       </div>
 
@@ -110,7 +109,7 @@ export default function Transactions() {
             <TrendingUp className="h-5 w-5 md:h-6 md:w-6 text-success" />
           </div>
           <div className="min-w-0">
-            <p className="text-xs md:text-sm text-muted-foreground">Income (ARS)</p>
+            <p className="text-xs md:text-sm text-muted-foreground">Ingresos (ARS)</p>
             <p className="text-lg md:text-2xl font-bold amount-positive truncate">
               {formatCurrency(totalIncomeARS, 'ARS')}
             </p>
@@ -121,7 +120,7 @@ export default function Transactions() {
             <TrendingDown className="h-5 w-5 md:h-6 md:w-6 text-overdue" />
           </div>
           <div className="min-w-0">
-            <p className="text-xs md:text-sm text-muted-foreground">Expenses (ARS)</p>
+            <p className="text-xs md:text-sm text-muted-foreground">Gastos (ARS)</p>
             <p className="text-lg md:text-2xl font-bold amount-negative truncate">
               {formatCurrency(totalExpensesARS, 'ARS')}
             </p>
@@ -134,7 +133,7 @@ export default function Transactions() {
                 <TrendingUp className="h-5 w-5 md:h-6 md:w-6 text-success" />
               </div>
               <div className="min-w-0">
-                <p className="text-xs md:text-sm text-muted-foreground">Income (USD)</p>
+                <p className="text-xs md:text-sm text-muted-foreground">Ingresos (USD)</p>
                 <p className="text-lg md:text-2xl font-bold amount-positive truncate">
                   {formatCurrency(totalIncomeUSD, 'USD')}
                 </p>
@@ -145,7 +144,7 @@ export default function Transactions() {
                 <TrendingDown className="h-5 w-5 md:h-6 md:w-6 text-overdue" />
               </div>
               <div className="min-w-0">
-                <p className="text-xs md:text-sm text-muted-foreground">Expenses (USD)</p>
+                <p className="text-xs md:text-sm text-muted-foreground">Gastos (USD)</p>
                 <p className="text-lg md:text-2xl font-bold amount-negative truncate">
                   {formatCurrency(totalExpensesUSD, 'USD')}
                 </p>
@@ -160,7 +159,7 @@ export default function Transactions() {
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search transactions..."
+            placeholder="Buscar transacciones..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9"
@@ -169,20 +168,20 @@ export default function Transactions() {
         <div className="flex gap-2">
           <Select value={typeFilter} onValueChange={setTypeFilter}>
             <SelectTrigger className="flex-1 sm:w-[140px] sm:flex-none">
-              <SelectValue placeholder="Type" />
+              <SelectValue placeholder="Tipo" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Types</SelectItem>
-              <SelectItem value="income">Income</SelectItem>
-              <SelectItem value="expense">Expense</SelectItem>
+              <SelectItem value="all">Todos los Tipos</SelectItem>
+              <SelectItem value="income">Ingreso</SelectItem>
+              <SelectItem value="expense">Gasto</SelectItem>
             </SelectContent>
           </Select>
           <Select value={categoryFilter} onValueChange={setCategoryFilter}>
             <SelectTrigger className="flex-1 sm:w-[180px] sm:flex-none">
-              <SelectValue placeholder="Category" />
+              <SelectValue placeholder="Categoría" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Categories</SelectItem>
+              <SelectItem value="all">Todas las Categorías</SelectItem>
               {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
                 <SelectItem key={value} value={value}>
                   {label}
@@ -192,10 +191,10 @@ export default function Transactions() {
           </Select>
           <Select value={accountFilter} onValueChange={setAccountFilter}>
             <SelectTrigger className="flex-1 sm:w-[180px] sm:flex-none">
-              <SelectValue placeholder="Account" />
+              <SelectValue placeholder="Cuenta" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Accounts</SelectItem>
+              <SelectItem value="all">Todas las Cuentas</SelectItem>
               {Object.entries(ACCOUNT_LABELS).map(([value, label]) => (
                 <SelectItem key={value} value={value}>
                   {label}
@@ -210,7 +209,7 @@ export default function Transactions() {
       <div className="md:hidden landscape-hide-cards space-y-3">
         {filteredTransactions.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground bg-card rounded-lg border">
-            No transactions found
+            No se encontraron transacciones
           </div>
         ) : (
           filteredTransactions.map((transaction) => (
@@ -228,8 +227,8 @@ export default function Transactions() {
                     {CATEGORY_LABELS[transaction.category]}
                   </Badge>
                   <p className="text-xs text-muted-foreground">
-                    {format(parseLocalDate(transaction.transaction_date), 'MMM d, yyyy')}
-                    {' • '}{ACCOUNT_LABELS[transaction.account] || 'Bank Main Account'}
+                    {format(parseLocalDate(transaction.transaction_date), 'd MMM yyyy', { locale: es })}
+                    {' • '}{ACCOUNT_LABELS[transaction.account] || 'Cuenta Bancaria Principal'}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -252,14 +251,14 @@ export default function Transactions() {
                       <DropdownMenuContent align="end" className="bg-popover">
                         <DropdownMenuItem onClick={() => setEditingTransaction(transaction)}>
                           <Pencil className="mr-2 h-4 w-4" />
-                          Edit
+                          Editar
                         </DropdownMenuItem>
                         <DropdownMenuItem 
                           onClick={() => setDeletingTransaction(transaction)}
                           className="text-destructive focus:text-destructive"
                         >
                           <Trash2 className="mr-2 h-4 w-4" />
-                          Delete
+                          Eliminar
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -268,8 +267,8 @@ export default function Transactions() {
               </div>
               {(transaction.member?.full_name || transaction.notes) && (
                 <div className="text-sm text-muted-foreground">
-                  {transaction.member?.full_name && <p>Member: {transaction.member.full_name}</p>}
-                  {transaction.notes && <p className="truncate">Note: {transaction.notes}</p>}
+                  {transaction.member?.full_name && <p>Miembro: {transaction.member.full_name}</p>}
+                  {transaction.notes && <p className="truncate">Nota: {transaction.notes}</p>}
                 </div>
               )}
             </div>
@@ -282,12 +281,12 @@ export default function Transactions() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Date</TableHead>
-              <TableHead>Account</TableHead>
-              <TableHead>Category</TableHead>
-              <TableHead>Member</TableHead>
-              <TableHead>Notes</TableHead>
-              <TableHead className="text-right">Amount</TableHead>
+              <TableHead>Fecha</TableHead>
+              <TableHead>Cuenta</TableHead>
+              <TableHead>Categoría</TableHead>
+              <TableHead>Miembro</TableHead>
+              <TableHead>Notas</TableHead>
+              <TableHead className="text-right">Monto</TableHead>
               {isAdmin && <TableHead className="w-[50px]"></TableHead>}
             </TableRow>
           </TableHeader>
@@ -295,18 +294,18 @@ export default function Transactions() {
             {filteredTransactions.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                  No transactions found
+                  No se encontraron transacciones
                 </TableCell>
               </TableRow>
             ) : (
               filteredTransactions.map((transaction) => (
                 <TableRow key={transaction.id}>
                   <TableCell className="font-medium">
-                    {format(parseLocalDate(transaction.transaction_date), 'MMM d, yyyy')}
+                    {format(parseLocalDate(transaction.transaction_date), 'd MMM yyyy', { locale: es })}
                   </TableCell>
                   <TableCell>
                     <span className="text-xs text-muted-foreground">
-                      {ACCOUNT_LABELS[transaction.account] || 'Bank Main Account'}
+                      {ACCOUNT_LABELS[transaction.account] || 'Cuenta Bancaria Principal'}
                     </span>
                   </TableCell>
                   <TableCell>
@@ -352,20 +351,20 @@ export default function Transactions() {
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="icon" className="h-8 w-8">
                             <MoreHorizontal className="h-4 w-4" />
-                            <span className="sr-only">Open menu</span>
+                            <span className="sr-only">Abrir menú</span>
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="bg-popover">
                           <DropdownMenuItem onClick={() => setEditingTransaction(transaction)}>
                             <Pencil className="mr-2 h-4 w-4" />
-                            Edit
+                            Editar
                           </DropdownMenuItem>
                           <DropdownMenuItem 
                             onClick={() => setDeletingTransaction(transaction)}
                             className="text-destructive focus:text-destructive"
                           >
                             <Trash2 className="mr-2 h-4 w-4" />
-                            Delete
+                            Eliminar
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -378,7 +377,6 @@ export default function Transactions() {
         </Table>
       </div>
 
-      {/* Edit Dialog */}
       {editingTransaction && (
         <EditTransactionDialog
           transaction={editingTransaction}
@@ -387,7 +385,6 @@ export default function Transactions() {
         />
       )}
 
-      {/* Delete Dialog */}
       {deletingTransaction && (
         <DeleteTransactionDialog
           transaction={deletingTransaction}
