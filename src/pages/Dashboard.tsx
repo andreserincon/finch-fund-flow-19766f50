@@ -1,3 +1,4 @@
+import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useHiddenMode } from '@/contexts/HiddenModeContext';
 import { useMembers } from '@/hooks/useMembers';
@@ -15,6 +16,13 @@ import { AddTransactionForm } from '@/components/forms/AddTransactionForm';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { useIsMemberOnly } from '@/hooks/useIsMemberOnly';
 import { useAuth } from '@/hooks/useAuth';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { 
   Wallet, 
   Users, 
@@ -22,9 +30,10 @@ import {
   TrendingUp,
   ArrowRight,
   Landmark,
-  HandCoins
+  HandCoins,
+  CalendarDays
 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, lastDayOfMonth, startOfMonth, startOfYear } from 'date-fns';
 import { parseLocalDate } from '@/lib/utils';
 import { es } from 'date-fns/locale';
 import { Link } from 'react-router-dom';
@@ -46,6 +55,49 @@ export default function Dashboard() {
   const { exchangeRate } = useExchangeRate();
   
   const dateLocale = es;
+
+  // Month/Year filter state - default to current month
+  const now = new Date();
+  const currentYM = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const [selectedYM, setSelectedYM] = useState<string>(currentYM);
+
+  // Build available month options from transactions
+  const monthOptions = useMemo(() => {
+    const months = new Set<string>();
+    transactions.forEach((t) => {
+      months.add(t.transaction_date.substring(0, 7));
+    });
+    // Always include current month
+    months.add(currentYM);
+    return Array.from(months).sort((a, b) => b.localeCompare(a));
+  }, [transactions, currentYM]);
+
+  // Compute the cutoff date: last day of selected month
+  const selectedDate = parseLocalDate(`${selectedYM}-01`);
+  const cutoffDate = lastDayOfMonth(selectedDate);
+  const selectedMonthStart = startOfMonth(selectedDate);
+  const selectedYearStart = startOfYear(selectedDate);
+  const isCurrentMonth = selectedYM === currentYM;
+
+  // Filter transactions and transfers up to the cutoff date
+  const filteredTransactions = useMemo(() => {
+    return transactions.filter(t => parseLocalDate(t.transaction_date) <= cutoffDate);
+  }, [transactions, cutoffDate]);
+
+  const filteredTransfers = useMemo(() => {
+    return transfers.filter(t => parseLocalDate(t.transfer_date) <= cutoffDate);
+  }, [transfers, cutoffDate]);
+
+  // Filter loans: those active as of the cutoff (created on or before, and not paid before cutoff)
+  const filteredLoans = useMemo(() => {
+    return loans.filter(l => {
+      const loanDate = parseLocalDate(l.loan_date);
+      if (loanDate > cutoffDate) return false;
+      if (l.status === 'paid' && l.paid_date && parseLocalDate(l.paid_date) <= cutoffDate) return false;
+      if (l.status === 'cancelled') return false;
+      return true;
+    });
+  }, [loans, cutoffDate]);
 
   // Query unpaid event amounts per member
   const { data: memberEventDebts = {} } = useQuery({
@@ -72,52 +124,48 @@ export default function Dashboard() {
   const isLoading = membersLoading || transactionsLoading || feesLoading || transfersLoading || loansLoading;
 
   // Calculate total loans due (ARS and USD separately)
-  const activeLoans = loans.filter(l => l.status === 'active');
+  const activeLoans = filteredLoans;
   const loansARS = activeLoans.filter(l => l.account === 'bank');
   const loansUSD = activeLoans.filter(l => l.account === 'savings');
   const totalLoansDueARS = loansARS.reduce((sum, l) => sum + (l.amount - l.amount_paid), 0);
   const totalLoansDueUSD = loansUSD.reduce((sum, l) => sum + (l.amount - l.amount_paid), 0);
 
 
-  // Calculate account balances
-  const bankBalance = transactions
+  // Calculate account balances from filtered data
+  const bankBalance = filteredTransactions
     .filter(t => t.account === 'bank' || !t.account)
     .reduce((sum, t) => sum + (t.transaction_type === 'income' ? t.amount : -t.amount), 0)
-    - transfers.filter(t => t.from_account === 'bank').reduce((sum, t) => sum + t.amount, 0)
-    + transfers.filter(t => t.to_account === 'bank').reduce((sum, t) => sum + t.amount, 0);
+    - filteredTransfers.filter(t => t.from_account === 'bank').reduce((sum, t) => sum + t.amount, 0)
+    + filteredTransfers.filter(t => t.to_account === 'bank').reduce((sum, t) => sum + t.amount, 0);
 
-  const greatLodgeBalance = transactions
+  const greatLodgeBalance = filteredTransactions
     .filter(t => t.account === 'great_lodge')
     .reduce((sum, t) => sum + (t.transaction_type === 'income' ? t.amount : -t.amount), 0)
-    - transfers.filter(t => t.from_account === 'great_lodge').reduce((sum, t) => sum + t.amount, 0)
-    + transfers.filter(t => t.to_account === 'great_lodge').reduce((sum, t) => sum + t.amount, 0);
+    - filteredTransfers.filter(t => t.from_account === 'great_lodge').reduce((sum, t) => sum + t.amount, 0)
+    + filteredTransfers.filter(t => t.to_account === 'great_lodge').reduce((sum, t) => sum + t.amount, 0);
 
-  const savingsBalance = transactions
+  const savingsBalance = filteredTransactions
     .filter(t => t.account === 'savings')
     .reduce((sum, t) => sum + (t.transaction_type === 'income' ? t.amount : -t.amount), 0)
-    - transfers.filter(t => t.from_account === 'savings').reduce((sum, t) => sum + t.amount, 0)
-    + transfers.filter(t => t.to_account === 'savings').reduce((sum, t) => sum + t.amount, 0);
+    - filteredTransfers.filter(t => t.from_account === 'savings').reduce((sum, t) => sum + t.amount, 0)
+    + filteredTransfers.filter(t => t.to_account === 'savings').reduce((sum, t) => sum + t.amount, 0);
 
   // Calculate stats (ARS balance includes savings converted to ARS)
   const savingsInARS = savingsBalance * exchangeRate;
   const totalARSBalance = bankBalance + greatLodgeBalance + savingsInARS;
 
-  const thisMonth = new Date();
-  const monthStart = new Date(thisMonth.getFullYear(), thisMonth.getMonth(), 1);
-  const yearStart = new Date(thisMonth.getFullYear(), 0, 1);
-
-  // Calculate account yield (monthly and annual)
-  const monthlyYieldARS = transactions
-    .filter(t => parseLocalDate(t.transaction_date) >= monthStart && t.category === 'account_yield' && t.account !== 'savings')
+  // Calculate account yield (monthly and annual) based on selected month
+  const monthlyYieldARS = filteredTransactions
+    .filter(t => parseLocalDate(t.transaction_date) >= selectedMonthStart && t.category === 'account_yield' && t.account !== 'savings')
     .reduce((sum, t) => sum + (t.transaction_type === 'income' ? t.amount : -t.amount), 0);
-  const monthlyYieldUSD = transactions
-    .filter(t => parseLocalDate(t.transaction_date) >= monthStart && t.category === 'account_yield' && t.account === 'savings')
+  const monthlyYieldUSD = filteredTransactions
+    .filter(t => parseLocalDate(t.transaction_date) >= selectedMonthStart && t.category === 'account_yield' && t.account === 'savings')
     .reduce((sum, t) => sum + (t.transaction_type === 'income' ? t.amount : -t.amount), 0);
-  const annualYieldARS = transactions
-    .filter(t => parseLocalDate(t.transaction_date) >= yearStart && t.category === 'account_yield' && t.account !== 'savings')
+  const annualYieldARS = filteredTransactions
+    .filter(t => parseLocalDate(t.transaction_date) >= selectedYearStart && t.category === 'account_yield' && t.account !== 'savings')
     .reduce((sum, t) => sum + (t.transaction_type === 'income' ? t.amount : -t.amount), 0);
-  const annualYieldUSD = transactions
-    .filter(t => parseLocalDate(t.transaction_date) >= yearStart && t.category === 'account_yield' && t.account === 'savings')
+  const annualYieldUSD = filteredTransactions
+    .filter(t => parseLocalDate(t.transaction_date) >= selectedYearStart && t.category === 'account_yield' && t.account === 'savings')
     .reduce((sum, t) => sum + (t.transaction_type === 'income' ? t.amount : -t.amount), 0);
 
   const totalMonthlyYield = monthlyYieldARS + (monthlyYieldUSD * exchangeRate);
@@ -138,24 +186,24 @@ export default function Dashboard() {
     return amountOwed > monthlyFeeRate || hasUnpaidEvents;
   }).length;
   
-  // Calculate monthly income (ARS accounts + savings converted to ARS)
-  const monthlyIncomeARS = transactions
-    .filter(t => parseLocalDate(t.transaction_date) >= monthStart && t.transaction_type === 'income' && t.account !== 'savings')
+  // Calculate monthly income (ARS accounts + savings converted to ARS) for selected month
+  const monthlyIncomeARS = filteredTransactions
+    .filter(t => parseLocalDate(t.transaction_date) >= selectedMonthStart && t.transaction_type === 'income' && t.account !== 'savings')
     .reduce((sum, t) => sum + t.amount, 0);
   
-  const monthlyIncomeUSD = transactions
-    .filter(t => parseLocalDate(t.transaction_date) >= monthStart && t.transaction_type === 'income' && t.account === 'savings')
+  const monthlyIncomeUSD = filteredTransactions
+    .filter(t => parseLocalDate(t.transaction_date) >= selectedMonthStart && t.transaction_type === 'income' && t.account === 'savings')
     .reduce((sum, t) => sum + t.amount, 0);
   
   const monthlyIncome = monthlyIncomeARS + (monthlyIncomeUSD * exchangeRate);
 
-  // Calculate monthly expenses (ARS accounts + savings converted to ARS)
-  const monthlyExpensesARS = transactions
-    .filter(t => parseLocalDate(t.transaction_date) >= monthStart && t.transaction_type === 'expense' && t.account !== 'savings')
+  // Calculate monthly expenses (ARS accounts + savings converted to ARS) for selected month
+  const monthlyExpensesARS = filteredTransactions
+    .filter(t => parseLocalDate(t.transaction_date) >= selectedMonthStart && t.transaction_type === 'expense' && t.account !== 'savings')
     .reduce((sum, t) => sum + t.amount, 0);
   
-  const monthlyExpensesUSD = transactions
-    .filter(t => parseLocalDate(t.transaction_date) >= monthStart && t.transaction_type === 'expense' && t.account === 'savings')
+  const monthlyExpensesUSD = filteredTransactions
+    .filter(t => parseLocalDate(t.transaction_date) >= selectedMonthStart && t.transaction_type === 'expense' && t.account === 'savings')
     .reduce((sum, t) => sum + t.amount, 0);
   
   const monthlyExpenses = monthlyExpensesARS + (monthlyExpensesUSD * exchangeRate);
@@ -204,13 +252,36 @@ export default function Dashboard() {
     <div className="space-y-6 md:space-y-8 animate-fade-in">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-xl md:text-2xl font-bold text-foreground">{t('dashboard.title')}</h1>
-          <p className="text-sm text-muted-foreground">
-            {t('dashboard.financialOverview', { month: format(new Date(), 'MMMM yyyy', { locale: dateLocale }) })}
-          </p>
+        <div className="flex items-center gap-3">
+          <div>
+            <h1 className="text-xl md:text-2xl font-bold text-foreground">{t('dashboard.title')}</h1>
+            <p className="text-sm text-muted-foreground">
+              {isCurrentMonth
+                ? t('dashboard.financialOverview', { month: format(selectedDate, 'MMMM yyyy', { locale: dateLocale }) })
+                : `Al ${format(cutoffDate, "d 'de' MMMM yyyy", { locale: dateLocale })}`
+              }
+            </p>
+          </div>
         </div>
-        {isAdmin && <AddTransactionForm triggerLabel={t('dashboard.logTransaction')} />}
+        <div className="flex items-center gap-2">
+          <CalendarDays className="h-4 w-4 text-muted-foreground" />
+          <Select value={selectedYM} onValueChange={setSelectedYM}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Seleccionar mes" />
+            </SelectTrigger>
+            <SelectContent>
+              {monthOptions.map((ym) => {
+                const d = parseLocalDate(`${ym}-01`);
+                return (
+                  <SelectItem key={ym} value={ym}>
+                    {format(d, 'MMMM yyyy', { locale: dateLocale })}
+                  </SelectItem>
+                );
+              })}
+            </SelectContent>
+          </Select>
+          {isAdmin && <AddTransactionForm triggerLabel={t('dashboard.logTransaction')} />}
+        </div>
       </div>
 
 
