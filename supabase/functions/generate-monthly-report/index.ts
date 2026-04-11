@@ -1508,7 +1508,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
 
   ${isLite ? '' : `<div class="page-break"></div>
   
-  <!-- Condensed header for page 2+ -->
+  <!-- Page 2 header -->
   <div class="page-header">
     ${logoBase64 ? `<img src="data:image/png;base64,${logoBase64}" alt="Logo" class="logo-small" />` : ''}
     <span>R.·.L.·. Simón Bolívar N° 646</span>
@@ -1519,6 +1519,20 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
   <div class="section">
     <h2 class="section-title">${memberSectionTitle}</h2>
     ${memberSection}
+  </div>
+  
+  <!-- Page 2 footer -->
+  <div class="page-footer">
+    R.·.L.·. Simón Bolívar N° 646 · Tesorería · ${data.monthName} ${data.year}
+  </div>`}
+
+  ${isLite ? '' : `<div class="page-break"></div>
+  
+  <!-- Page 3 header -->
+  <div class="page-header">
+    ${logoBase64 ? `<img src="data:image/png;base64,${logoBase64}" alt="Logo" class="logo-small" />` : ''}
+    <span>R.·.L.·. Simón Bolívar N° 646</span>
+    <span>${reportTitleFormatted}</span>
   </div>`}
 
   <!-- Section 3: Monthly Fee Coverage -->
@@ -1546,6 +1560,11 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
   ${loansSection}
 
   ${eventsSection}
+
+  ${isLite ? '' : `<!-- Page 3+ footer -->
+  <div class="page-footer">
+    R.·.L.·. Simón Bolívar N° 646 · Tesorería · ${data.monthName} ${data.year}
+  </div>`}
 
   <div class="footer">
     <p>R.·.L.·. Simón Bolívar N° 646 · Tesorería · ${data.monthName} ${data.year}${isLite ? ' (Resumen)' : ''}</p>
