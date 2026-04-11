@@ -35,16 +35,17 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Search, Phone, MoreHorizontal, Pencil, Trash2, Filter, X, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 import { FEE_TYPE_LABELS, MemberBalance } from '@/lib/types';
 import { parseLocalDate } from '@/lib/utils';
 
 const STATUS_OPTIONS = [
-  { value: 'active', label: 'Active' },
-  { value: 'inactive', label: 'Inactive' },
-  { value: 'ahead', label: 'Ahead' },
-  { value: 'up_to_date', label: 'Up to Date' },
-  { value: 'unpaid', label: 'Unpaid' },
-  { value: 'overdue', label: 'Overdue' },
+  { value: 'active', label: 'Activo' },
+  { value: 'inactive', label: 'Inactivo' },
+  { value: 'ahead', label: 'Adelantado' },
+  { value: 'up_to_date', label: 'Al día' },
+  { value: 'unpaid', label: 'Impago' },
+  { value: 'overdue', label: 'Moroso' },
 ] as const;
 
 type SortColumn = 'name' | 'fee_type' | 'balance' | 'status' | 'joined';
@@ -67,17 +68,14 @@ export default function Members() {
   const [sortConfig, setSortConfig] = useState<SortConfig>({ column: null, direction: 'asc' });
   const [editMember, setEditMember] = useState<MemberBalance | null>(null);
   const [deleteMember, setDeleteMember] = useState<MemberBalance | null>(null);
-  // Query event amounts per member (owed and paid)
+
   const { data: memberEventData = { owed: {}, paid: {} } } = useQuery({
     queryKey: ['member-event-data'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('event_member_payments')
         .select('member_id, amount_owed, amount_paid');
-      
       if (error) throw error;
-      
-      // Aggregate event amounts per member
       const owed: Record<string, number> = {};
       const paid: Record<string, number> = {};
       data?.forEach((payment) => {
@@ -89,186 +87,110 @@ export default function Members() {
   });
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('es-AR', {
-      style: 'currency',
-      currency: 'ARS',
-    }).format(amount);
+    return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(amount);
   };
 
-  const getMonthlyFeeForMember = (feeType: 'standard' | 'solidarity') => {
-    return currentMonthFees[feeType] ?? 0;
-  };
+  const getMonthlyFeeForMember = (feeType: 'standard' | 'solidarity') => currentMonthFees[feeType] ?? 0;
+  const getEventOwed = (memberId: string) => memberEventData.owed[memberId] || 0;
+  const getEventPaid = (memberId: string) => memberEventData.paid[memberId] || 0;
+  const getMonthlyOwed = (member: MemberBalance) => member.total_fees_owed - getEventOwed(member.member_id);
+  const getEventsBalance = (memberId: string) => getEventPaid(memberId) - getEventOwed(memberId);
+  const getMonthlyPaid = (member: MemberBalance) => member.total_paid - getEventPaid(member.member_id);
+  const getMonthlyBalance = (member: MemberBalance) => getMonthlyPaid(member) - getMonthlyOwed(member);
+  const getOverallBalance = (member: MemberBalance) => getMonthlyBalance(member) + getEventsBalance(member.member_id);
 
-  // Get total event fees owed for a member
-  const getEventOwed = (memberId: string) => {
-    return memberEventData.owed[memberId] || 0;
-  };
-
-  // Get total event fees paid by a member
-  const getEventPaid = (memberId: string) => {
-    return memberEventData.paid[memberId] || 0;
-  };
-
-  // Get monthly fees owed (total_fees_owed minus event fees)
-  const getMonthlyOwed = (member: MemberBalance) => {
-    const eventOwed = getEventOwed(member.member_id);
-    return member.total_fees_owed - eventOwed;
-  };
-
-  // Get events balance (event fees paid - event fees owed)
-  const getEventsBalance = (memberId: string) => {
-    return getEventPaid(memberId) - getEventOwed(memberId);
-  };
-
-  // Get monthly-only payments (total_paid minus event payments)
-  const getMonthlyPaid = (member: MemberBalance) => {
-    return member.total_paid - getEventPaid(member.member_id);
-  };
-
-  // Get monthly balance (monthly paid - monthly owed)
-  const getMonthlyBalance = (member: MemberBalance) => {
-    return getMonthlyPaid(member) - getMonthlyOwed(member);
-  };
-
-  // Calculate overall balance (monthly + events)
-  const getOverallBalance = (member: MemberBalance) => {
-    return getMonthlyBalance(member) + getEventsBalance(member.member_id);
-  };
-
-  // Determine payment status based on overall balance
   const getPaymentStatus = (member: MemberBalance) => {
     const overallBalance = getOverallBalance(member);
     const monthlyFeeRate = currentMonthFees[member.fee_type] || 0;
-    
-    // Negative balance more than 1 monthly fee = overdue
     if (overallBalance < -monthlyFeeRate) return 'overdue';
-    // Negative balance between 0 and 1 monthly fee = unpaid
     if (overallBalance < 0) return 'unpaid';
-    // Balance above 1 monthly fee = ahead
     if (overallBalance > monthlyFeeRate) return 'ahead';
-    // Balance between 0 and 1 monthly fee = up_to_date
     return 'up_to_date';
   };
 
   const getStatusBadge = (status: string) => {
     const config = {
-      ahead: { label: 'Ahead', className: 'status-ahead' },
-      up_to_date: { label: 'Up to date', className: 'status-up-to-date' },
-      unpaid: { label: 'Unpaid', className: 'status-unpaid' },
-      overdue: { label: 'Overdue', className: 'status-overdue' },
+      ahead: { label: 'Adelantado', className: 'status-ahead' },
+      up_to_date: { label: 'Al día', className: 'status-up-to-date' },
+      unpaid: { label: 'Impago', className: 'status-unpaid' },
+      overdue: { label: 'Moroso', className: 'status-overdue' },
     };
     const c = config[status as keyof typeof config] || config.up_to_date;
     return <span className={`status-badge ${c.className}`}>{c.label}</span>;
   };
 
   const toggleStatus = (status: string) => {
-    setSelectedStatuses(prev => 
-      prev.includes(status) 
-        ? prev.filter(s => s !== status)
-        : [...prev, status]
-    );
+    setSelectedStatuses(prev => prev.includes(status) ? prev.filter(s => s !== status) : [...prev, status]);
   };
-
-  const clearFilters = () => {
-    setSelectedStatuses([]);
-  };
+  const clearFilters = () => setSelectedStatuses([]);
 
   const handleSort = (column: SortColumn) => {
-    setSortConfig(prev => ({
-      column,
-      direction: prev.column === column && prev.direction === 'asc' ? 'desc' : 'asc'
-    }));
+    setSortConfig(prev => ({ column, direction: prev.column === column && prev.direction === 'asc' ? 'desc' : 'asc' }));
   };
 
   const getSortIcon = (column: SortColumn) => {
-    if (sortConfig.column !== column) {
-      return <ArrowUpDown className="ml-1 h-4 w-4" />;
-    }
-    return sortConfig.direction === 'asc' 
-      ? <ArrowUp className="ml-1 h-4 w-4" />
-      : <ArrowDown className="ml-1 h-4 w-4" />;
+    if (sortConfig.column !== column) return <ArrowUpDown className="ml-1 h-4 w-4" />;
+    return sortConfig.direction === 'asc' ? <ArrowUp className="ml-1 h-4 w-4" /> : <ArrowDown className="ml-1 h-4 w-4" />;
   };
 
   const filteredMembers = memberBalances.filter((member) => {
-    // Member-only users can only see their own data
     if (isMemberOnly && member.member_id !== userMemberId) return false;
-
-    const matchesSearch =
-      member.full_name.toLowerCase().includes(search.toLowerCase()) ||
-      member.phone_number.includes(search);
-
-    // If no filters selected, show all
-    if (selectedStatuses.length === 0) {
-      return matchesSearch;
-    }
-
+    const matchesSearch = member.full_name.toLowerCase().includes(search.toLowerCase()) || member.phone_number.includes(search);
+    if (selectedStatuses.length === 0) return matchesSearch;
     const status = getPaymentStatus(member);
     const isActive = member.is_active;
-    
-    // Check if member matches any selected filter
     const matchesStatus = selectedStatuses.some(filter => {
       if (filter === 'active') return isActive;
       if (filter === 'inactive') return !isActive;
-      // Payment status filters only apply to active members
       if (!isActive) return false;
       return status === filter;
     });
-
     return matchesSearch && matchesStatus;
   });
 
   const sortedMembers = [...filteredMembers].sort((a, b) => {
     if (!sortConfig.column) return 0;
-    
     const direction = sortConfig.direction === 'asc' ? 1 : -1;
-    
     switch (sortConfig.column) {
-      case 'name':
-        return direction * a.full_name.localeCompare(b.full_name);
-      case 'fee_type':
-        return direction * a.fee_type.localeCompare(b.fee_type);
-      case 'balance':
-        return direction * (getOverallBalance(a) - getOverallBalance(b));
+      case 'name': return direction * a.full_name.localeCompare(b.full_name);
+      case 'fee_type': return direction * a.fee_type.localeCompare(b.fee_type);
+      case 'balance': return direction * (getOverallBalance(a) - getOverallBalance(b));
       case 'status': {
         const statusOrder = { overdue: 0, unpaid: 1, up_to_date: 2, ahead: 3 };
         const statusA = a.is_active ? statusOrder[getPaymentStatus(a) as keyof typeof statusOrder] : -1;
         const statusB = b.is_active ? statusOrder[getPaymentStatus(b) as keyof typeof statusOrder] : -1;
         return direction * (statusA - statusB);
       }
-      case 'joined':
-        return direction * (parseLocalDate(a.join_date).getTime() - parseLocalDate(b.join_date).getTime());
-      default:
-        return 0;
+      case 'joined': return direction * (parseLocalDate(a.join_date).getTime() - parseLocalDate(b.join_date).getTime());
+      default: return 0;
     }
   });
 
   if (isLoading || feesLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-pulse text-muted-foreground">Loading...</div>
+        <div className="animate-pulse text-muted-foreground">Cargando...</div>
       </div>
     );
   }
 
   return (
     <div className="space-y-4 md:space-y-6 animate-fade-in">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-xl md:text-2xl font-bold text-foreground">Members</h1>
+          <h1 className="text-xl md:text-2xl font-bold text-foreground">Miembros</h1>
           <p className="text-sm text-muted-foreground">
-            {memberBalances.filter((m) => m.is_active).length} active members
+            {memberBalances.filter((m) => m.is_active).length} miembros activos
           </p>
         </div>
         {isAdmin && !isMemberOnly && <AddMemberForm />}
       </div>
 
-      {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search by name or phone..."
+            placeholder="Buscar por nombre o teléfono..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9"
@@ -278,7 +200,7 @@ export default function Members() {
           <PopoverTrigger asChild>
             <Button variant="outline" className="w-full sm:w-auto justify-start">
               <Filter className="mr-2 h-4 w-4" />
-              Status
+              Estado
               {selectedStatuses.length > 0 && (
                 <Badge variant="secondary" className="ml-2 px-1.5 py-0.5 text-xs">
                   {selectedStatuses.length}
@@ -288,29 +210,18 @@ export default function Members() {
           </PopoverTrigger>
           <PopoverContent className="w-56 p-3" align="start">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-sm font-medium">Filter by Status</span>
+              <span className="text-sm font-medium">Filtrar por Estado</span>
               {selectedStatuses.length > 0 && (
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={clearFilters}
-                  className="h-6 px-2 text-xs"
-                >
-                  Clear
+                <Button variant="ghost" size="sm" onClick={clearFilters} className="h-6 px-2 text-xs">
+                  Limpiar
                   <X className="ml-1 h-3 w-3" />
                 </Button>
               )}
             </div>
             <div className="space-y-2">
               {STATUS_OPTIONS.map((option) => (
-                <label
-                  key={option.value}
-                  className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 p-1.5 rounded-md -mx-1.5"
-                >
-                  <Checkbox
-                    checked={selectedStatuses.includes(option.value)}
-                    onCheckedChange={() => toggleStatus(option.value)}
-                  />
+                <label key={option.value} className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 p-1.5 rounded-md -mx-1.5">
+                  <Checkbox checked={selectedStatuses.includes(option.value)} onCheckedChange={() => toggleStatus(option.value)} />
                   <span className="text-sm">{option.label}</span>
                 </label>
               ))}
@@ -323,7 +234,7 @@ export default function Members() {
       <div className="md:hidden landscape-hide-cards space-y-3">
         {filteredMembers.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground bg-card rounded-lg border">
-            No members found
+            No se encontraron miembros
           </div>
         ) : (
           sortedMembers.map((member) => (
@@ -337,61 +248,51 @@ export default function Members() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  {!member.is_active && (
-                    <Badge variant="outline">Inactive</Badge>
+                  {!member.is_active && <Badge variant="outline">Inactivo</Badge>}
+                  {!isMemberOnly && (
+                    <FeeTypeHistoryDialog memberId={member.member_id} memberName={member.full_name} />
                   )}
-                    {!isMemberOnly && (
-                      <FeeTypeHistoryDialog
-                        memberId={member.member_id}
-                        memberName={member.full_name}
-                      />
-                    )}
-                    {isAdmin && (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="bg-popover">
-                          <DropdownMenuItem onClick={() => setEditMember(member)}>
-                            <Pencil className="mr-2 h-4 w-4" />
-                            Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            onClick={() => setDeleteMember(member)}
-                            className="text-destructive focus:text-destructive"
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
+                  {isAdmin && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="bg-popover">
+                        <DropdownMenuItem onClick={() => setEditMember(member)}>
+                          <Pencil className="mr-2 h-4 w-4" />
+                          Editar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setDeleteMember(member)} className="text-destructive focus:text-destructive">
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Eliminar
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-2 text-sm">
                 <div>
-                  <p className="text-muted-foreground text-xs">Fee Type</p>
-                  <Badge variant="secondary" className="mt-1">
-                    {FEE_TYPE_LABELS[member.fee_type]}
-                  </Badge>
+                  <p className="text-muted-foreground text-xs">Tipo de Cuota</p>
+                  <Badge variant="secondary" className="mt-1">{FEE_TYPE_LABELS[member.fee_type]}</Badge>
                 </div>
                 <div>
-                  <p className="text-muted-foreground text-xs">Overall Balance</p>
+                  <p className="text-muted-foreground text-xs">Saldo General</p>
                   <p className={`font-mono text-sm font-semibold ${getOverallBalance(member) < 0 ? 'text-destructive' : 'text-emerald-600'}`}>
                     {formatCurrency(getOverallBalance(member))}
                   </p>
                 </div>
                 <div>
-                  <p className="text-muted-foreground text-xs">Status</p>
+                  <p className="text-muted-foreground text-xs">Estado</p>
                   <div className="mt-1">
-                    {member.is_active ? getStatusBadge(getPaymentStatus(member)) : <Badge variant="outline">Inactive</Badge>}
+                    {member.is_active ? getStatusBadge(getPaymentStatus(member)) : <Badge variant="outline">Inactivo</Badge>}
                   </div>
                 </div>
                 <div>
-                  <p className="text-muted-foreground text-xs">Joined</p>
-                  <p className="font-mono text-sm">{format(parseLocalDate(member.join_date), 'MMM d, yyyy')}</p>
+                  <p className="text-muted-foreground text-xs">Ingreso</p>
+                  <p className="font-mono text-sm">{format(parseLocalDate(member.join_date), 'd MMM yyyy', { locale: es })}</p>
                 </div>
               </div>
             </div>
@@ -406,21 +307,19 @@ export default function Members() {
             <TableRow>
               <TableHead>
                 <Button variant="ghost" size="sm" className="-ml-3 h-8" onClick={() => handleSort('name')}>
-                  Member
-                  {getSortIcon('name')}
+                  Miembro {getSortIcon('name')}
                 </Button>
               </TableHead>
               <TableHead>
                 <Button variant="ghost" size="sm" className="-ml-3 h-8" onClick={() => handleSort('fee_type')}>
-                  Fee Type
-                  {getSortIcon('fee_type')}
+                  Tipo de Cuota {getSortIcon('fee_type')}
                 </Button>
               </TableHead>
-              <TableHead className="text-right">Monthly Fee</TableHead>
-              <TableHead className="text-right">Monthly Balance</TableHead>
-              <TableHead className="text-right">Events Balance</TableHead>
-              <TableHead className="text-right">Overall Balance</TableHead>
-              <TableHead>Status</TableHead>
+              <TableHead className="text-right">Cuota Mensual</TableHead>
+              <TableHead className="text-right">Saldo Mensual</TableHead>
+              <TableHead className="text-right">Saldo Eventos</TableHead>
+              <TableHead className="text-right">Saldo General</TableHead>
+              <TableHead>Estado</TableHead>
               <TableHead className="w-[50px]"></TableHead>
             </TableRow>
           </TableHeader>
@@ -428,7 +327,7 @@ export default function Members() {
             {filteredMembers.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
-                  No members found
+                  No se encontraron miembros
                 </TableCell>
               </TableRow>
             ) : (
@@ -444,9 +343,7 @@ export default function Members() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="secondary">
-                      {FEE_TYPE_LABELS[member.fee_type]}
-                    </Badge>
+                    <Badge variant="secondary">{FEE_TYPE_LABELS[member.fee_type]}</Badge>
                   </TableCell>
                   <TableCell className="text-right font-mono">
                     {formatCurrency(getMonthlyFeeForMember(member.fee_type))}
@@ -461,35 +358,29 @@ export default function Members() {
                     {formatCurrency(getOverallBalance(member))}
                   </TableCell>
                   <TableCell>
-                    {member.is_active ? getStatusBadge(getPaymentStatus(member)) : <Badge variant="outline">Inactive</Badge>}
+                    {member.is_active ? getStatusBadge(getPaymentStatus(member)) : <Badge variant="outline">Inactivo</Badge>}
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">
                       {!isMemberOnly && (
-                        <FeeTypeHistoryDialog
-                          memberId={member.member_id}
-                          memberName={member.full_name}
-                        />
+                        <FeeTypeHistoryDialog memberId={member.member_id} memberName={member.full_name} />
                       )}
                       {isAdmin && (
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="icon" className="h-8 w-8">
                               <MoreHorizontal className="h-4 w-4" />
-                              <span className="sr-only">Open menu</span>
+                              <span className="sr-only">Abrir menú</span>
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="bg-popover">
                             <DropdownMenuItem onClick={() => setEditMember(member)}>
                               <Pencil className="mr-2 h-4 w-4" />
-                              Edit
+                              Editar
                             </DropdownMenuItem>
-                            <DropdownMenuItem 
-                              onClick={() => setDeleteMember(member)}
-                              className="text-destructive focus:text-destructive"
-                            >
+                            <DropdownMenuItem onClick={() => setDeleteMember(member)} className="text-destructive focus:text-destructive">
                               <Trash2 className="mr-2 h-4 w-4" />
-                              Delete
+                              Eliminar
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -503,17 +394,8 @@ export default function Members() {
         </Table>
       </div>
 
-      <EditMemberForm
-        member={editMember}
-        open={!!editMember}
-        onOpenChange={(open) => !open && setEditMember(null)}
-      />
-
-      <DeleteMemberDialog
-        member={deleteMember}
-        open={!!deleteMember}
-        onOpenChange={(open) => !open && setDeleteMember(null)}
-      />
+      <EditMemberForm member={editMember} open={!!editMember} onOpenChange={(open) => !open && setEditMember(null)} />
+      <DeleteMemberDialog member={deleteMember} open={!!deleteMember} onOpenChange={(open) => !open && setDeleteMember(null)} />
     </div>
   );
 }
