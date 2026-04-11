@@ -33,7 +33,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Search, Phone, MoreHorizontal, Pencil, Trash2, Filter, X, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { Search, MoreHorizontal, Pencil, Trash2, Filter, X, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { FEE_TYPE_LABELS, MemberBalance } from '@/lib/types';
@@ -135,7 +135,7 @@ export default function Members() {
 
   const filteredMembers = memberBalances.filter((member) => {
     if (isMemberOnly && member.member_id !== userMemberId) return false;
-    const matchesSearch = member.full_name.toLowerCase().includes(search.toLowerCase()) || member.phone_number.includes(search);
+    const matchesSearch = member.full_name.toLowerCase().includes(search.toLowerCase()) || (member.phone_number && member.phone_number.includes(search));
     if (selectedStatuses.length === 0) return matchesSearch;
     const status = getPaymentStatus(member);
     const isActive = member.is_active;
@@ -241,11 +241,8 @@ export default function Members() {
             <div key={member.member_id} className="rounded-lg border bg-card p-4 space-y-3">
               <div className="flex items-start justify-between">
                 <div>
+                  {member.phone_number && <p className="text-xs text-muted-foreground">Mat. {member.phone_number}</p>}
                   <p className="font-semibold">{member.full_name}</p>
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                    <Phone className="h-3 w-3" />
-                    {member.phone_number}
-                  </div>
                 </div>
                 <div className="flex items-center gap-2">
                   {!member.is_active && <Badge variant="outline">Inactivo</Badge>}
@@ -335,11 +332,8 @@ export default function Members() {
                 <TableRow key={member.member_id}>
                   <TableCell>
                     <div>
+                      {member.phone_number && <p className="text-xs text-muted-foreground font-mono">Mat. {member.phone_number}</p>}
                       <p className="font-medium">{member.full_name}</p>
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <Phone className="h-3 w-3" />
-                        {member.phone_number}
-                      </div>
                     </div>
                   </TableCell>
                   <TableCell>

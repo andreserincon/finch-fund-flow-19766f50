@@ -26,10 +26,10 @@ import { FeeType, FEE_TYPE_LABELS } from '@/lib/types';
 import { PlusCircle } from 'lucide-react';
 
 const memberSchema = z.object({
-  full_name: z.string().min(1, 'Name is required').max(100),
-  phone_number: z.string().min(1, 'Phone number is required').max(20),
+  full_name: z.string().min(1, 'El nombre es obligatorio').max(100),
+  phone_number: z.string().max(20).optional().default(''),
   fee_type: z.enum(['standard', 'solidarity']),
-  join_date: z.string().min(1, 'Join date is required'),
+  join_date: z.string().min(1, 'La fecha de ingreso es obligatoria'),
 });
 
 type MemberFormData = z.infer<typeof memberSchema>;
@@ -72,23 +72,23 @@ export function AddMemberForm() {
       <DialogTrigger asChild>
         <Button>
           <PlusCircle className="mr-2 h-4 w-4" />
-          Add Member
+          Agregar Miembro
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Add New Member</DialogTitle>
+          <DialogTitle>Agregar Nuevo Miembro</DialogTitle>
           <DialogDescription>
-            Add a new member to the organization. They will start accumulating fees from the join date.
+            Agregar un nuevo miembro a la organización. Comenzará a acumular cuotas desde la fecha de ingreso.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="full_name">Full Name</Label>
+            <Label htmlFor="full_name">Nombre Completo</Label>
             <Input
               id="full_name"
               {...register('full_name')}
-              placeholder="John Doe"
+              placeholder="Nombre y Apellido"
             />
             {errors.full_name && (
               <p className="text-sm text-destructive">{errors.full_name.message}</p>
@@ -96,11 +96,11 @@ export function AddMemberForm() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="phone_number">Phone Number</Label>
+            <Label htmlFor="phone_number">Matrícula</Label>
             <Input
               id="phone_number"
               {...register('phone_number')}
-              placeholder="+1234567890"
+              placeholder="Ej: 12345"
             />
             {errors.phone_number && (
               <p className="text-sm text-destructive">{errors.phone_number.message}</p>
@@ -108,7 +108,7 @@ export function AddMemberForm() {
           </div>
 
           <div className="space-y-2">
-            <Label>Fee Type</Label>
+            <Label>Tipo de Cuota</Label>
             <Select
               value={feeType}
               onValueChange={(value: FeeType) => setValue('fee_type', value)}
@@ -127,7 +127,7 @@ export function AddMemberForm() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="join_date">Join Date</Label>
+            <Label htmlFor="join_date">Fecha de Ingreso</Label>
             <Input
               id="join_date"
               type="date"
@@ -140,10 +140,10 @@ export function AddMemberForm() {
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-              Cancel
+              Cancelar
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? 'Adding...' : 'Add Member'}
+              {isSubmitting ? 'Agregando...' : 'Agregar Miembro'}
             </Button>
           </DialogFooter>
         </form>
