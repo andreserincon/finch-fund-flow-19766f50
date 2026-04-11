@@ -994,7 +994,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
   const liteStyles = isLite ? `
     /* Lite report - optimized for single page */
     @media print {
-      body { margin: 0; padding: 8px; }
+      body { margin: 0; padding: 8px; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
       .page-break { display: none; }
       .no-print { display: none; }
       @page { margin: 8mm 8mm; size: A4; }
