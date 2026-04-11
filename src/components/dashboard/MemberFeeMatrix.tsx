@@ -212,9 +212,9 @@ export function MemberFeeMatrix({ filterMemberId }: { filterMemberId?: string | 
       <CardHeader className="pb-3">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
-            <CardTitle className="text-lg md:text-xl">Monthly Fee Status</CardTitle>
+            <CardTitle className="text-lg md:text-xl">Estado de Capitas Mensuales</CardTitle>
             <CardDescription className="text-xs md:text-sm">
-              Payment status for each member across months
+              Estado de pago de cada miembro por mes
             </CardDescription>
           </div>
           <div className="flex items-center space-x-2">
@@ -224,7 +224,7 @@ export function MemberFeeMatrix({ filterMemberId }: { filterMemberId?: string | 
               onCheckedChange={setShowAllMembers}
             />
             <Label htmlFor="show-all-members" className="text-xs md:text-sm cursor-pointer">
-              Show paid members ({paidMembersCount})
+              Mostrar miembros al día ({paidMembersCount})
             </Label>
           </div>
         </div>
