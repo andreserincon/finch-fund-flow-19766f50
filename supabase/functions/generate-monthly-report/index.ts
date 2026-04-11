@@ -1523,16 +1523,6 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
   <div class="section">
     <h2 class="section-title">${memberSectionTitle}</h2>
     ${memberSection}
-  </div>
-  
-  <!-- Page 2 footer -->
-  <div class="page-footer">
-    R.·.L.·. Simón Bolívar N° 646 · Tesorería · ${data.monthName} ${data.year}
-  </div>`}
-
-  ${isLite ? '' : `<!-- Page 3+ footer -->
-  <div class="page-footer">
-    R.·.L.·. Simón Bolívar N° 646 · Tesorería · ${data.monthName} ${data.year}
   </div>`}
 
   <div class="footer">
