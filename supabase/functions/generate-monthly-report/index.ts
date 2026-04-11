@@ -821,11 +821,9 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
     ? [] // Lite report doesn't show member details
     : sortedMembers;
   
-  const memberSectionTitle = '2. Detalle Financiero de Miembros';
-  // For lite: section 2 is fee coverage (since member detail is skipped)
-  const feeSectionTitle = isLite ? '2. Cobranza de Capita' : '3. Cobertura de Cuotas Mensuales';
-  // For lite: loans section is 3, events is 4
-  const loansSectionNum = isLite ? '3' : '4';
+  const memberSectionTitle = '4. Detalle Financiero de Miembros';
+  const feeSectionTitle = isLite ? '2. Cobranza de Capita' : '2. Cobertura de Cuotas Mensuales';
+  const loansSectionNum = '3';
   const eventsSectionNum = isLite ? '4' : '5';
 
   // Build member rows
