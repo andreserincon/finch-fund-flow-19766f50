@@ -821,11 +821,9 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
     ? [] // Lite report doesn't show member details
     : sortedMembers;
   
-  const memberSectionTitle = '2. Detalle Financiero de Miembros';
-  // For lite: section 2 is fee coverage (since member detail is skipped)
-  const feeSectionTitle = isLite ? '2. Cobranza de Capita' : '3. Cobertura de Cuotas Mensuales';
-  // For lite: loans section is 3, events is 4
-  const loansSectionNum = isLite ? '3' : '4';
+  const memberSectionTitle = '4. Detalle Financiero de Miembros';
+  const feeSectionTitle = isLite ? '2. Cobranza de Capita' : '2. Cobertura de Cuotas Mensuales';
+  const loansSectionNum = '3';
   const eventsSectionNum = isLite ? '4' : '5';
 
   // Build member rows
@@ -907,7 +905,6 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
       .reduce((s: number, l: any) => s + l.outstanding_balance, 0);
 
     loansSection = `
-      <div class="page-break"></div>
       <div class="section">
         <h2 class="section-title">${loansSectionNum}. Préstamos Activos</h2>
         <table>
@@ -1484,58 +1481,9 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
       </div>
     </div>
 
-    ${(() => {
-      const pendingLoansARS = data.loanSnapshots
-        .filter((l: any) => l.account !== 'savings')
-        .reduce((s: number, l: any) => s + Number(l.outstanding_balance), 0);
-      const pendingLoansUSD = data.loanSnapshots
-        .filter((l: any) => l.account === 'savings')
-        .reduce((s: number, l: any) => s + Number(l.outstanding_balance), 0);
-      return (pendingLoansARS > 0 || pendingLoansUSD > 0) ? `
-    <h3 class="subsection-title">Deuda por Préstamos Activos</h3>
-    <div class="grid" style="grid-template-columns: repeat(2, 1fr);">
-      <div class="stat-card ${pendingLoansARS > 0 ? 'danger' : ''}">
-        <div class="stat-label">Pendiente en Pesos (ARS)</div>
-        <div class="stat-value ${pendingLoansARS > 0 ? 'negative' : ''}">${formatCurrency(pendingLoansARS)}</div>
-      </div>
-      <div class="stat-card ${pendingLoansUSD > 0 ? 'warning' : ''}">
-        <div class="stat-label">Pendiente en Dólares (USD)</div>
-        <div class="stat-value" style="${pendingLoansUSD > 0 ? 'color: #e67e22;' : ''}">${formatCurrency(pendingLoansUSD, 'USD')}</div>
-      </div>
-    </div>` : '';
-    })()}
   </div>
 
-  ${isLite ? '' : `<div class="page-break"></div>
-  
-  <!-- Page 2 header -->
-  <div class="page-header">
-    ${logoBase64 ? `<img src="data:image/png;base64,${logoBase64}" alt="Logo" class="logo-small" />` : ''}
-    <span>R.·.L.·. Simón Bolívar N° 646</span>
-    <span>${reportTitleFormatted}</span>
-  </div>`}
-
-  ${isLite ? '' : `<!-- Section 2: Member Financial Detail -->
-  <div class="section">
-    <h2 class="section-title">${memberSectionTitle}</h2>
-    ${memberSection}
-  </div>
-  
-  <!-- Page 2 footer -->
-  <div class="page-footer">
-    R.·.L.·. Simón Bolívar N° 646 · Tesorería · ${data.monthName} ${data.year}
-  </div>`}
-
-  ${isLite ? '' : `<div class="page-break"></div>
-  
-  <!-- Page 3 header -->
-  <div class="page-header">
-    ${logoBase64 ? `<img src="data:image/png;base64,${logoBase64}" alt="Logo" class="logo-small" />` : ''}
-    <span>R.·.L.·. Simón Bolívar N° 646</span>
-    <span>${reportTitleFormatted}</span>
-  </div>`}
-
-  <!-- Section 3: Monthly Fee Coverage -->
+  <!-- Section 2: Monthly Fee Coverage (on page 1) -->
   <div class="section">
     <h2 class="section-title">${feeSectionTitle}</h2>
     <div class="grid">
@@ -1557,9 +1505,30 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
     </p>`}
   </div>
 
+  <!-- Section 3: Loans (on page 1) -->
   ${loansSection}
 
   ${eventsSection}
+
+  ${isLite ? '' : `<div class="page-break"></div>
+  
+  <!-- Page 2 header -->
+  <div class="page-header">
+    ${logoBase64 ? `<img src="data:image/png;base64,${logoBase64}" alt="Logo" class="logo-small" />` : ''}
+    <span>R.·.L.·. Simón Bolívar N° 646</span>
+    <span>${reportTitleFormatted}</span>
+  </div>`}
+
+  ${isLite ? '' : `<!-- Section 4: Member Financial Detail -->
+  <div class="section">
+    <h2 class="section-title">${memberSectionTitle}</h2>
+    ${memberSection}
+  </div>
+  
+  <!-- Page 2 footer -->
+  <div class="page-footer">
+    R.·.L.·. Simón Bolívar N° 646 · Tesorería · ${data.monthName} ${data.year}
+  </div>`}
 
   ${isLite ? '' : `<!-- Page 3+ footer -->
   <div class="page-footer">
