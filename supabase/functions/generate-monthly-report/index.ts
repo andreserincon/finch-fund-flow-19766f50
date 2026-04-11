@@ -1303,7 +1303,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Reporte Financiero${isLite ? ' Resumen' : ''} - ${data.monthName} ${data.year}</title>
+  <title>Reporte Mensual ${data.monthName.substring(0,3)}-${data.year}${isLite ? ' Resumen' : ' Completo'}</title>
   <style>
     ${liteStyles}
   </style>
