@@ -212,9 +212,9 @@ export function MemberFeeMatrix({ filterMemberId }: { filterMemberId?: string | 
       <CardHeader className="pb-3">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
-            <CardTitle className="text-lg md:text-xl">Monthly Fee Status</CardTitle>
+            <CardTitle className="text-lg md:text-xl">Estado de Capitas Mensuales</CardTitle>
             <CardDescription className="text-xs md:text-sm">
-              Payment status for each member across months
+              Estado de pago de cada miembro por mes
             </CardDescription>
           </div>
           <div className="flex items-center space-x-2">
@@ -224,7 +224,7 @@ export function MemberFeeMatrix({ filterMemberId }: { filterMemberId?: string | 
               onCheckedChange={setShowAllMembers}
             />
             <Label htmlFor="show-all-members" className="text-xs md:text-sm cursor-pointer">
-              Show paid members ({paidMembersCount})
+              Mostrar miembros al día ({paidMembersCount})
             </Label>
           </div>
         </div>
@@ -235,7 +235,7 @@ export function MemberFeeMatrix({ filterMemberId }: { filterMemberId?: string | 
             <Table>
               <TableHeader>
               <TableRow>
-                <TableHead className="sticky left-0 bg-card z-10">Member</TableHead>
+                <TableHead className="sticky left-0 bg-card z-10">Miembro</TableHead>
                 {months.map((month) => (
                   <TableHead
                     key={month.key}
@@ -256,7 +256,7 @@ export function MemberFeeMatrix({ filterMemberId }: { filterMemberId?: string | 
               {displayedMembers.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={months.length + 1} className="text-center py-8 text-muted-foreground">
-                    {showAllMembers ? 'No active members' : 'All members are up to date!'}
+                    {showAllMembers ? 'No hay miembros activos' : '¡Todos los miembros están al día!'}
                   </TableCell>
                 </TableRow>
               ) : (
@@ -306,19 +306,19 @@ export function MemberFeeMatrix({ filterMemberId }: { filterMemberId?: string | 
         <div className="flex flex-wrap gap-3 md:gap-4 mt-4 text-xs">
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded bg-success/20 border border-success/30" />
-            <span>Paid</span>
+            <span>Pagado</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded bg-warning/20 border border-warning/30" />
-            <span>Current (unpaid)</span>
+            <span>Actual (impago)</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded bg-destructive/20 border border-destructive/30" />
-            <span>Overdue</span>
+            <span>Demorado</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded bg-muted/50 border border-border" />
-            <span>Future</span>
+            <span>Futuro</span>
           </div>
         </div>
       </CardContent>
