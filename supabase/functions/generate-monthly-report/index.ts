@@ -905,7 +905,6 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
       .reduce((s: number, l: any) => s + l.outstanding_balance, 0);
 
     loansSection = `
-      <div class="page-break"></div>
       <div class="section">
         <h2 class="section-title">${loansSectionNum}. Préstamos Activos</h2>
         <table>
