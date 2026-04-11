@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useHiddenMode } from '@/contexts/HiddenModeContext';
 import { format, subMonths, addMonths, startOfMonth, isBefore, isAfter, parseISO } from 'date-fns';
 import { useMembers } from '@/hooks/useMembers';
 import { useMonthlyFees } from '@/hooks/useMonthlyFees';
