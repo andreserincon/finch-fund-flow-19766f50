@@ -83,7 +83,6 @@ export default function Reports() {
       const reportType = isLite ? 'Resumen' : 'Completo';
       const fileName = `Reporte_Mensual_${shortMonth}-${year}_${reportType}.html`;
       const file = new File([blob], fileName, { type: 'text/html' });
-      const file = new File([blob], fileName, { type: 'text/html' });
 
       if (navigator.share && navigator.canShare({ files: [file] })) {
         await navigator.share({
