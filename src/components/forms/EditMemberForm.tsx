@@ -34,12 +34,12 @@ import { FeeType, FEE_TYPE_LABELS, MemberBalance } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 const memberSchema = z.object({
-  full_name: z.string().min(1, 'Name is required').max(100),
-  phone_number: z.string().min(1, 'Phone number is required').max(20),
-  monthly_fee_amount: z.number().min(0, 'Fee must be positive'),
+  full_name: z.string().min(1, 'El nombre es obligatorio').max(100),
+  phone_number: z.string().max(20).optional().default(''),
+  monthly_fee_amount: z.number().min(0, 'La cuota debe ser positiva'),
   fee_type: z.enum(['standard', 'solidarity']),
   is_active: z.boolean(),
-  join_date: z.string().min(1, 'Join date is required'),
+  join_date: z.string().min(1, 'La fecha de ingreso es obligatoria'),
 });
 
 type MemberFormData = z.infer<typeof memberSchema>;
@@ -109,18 +109,18 @@ export function EditMemberForm({ member, open, onOpenChange }: EditMemberFormPro
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Edit Member</DialogTitle>
+          <DialogTitle>Editar Miembro</DialogTitle>
           <DialogDescription>
-            Update member details. Changes will be saved immediately.
+            Actualizar datos del miembro. Los cambios se guardarán inmediatamente.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="edit_full_name">Full Name</Label>
+            <Label htmlFor="edit_full_name">Nombre Completo</Label>
             <Input
               id="edit_full_name"
               {...register('full_name')}
-              placeholder="John Doe"
+              placeholder="Nombre y Apellido"
             />
             {errors.full_name && (
               <p className="text-sm text-destructive">{errors.full_name.message}</p>
@@ -128,11 +128,11 @@ export function EditMemberForm({ member, open, onOpenChange }: EditMemberFormPro
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="edit_phone_number">Phone Number</Label>
+            <Label htmlFor="edit_phone_number">Matrícula</Label>
             <Input
               id="edit_phone_number"
               {...register('phone_number')}
-              placeholder="+1234567890"
+              placeholder="Ej: 12345"
             />
             {errors.phone_number && (
               <p className="text-sm text-destructive">{errors.phone_number.message}</p>
@@ -141,7 +141,7 @@ export function EditMemberForm({ member, open, onOpenChange }: EditMemberFormPro
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="edit_monthly_fee_amount">Monthly Fee</Label>
+              <Label htmlFor="edit_monthly_fee_amount">Cuota Mensual</Label>
               <Input
                 id="edit_monthly_fee_amount"
                 type="number"
@@ -155,7 +155,7 @@ export function EditMemberForm({ member, open, onOpenChange }: EditMemberFormPro
             </div>
 
             <div className="space-y-2">
-              <Label>Fee Type</Label>
+              <Label>Tipo de Cuota</Label>
               <Select
                 value={feeType}
                 onValueChange={(value: FeeType) => setValue('fee_type', value)}
@@ -175,7 +175,7 @@ export function EditMemberForm({ member, open, onOpenChange }: EditMemberFormPro
           </div>
 
           <div className="space-y-2">
-            <Label>Join Date</Label>
+            <Label>Fecha de Ingreso</Label>
             <Popover>
               <PopoverTrigger asChild>
                 <Button
@@ -186,7 +186,7 @@ export function EditMemberForm({ member, open, onOpenChange }: EditMemberFormPro
                   )}
                 >
                   <CalendarIcon className="mr-2 h-4 w-4" />
-                  {joinDate ? format(joinDate, 'PPP') : <span>Pick a date</span>}
+                  {joinDate ? format(joinDate, 'PPP') : <span>Seleccionar fecha</span>}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
@@ -205,7 +205,7 @@ export function EditMemberForm({ member, open, onOpenChange }: EditMemberFormPro
           </div>
 
           <div className="flex items-center justify-between">
-            <Label htmlFor="is_active">Active Member</Label>
+            <Label htmlFor="is_active">Miembro Activo</Label>
             <Switch
               id="is_active"
               checked={isActive}
@@ -215,10 +215,10 @@ export function EditMemberForm({ member, open, onOpenChange }: EditMemberFormPro
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
+              Cancelar
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? 'Saving...' : 'Save Changes'}
+              {isSubmitting ? 'Guardando...' : 'Guardar Cambios'}
             </Button>
           </DialogFooter>
         </form>
