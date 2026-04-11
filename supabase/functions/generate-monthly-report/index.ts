@@ -1429,7 +1429,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
     </div>`}
 
     <h3 class="subsection-title">Flujo del Mes</h3>
-    ${isLite ? `<div class="grid" style="grid-template-columns: repeat(4, 1fr);">
+    ${isLite ? `<div class="grid" style="grid-template-columns: repeat(3, 1fr);">
       <div class="stat-card success">
         <div class="stat-label">Ingresos</div>
         <div class="stat-value positive">${formatCurrency(data.totalInflows)}</div>
@@ -1441,13 +1441,6 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
       <div class="stat-card ${data.netResult >= 0 ? 'success' : 'danger'}">
         <div class="stat-label">Resultado Neto</div>
         <div class="stat-value ${data.netResult >= 0 ? 'positive' : 'negative'}">${formatCurrency(data.netResult)}</div>
-      </div>
-      <div class="stat-card success">
-        <div class="stat-label">Rendimiento del Mes</div>
-        <div class="stat-value positive">
-          ${data.yieldMonthARS === 0 && data.yieldMonthUSD === 0 ? '$0' : `${formatCurrency(data.yieldMonthARS)}${data.yieldMonthUSD > 0 ? ` + ${formatCurrency(data.yieldMonthUSD, 'USD')}` : ''}`}
-        </div>
-        <div class="stat-subtext">${data.yieldMonthARS === 0 && data.yieldMonthUSD === 0 ? 'Sin rendimiento registrado' : `Acum. ${data.year}: ${formatCurrency(data.yieldYearARS)}${data.yieldYearUSD > 0 ? ` + ${formatCurrency(data.yieldYearUSD, 'USD')}` : ''}`}</div>
       </div>
     </div>` : buildFlowTable(data, formatCurrency)}
 
