@@ -145,7 +145,7 @@ export function AppSidebar() {
   };
 
   return (
-    <Sidebar className="border-r border-sidebar-border">
+    <Sidebar collapsible="icon" className="border-r border-sidebar-border">
       {/* ── Header: module switcher dropdown ── */}
       <SidebarHeader className="p-4">
         <DropdownMenu>
