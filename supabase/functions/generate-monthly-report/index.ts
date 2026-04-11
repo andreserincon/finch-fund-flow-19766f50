@@ -491,6 +491,67 @@ Deno.serve(async (req) => {
       .filter((t: any) => t.category === 'account_yield' && t.account === 'savings' && t.transaction_date >= yearStartStr)
       .reduce((sum: number, t: any) => sum + (t.transaction_type === 'income' ? Number(t.amount) : -Number(t.amount)), 0);
 
+    // Calculate initial balances (before this month)
+    const preMonthTransactions = allTransactions.filter((t: any) => t.transaction_date < monthStartStr);
+    const preMonthTransfers = allTransfers.filter((t: any) => t.transfer_date < monthStartStr);
+    
+    let initialBankBalance = 0;
+    let initialGLBalance = 0;
+    let initialSavingsBalance = 0;
+    
+    preMonthTransactions.forEach((t: any) => {
+      const amount = t.transaction_type === 'income' ? Number(t.amount) : -Number(t.amount);
+      if (t.account === 'bank') initialBankBalance += amount;
+      else if (t.account === 'great_lodge') initialGLBalance += amount;
+      else if (t.account === 'savings') initialSavingsBalance += amount;
+    });
+    
+    preMonthTransfers.forEach((t: any) => {
+      const amt = Number(t.amount);
+      if (t.from_account === 'bank') initialBankBalance -= amt;
+      else if (t.from_account === 'great_lodge') initialGLBalance -= amt;
+      else if (t.from_account === 'savings') initialSavingsBalance -= amt;
+      if (t.to_account === 'bank') initialBankBalance += amt;
+      else if (t.to_account === 'great_lodge') initialGLBalance += amt;
+      else if (t.to_account === 'savings') initialSavingsBalance += amt;
+    });
+    
+    const initialARS = initialBankBalance + initialGLBalance;
+    const initialUSD = initialSavingsBalance;
+
+    // Build category flow breakdown from this month's transactions
+    const categoryLabels: Record<string, string> = {
+      monthly_fee: 'Cuota Mensual',
+      extraordinary_income: 'Ingreso Extraordinario',
+      donation: 'Donación',
+      reimbursement: 'Reembolso',
+      event_expense: 'Gasto de Evento',
+      parent_organization_fee: 'Cuota Org. Matriz',
+      other_expense: 'Otro Gasto',
+      other_income: 'Otro Ingreso',
+      event_payment: 'Pago de Evento',
+      loan_disbursement: 'Desembolso Préstamo',
+      loan_repayment: 'Pago Préstamo',
+      account_yield: 'Rendimiento de Cuenta',
+    };
+
+    const categoryFlows: Record<string, { incomeARS: number; incomeUSD: number; expenseARS: number; expenseUSD: number }> = {};
+    transactions.forEach((t: any) => {
+      const cat = t.category as string;
+      if (!categoryFlows[cat]) categoryFlows[cat] = { incomeARS: 0, incomeUSD: 0, expenseARS: 0, expenseUSD: 0 };
+      const isUSD = t.account === 'savings';
+      if (t.transaction_type === 'income') {
+        if (isUSD) categoryFlows[cat].incomeUSD += Number(t.amount);
+        else categoryFlows[cat].incomeARS += Number(t.amount);
+      } else {
+        if (isUSD) categoryFlows[cat].expenseUSD += Number(t.amount);
+        else categoryFlows[cat].expenseARS += Number(t.amount);
+      }
+    });
+
+    // Also account for transfers in/out this month
+    const monthTransfers = allTransfers.filter((t: any) => t.transfer_date >= monthStartStr && t.transfer_date <= monthEndStr);
+
     const reportData = {
       year,
       month,
@@ -523,6 +584,12 @@ Deno.serve(async (req) => {
       yieldMonthUSD,
       yieldYearARS,
       yieldYearUSD,
+      // Category flows
+      categoryFlows,
+      categoryLabels,
+      initialARS,
+      initialUSD,
+      monthTransfers,
     };
 
     // Fetch logo as base64 for embedding in HTML
