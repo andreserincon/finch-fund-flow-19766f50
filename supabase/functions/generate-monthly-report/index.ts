@@ -1358,120 +1358,27 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
     </div>`}
 
     <h3 class="subsection-title">Flujo del Mes</h3>
-    ${(() => {
-      if (isLite) {
-        // Lite: keep simple cards
-        return `<div class="grid" style="grid-template-columns: repeat(4, 1fr);">
-          <div class="stat-card success">
-            <div class="stat-label">Ingresos</div>
-            <div class="stat-value positive">${formatCurrency(data.totalInflows)}</div>
-          </div>
-          <div class="stat-card danger">
-            <div class="stat-label">Egresos</div>
-            <div class="stat-value negative">${formatCurrency(data.totalOutflows)}</div>
-          </div>
-          <div class="stat-card ${data.netResult >= 0 ? 'success' : 'danger'}">
-            <div class="stat-label">Resultado Neto</div>
-            <div class="stat-value ${data.netResult >= 0 ? 'positive' : 'negative'}">${formatCurrency(data.netResult)}</div>
-          </div>
-          <div class="stat-card success">
-            <div class="stat-label">Rendimiento del Mes</div>
-            <div class="stat-value positive">
-              ${data.yieldMonthARS === 0 && data.yieldMonthUSD === 0 ? '$0' : `${formatCurrency(data.yieldMonthARS)}${data.yieldMonthUSD > 0 ? ` + ${formatCurrency(data.yieldMonthUSD, 'USD')}` : ''}`}
-            </div>
-            <div class="stat-subtext">${data.yieldMonthARS === 0 && data.yieldMonthUSD === 0 ? 'Sin rendimiento registrado' : `Acum. ${data.year}: ${formatCurrency(data.yieldYearARS)}${data.yieldYearUSD > 0 ? ` + ${formatCurrency(data.yieldYearUSD, 'USD')}` : ''}`}</div>
-          </div>
-        </div>`;
-      }
-
-      // Comprehensive: category breakdown table
-      const cats = Object.keys(data.categoryFlows || {});
-      let totalIncARS = 0, totalIncUSD = 0, totalExpARS = 0, totalExpUSD = 0;
-      
-      const catRows = cats.map((cat: string) => {
-        const f = data.categoryFlows[cat];
-        totalIncARS += f.incomeARS;
-        totalIncUSD += f.incomeUSD;
-        totalExpARS += f.expenseARS;
-        totalExpUSD += f.expenseUSD;
-        const label = data.categoryLabels[cat] || cat;
-        return \`<tr>
-          <td>\${label}</td>
-          <td class="text-right \${f.incomeARS > 0 ? 'positive' : ''}">\${f.incomeARS > 0 ? formatCurrency(f.incomeARS) : '-'}</td>
-          <td class="text-right \${f.incomeUSD > 0 ? 'positive' : ''}">\${f.incomeUSD > 0 ? formatCurrency(f.incomeUSD, 'USD') : '-'}</td>
-          <td class="text-right \${f.expenseARS > 0 ? 'negative' : ''}">\${f.expenseARS > 0 ? formatCurrency(f.expenseARS) : '-'}</td>
-          <td class="text-right \${f.expenseUSD > 0 ? 'negative' : ''}">\${f.expenseUSD > 0 ? formatCurrency(f.expenseUSD, 'USD') : '-'}</td>
-        </tr>\`;
-      }).join('');
-
-      // Transfer rows
-      let transferInARS = 0, transferInUSD = 0, transferOutARS = 0, transferOutUSD = 0;
-      (data.monthTransfers || []).forEach((tr: any) => {
-        const amt = Number(tr.amount);
-        if (tr.from_account === 'savings') transferOutUSD += amt;
-        else transferOutARS += amt;
-        if (tr.to_account === 'savings') transferInUSD += amt;
-        else transferInARS += amt;
-      });
-
-      const hasTransfers = transferInARS > 0 || transferInUSD > 0 || transferOutARS > 0 || transferOutUSD > 0;
-      const transferRow = hasTransfers ? \`<tr>
-        <td>Transferencias entre Cuentas</td>
-        <td class="text-right \${transferInARS > 0 ? 'positive' : ''}">\${transferInARS > 0 ? formatCurrency(transferInARS) : '-'}</td>
-        <td class="text-right \${transferInUSD > 0 ? 'positive' : ''}">\${transferInUSD > 0 ? formatCurrency(transferInUSD, 'USD') : '-'}</td>
-        <td class="text-right \${transferOutARS > 0 ? 'negative' : ''}">\${transferOutARS > 0 ? formatCurrency(transferOutARS) : '-'}</td>
-        <td class="text-right \${transferOutUSD > 0 ? 'negative' : ''}">\${transferOutUSD > 0 ? formatCurrency(transferOutUSD, 'USD') : '-'}</td>
-      </tr>\` : '';
-
-      const finalARS = data.initialARS + totalIncARS - totalExpARS;
-      const finalUSD = data.initialUSD + totalIncUSD - totalExpUSD;
-
-      return \`<table>
-        <thead>
-          <tr>
-            <th>Concepto</th>
-            <th class="text-right">Ingresos ARS</th>
-            <th class="text-right">Ingresos USD</th>
-            <th class="text-right">Egresos ARS</th>
-            <th class="text-right">Egresos USD</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr class="summary-row">
-            <td>Flujo Inicial</td>
-            <td class="text-right">\${formatCurrency(data.initialARS)}</td>
-            <td class="text-right">\${formatCurrency(data.initialUSD, 'USD')}</td>
-            <td class="text-right">-</td>
-            <td class="text-right">-</td>
-          </tr>
-          \${catRows}
-          \${transferRow}
-          <tr class="summary-row">
-            <td>Total Movimientos</td>
-            <td class="text-right positive">\${formatCurrency(totalIncARS)}</td>
-            <td class="text-right positive">\${formatCurrency(totalIncUSD, 'USD')}</td>
-            <td class="text-right negative">\${formatCurrency(totalExpARS)}</td>
-            <td class="text-right negative">\${formatCurrency(totalExpUSD, 'USD')}</td>
-          </tr>
-          <tr class="summary-row">
-            <td><strong>Balance Final</strong></td>
-            <td class="text-right \${finalARS >= 0 ? 'positive' : 'negative'}"><strong>\${formatCurrency(finalARS)}</strong></td>
-            <td class="text-right \${finalUSD >= 0 ? 'positive' : 'negative'}"><strong>\${formatCurrency(finalUSD, 'USD')}</strong></td>
-            <td class="text-right">-</td>
-            <td class="text-right">-</td>
-          </tr>
-        </tbody>
-      </table>
-      <div class="grid" style="margin-top: 8px; grid-template-columns: repeat(2, 1fr);">
-        <div class="stat-card success">
-          <div class="stat-label">Rendimiento del Mes</div>
-          <div class="stat-value positive">
-            \${data.yieldMonthARS === 0 && data.yieldMonthUSD === 0 ? '$0' : \`\${formatCurrency(data.yieldMonthARS)}\${data.yieldMonthUSD > 0 ? \` + \${formatCurrency(data.yieldMonthUSD, 'USD')}\` : ''}\`}
-          </div>
-          <div class="stat-subtext">\${data.yieldMonthARS === 0 && data.yieldMonthUSD === 0 ? 'Sin rendimiento registrado' : \`Acum. \${data.year}: \${formatCurrency(data.yieldYearARS)}\${data.yieldYearUSD > 0 ? \` + \${formatCurrency(data.yieldYearUSD, 'USD')}\` : ''}\`}</div>
+    ${isLite ? `<div class="grid" style="grid-template-columns: repeat(4, 1fr);">
+      <div class="stat-card success">
+        <div class="stat-label">Ingresos</div>
+        <div class="stat-value positive">${formatCurrency(data.totalInflows)}</div>
+      </div>
+      <div class="stat-card danger">
+        <div class="stat-label">Egresos</div>
+        <div class="stat-value negative">${formatCurrency(data.totalOutflows)}</div>
+      </div>
+      <div class="stat-card ${data.netResult >= 0 ? 'success' : 'danger'}">
+        <div class="stat-label">Resultado Neto</div>
+        <div class="stat-value ${data.netResult >= 0 ? 'positive' : 'negative'}">${formatCurrency(data.netResult)}</div>
+      </div>
+      <div class="stat-card success">
+        <div class="stat-label">Rendimiento del Mes</div>
+        <div class="stat-value positive">
+          ${data.yieldMonthARS === 0 && data.yieldMonthUSD === 0 ? '$0' : `${formatCurrency(data.yieldMonthARS)}${data.yieldMonthUSD > 0 ? ` + ${formatCurrency(data.yieldMonthUSD, 'USD')}` : ''}`}
         </div>
-      </div>\`;
-    })()}
+        <div class="stat-subtext">${data.yieldMonthARS === 0 && data.yieldMonthUSD === 0 ? 'Sin rendimiento registrado' : `Acum. ${data.year}: ${formatCurrency(data.yieldYearARS)}${data.yieldYearUSD > 0 ? ` + ${formatCurrency(data.yieldYearUSD, 'USD')}` : ''}`}</div>
+      </div>
+    </div>` : buildFlowTable(data, formatCurrency)}
 
     <h3 class="subsection-title">Posición de Miembros</h3>
     <div class="grid" style="grid-template-columns: repeat(4, 1fr);">
