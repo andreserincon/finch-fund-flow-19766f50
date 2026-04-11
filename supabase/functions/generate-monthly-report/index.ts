@@ -526,7 +526,7 @@ Deno.serve(async (req) => {
       donation: 'Donación',
       reimbursement: 'Reembolso',
       event_expense: 'Gasto de Evento',
-      parent_organization_fee: 'Cuota Org. Matriz',
+      parent_organization_fee: 'Pago GL',
       other_expense: 'Otro Gasto',
       other_income: 'Otro Ingreso',
       event_payment: 'Pago de Evento',
@@ -723,13 +723,6 @@ function buildFlowTable(data: any, formatCurrency: (amount: number, currency?: s
   const finalARS = data.initialARS + totalIncARS - totalExpARS;
   const finalUSD = data.initialUSD + totalIncUSD - totalExpUSD;
 
-  const yieldDisplay = data.yieldMonthARS === 0 && data.yieldMonthUSD === 0
-    ? '$0'
-    : formatCurrency(data.yieldMonthARS) + (data.yieldMonthUSD > 0 ? ' + ' + formatCurrency(data.yieldMonthUSD, 'USD') : '');
-  const yieldSubtext = data.yieldMonthARS === 0 && data.yieldMonthUSD === 0
-    ? 'Sin rendimiento registrado'
-    : 'Acum. ' + data.year + ': ' + formatCurrency(data.yieldYearARS) + (data.yieldYearUSD > 0 ? ' + ' + formatCurrency(data.yieldYearUSD, 'USD') : '');
-
   return '<table>'
     + '<thead><tr>'
     + '<th>Concepto</th>'
@@ -762,13 +755,7 @@ function buildFlowTable(data: any, formatCurrency: (amount: number, currency?: s
     + '<td class="text-right">-</td>'
     + '<td class="text-right">-</td>'
     + '</tr>'
-    + '</tbody></table>'
-    + '<div class="grid" style="margin-top: 8px; grid-template-columns: repeat(2, 1fr);">'
-    + '<div class="stat-card success">'
-    + '<div class="stat-label">Rendimiento del Mes</div>'
-    + '<div class="stat-value positive">' + yieldDisplay + '</div>'
-    + '<div class="stat-subtext">' + yieldSubtext + '</div>'
-    + '</div></div>';
+    + '</tbody></table>';
 }
 
 function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comprehensive', logoBase64?: string): string {
@@ -1191,19 +1178,20 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
       body { margin: 0; padding: 10px; }
       .page-break { page-break-before: always; }
       .no-print { display: none; }
-      @page { margin: 10mm 12mm; }
+      @page { margin: 12mm 15mm; size: A4; }
     }
     
     * { box-sizing: border-box; }
     
     body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      line-height: 1.6;
+      line-height: 1.5;
       color: #1a1a1a;
       max-width: 210mm;
       margin: 0 auto;
-      padding: 20px;
+      padding: 15px;
       background: #fff;
+      font-size: 12px;
     }
     
     .header {
@@ -1267,7 +1255,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
       .page-header .logo-small { width: 30px; height: auto; }
     }
     
-    .section { margin-bottom: 15px; }
+    .section { margin-bottom: 15px; page-break-inside: avoid; }
     
     .section-title {
       background: #000;
@@ -1342,20 +1330,12 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
     .negative { color: #e74c3c; }
     
     .footer {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
       text-align: center;
       font-size: 10px;
       color: #666;
       padding: 10px;
       border-top: 1px solid #999;
-      background: white;
-    }
-    
-    @media print {
-      .footer { position: fixed; bottom: 10px; }
+      margin-top: 20px;
     }
     
     .print-button {
@@ -1449,7 +1429,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
     </div>`}
 
     <h3 class="subsection-title">Flujo del Mes</h3>
-    ${isLite ? `<div class="grid" style="grid-template-columns: repeat(4, 1fr);">
+    ${isLite ? `<div class="grid" style="grid-template-columns: repeat(3, 1fr);">
       <div class="stat-card success">
         <div class="stat-label">Ingresos</div>
         <div class="stat-value positive">${formatCurrency(data.totalInflows)}</div>
@@ -1461,13 +1441,6 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
       <div class="stat-card ${data.netResult >= 0 ? 'success' : 'danger'}">
         <div class="stat-label">Resultado Neto</div>
         <div class="stat-value ${data.netResult >= 0 ? 'positive' : 'negative'}">${formatCurrency(data.netResult)}</div>
-      </div>
-      <div class="stat-card success">
-        <div class="stat-label">Rendimiento del Mes</div>
-        <div class="stat-value positive">
-          ${data.yieldMonthARS === 0 && data.yieldMonthUSD === 0 ? '$0' : `${formatCurrency(data.yieldMonthARS)}${data.yieldMonthUSD > 0 ? ` + ${formatCurrency(data.yieldMonthUSD, 'USD')}` : ''}`}
-        </div>
-        <div class="stat-subtext">${data.yieldMonthARS === 0 && data.yieldMonthUSD === 0 ? 'Sin rendimiento registrado' : `Acum. ${data.year}: ${formatCurrency(data.yieldYearARS)}${data.yieldYearUSD > 0 ? ` + ${formatCurrency(data.yieldYearUSD, 'USD')}` : ''}`}</div>
       </div>
     </div>` : buildFlowTable(data, formatCurrency)}
 
