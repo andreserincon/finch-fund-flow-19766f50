@@ -7,6 +7,7 @@ import { DeleteLoanDialog } from '@/components/loans/DeleteLoanDialog';
 import { AddPaymentDialog } from '@/components/loans/AddPaymentDialog';
 import { PaymentHistoryDialog } from '@/components/loans/PaymentHistoryDialog';
 import { RevertPaidDialog } from '@/components/loans/RevertPaidDialog';
+import { EditLoanDialog } from '@/components/loans/EditLoanDialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -18,7 +19,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { MoreHorizontal, Plus, CheckCircle, XCircle, Trash2, DollarSign, History, Undo2 } from 'lucide-react';
+import { MoreHorizontal, Plus, CheckCircle, XCircle, Trash2, DollarSign, History, Undo2, Pencil } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Loan, ACCOUNT_LABELS, LOAN_STATUS_LABELS, LoanStatus } from '@/lib/types';
@@ -34,6 +35,7 @@ export default function Loans() {
   const [addingPaymentLoan, setAddingPaymentLoan] = useState<Loan | null>(null);
   const [viewingHistoryLoan, setViewingHistoryLoan] = useState<Loan | null>(null);
   const [revertingLoan, setRevertingLoan] = useState<Loan | null>(null);
+  const [editingLoan, setEditingLoan] = useState<Loan | null>(null);
 
   const filteredLoans = showPaid
     ? loans.filter((loan) => loan.status === 'paid').sort((a, b) => {
@@ -168,6 +170,9 @@ export default function Loans() {
                         <DropdownMenuContent align="end" className="bg-popover">
                           {loan.status === 'active' && (
                             <>
+                              <DropdownMenuItem onClick={() => setEditingLoan(loan)}>
+                                <Pencil className="mr-2 h-4 w-4" />Editar Préstamo
+                              </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => setAddingPaymentLoan(loan)}>
                                 <DollarSign className="mr-2 h-4 w-4" />Agregar Pago
                               </DropdownMenuItem>
@@ -294,6 +299,9 @@ export default function Loans() {
                           <DropdownMenuContent align="end" className="bg-popover">
                             {loan.status === 'active' && (
                               <>
+                                <DropdownMenuItem onClick={() => setEditingLoan(loan)}>
+                                  <Pencil className="mr-2 h-4 w-4" />Editar Préstamo
+                                </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => setAddingPaymentLoan(loan)}>
                                   <DollarSign className="mr-2 h-4 w-4" />Agregar Pago
                                 </DropdownMenuItem>
@@ -345,6 +353,7 @@ export default function Loans() {
       {addingPaymentLoan && <AddPaymentDialog loan={addingPaymentLoan} open={!!addingPaymentLoan} onOpenChange={(open) => !open && setAddingPaymentLoan(null)} />}
       {viewingHistoryLoan && <PaymentHistoryDialog loan={viewingHistoryLoan} open={!!viewingHistoryLoan} onOpenChange={(open) => !open && setViewingHistoryLoan(null)} />}
       {revertingLoan && <RevertPaidDialog loan={revertingLoan} open={!!revertingLoan} onOpenChange={(open) => !open && setRevertingLoan(null)} />}
+      {editingLoan && <EditLoanDialog loan={editingLoan} open={!!editingLoan} onOpenChange={(open) => !open && setEditingLoan(null)} />}
     </div>
   );
 }
