@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { useHiddenMode } from '@/contexts/HiddenModeContext';
 import { useMembers } from '@/hooks/useMembers';
 import { useTransactions } from '@/hooks/useTransactions';
 import { useMonthlyFees } from '@/hooks/useMonthlyFees';
@@ -311,7 +312,7 @@ export default function Dashboard() {
                     className="flex items-center justify-between py-2 border-b border-border/50 last:border-0"
                   >
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm">{member.full_name}</p>
+                      <p className="font-medium text-sm">{displayName(member.full_name, member.phone_number)}</p>
                       <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs">
                         {isMonthlyOverdue && (
                           <span className="text-destructive">
