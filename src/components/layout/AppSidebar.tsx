@@ -147,18 +147,18 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
       {/* ── Header: module switcher dropdown ── */}
-      <SidebarHeader className="p-4">
+      <SidebarHeader className="p-2 group-data-[state=collapsed]:p-1">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="flex items-center gap-3 w-full rounded-lg p-2 hover:bg-sidebar-accent transition-colors text-left">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg gradient-primary shrink-0">
-                <currentModule.icon className="h-5 w-5 text-primary-foreground" />
+            <button className="flex items-center gap-3 w-full rounded-lg p-2 hover:bg-sidebar-accent transition-colors text-left group-data-[state=collapsed]:justify-center group-data-[state=collapsed]:p-1 group-data-[state=collapsed]:gap-0">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg gradient-primary shrink-0 group-data-[state=collapsed]:h-8 group-data-[state=collapsed]:w-8">
+                <currentModule.icon className="h-5 w-5 text-primary-foreground group-data-[state=collapsed]:h-4 group-data-[state=collapsed]:w-4" />
               </div>
-              <div className="flex-1 min-w-0">
+              <div className="flex-1 min-w-0 group-data-[state=collapsed]:hidden">
                 <h1 className="text-sm font-semibold text-sidebar-foreground truncate">{currentModule.label}</h1>
                 <p className="text-xs text-sidebar-foreground/60 truncate">{currentModule.sublabel}</p>
               </div>
-              <ChevronDown className="h-4 w-4 text-sidebar-foreground/40 shrink-0" />
+              <ChevronDown className="h-4 w-4 text-sidebar-foreground/40 shrink-0 group-data-[state=collapsed]:hidden" />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-[220px]">
