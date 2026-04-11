@@ -306,19 +306,19 @@ export function MemberFeeMatrix({ filterMemberId }: { filterMemberId?: string | 
         <div className="flex flex-wrap gap-3 md:gap-4 mt-4 text-xs">
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded bg-success/20 border border-success/30" />
-            <span>Paid</span>
+            <span>Pagado</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded bg-warning/20 border border-warning/30" />
-            <span>Current (unpaid)</span>
+            <span>Actual (impago)</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded bg-destructive/20 border border-destructive/30" />
-            <span>Overdue</span>
+            <span>Demorado</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded bg-muted/50 border border-border" />
-            <span>Future</span>
+            <span>Futuro</span>
           </div>
         </div>
       </CardContent>
