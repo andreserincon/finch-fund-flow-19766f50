@@ -1179,7 +1179,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
   ` : `
     /* Comprehensive report - full styling */
     @media print {
-      body { margin: 0; padding: 10px; }
+      body { margin: 0; padding: 10px; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
       .page-break { page-break-before: always; }
       .no-print { display: none; }
       @page { margin: 15mm 15mm; size: A4; }
