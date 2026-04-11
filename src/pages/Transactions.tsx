@@ -40,6 +40,7 @@ export default function Transactions() {
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [accountFilter, setAccountFilter] = useState<string>('all');
+  const [monthFilter, setMonthFilter] = useState<string>('all');
   
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [deletingTransaction, setDeletingTransaction] = useState<Transaction | null>(null);
@@ -47,6 +48,13 @@ export default function Transactions() {
   const formatTransactionCurrency = (amount: number, account: AccountType) => {
     return formatCurrency(amount, getCurrencyForAccount(account));
   };
+
+  // Build unique month options from transactions
+  const monthOptions = Array.from(
+    new Set(
+      transactions.map((t) => t.transaction_date.substring(0, 7)) // "YYYY-MM"
+    )
+  ).sort((a, b) => b.localeCompare(a));
 
   const filteredTransactions = transactions.filter((transaction) => {
     const matchesSearch =
@@ -63,7 +71,10 @@ export default function Transactions() {
     const matchesAccount =
       accountFilter === 'all' || transaction.account === accountFilter;
 
-    return matchesSearch && matchesType && matchesCategory && matchesAccount;
+    const matchesMonth =
+      monthFilter === 'all' || transaction.transaction_date.startsWith(monthFilter);
+
+    return matchesSearch && matchesType && matchesCategory && matchesAccount && matchesMonth;
   });
 
   const arsTransactions = filteredTransactions.filter(t => t.account !== 'savings');
