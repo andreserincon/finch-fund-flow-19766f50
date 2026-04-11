@@ -1294,7 +1294,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
     
     .stat-label {
       font-size: 10px;
-      color: #555;
+      color: #000;
       text-transform: uppercase;
       margin-bottom: 2px;
     }
@@ -1339,7 +1339,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
     .footer {
       text-align: center;
       font-size: 10px;
-      color: #666;
+      color: #000;
       padding: 10px;
       border-top: 1px solid #999;
       margin-top: 20px;
@@ -1373,7 +1373,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
       border-bottom: 1px solid #ccc;
       padding-bottom: 3px;
     }
-    .stat-subtext { font-size: 9px; color: #777; margin-top: 2px; }
+    .stat-subtext { font-size: 9px; color: #000; margin-top: 2px; }
   `;
 
   return `<!DOCTYPE html>
