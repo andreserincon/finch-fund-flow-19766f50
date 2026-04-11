@@ -20,7 +20,15 @@ import { cn } from '@/lib/utils';
 
 type PaymentStatus = 'paid' | 'overdue' | 'current_unpaid' | 'future' | 'not_member';
 
-export function MemberFeeMatrix({ filterMemberId }: { filterMemberId?: string | null | undefined }) {
+interface MemberFeeMatrixProps {
+  filterMemberId?: string | null | undefined;
+  /** When provided, centers the month window around this date instead of today */
+  referenceMonth?: Date;
+  /** When provided, overrides member.total_paid with the value from this map */
+  adjustedTotalPaid?: Record<string, number>;
+}
+
+export function MemberFeeMatrix({ filterMemberId, referenceMonth, adjustedTotalPaid }: MemberFeeMatrixProps) {
   const [showAllMembers, setShowAllMembers] = useState(false);
   const isMobile = useIsMobile();
   const { displayName } = useHiddenMode();
@@ -30,27 +38,31 @@ export function MemberFeeMatrix({ filterMemberId }: { filterMemberId?: string | 
 
   const isLoading = membersLoading || feesLoading || historyLoading;
 
-  // Generate array of months: 1 month for mobile (current only), 7 months for desktop (3 past, current, 3 future)
+  const refDate = referenceMonth ?? new Date();
+
+  // Generate array of months centered on the reference date
   const months = useMemo(() => {
-    const now = new Date();
     const result = [];
     const startOffset = isMobile ? 0 : -3;
     const endOffset = isMobile ? 0 : 3;
     
     for (let i = startOffset; i <= endOffset; i++) {
-      const monthDate = startOfMonth(i < 0 ? subMonths(now, Math.abs(i)) : i > 0 ? addMonths(now, i) : now);
+      const monthDate = startOfMonth(i < 0 ? subMonths(refDate, Math.abs(i)) : i > 0 ? addMonths(refDate, i) : refDate);
+      const isRef = i === 0;
+      // Determine if a month is truly "future" relative to the reference
+      const nowMonth = startOfMonth(new Date());
       result.push({
         date: monthDate,
         key: format(monthDate, 'yyyy-MM-dd'),
         label: format(monthDate, 'MMM'),
         year: format(monthDate, 'yyyy'),
-        isCurrent: i === 0,
-        isFuture: i > 0,
-        isPast: i < 0,
+        isCurrent: isRef,
+        isFuture: isAfter(monthDate, startOfMonth(refDate)),
+        isPast: isBefore(monthDate, startOfMonth(refDate)),
       });
     }
     return result;
-  }, [isMobile]);
+  }, [isMobile, refDate]);
 
   // Get fee rate for a specific month and fee type
   const getFeeForMonth = (monthKey: string, feeType: 'standard' | 'solidarity'): number => {
@@ -60,13 +72,13 @@ export function MemberFeeMatrix({ filterMemberId }: { filterMemberId?: string | 
     return fee?.amount ?? 0;
   };
 
-  // Get the fee type for a member at a specific month (uses history for non-retroactive changes)
+  // Get the fee type for a member at a specific month
   const getMemberFeeTypeForMonth = (memberId: string, monthKey: string, currentFeeType: 'standard' | 'solidarity'): 'standard' | 'solidarity' => {
     const historicalFeeType = getHistoricalFeeType(memberId, monthKey);
     return historicalFeeType ?? currentFeeType;
   };
 
-  // Generate all months from a start date to an end date for cumulative calculation
+  // Generate all months from a start date to an end date
   const generateMonthRange = (startDate: Date, endDate: Date): string[] => {
     const result: string[] = [];
     let current = startOfMonth(startDate);
@@ -77,6 +89,14 @@ export function MemberFeeMatrix({ filterMemberId }: { filterMemberId?: string | 
       current = addMonths(current, 1);
     }
     return result;
+  };
+
+  // Get effective total_paid for a member (use adjusted if available)
+  const getEffectiveTotalPaid = (member: typeof memberBalances[0]): number => {
+    if (adjustedTotalPaid && member.member_id in adjustedTotalPaid) {
+      return adjustedTotalPaid[member.member_id];
+    }
+    return member.total_paid;
   };
 
   // Calculate payment status for each member/month
@@ -90,43 +110,34 @@ export function MemberFeeMatrix({ filterMemberId }: { filterMemberId?: string | 
     const joinDate = parseISO(member.join_date);
     const monthStart = startOfMonth(monthDate);
     
-    // Get the fee type that was active for this member during this month
     const effectiveFeeType = getMemberFeeTypeForMonth(member.member_id, monthKey, member.fee_type);
     const feeAmount = getFeeForMonth(monthKey, effectiveFeeType);
 
-    // Member wasn't a member yet in this month
     if (isAfter(startOfMonth(joinDate), monthStart)) {
       return { status: 'not_member', amount: 0 };
     }
 
-    // Calculate cumulative fees owed up to and including this month
-    // Use the full range from join date to the displayed month, not the limited display array
     let cumulativeOwed = 0;
     const memberJoinMonth = startOfMonth(joinDate);
     const allMonthsToCalculate = generateMonthRange(memberJoinMonth, monthStart);
     
     for (const mKey of allMonthsToCalculate) {
-      // Use historical fee type for each month
       const monthFeeType = getMemberFeeTypeForMonth(member.member_id, mKey, member.fee_type);
       cumulativeOwed += getFeeForMonth(mKey, monthFeeType);
     }
 
-    // Calculate cumulative owed up to the PREVIOUS month to determine partial payments
     const prevMonthOwed = cumulativeOwed - feeAmount;
-
-    // If total paid covers cumulative owed, this month is paid (even if future)
-    const isPaid = member.total_paid >= cumulativeOwed;
+    const totalPaid = getEffectiveTotalPaid(member);
+    const isPaid = totalPaid >= cumulativeOwed;
 
     if (isPaid) {
       return { status: 'paid', amount: feeAmount };
     }
 
-    // Calculate the display amount: if partially paid into this month, show remaining
-    const pendingAmount = member.total_paid >= prevMonthOwed
-      ? cumulativeOwed - member.total_paid  // partially paid → show remaining
-      : feeAmount;                           // fully unpaid → show full fee
+    const pendingAmount = totalPaid >= prevMonthOwed
+      ? cumulativeOwed - totalPaid
+      : feeAmount;
 
-    // Future month - not due yet but not paid in advance
     if (isFuture) {
       return { status: 'future', amount: pendingAmount };
     }
@@ -163,7 +174,6 @@ export function MemberFeeMatrix({ filterMemberId }: { filterMemberId?: string | 
     }
   };
 
-  // Helper to check if member has unpaid/overdue status
   const memberHasUnpaidOrOverdue = (member: typeof memberBalances[0]) => {
     return months.some((month) => {
       const { status } = getMemberMonthStatus(
@@ -177,7 +187,6 @@ export function MemberFeeMatrix({ filterMemberId }: { filterMemberId?: string | 
     });
   };
 
-  // Filter and sort members based on toggle state
   const displayedMembers = useMemo(() => {
     let filtered = memberBalances.filter((m) => {
       if (!m.is_active) return false;
@@ -190,20 +199,19 @@ export function MemberFeeMatrix({ filterMemberId }: { filterMemberId?: string | 
       return true;
     });
 
-    // Sort: members with unpaid/overdue first (by balance desc), then paid members (by balance desc)
     return filtered.sort((a, b) => {
       const aHasUnpaid = memberHasUnpaidOrOverdue(a);
       const bHasUnpaid = memberHasUnpaidOrOverdue(b);
       
-      // If both have same unpaid status, sort by current_balance descending
       if (aHasUnpaid === bHasUnpaid) {
-        return (b.current_balance ?? 0) - (a.current_balance ?? 0);
+        const aTotalPaid = getEffectiveTotalPaid(a);
+        const bTotalPaid = getEffectiveTotalPaid(b);
+        return (bTotalPaid - b.total_fees_owed) - (aTotalPaid - a.total_fees_owed);
       }
       
-      // Members with unpaid/overdue come first
       return aHasUnpaid ? -1 : 1;
     });
-  }, [memberBalances, showAllMembers, months, filterMemberId]);
+  }, [memberBalances, showAllMembers, months, filterMemberId, adjustedTotalPaid]);
 
   const paidMembersCount = memberBalances.filter(m => m.is_active && !memberHasUnpaidOrOverdue(m)).length;
 
