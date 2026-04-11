@@ -66,10 +66,10 @@ export function useTransactions() {
     },
     onSuccess: () => {
       invalidateRelated();
-      toast.success('Transaction recorded successfully');
+      toast.success('Transacción registrada correctamente');
     },
     onError: (error: Error) => {
-      toast.error(`Failed to record transaction: ${error.message}`);
+      toast.error(`Error al registrar transacción: ${error.message}`);
     },
   });
 
@@ -88,10 +88,10 @@ export function useTransactions() {
     },
     onSuccess: () => {
       invalidateRelated();
-      toast.success('Transaction updated successfully');
+      toast.success('Transacción actualizada correctamente');
     },
     onError: (error: Error) => {
-      toast.error(`Failed to update transaction: ${error.message}`);
+      toast.error(`Error al actualizar transacción: ${error.message}`);
     },
   });
 
@@ -103,10 +103,10 @@ export function useTransactions() {
     },
     onSuccess: () => {
       invalidateRelated();
-      toast.success('Transaction deleted successfully');
+      toast.success('Transacción eliminada correctamente');
     },
     onError: (error: Error) => {
-      toast.error(`Failed to delete transaction: ${error.message}`);
+      toast.error(`Error al eliminar transacción: ${error.message}`);
     },
   });
 
