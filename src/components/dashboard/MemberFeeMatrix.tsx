@@ -23,6 +23,7 @@ type PaymentStatus = 'paid' | 'overdue' | 'current_unpaid' | 'future' | 'not_mem
 export function MemberFeeMatrix({ filterMemberId }: { filterMemberId?: string | null | undefined }) {
   const [showAllMembers, setShowAllMembers] = useState(false);
   const isMobile = useIsMobile();
+  const { displayName } = useHiddenMode();
   const { memberBalances, isLoading: membersLoading } = useMembers();
   const { monthlyFees, isLoading: feesLoading } = useMonthlyFees();
   const { getFeeTypeForMonth: getHistoricalFeeType, isLoading: historyLoading } = useMemberFeeTypeHistory();
