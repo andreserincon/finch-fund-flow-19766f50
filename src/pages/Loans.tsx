@@ -170,6 +170,9 @@ export default function Loans() {
                         <DropdownMenuContent align="end" className="bg-popover">
                           {loan.status === 'active' && (
                             <>
+                              <DropdownMenuItem onClick={() => setEditingLoan(loan)}>
+                                <Pencil className="mr-2 h-4 w-4" />Editar Préstamo
+                              </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => setAddingPaymentLoan(loan)}>
                                 <DollarSign className="mr-2 h-4 w-4" />Agregar Pago
                               </DropdownMenuItem>
@@ -296,6 +299,9 @@ export default function Loans() {
                           <DropdownMenuContent align="end" className="bg-popover">
                             {loan.status === 'active' && (
                               <>
+                                <DropdownMenuItem onClick={() => setEditingLoan(loan)}>
+                                  <Pencil className="mr-2 h-4 w-4" />Editar Préstamo
+                                </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => setAddingPaymentLoan(loan)}>
                                   <DollarSign className="mr-2 h-4 w-4" />Agregar Pago
                                 </DropdownMenuItem>
