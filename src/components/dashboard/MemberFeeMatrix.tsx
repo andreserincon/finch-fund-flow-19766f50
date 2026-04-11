@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useHiddenMode } from '@/contexts/HiddenModeContext';
 import { format, subMonths, addMonths, startOfMonth, isBefore, isAfter, parseISO } from 'date-fns';
 import { useMembers } from '@/hooks/useMembers';
 import { useMonthlyFees } from '@/hooks/useMonthlyFees';
@@ -22,6 +23,7 @@ type PaymentStatus = 'paid' | 'overdue' | 'current_unpaid' | 'future' | 'not_mem
 export function MemberFeeMatrix({ filterMemberId }: { filterMemberId?: string | null | undefined }) {
   const [showAllMembers, setShowAllMembers] = useState(false);
   const isMobile = useIsMobile();
+  const { displayName } = useHiddenMode();
   const { memberBalances, isLoading: membersLoading } = useMembers();
   const { monthlyFees, isLoading: feesLoading } = useMonthlyFees();
   const { getFeeTypeForMonth: getHistoricalFeeType, isLoading: historyLoading } = useMemberFeeTypeHistory();
@@ -271,7 +273,7 @@ export function MemberFeeMatrix({ filterMemberId }: { filterMemberId?: string | 
                 displayedMembers.map((member) => (
                   <TableRow key={member.member_id}>
                     <TableCell className="sticky left-0 bg-card z-10 font-medium">
-                      {member.full_name}
+                      {displayName(member.full_name, member.phone_number)}
                     </TableCell>
                     {months.map((month) => {
                       const { status, amount } = getMemberMonthStatus(

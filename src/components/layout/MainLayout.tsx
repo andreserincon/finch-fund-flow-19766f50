@@ -11,8 +11,11 @@ import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { AppSidebar } from './AppSidebar';
 import { useOrientationToggle } from '@/hooks/useOrientationToggle';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { RotateCcw, Smartphone } from 'lucide-react';
+import { useHiddenMode } from '@/contexts/HiddenModeContext';
+import { RotateCcw, Smartphone, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -28,6 +31,7 @@ export function MainLayout({ children }: MainLayoutProps) {
   const { t } = useTranslation();
   const { isLandscape, toggle } = useOrientationToggle();
   const isMobile = useIsMobile();
+  const { hiddenMode, toggleHiddenMode } = useHiddenMode();
 
   return (
     <SidebarProvider>
@@ -46,7 +50,20 @@ export function MainLayout({ children }: MainLayoutProps) {
               <h2 className="font-semibold text-lg md:hidden">{t('nav.treasury')}</h2>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
+              {/* Hidden mode toggle */}
+              <div className="flex items-center gap-2">
+                <EyeOff className={`h-4 w-4 ${hiddenMode ? 'text-primary' : 'text-muted-foreground'}`} />
+                <Switch
+                  checked={hiddenMode}
+                  onCheckedChange={toggleHiddenMode}
+                  aria-label="Modo oculto"
+                />
+                <Label className="text-xs text-muted-foreground hidden sm:inline cursor-pointer" onClick={toggleHiddenMode}>
+                  Oculto
+                </Label>
+              </div>
+
               {/* Orientation toggle button (mobile only) */}
               {isMobile && (
                 <Button

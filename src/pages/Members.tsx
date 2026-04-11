@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useHiddenMode } from '@/contexts/HiddenModeContext';
 import { useMembers } from '@/hooks/useMembers';
 import { useMonthlyFees } from '@/hooks/useMonthlyFees';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
@@ -63,6 +64,7 @@ export default function Members() {
   const { isMemberOnly } = useIsMemberOnly();
   const { profile } = useAuth();
   const userMemberId = profile?.member_id;
+  const { displayName } = useHiddenMode();
   const [search, setSearch] = useState('');
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
   const [sortConfig, setSortConfig] = useState<SortConfig>({ column: null, direction: 'asc' });
@@ -242,7 +244,7 @@ export default function Members() {
               <div className="flex items-start justify-between">
                 <div>
                   {member.phone_number && <p className="text-xs text-muted-foreground">Mat. {member.phone_number}</p>}
-                  <p className="font-semibold">{member.full_name}</p>
+                  <p className="font-semibold">{displayName(member.full_name, member.phone_number)}</p>
                 </div>
                 <div className="flex items-center gap-2">
                   {!member.is_active && <Badge variant="outline">Inactivo</Badge>}
@@ -333,7 +335,7 @@ export default function Members() {
                   <TableCell>
                     <div>
                       {member.phone_number && <p className="text-xs text-muted-foreground font-mono">Mat. {member.phone_number}</p>}
-                      <p className="font-medium">{member.full_name}</p>
+                      <p className="font-medium">{displayName(member.full_name, member.phone_number)}</p>
                     </div>
                   </TableCell>
                   <TableCell>

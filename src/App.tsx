@@ -36,6 +36,7 @@ import { useCanViewTreasury } from "@/hooks/useCanViewTreasury";
 import { useIsMemberOnly } from "@/hooks/useIsMemberOnly";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { InstallPrompt } from "@/components/pwa/InstallPrompt";
+import { HiddenModeProvider } from "@/contexts/HiddenModeContext";
 import Dashboard from "./pages/Dashboard";
 import Members from "./pages/Members";
 import AdminMembers from "./pages/AdminMembers";
@@ -220,6 +221,7 @@ function AuthRoute({ children }: { children: React.ReactNode }) {
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
+    <HiddenModeProvider>
     {/* Toast notification providers */}
     <Toaster />
     <Sonner />
@@ -263,6 +265,7 @@ const App = () => (
         <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>
+    </HiddenModeProvider>
   </QueryClientProvider>
 );
 
