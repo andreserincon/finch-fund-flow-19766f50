@@ -681,7 +681,14 @@ Deno.serve(async (req) => {
 });
 
 function buildFlowTable(data: any, formatCurrency: (amount: number, currency?: string) => string): string {
-  const cats = Object.keys(data.categoryFlows || {});
+  // Order categories: loan_disbursement before loan_repayment
+  const categoryOrder = [
+    'monthly_fee', 'extraordinary_income', 'donation', 'reimbursement',
+    'event_expense', 'parent_organization_fee', 'other_expense', 'other_income',
+    'event_payment', 'account_yield', 'loan_disbursement', 'loan_repayment',
+  ];
+  const allCats = Object.keys(data.categoryFlows || {});
+  const cats = categoryOrder.filter(c => allCats.includes(c)).concat(allCats.filter(c => !categoryOrder.includes(c)));
   let totalIncARS = 0, totalIncUSD = 0, totalExpARS = 0, totalExpUSD = 0;
   
   const catRows = cats.map((cat: string) => {
@@ -733,7 +740,7 @@ function buildFlowTable(data: any, formatCurrency: (amount: number, currency?: s
     + '</tr></thead>'
     + '<tbody>'
     + '<tr class="summary-row">'
-    + '<td>Flujo Inicial</td>'
+    + '<td>Balance Inicial</td>'
     + '<td class="text-right">' + formatCurrency(data.initialARS) + '</td>'
     + '<td class="text-right">' + formatCurrency(data.initialUSD, 'USD') + '</td>'
     + '<td class="text-right">-</td>'
@@ -850,14 +857,14 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
         </thead>
         <tbody>${memberRows}</tbody>
       </table>`
-    : `<p style="color: #666; text-align: center;">No hay miembros con más de un mes de capita pendiente.</p>`;
+    : `<p style="color: #000; text-align: center;">No hay miembros con más de un mes de capita pendiente.</p>`;
 
   // Build loans section
   let loansSection = '';
   if (isLite) {
     if (data.totalActiveLoans > 0) {
-      const usdNoteAmount = data.totalLoanAmountUSD > 0 ? `<div style="font-size: 8px; color: #666; margin-top: 2px;">Incluye USD ${formatCurrency(data.totalLoanAmountUSD, 'USD')} × ${data.exchangeRate}</div>` : '';
-      const usdNoteDue = data.totalLoanDueUSD > 0 ? `<div style="font-size: 8px; color: #666; margin-top: 2px;">Incluye USD ${formatCurrency(data.totalLoanDueUSD, 'USD')} × ${data.exchangeRate}</div>` : '';
+      const usdNoteAmount = data.totalLoanAmountUSD > 0 ? `<div style="font-size: 8px; color: #000; margin-top: 2px;">Incluye USD ${formatCurrency(data.totalLoanAmountUSD, 'USD')} × ${data.exchangeRate}</div>` : '';
+      const usdNoteDue = data.totalLoanDueUSD > 0 ? `<div style="font-size: 8px; color: #000; margin-top: 2px;">Incluye USD ${formatCurrency(data.totalLoanDueUSD, 'USD')} × ${data.exchangeRate}</div>` : '';
       loansSection = `
         <div class="section">
           <h2 class="section-title">${loansSectionNum}. Préstamos Activos (Resumen)</h2>
@@ -1088,7 +1095,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
     
     .stat-label {
       font-size: 7px;
-      color: #555;
+      color: #000;
       text-transform: uppercase;
       margin-bottom: 2px;
     }
@@ -1133,7 +1140,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
     .footer {
       text-align: center;
       font-size: 7px;
-      color: #666;
+      color: #000;
       padding: 4px;
       border-top: 1px solid #999;
       margin-top: 8px;
@@ -1171,7 +1178,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
       border-bottom: 1px solid #ccc;
       padding-bottom: 2px;
     }
-    .stat-subtext { font-size: 7px; color: #777; margin-top: 2px; }
+    .stat-subtext { font-size: 7px; color: #000; margin-top: 2px; }
   ` : `
     /* Comprehensive report - full styling */
     @media print {
@@ -1250,9 +1257,9 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
         border-bottom: 1px solid #999;
         margin-bottom: 15px;
         font-size: 10px;
-        color: #666;
+        color: #000;
       }
-      .page-header .logo-small { width: 30px; height: auto; }
+      .page-header .logo-small { width: 55px; height: auto; }
     }
     
     .section { margin-bottom: 15px; page-break-inside: avoid; }
@@ -1287,7 +1294,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
     
     .stat-label {
       font-size: 10px;
-      color: #555;
+      color: #000;
       text-transform: uppercase;
       margin-bottom: 2px;
     }
@@ -1332,7 +1339,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
     .footer {
       text-align: center;
       font-size: 10px;
-      color: #666;
+      color: #000;
       padding: 10px;
       border-top: 1px solid #999;
       margin-top: 20px;
@@ -1366,7 +1373,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
       border-bottom: 1px solid #ccc;
       padding-bottom: 3px;
     }
-    .stat-subtext { font-size: 9px; color: #777; margin-top: 2px; }
+    .stat-subtext { font-size: 9px; color: #000; margin-top: 2px; }
   `;
 
   return `<!DOCTYPE html>
@@ -1409,7 +1416,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
       <div class="stat-card ${data.totalARSBalance >= 0 ? 'success' : 'danger'}">
         <div class="stat-label">Balance Total (ARS)</div>
         <div class="stat-value">${formatCurrency(data.totalARSBalance)}</div>
-        ${isLite ? '' : `<div style="font-size: 10px; color: #666; margin-top: 4px;">Incluye USD al TC Oficial: ${formatCurrency(data.exchangeRate)}</div>`}
+        ${isLite ? '' : `<div style="font-size: 10px; color: #000; margin-top: 4px;">Incluye USD al TC Oficial: ${formatCurrency(data.exchangeRate)}</div>`}
       </div>
       <div class="stat-card ${data.bankBalance >= 0 ? 'success' : 'danger'}">
         <div class="stat-label">Cuenta Bancaria (ARS)</div>
@@ -1424,7 +1431,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
       <div class="stat-card ${data.savingsBalance >= 0 ? 'success' : 'danger'}">
         <div class="stat-label">Cuenta de Ahorros (USD)</div>
         <div class="stat-value">${formatCurrency(data.savingsBalance, 'USD')}</div>
-        <div style="font-size: 11px; color: #666; margin-top: 4px;">Equivalente en ARS: ${formatCurrency(data.savingsBalance * data.exchangeRate)}</div>
+        <div style="font-size: 11px; color: #000; margin-top: 4px;">Equivalente en ARS: ${formatCurrency(data.savingsBalance * data.exchangeRate)}</div>
       </div>
     </div>`}
 
@@ -1520,7 +1527,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
         <div class="stat-value">${data.collectionPercentage}%</div>
       </div>
     </div>
-    ${isLite ? '' : `<p style="margin-top: 15px; color: #555;">
+    ${isLite ? '' : `<p style="margin-top: 15px; color: #000;">
       <strong>${data.membersMissingPayment}</strong> miembro(s) sin pago registrado este mes.
     </p>`}
   </div>
