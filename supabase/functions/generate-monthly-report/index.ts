@@ -1185,7 +1185,8 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
       body { margin: 0; padding: 10px; }
       .page-break { page-break-before: always; }
       .no-print { display: none; }
-      @page { margin: 12mm 15mm; size: A4; }
+      @page { margin: 15mm 15mm; size: A4; }
+      @page :first { margin-top: 15mm; }
     }
     
     * { box-sizing: border-box; }
@@ -1247,19 +1248,29 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
     }
     
     .page-header { display: none; }
+    .page-footer { display: none; }
     
     @media print {
       .page-header {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding-bottom: 10px;
+        padding: 5mm 0 8px 0;
         border-bottom: 1px solid #999;
         margin-bottom: 15px;
         font-size: 10px;
         color: #000;
       }
       .page-header .logo-small { width: 55px; height: auto; }
+      .page-footer {
+        display: block;
+        text-align: center;
+        font-size: 9px;
+        color: #000;
+        border-top: 1px solid #999;
+        padding-top: 6px;
+        margin-top: 15px;
+      }
     }
     
     .section { margin-bottom: 15px; page-break-inside: avoid; }
