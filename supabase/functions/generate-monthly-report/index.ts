@@ -1255,7 +1255,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
       .page-header .logo-small { width: 30px; height: auto; }
     }
     
-    .section { margin-bottom: 15px; }
+    .section { margin-bottom: 15px; page-break-inside: avoid; }
     
     .section-title {
       background: #000;
