@@ -19,7 +19,7 @@ export function HiddenModeProvider({ children }: { children: ReactNode }) {
 
   const displayName = (fullName: string, matricula?: string | null) => {
     if (!hiddenMode) return fullName;
-    return matricula ? `Mat. ${matricula}` : '***';
+    return matricula || '***';
   };
 
   return (
