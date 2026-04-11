@@ -681,7 +681,14 @@ Deno.serve(async (req) => {
 });
 
 function buildFlowTable(data: any, formatCurrency: (amount: number, currency?: string) => string): string {
-  const cats = Object.keys(data.categoryFlows || {});
+  // Order categories: loan_disbursement before loan_repayment
+  const categoryOrder = [
+    'monthly_fee', 'extraordinary_income', 'donation', 'reimbursement',
+    'event_expense', 'parent_organization_fee', 'other_expense', 'other_income',
+    'event_payment', 'account_yield', 'loan_disbursement', 'loan_repayment',
+  ];
+  const allCats = Object.keys(data.categoryFlows || {});
+  const cats = categoryOrder.filter(c => allCats.includes(c)).concat(allCats.filter(c => !categoryOrder.includes(c)));
   let totalIncARS = 0, totalIncUSD = 0, totalExpARS = 0, totalExpUSD = 0;
   
   const catRows = cats.map((cat: string) => {
@@ -733,7 +740,7 @@ function buildFlowTable(data: any, formatCurrency: (amount: number, currency?: s
     + '</tr></thead>'
     + '<tbody>'
     + '<tr class="summary-row">'
-    + '<td>Flujo Inicial</td>'
+    + '<td>Balance Inicial</td>'
     + '<td class="text-right">' + formatCurrency(data.initialARS) + '</td>'
     + '<td class="text-right">' + formatCurrency(data.initialUSD, 'USD') + '</td>'
     + '<td class="text-right">-</td>'
@@ -1252,7 +1259,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
         font-size: 10px;
         color: #666;
       }
-      .page-header .logo-small { width: 30px; height: auto; }
+      .page-header .logo-small { width: 55px; height: auto; }
     }
     
     .section { margin-bottom: 15px; page-break-inside: avoid; }
