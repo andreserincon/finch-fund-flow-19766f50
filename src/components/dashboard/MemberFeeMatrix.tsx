@@ -256,7 +256,7 @@ export function MemberFeeMatrix({ filterMemberId }: { filterMemberId?: string | 
               {displayedMembers.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={months.length + 1} className="text-center py-8 text-muted-foreground">
-                    {showAllMembers ? 'No active members' : 'All members are up to date!'}
+                    {showAllMembers ? 'No hay miembros activos' : '¡Todos los miembros están al día!'}
                   </TableCell>
                 </TableRow>
               ) : (
