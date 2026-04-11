@@ -12,24 +12,10 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
 } from '@/components/ui/dialog';
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { useExtraordinaryExpenses, ExtraordinaryExpense } from '@/hooks/useExtraordinaryExpenses';
 import { useEventMemberPayments } from '@/hooks/useEventMemberPayments';
@@ -39,9 +25,9 @@ import { PlusCircle, Pencil, Trash2, Tag, Users, Check, X } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 const expenseSchema = z.object({
-  name: z.string().min(1, 'Name is required').max(100),
+  name: z.string().min(1, 'El nombre es obligatorio').max(100),
   description: z.string().max(500).optional(),
-  default_amount: z.number().min(0, 'Amount must be positive'),
+  default_amount: z.number().min(0, 'El monto debe ser positivo'),
   assign_to_members: z.boolean().optional(),
 });
 
@@ -68,14 +54,12 @@ function AddExpenseDialog() {
       description: data.description,
       default_amount: data.default_amount,
     });
-
     if (data.assign_to_members && result?.id && data.default_amount > 0) {
       await createPaymentsForAllMembers.mutateAsync({
         eventId: result.id,
         amountPerMember: data.default_amount,
       });
     }
-
     reset();
     setOpen(false);
   };
@@ -83,51 +67,40 @@ function AddExpenseDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button>
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Add Event
-        </Button>
+        <Button><PlusCircle className="mr-2 h-4 w-4" />Agregar Evento</Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Add Event / Expense Category</DialogTitle>
-          <DialogDescription>Create a new event with fees for all members.</DialogDescription>
+          <DialogTitle>Agregar Evento / Categoría de Gasto</DialogTitle>
+          <DialogDescription>Crear un nuevo evento con cuotas para todos los miembros.</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="name">Event Name</Label>
-            <Input id="name" {...register('name')} placeholder="e.g., Year End Party" />
+            <Label htmlFor="name">Nombre del Evento</Label>
+            <Input id="name" {...register('name')} placeholder="ej., Fiesta de Fin de Año" />
             {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="description">Description (Optional)</Label>
-            <Textarea id="description" {...register('description')} placeholder="Brief description..." rows={2} />
+            <Label htmlFor="description">Descripción (Opcional)</Label>
+            <Textarea id="description" {...register('description')} placeholder="Breve descripción..." rows={2} />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="default_amount">Fee Per Member (ARS)</Label>
+            <Label htmlFor="default_amount">Cuota por Miembro (ARS)</Label>
             <Input id="default_amount" type="number" step="0.01" {...register('default_amount', { valueAsNumber: true })} />
             {errors.default_amount && <p className="text-sm text-destructive">{errors.default_amount.message}</p>}
           </div>
-
           <div className="flex items-center space-x-2 p-3 bg-muted rounded-lg">
-            <Checkbox
-              id="assign_to_members"
-              checked={assignToMembers}
-              onCheckedChange={(checked) => setValue('assign_to_members', !!checked)}
-            />
+            <Checkbox id="assign_to_members" checked={assignToMembers} onCheckedChange={(checked) => setValue('assign_to_members', !!checked)} />
             <div className="flex-1">
-              <Label htmlFor="assign_to_members" className="cursor-pointer">
-                Assign fee to all active members
-              </Label>
+              <Label htmlFor="assign_to_members" className="cursor-pointer">Asignar cuota a todos los miembros activos</Label>
               <p className="text-xs text-muted-foreground">
-                {activeMembersCount} active members × ARS {defaultAmount?.toFixed(2) || '0.00'} = ARS {(activeMembersCount * (defaultAmount || 0)).toFixed(2)}
+                {activeMembersCount} miembros activos × ARS {defaultAmount?.toFixed(2) || '0.00'} = ARS {(activeMembersCount * (defaultAmount || 0)).toFixed(2)}
               </p>
             </div>
           </div>
-
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button type="submit" disabled={isSubmitting}>{isSubmitting ? 'Creating...' : 'Create Event'}</Button>
+            <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
+            <Button type="submit" disabled={isSubmitting}>{isSubmitting ? 'Creando...' : 'Crear Evento'}</Button>
           </DialogFooter>
         </form>
       </DialogContent>
@@ -141,53 +114,42 @@ function EditExpenseDialog({ expense }: { expense: ExtraordinaryExpense }) {
 
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<ExpenseFormData>({
     resolver: zodResolver(expenseSchema),
-    defaultValues: {
-      name: expense.name,
-      description: expense.description || '',
-      default_amount: expense.default_amount,
-    },
+    defaultValues: { name: expense.name, description: expense.description || '', default_amount: expense.default_amount },
   });
 
   const onSubmit = async (data: ExpenseFormData) => {
-    await updateExpense.mutateAsync({ 
-      id: expense.id, 
-      name: data.name,
-      description: data.description,
-      default_amount: data.default_amount,
-    });
+    await updateExpense.mutateAsync({ id: expense.id, name: data.name, description: data.description, default_amount: data.default_amount });
     setOpen(false);
   };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="icon">
-          <Pencil className="h-4 w-4" />
-        </Button>
+        <Button variant="ghost" size="icon"><Pencil className="h-4 w-4" /></Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Edit Event</DialogTitle>
-          <DialogDescription>Update the event details.</DialogDescription>
+          <DialogTitle>Editar Evento</DialogTitle>
+          <DialogDescription>Actualizar los detalles del evento.</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="edit-name">Name</Label>
+            <Label htmlFor="edit-name">Nombre</Label>
             <Input id="edit-name" {...register('name')} />
             {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="edit-description">Description (Optional)</Label>
+            <Label htmlFor="edit-description">Descripción (Opcional)</Label>
             <Textarea id="edit-description" {...register('description')} rows={2} />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="edit-default_amount">Fee Per Member (ARS)</Label>
+            <Label htmlFor="edit-default_amount">Cuota por Miembro (ARS)</Label>
             <Input id="edit-default_amount" type="number" step="0.01" {...register('default_amount', { valueAsNumber: true })} />
             {errors.default_amount && <p className="text-sm text-destructive">{errors.default_amount.message}</p>}
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button type="submit" disabled={isSubmitting}>{isSubmitting ? 'Saving...' : 'Save Changes'}</Button>
+            <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
+            <Button type="submit" disabled={isSubmitting}>{isSubmitting ? 'Guardando...' : 'Guardar Cambios'}</Button>
           </DialogFooter>
         </form>
       </DialogContent>
@@ -202,51 +164,24 @@ function ViewPaymentsDialog({ expense }: { expense: ExtraordinaryExpense }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editAmount, setEditAmount] = useState<string>('');
 
-  // Get list of members already in the event, sorted alphabetically
   const memberIdsInEvent = new Set(payments.map((p: any) => p.member_id));
-  const sortedPayments = [...payments].sort((a: any, b: any) => 
-    (a.member?.full_name || '').localeCompare(b.member?.full_name || '')
-  );
-  
-  // Get active members not in the event, sorted alphabetically
-  const membersNotInEvent = memberBalances
-    .filter(m => m.is_active && !memberIdsInEvent.has(m.member_id))
-    .sort((a, b) => a.full_name.localeCompare(b.full_name));
+  const sortedPayments = [...payments].sort((a: any, b: any) => (a.member?.full_name || '').localeCompare(b.member?.full_name || ''));
+  const membersNotInEvent = memberBalances.filter(m => m.is_active && !memberIdsInEvent.has(m.member_id)).sort((a, b) => a.full_name.localeCompare(b.full_name));
 
   const handleMarkPaid = async (paymentId: string, amountOwed: number) => {
     await updatePayment.mutateAsync({ id: paymentId, amount_paid: amountOwed });
   };
-
-  const handleToggleMember = async (payment: any) => {
-    await removeMemberFromEvent.mutateAsync(payment.id);
-  };
-
+  const handleToggleMember = async (payment: any) => { await removeMemberFromEvent.mutateAsync(payment.id); };
   const handleAddMember = async (memberId: string) => {
-    await addMemberToEvent.mutateAsync({
-      eventId: expense.id,
-      memberId,
-      amountOwed: expense.default_amount,
-    });
+    await addMemberToEvent.mutateAsync({ eventId: expense.id, memberId, amountOwed: expense.default_amount });
   };
-
-  const handleStartEdit = (paymentId: string, currentAmount: number) => {
-    setEditingId(paymentId);
-    setEditAmount(currentAmount.toString());
-  };
-
+  const handleStartEdit = (paymentId: string, currentAmount: number) => { setEditingId(paymentId); setEditAmount(currentAmount.toString()); };
   const handleSaveEdit = async (paymentId: string) => {
     const newAmount = parseFloat(editAmount);
-    if (!isNaN(newAmount) && newAmount >= 0) {
-      await updatePayment.mutateAsync({ id: paymentId, amount_owed: newAmount });
-    }
-    setEditingId(null);
-    setEditAmount('');
+    if (!isNaN(newAmount) && newAmount >= 0) await updatePayment.mutateAsync({ id: paymentId, amount_owed: newAmount });
+    setEditingId(null); setEditAmount('');
   };
-
-  const handleCancelEdit = () => {
-    setEditingId(null);
-    setEditAmount('');
-  };
+  const handleCancelEdit = () => { setEditingId(null); setEditAmount(''); };
 
   const totalOwed = payments.reduce((sum, p) => sum + Number(p.amount_owed), 0);
   const totalPaid = payments.reduce((sum, p) => sum + Number(p.amount_paid), 0);
@@ -254,129 +189,93 @@ function ViewPaymentsDialog({ expense }: { expense: ExtraordinaryExpense }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="icon">
-          <Users className="h-4 w-4" />
-        </Button>
+        <Button variant="ghost" size="icon"><Users className="h-4 w-4" /></Button>
       </DialogTrigger>
       <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col overflow-hidden">
         <DialogHeader className="flex-shrink-0">
-          <DialogTitle>{expense.name} - Member Payments</DialogTitle>
+          <DialogTitle>{expense.name} - Pagos de Miembros</DialogTitle>
           <DialogDescription>
-            {payments.length} members assigned • ARS {totalPaid.toFixed(2)} / ARS {totalOwed.toFixed(2)} collected
+            {payments.length} miembros asignados • ARS {totalPaid.toFixed(2)} / ARS {totalOwed.toFixed(2)} recaudados
           </DialogDescription>
         </DialogHeader>
-        
         {isLoading ? (
-          <div className="text-center py-4">Loading...</div>
+          <div className="text-center py-4">Cargando...</div>
         ) : (
           <div className="flex-1 overflow-auto min-h-0">
             <div className="min-w-[600px]">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[60px]">Include</TableHead>
-                    <TableHead className="min-w-[150px]">Member</TableHead>
-                    <TableHead className="text-right min-w-[120px]">Fee Owed</TableHead>
-                    <TableHead className="text-right min-w-[100px]">Paid</TableHead>
-                    <TableHead className="text-center min-w-[80px]">Status</TableHead>
+                    <TableHead className="w-[60px]">Incluir</TableHead>
+                    <TableHead className="min-w-[150px]">Miembro</TableHead>
+                    <TableHead className="text-right min-w-[120px]">Cuota Adeudada</TableHead>
+                    <TableHead className="text-right min-w-[100px]">Pagado</TableHead>
+                    <TableHead className="text-center min-w-[80px]">Estado</TableHead>
                     <TableHead className="min-w-[100px]"></TableHead>
                   </TableRow>
                 </TableHeader>
-              <TableBody>
-                {payments.length === 0 && membersNotInEvent.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center py-4 text-muted-foreground">
-                      No members available.
-                    </TableCell>
-                  </TableRow>
-                )}
-                {sortedPayments.map((payment: any) => {
-                  const isPaid = Number(payment.amount_paid) >= Number(payment.amount_owed);
-                  const isEditing = editingId === payment.id;
-                  
-                  return (
-                    <TableRow key={payment.id}>
-                      <TableCell>
-                        <Checkbox
-                          checked={true}
-                          onCheckedChange={() => handleToggleMember(payment)}
-                          disabled={isPaid}
-                        />
-                      </TableCell>
-                      <TableCell>{payment.member?.full_name || 'Unknown'}</TableCell>
-                      <TableCell className="text-right">
-                        {isEditing ? (
-                          <div className="flex items-center justify-end gap-1">
-                            <Input
-                              type="number"
-                              value={editAmount}
-                              onChange={(e) => setEditAmount(e.target.value)}
-                              className="w-24 h-8 text-right"
-                              step="0.01"
-                              autoFocus
-                            />
-                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleSaveEdit(payment.id)}>
-                              <Check className="h-4 w-4 text-success" />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleCancelEdit}>
-                              <X className="h-4 w-4 text-destructive" />
-                            </Button>
-                          </div>
-                        ) : (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 px-2 font-mono"
-                            onClick={() => handleStartEdit(payment.id, Number(payment.amount_owed))}
-                            disabled={isPaid}
-                          >
-                            ARS {Number(payment.amount_owed).toFixed(2)}
-                          </Button>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right font-mono">ARS {Number(payment.amount_paid).toFixed(2)}</TableCell>
-                      <TableCell className="text-center">
-                        <Badge variant={isPaid ? 'default' : 'destructive'}>
-                          {isPaid ? 'Paid' : 'Pending'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {!isPaid && (
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => handleMarkPaid(payment.id, payment.amount_owed)}
-                          >
-                            Mark Paid
-                          </Button>
-                        )}
+                <TableBody>
+                  {payments.length === 0 && membersNotInEvent.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-4 text-muted-foreground">
+                        No hay miembros disponibles.
                       </TableCell>
                     </TableRow>
-                  );
-                })}
-                
-                {/* Members not yet in event */}
-                {membersNotInEvent.map((member) => (
-                  <TableRow key={member.member_id} className="opacity-60">
-                    <TableCell>
-                      <Checkbox
-                        checked={false}
-                        onCheckedChange={() => handleAddMember(member.member_id)}
-                      />
-                    </TableCell>
-                    <TableCell>{member.full_name}</TableCell>
-                    <TableCell className="text-right text-muted-foreground">
-                      ARS {expense.default_amount.toFixed(2)}
-                    </TableCell>
-                    <TableCell className="text-right text-muted-foreground">—</TableCell>
-                    <TableCell className="text-center">
-                      <Badge variant="outline">Not assigned</Badge>
-                    </TableCell>
-                    <TableCell></TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                  )}
+                  {sortedPayments.map((payment: any) => {
+                    const isPaid = Number(payment.amount_paid) >= Number(payment.amount_owed);
+                    const isEditing = editingId === payment.id;
+                    return (
+                      <TableRow key={payment.id}>
+                        <TableCell>
+                          <Checkbox checked={true} onCheckedChange={() => handleToggleMember(payment)} disabled={isPaid} />
+                        </TableCell>
+                        <TableCell>{payment.member?.full_name || 'Desconocido'}</TableCell>
+                        <TableCell className="text-right">
+                          {isEditing ? (
+                            <div className="flex items-center justify-end gap-1">
+                              <Input type="number" value={editAmount} onChange={(e) => setEditAmount(e.target.value)} className="w-24 h-8 text-right" step="0.01" autoFocus />
+                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleSaveEdit(payment.id)}>
+                                <Check className="h-4 w-4 text-success" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleCancelEdit}>
+                                <X className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </div>
+                          ) : (
+                            <Button variant="ghost" size="sm" className="h-8 px-2 font-mono" onClick={() => handleStartEdit(payment.id, Number(payment.amount_owed))} disabled={isPaid}>
+                              ARS {Number(payment.amount_owed).toFixed(2)}
+                            </Button>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right font-mono">ARS {Number(payment.amount_paid).toFixed(2)}</TableCell>
+                        <TableCell className="text-center">
+                          <Badge variant={isPaid ? 'default' : 'destructive'}>{isPaid ? 'Pagado' : 'Pendiente'}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          {!isPaid && (
+                            <Button variant="outline" size="sm" onClick={() => handleMarkPaid(payment.id, payment.amount_owed)}>
+                              Marcar Pagado
+                            </Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                  {membersNotInEvent.map((member) => (
+                    <TableRow key={member.member_id} className="opacity-60">
+                      <TableCell>
+                        <Checkbox checked={false} onCheckedChange={() => handleAddMember(member.member_id)} />
+                      </TableCell>
+                      <TableCell>{member.full_name}</TableCell>
+                      <TableCell className="text-right text-muted-foreground">ARS {expense.default_amount.toFixed(2)}</TableCell>
+                      <TableCell className="text-right text-muted-foreground">—</TableCell>
+                      <TableCell className="text-center"><Badge variant="outline">No asignado</Badge></TableCell>
+                      <TableCell></TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </div>
           </div>
         )}
@@ -387,28 +286,22 @@ function ViewPaymentsDialog({ expense }: { expense: ExtraordinaryExpense }) {
 
 function DeleteExpenseDialog({ expense }: { expense: ExtraordinaryExpense }) {
   const { deleteExpense } = useExtraordinaryExpenses();
-
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>
-        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
-          <Trash2 className="h-4 w-4" />
-        </Button>
+        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete "{expense.name}"?</AlertDialogTitle>
+          <AlertDialogTitle>¿Eliminar "{expense.name}"?</AlertDialogTitle>
           <AlertDialogDescription>
-            This will delete the event and all associated member payment records. This action cannot be undone.
+            Esto eliminará el evento y todos los registros de pagos de miembros asociados. Esta acción no se puede deshacer.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction
-            onClick={() => deleteExpense.mutate(expense.id)}
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-          >
-            Delete
+          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+          <AlertDialogAction onClick={() => deleteExpense.mutate(expense.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            Eliminar
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -428,8 +321,8 @@ export default function ExtraordinaryExpenses() {
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Events & Expenses</h1>
-          <p className="text-muted-foreground">Manage events with per-member fees</p>
+          <h1 className="text-2xl font-bold text-foreground">Eventos y Gastos</h1>
+          <p className="text-muted-foreground">Gestionar eventos con cuotas por miembro</p>
         </div>
         {isAdmin && <AddExpenseDialog />}
       </div>
@@ -438,44 +331,36 @@ export default function ExtraordinaryExpenses() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Tag className="h-5 w-5 text-primary" />
-            Events
+            Eventos
           </CardTitle>
-          <CardDescription>
-            Event fees are automatically added to member balances
-          </CardDescription>
+          <CardDescription>Las cuotas de eventos se agregan automáticamente a los saldos de miembros</CardDescription>
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="text-center py-8 text-muted-foreground">Loading...</div>
+            <div className="text-center py-8 text-muted-foreground">Cargando...</div>
           ) : expenses.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              No events yet. Create your first one!
+              Aún no hay eventos. ¡Creá el primero!
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Event Name</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead className="text-right">Fee/Member</TableHead>
-                  <TableHead className="text-center">Active</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead>Nombre del Evento</TableHead>
+                  <TableHead>Descripción</TableHead>
+                  <TableHead className="text-right">Cuota/Miembro</TableHead>
+                  <TableHead className="text-center">Activo</TableHead>
+                  <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {expenses.map((expense) => (
                   <TableRow key={expense.id}>
                     <TableCell className="font-medium">{expense.name}</TableCell>
-                    <TableCell className="text-muted-foreground max-w-xs truncate">
-                      {expense.description || '—'}
-                    </TableCell>
+                    <TableCell className="text-muted-foreground max-w-xs truncate">{expense.description || '—'}</TableCell>
                     <TableCell className="text-right">ARS {expense.default_amount.toFixed(2)}</TableCell>
                     <TableCell className="text-center">
-                      <Switch
-                        checked={expense.is_active}
-                        onCheckedChange={() => handleToggleActive(expense)}
-                        disabled={!isAdmin}
-                      />
+                      <Switch checked={expense.is_active} onCheckedChange={() => handleToggleActive(expense)} disabled={!isAdmin} />
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">

@@ -9,7 +9,6 @@ import { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { AppSidebar } from './AppSidebar';
-import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { useOrientationToggle } from '@/hooks/useOrientationToggle';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { RotateCcw, Smartphone } from 'lucide-react';
@@ -60,8 +59,6 @@ export function MainLayout({ children }: MainLayoutProps) {
                   {isLandscape ? <Smartphone className="h-5 w-5" /> : <RotateCcw className="h-5 w-5" />}
                 </Button>
               )}
-              {/* Language switcher (EN / ES) */}
-              <LanguageSwitcher />
             </div>
           </div>
 

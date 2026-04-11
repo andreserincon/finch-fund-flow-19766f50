@@ -11,23 +11,16 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { MoreHorizontal, Plus, CheckCircle, XCircle, Trash2, DollarSign, History, Undo2 } from 'lucide-react';
 import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 import { Loan, ACCOUNT_LABELS, LOAN_STATUS_LABELS, LoanStatus } from '@/lib/types';
 import { formatCurrency, getCurrencyForAccount, cn, parseLocalDate } from '@/lib/utils';
 
@@ -43,18 +36,13 @@ export default function Loans() {
   const [revertingLoan, setRevertingLoan] = useState<Loan | null>(null);
 
   const filteredLoans = showPaid
-    ? loans
-        .filter((loan) => loan.status === 'paid')
-        .sort((a, b) => {
-          const dateA = a.paid_date ? new Date(a.paid_date).getTime() : 0;
-          const dateB = b.paid_date ? new Date(b.paid_date).getTime() : 0;
-          return dateB - dateA;
-        })
-    : loans
-        .filter((loan) => loan.status === 'active')
-        .sort((a, b) => b.amount - a.amount);
+    ? loans.filter((loan) => loan.status === 'paid').sort((a, b) => {
+        const dateA = a.paid_date ? new Date(a.paid_date).getTime() : 0;
+        const dateB = b.paid_date ? new Date(b.paid_date).getTime() : 0;
+        return dateB - dateA;
+      })
+    : loans.filter((loan) => loan.status === 'active').sort((a, b) => b.amount - a.amount);
 
-  // Calculate totals for active loans
   const activeLoansARS = loans.filter((l) => l.status === 'active' && l.account !== 'savings');
   const activeLoansUSD = loans.filter((l) => l.status === 'active' && l.account === 'savings');
 
@@ -72,35 +60,30 @@ export default function Loans() {
       paid: 'bg-success/10 text-success hover:bg-success/20',
       cancelled: 'bg-muted text-muted-foreground hover:bg-muted/80',
     };
-    return (
-      <Badge className={cn(variants[status])}>
-        {LOAN_STATUS_LABELS[status]}
-      </Badge>
-    );
+    return <Badge className={cn(variants[status])}>{LOAN_STATUS_LABELS[status]}</Badge>;
   };
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-pulse text-muted-foreground">Loading...</div>
+        <div className="animate-pulse text-muted-foreground">Cargando...</div>
       </div>
     );
   }
 
   return (
     <div className="space-y-4 md:space-y-6 animate-fade-in">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-xl md:text-2xl font-bold text-foreground">Loans</h1>
+          <h1 className="text-xl md:text-2xl font-bold text-foreground">Préstamos</h1>
           <p className="text-sm text-muted-foreground">
-            Manage member loans and track repayments
+            Gestionar préstamos de miembros y seguimiento de pagos
           </p>
         </div>
         {isAdmin && (
           <Button onClick={() => setShowAddDialog(true)}>
             <Plus className="h-4 w-4 mr-2" />
-            New Loan
+            Nuevo Préstamo
           </Button>
         )}
       </div>
@@ -109,67 +92,56 @@ export default function Loans() {
       <div className="grid gap-3 grid-cols-1 md:grid-cols-2">
         <div className="stat-card space-y-3">
           <div className="flex justify-between items-start">
-            <p className="text-sm text-muted-foreground">Active Loans (ARS)</p>
-            <Badge variant="outline" className="text-xs">
-              {activeLoansARS.length} loans
-            </Badge>
+            <p className="text-sm text-muted-foreground">Préstamos Activos (ARS)</p>
+            <Badge variant="outline" className="text-xs">{activeLoansARS.length} préstamos</Badge>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <p className="text-xs text-muted-foreground">Total Due</p>
+              <p className="text-xs text-muted-foreground">Total Adeudado</p>
               <p className="text-lg font-bold font-mono">{formatCurrency(totalDueARS, 'ARS')}</p>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">Paid</p>
+              <p className="text-xs text-muted-foreground">Pagado</p>
               <p className="text-lg font-bold font-mono text-success">{formatCurrency(totalPaidARS, 'ARS')}</p>
             </div>
           </div>
           <div>
-            <p className="text-xs text-muted-foreground">Remaining</p>
+            <p className="text-xs text-muted-foreground">Pendiente</p>
             <p className="text-xl font-bold font-mono text-warning">{formatCurrency(remainingDueARS, 'ARS')}</p>
           </div>
         </div>
         <div className="stat-card space-y-3">
           <div className="flex justify-between items-start">
-            <p className="text-sm text-muted-foreground">Active Loans (USD)</p>
-            <Badge variant="outline" className="text-xs">
-              {activeLoansUSD.length} loans
-            </Badge>
+            <p className="text-sm text-muted-foreground">Préstamos Activos (USD)</p>
+            <Badge variant="outline" className="text-xs">{activeLoansUSD.length} préstamos</Badge>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <p className="text-xs text-muted-foreground">Total Due</p>
+              <p className="text-xs text-muted-foreground">Total Adeudado</p>
               <p className="text-lg font-bold font-mono">{formatCurrency(totalDueUSD, 'USD')}</p>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">Paid</p>
+              <p className="text-xs text-muted-foreground">Pagado</p>
               <p className="text-lg font-bold font-mono text-success">{formatCurrency(totalPaidUSD, 'USD')}</p>
             </div>
           </div>
           <div>
-            <p className="text-xs text-muted-foreground">Remaining</p>
+            <p className="text-xs text-muted-foreground">Pendiente</p>
             <p className="text-xl font-bold font-mono text-warning">{formatCurrency(remainingDueUSD, 'USD')}</p>
           </div>
         </div>
       </div>
 
-      {/* Filters */}
       <div className="flex items-center gap-3">
-        <Switch
-          id="show-paid"
-          checked={showPaid}
-          onCheckedChange={setShowPaid}
-        />
-        <Label htmlFor="show-paid" className="text-sm cursor-pointer">
-          Show paid loans
-        </Label>
+        <Switch id="show-paid" checked={showPaid} onCheckedChange={setShowPaid} />
+        <Label htmlFor="show-paid" className="text-sm cursor-pointer">Mostrar préstamos pagados</Label>
       </div>
 
       {/* Mobile Card View */}
       <div className="md:hidden space-y-3">
         {filteredLoans.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground bg-card rounded-lg border">
-            No loans found
+            No se encontraron préstamos
           </div>
         ) : (
           filteredLoans.map((loan) => {
@@ -182,7 +154,7 @@ export default function Loans() {
                   <div className="space-y-1">
                     <p className="font-medium">{loan.member?.full_name}</p>
                     <p className="text-xs text-muted-foreground">
-                      {format(parseLocalDate(loan.loan_date), 'MMM d, yyyy')}
+                      {format(parseLocalDate(loan.loan_date), 'd MMM yyyy', { locale: es })}
                       {' • '}{ACCOUNT_LABELS[loan.account]}
                     </p>
                   </div>
@@ -191,52 +163,37 @@ export default function Loans() {
                     {isAdmin ? (
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="bg-popover">
                           {loan.status === 'active' && (
                             <>
                               <DropdownMenuItem onClick={() => setAddingPaymentLoan(loan)}>
-                                <DollarSign className="mr-2 h-4 w-4" />
-                                Add Payment
+                                <DollarSign className="mr-2 h-4 w-4" />Agregar Pago
                               </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => setViewingHistoryLoan(loan)}>
-                                <History className="mr-2 h-4 w-4" />
-                                View History
+                                <History className="mr-2 h-4 w-4" />Ver Historial
                               </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => setMarkingPaidLoan(loan)}>
-                                <CheckCircle className="mr-2 h-4 w-4" />
-                                Mark as Fully Paid
+                                <CheckCircle className="mr-2 h-4 w-4" />Marcar como Pagado
                               </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => cancelLoan.mutate(loan.id)}
-                                className="text-warning focus:text-warning"
-                              >
-                                <XCircle className="mr-2 h-4 w-4" />
-                                Cancel Loan
+                              <DropdownMenuItem onClick={() => cancelLoan.mutate(loan.id)} className="text-warning focus:text-warning">
+                                <XCircle className="mr-2 h-4 w-4" />Cancelar Préstamo
                               </DropdownMenuItem>
                             </>
                           )}
                           {loan.status === 'paid' && (
                             <>
                               <DropdownMenuItem onClick={() => setViewingHistoryLoan(loan)}>
-                                <History className="mr-2 h-4 w-4" />
-                                View History
+                                <History className="mr-2 h-4 w-4" />Ver Historial
                               </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => setRevertingLoan(loan)}>
-                                <Undo2 className="mr-2 h-4 w-4" />
-                                Revert to Active
+                                <Undo2 className="mr-2 h-4 w-4" />Revertir a Activo
                               </DropdownMenuItem>
                             </>
                           )}
-                          <DropdownMenuItem
-                            onClick={() => setDeletingLoan(loan)}
-                            className="text-destructive focus:text-destructive"
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete
+                          <DropdownMenuItem onClick={() => setDeletingLoan(loan)} className="text-destructive focus:text-destructive">
+                            <Trash2 className="mr-2 h-4 w-4" />Eliminar
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -247,41 +204,29 @@ export default function Loans() {
                     )}
                   </div>
                 </div>
-                
-                {/* Payment Progress */}
                 {loan.status === 'active' && (
                   <div className="space-y-1">
                     <div className="flex justify-between text-xs">
-                      <span className="text-muted-foreground">
-                        Paid: {formatCurrency(loan.amount_paid, currency)}
-                      </span>
+                      <span className="text-muted-foreground">Pagado: {formatCurrency(loan.amount_paid, currency)}</span>
                       <span className="font-medium">{paidPercentage.toFixed(0)}%</span>
                     </div>
                     <Progress value={paidPercentage} className="h-1.5" />
                   </div>
                 )}
-
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
-                    <p className="text-xs text-muted-foreground">
-                      {loan.status === 'active' ? 'Remaining Due' : 'Total'}
-                    </p>
-                    <span className={cn(
-                      "font-mono text-lg font-semibold",
-                      loan.status === 'active' && remainingDue > 0 && "text-warning"
-                    )}>
+                    <p className="text-xs text-muted-foreground">{loan.status === 'active' ? 'Pendiente' : 'Total'}</p>
+                    <span className={cn("font-mono text-lg font-semibold", loan.status === 'active' && remainingDue > 0 && "text-warning")}>
                       {formatCurrency(loan.status === 'active' ? remainingDue : loan.amount, currency)}
                     </span>
                   </div>
                   {loan.paid_date && (
                     <span className="text-xs text-muted-foreground">
-                      Paid: {format(parseLocalDate(loan.paid_date), 'MMM d, yyyy')}
+                      Pagado: {format(parseLocalDate(loan.paid_date), 'd MMM yyyy', { locale: es })}
                     </span>
                   )}
                 </div>
-                {loan.notes && (
-                  <p className="text-sm text-muted-foreground truncate">{loan.notes}</p>
-                )}
+                {loan.notes && <p className="text-sm text-muted-foreground truncate">{loan.notes}</p>}
               </div>
             );
           })
@@ -293,14 +238,14 @@ export default function Loans() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Date</TableHead>
-              <TableHead>Member</TableHead>
-              <TableHead>Account</TableHead>
+              <TableHead>Fecha</TableHead>
+              <TableHead>Miembro</TableHead>
+              <TableHead>Cuenta</TableHead>
               <TableHead>Total</TableHead>
-              <TableHead>Paid</TableHead>
-              <TableHead>Due</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Notes</TableHead>
+              <TableHead>Pagado</TableHead>
+              <TableHead>Pendiente</TableHead>
+              <TableHead>Estado</TableHead>
+              <TableHead>Notas</TableHead>
               <TableHead className="w-[50px]"></TableHead>
             </TableRow>
           </TableHeader>
@@ -308,7 +253,7 @@ export default function Loans() {
             {filteredLoans.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
-                  No loans found
+                  No se encontraron préstamos
                 </TableCell>
               </TableRow>
             ) : (
@@ -319,83 +264,62 @@ export default function Loans() {
                 return (
                   <TableRow key={loan.id}>
                     <TableCell className="font-medium">
-                      {format(parseLocalDate(loan.loan_date), 'MMM d, yyyy')}
+                      {format(parseLocalDate(loan.loan_date), 'd MMM yyyy', { locale: es })}
                     </TableCell>
                     <TableCell>{loan.member?.full_name}</TableCell>
                     <TableCell>
-                      <span className="text-xs text-muted-foreground">
-                        {ACCOUNT_LABELS[loan.account]}
-                      </span>
+                      <span className="text-xs text-muted-foreground">{ACCOUNT_LABELS[loan.account]}</span>
                     </TableCell>
-                    <TableCell className="font-mono">
-                      {formatCurrency(loan.amount, currency)}
-                    </TableCell>
+                    <TableCell className="font-mono">{formatCurrency(loan.amount, currency)}</TableCell>
                     <TableCell className="font-mono text-success">
                       {formatCurrency(loan.amount_paid, currency)}
                       {loan.status === 'active' && (
-                        <span className="text-xs text-muted-foreground ml-1">
-                          ({paidPercentage.toFixed(0)}%)
-                        </span>
+                        <span className="text-xs text-muted-foreground ml-1">({paidPercentage.toFixed(0)}%)</span>
                       )}
                     </TableCell>
                     <TableCell className={cn("font-mono font-semibold", loan.status === 'active' && remainingDue > 0 && "text-warning")}>
                       {formatCurrency(remainingDue, currency)}
                     </TableCell>
                     <TableCell>{getStatusBadge(loan.status)}</TableCell>
-                    <TableCell className="max-w-[150px] truncate text-muted-foreground">
-                      {loan.notes || '—'}
-                    </TableCell>
+                    <TableCell className="max-w-[150px] truncate text-muted-foreground">{loan.notes || '—'}</TableCell>
                     {isAdmin ? (
                       <TableCell>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="icon" className="h-8 w-8">
                               <MoreHorizontal className="h-4 w-4" />
-                              <span className="sr-only">Open menu</span>
+                              <span className="sr-only">Abrir menú</span>
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="bg-popover">
                             {loan.status === 'active' && (
                               <>
                                 <DropdownMenuItem onClick={() => setAddingPaymentLoan(loan)}>
-                                  <DollarSign className="mr-2 h-4 w-4" />
-                                  Add Payment
+                                  <DollarSign className="mr-2 h-4 w-4" />Agregar Pago
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => setViewingHistoryLoan(loan)}>
-                                  <History className="mr-2 h-4 w-4" />
-                                  View History
+                                  <History className="mr-2 h-4 w-4" />Ver Historial
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => setMarkingPaidLoan(loan)}>
-                                  <CheckCircle className="mr-2 h-4 w-4" />
-                                  Mark as Fully Paid
+                                  <CheckCircle className="mr-2 h-4 w-4" />Marcar como Pagado
                                 </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => cancelLoan.mutate(loan.id)}
-                                  className="text-warning focus:text-warning"
-                                >
-                                  <XCircle className="mr-2 h-4 w-4" />
-                                  Cancel Loan
+                                <DropdownMenuItem onClick={() => cancelLoan.mutate(loan.id)} className="text-warning focus:text-warning">
+                                  <XCircle className="mr-2 h-4 w-4" />Cancelar Préstamo
                                 </DropdownMenuItem>
                               </>
                             )}
                             {loan.status === 'paid' && (
                               <>
                                 <DropdownMenuItem onClick={() => setViewingHistoryLoan(loan)}>
-                                  <History className="mr-2 h-4 w-4" />
-                                  View History
+                                  <History className="mr-2 h-4 w-4" />Ver Historial
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => setRevertingLoan(loan)}>
-                                  <Undo2 className="mr-2 h-4 w-4" />
-                                  Revert to Active
+                                  <Undo2 className="mr-2 h-4 w-4" />Revertir a Activo
                                 </DropdownMenuItem>
                               </>
                             )}
-                            <DropdownMenuItem
-                              onClick={() => setDeletingLoan(loan)}
-                              className="text-destructive focus:text-destructive"
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Delete
+                            <DropdownMenuItem onClick={() => setDeletingLoan(loan)} className="text-destructive focus:text-destructive">
+                              <Trash2 className="mr-2 h-4 w-4" />Eliminar
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -415,48 +339,12 @@ export default function Loans() {
         </Table>
       </div>
 
-      {/* Dialogs */}
       <AddLoanDialog open={showAddDialog} onOpenChange={setShowAddDialog} />
-
-      {markingPaidLoan && (
-        <MarkPaidDialog
-          loan={markingPaidLoan}
-          open={!!markingPaidLoan}
-          onOpenChange={(open) => !open && setMarkingPaidLoan(null)}
-        />
-      )}
-
-      {deletingLoan && (
-        <DeleteLoanDialog
-          loan={deletingLoan}
-          open={!!deletingLoan}
-          onOpenChange={(open) => !open && setDeletingLoan(null)}
-        />
-      )}
-
-      {addingPaymentLoan && (
-        <AddPaymentDialog
-          loan={addingPaymentLoan}
-          open={!!addingPaymentLoan}
-          onOpenChange={(open) => !open && setAddingPaymentLoan(null)}
-        />
-      )}
-
-      {viewingHistoryLoan && (
-        <PaymentHistoryDialog
-          loan={viewingHistoryLoan}
-          open={!!viewingHistoryLoan}
-          onOpenChange={(open) => !open && setViewingHistoryLoan(null)}
-        />
-      )}
-
-      {revertingLoan && (
-        <RevertPaidDialog
-          loan={revertingLoan}
-          open={!!revertingLoan}
-          onOpenChange={(open) => !open && setRevertingLoan(null)}
-        />
-      )}
+      {markingPaidLoan && <MarkPaidDialog loan={markingPaidLoan} open={!!markingPaidLoan} onOpenChange={(open) => !open && setMarkingPaidLoan(null)} />}
+      {deletingLoan && <DeleteLoanDialog loan={deletingLoan} open={!!deletingLoan} onOpenChange={(open) => !open && setDeletingLoan(null)} />}
+      {addingPaymentLoan && <AddPaymentDialog loan={addingPaymentLoan} open={!!addingPaymentLoan} onOpenChange={(open) => !open && setAddingPaymentLoan(null)} />}
+      {viewingHistoryLoan && <PaymentHistoryDialog loan={viewingHistoryLoan} open={!!viewingHistoryLoan} onOpenChange={(open) => !open && setViewingHistoryLoan(null)} />}
+      {revertingLoan && <RevertPaidDialog loan={revertingLoan} open={!!revertingLoan} onOpenChange={(open) => !open && setRevertingLoan(null)} />}
     </div>
   );
 }

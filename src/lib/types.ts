@@ -156,33 +156,33 @@ export interface DashboardStats {
 /* ================================================================== */
 
 export const CATEGORY_LABELS: Record<TransactionCategory, string> = {
-  monthly_fee: 'Monthly Fee',
-  extraordinary_income: 'Extraordinary Income',
-  donation: 'Donation',
-  reimbursement: 'Reimbursement',
-  event_expense: 'Event Expense',
-  parent_organization_fee: 'Parent Organization Fee',
-  other_expense: 'Other Expense',
-  other_income: 'Other Income',
-  event_payment: 'Event Payment',
-  loan_disbursement: 'Loan Disbursement',
-  loan_repayment: 'Loan Repayment',
+  monthly_fee: 'Cuota Mensual',
+  extraordinary_income: 'Ingreso Extraordinario',
+  donation: 'Donación',
+  reimbursement: 'Reembolso',
+  event_expense: 'Gasto de Evento',
+  parent_organization_fee: 'Cuota Organización Matriz',
+  other_expense: 'Otro Gasto',
+  other_income: 'Otro Ingreso',
+  event_payment: 'Pago de Evento',
+  loan_disbursement: 'Desembolso de Préstamo',
+  loan_repayment: 'Pago de Préstamo',
   account_yield: 'Rendimiento de Cuenta',
 };
 
 export const FEE_TYPE_LABELS: Record<FeeType, string> = {
-  standard: 'Standard',
-  solidarity: 'Solidarity',
+  standard: 'Estándar',
+  solidarity: 'Solidaria',
 };
 
 export const ACCOUNT_LABELS: Record<AccountType, string> = {
-  bank: 'Bank Main Account',
-  great_lodge: 'Great Lodge Account',
-  savings: 'Savings Account (USD)',
+  bank: 'Cuenta Bancaria Principal',
+  great_lodge: 'Cuenta GL',
+  savings: 'Cuenta de Ahorros (USD)',
 };
 
 export const LOAN_STATUS_LABELS: Record<LoanStatus, string> = {
-  active: 'Active',
-  paid: 'Paid',
-  cancelled: 'Cancelled',
+  active: 'Activo',
+  paid: 'Pagado',
+  cancelled: 'Cancelado',
 };
