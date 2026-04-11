@@ -526,7 +526,7 @@ Deno.serve(async (req) => {
       donation: 'Donación',
       reimbursement: 'Reembolso',
       event_expense: 'Gasto de Evento',
-      parent_organization_fee: 'Cuota Org. Matriz',
+      parent_organization_fee: 'Pago GL',
       other_expense: 'Otro Gasto',
       other_income: 'Otro Ingreso',
       event_payment: 'Pago de Evento',
