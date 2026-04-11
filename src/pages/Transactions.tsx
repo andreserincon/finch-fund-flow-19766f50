@@ -213,6 +213,22 @@ export default function Transactions() {
               ))}
             </SelectContent>
           </Select>
+          <Select value={monthFilter} onValueChange={setMonthFilter}>
+            <SelectTrigger className="flex-1 sm:w-[180px] sm:flex-none">
+              <SelectValue placeholder="Mes" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos los Meses</SelectItem>
+              {monthOptions.map((ym) => {
+                const d = parseLocalDate(`${ym}-01`);
+                return (
+                  <SelectItem key={ym} value={ym}>
+                    {format(d, 'MMMM yyyy', { locale: es })}
+                  </SelectItem>
+                );
+              })}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
