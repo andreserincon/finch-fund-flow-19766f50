@@ -4,6 +4,7 @@ import { useHiddenMode } from '@/contexts/HiddenModeContext';
 import { useMembers } from '@/hooks/useMembers';
 import { useTransactions } from '@/hooks/useTransactions';
 import { useMonthlyFees } from '@/hooks/useMonthlyFees';
+import { useMemberFeeTypeHistory } from '@/hooks/useMemberFeeTypeHistory';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useExchangeRate } from '@/hooks/useExchangeRate';
@@ -33,21 +34,23 @@ import {
   HandCoins,
   CalendarDays
 } from 'lucide-react';
-import { format, lastDayOfMonth, startOfMonth, startOfYear } from 'date-fns';
+import { format, lastDayOfMonth, startOfMonth, startOfYear, addMonths, isAfter } from 'date-fns';
 import { parseLocalDate } from '@/lib/utils';
 import { es } from 'date-fns/locale';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { FeeType } from '@/lib/types';
 
 
 export default function Dashboard() {
   const { t, i18n } = useTranslation();
   const { displayName } = useHiddenMode();
-  const { memberBalances, isLoading: membersLoading } = useMembers();
+  const { members, memberBalances, isLoading: membersLoading } = useMembers();
   const { transactions, isLoading: transactionsLoading } = useTransactions();
-  const { currentMonthFees, isLoading: feesLoading } = useMonthlyFees();
+  const { monthlyFees, currentMonthFees, isLoading: feesLoading } = useMonthlyFees();
   const { transfers, isLoading: transfersLoading } = useAccountTransfers();
   const { loans, isLoading: loansLoading } = useLoans();
+  const { getFeeTypeForMonth: getHistoricalFeeType, isLoading: historyLoading } = useMemberFeeTypeHistory();
   const { isAdmin } = useIsAdmin();
   const { isMemberOnly } = useIsMemberOnly();
   const { profile } = useAuth();
@@ -67,7 +70,6 @@ export default function Dashboard() {
     transactions.forEach((t) => {
       months.add(t.transaction_date.substring(0, 7));
     });
-    // Always include current month
     months.add(currentYM);
     return Array.from(months).sort((a, b) => b.localeCompare(a));
   }, [transactions, currentYM]);
@@ -78,6 +80,7 @@ export default function Dashboard() {
   const selectedMonthStart = startOfMonth(selectedDate);
   const selectedYearStart = startOfYear(selectedDate);
   const isCurrentMonth = selectedYM === currentYM;
+  const selectedMonthKey = `${selectedYM}-01`; // "YYYY-MM-01"
 
   // Filter transactions and transfers up to the cutoff date
   const filteredTransactions = useMemo(() => {
@@ -88,7 +91,7 @@ export default function Dashboard() {
     return transfers.filter(t => parseLocalDate(t.transfer_date) <= cutoffDate);
   }, [transfers, cutoffDate]);
 
-  // Filter loans: those active as of the cutoff (created on or before, and not paid before cutoff)
+  // Filter loans: those active as of the cutoff
   const filteredLoans = useMemo(() => {
     return loans.filter(l => {
       const loanDate = parseLocalDate(l.loan_date);
@@ -98,6 +101,67 @@ export default function Dashboard() {
       return true;
     });
   }, [loans, cutoffDate]);
+
+  // Helper: get fee type for a member at a given month
+  const getMemberFeeType = (memberId: string, monthKey: string, fallbackFeeType: FeeType): FeeType => {
+    return getHistoricalFeeType(memberId, monthKey) ?? fallbackFeeType;
+  };
+
+  // Helper: get fee amount for a month+type
+  const getFeeForMonth = (monthKey: string, feeType: FeeType): number => {
+    const fee = monthlyFees.find(f => f.year_month === monthKey && f.fee_type === feeType);
+    return fee?.amount ?? 0;
+  };
+
+  // Helper: generate month range as "YYYY-MM-01" strings
+  const generateMonthRange = (startDate: Date, endDate: Date): string[] => {
+    const result: string[] = [];
+    let current = startOfMonth(startDate);
+    const end = startOfMonth(endDate);
+    while (!isAfter(current, end)) {
+      result.push(format(current, 'yyyy-MM-dd'));
+      current = addMonths(current, 1);
+    }
+    return result;
+  };
+
+  // Compute adjusted member balances as of the selected month
+  const adjustedMemberBalances = useMemo(() => {
+    return memberBalances.map(m => {
+      // total_paid: sum income transactions (monthly_fee + event_payment) up to cutoff
+      const adjustedTotalPaid = filteredTransactions
+        .filter(t => 
+          t.member_id === m.member_id && 
+          t.transaction_type === 'income' && 
+          (t.category === 'monthly_fee' || t.category === 'event_payment')
+        )
+        .reduce((sum, t) => sum + t.amount, 0);
+
+      // total_fees_owed: sum monthly fees from join date to selected month + event fees
+      const joinDate = parseLocalDate(m.join_date);
+      const monthsRange = generateMonthRange(joinDate, selectedDate);
+      let monthlyFeesOwed = 0;
+      for (const mKey of monthsRange) {
+        const feeType = getMemberFeeType(m.member_id, mKey, m.fee_type);
+        monthlyFeesOwed += getFeeForMonth(mKey, feeType);
+      }
+
+      // Event fees: keep as-is (no date filtering available)
+      const eventFeesOwed = (m.total_fees_owed - (memberBalances.find(mb => mb.member_id === m.member_id)?.total_fees_owed ?? 0)) || 0;
+      // Actually, we can compute event fees from the original balance:
+      // original total_fees_owed = original_monthly_owed + event_owed
+      // We don't have event_owed separately, so let's use the event debts query
+      
+      const adjustedTotalFeesOwed = monthlyFeesOwed; // event fees added separately via memberEventDebts
+
+      return {
+        ...m,
+        total_paid: adjustedTotalPaid,
+        total_fees_owed: adjustedTotalFeesOwed,
+        current_balance: adjustedTotalPaid - adjustedTotalFeesOwed,
+      };
+    });
+  }, [memberBalances, filteredTransactions, selectedDate, monthlyFees]);
 
   // Query unpaid event amounts per member
   const { data: memberEventDebts = {} } = useQuery({
@@ -109,7 +173,6 @@ export default function Dashboard() {
       
       if (error) throw error;
       
-      // Aggregate unpaid event amounts per member
       const debts: Record<string, number> = {};
       data?.forEach((payment) => {
         const unpaid = payment.amount_owed - payment.amount_paid;
@@ -121,7 +184,7 @@ export default function Dashboard() {
     },
   });
 
-  const isLoading = membersLoading || transactionsLoading || feesLoading || transfersLoading || loansLoading;
+  const isLoading = membersLoading || transactionsLoading || feesLoading || transfersLoading || loansLoading || historyLoading;
 
   // Calculate total loans due (ARS and USD separately)
   const activeLoans = filteredLoans;
@@ -129,7 +192,6 @@ export default function Dashboard() {
   const loansUSD = activeLoans.filter(l => l.account === 'savings');
   const totalLoansDueARS = loansARS.reduce((sum, l) => sum + (l.amount - l.amount_paid), 0);
   const totalLoansDueUSD = loansUSD.reduce((sum, l) => sum + (l.amount - l.amount_paid), 0);
-
 
   // Calculate account balances from filtered data
   const bankBalance = filteredTransactions
@@ -150,7 +212,6 @@ export default function Dashboard() {
     - filteredTransfers.filter(t => t.from_account === 'savings').reduce((sum, t) => sum + t.amount, 0)
     + filteredTransfers.filter(t => t.to_account === 'savings').reduce((sum, t) => sum + t.amount, 0);
 
-  // Calculate stats (ARS balance includes savings converted to ARS)
   const savingsInARS = savingsBalance * exchangeRate;
   const totalARSBalance = bankBalance + greatLodgeBalance + savingsInARS;
 
@@ -171,61 +232,70 @@ export default function Dashboard() {
   const totalMonthlyYield = monthlyYieldARS + (monthlyYieldUSD * exchangeRate);
   const totalAnnualYield = annualYieldARS + (annualYieldUSD * exchangeRate);
 
-  const activeMembersCount = memberBalances.filter(m => m.is_active).length;
+  const activeMembersCount = adjustedMemberBalances.filter(m => m.is_active).length;
 
-  const membersUnpaid = memberBalances.filter(m => {
+  // Get fee rates for the selected month
+  const selectedMonthFees: Record<FeeType, number> = {
+    standard: getFeeForMonth(selectedMonthKey, 'standard'),
+    solidarity: getFeeForMonth(selectedMonthKey, 'solidarity'),
+  };
+  // Fallback to current month fees if selected month has no fee config
+  const effectiveFees = (selectedMonthFees.standard > 0 || selectedMonthFees.solidarity > 0)
+    ? selectedMonthFees
+    : currentMonthFees;
+
+  const membersUnpaid = adjustedMemberBalances.filter(m => {
     if (!m.is_active) return false;
     return m.total_paid < m.total_fees_owed;
   }).length;
 
-  const membersOverdue = memberBalances.filter(m => {
+  const membersOverdue = adjustedMemberBalances.filter(m => {
     if (!m.is_active) return false;
     const amountOwed = m.total_fees_owed - m.total_paid;
-    const monthlyFeeRate = currentMonthFees[m.fee_type] || 0;
+    const monthlyFeeRate = effectiveFees[m.fee_type] || 0;
     const hasUnpaidEvents = (memberEventDebts[m.member_id] || 0) > 0;
     return amountOwed > monthlyFeeRate || hasUnpaidEvents;
   }).length;
   
-  // Calculate monthly income (ARS accounts + savings converted to ARS) for selected month
+  // Calculate monthly income/expenses for selected month
   const monthlyIncomeARS = filteredTransactions
     .filter(t => parseLocalDate(t.transaction_date) >= selectedMonthStart && t.transaction_type === 'income' && t.account !== 'savings')
     .reduce((sum, t) => sum + t.amount, 0);
-  
   const monthlyIncomeUSD = filteredTransactions
     .filter(t => parseLocalDate(t.transaction_date) >= selectedMonthStart && t.transaction_type === 'income' && t.account === 'savings')
     .reduce((sum, t) => sum + t.amount, 0);
-  
   const monthlyIncome = monthlyIncomeARS + (monthlyIncomeUSD * exchangeRate);
 
-  // Calculate monthly expenses (ARS accounts + savings converted to ARS) for selected month
   const monthlyExpensesARS = filteredTransactions
     .filter(t => parseLocalDate(t.transaction_date) >= selectedMonthStart && t.transaction_type === 'expense' && t.account !== 'savings')
     .reduce((sum, t) => sum + t.amount, 0);
-  
   const monthlyExpensesUSD = filteredTransactions
     .filter(t => parseLocalDate(t.transaction_date) >= selectedMonthStart && t.transaction_type === 'expense' && t.account === 'savings')
     .reduce((sum, t) => sum + t.amount, 0);
-  
   const monthlyExpenses = monthlyExpensesARS + (monthlyExpensesUSD * exchangeRate);
 
+  // Compute adjusted total_paid map for MemberFeeMatrix
+  const adjustedTotalPaidMap = useMemo(() => {
+    const map: Record<string, number> = {};
+    adjustedMemberBalances.forEach(m => {
+      map[m.member_id] = m.total_paid;
+    });
+    return map;
+  }, [adjustedMemberBalances]);
 
-
-  // Filter members: owe more than 1 monthly fee OR have unpaid events
-  // For member-only users, show only their own data
-  const overdueMembers = memberBalances
+  // Members requiring attention - uses adjusted balances
+  const overdueMembers = adjustedMemberBalances
     .filter(m => {
       if (!m.is_active) return false;
       if (isMemberOnly && (!userMemberId || m.member_id !== userMemberId)) return false;
       
       const amountOwed = m.total_fees_owed - m.total_paid;
-      const monthlyFeeRate = currentMonthFees[m.fee_type] || 0;
+      const monthlyFeeRate = effectiveFees[m.fee_type] || 0;
       const hasUnpaidEvents = (memberEventDebts[m.member_id] || 0) > 0;
       
-      // Show if they owe more than 1 monthly fee OR have unpaid events
       return amountOwed > monthlyFeeRate || hasUnpaidEvents;
     })
     .sort((a, b) => {
-      // Sort by amount owed descending
       const aOwed = a.total_fees_owed - a.total_paid;
       const bOwed = b.total_fees_owed - b.total_paid;
       return bOwed - aOwed;
@@ -246,7 +316,6 @@ export default function Dashboard() {
       </div>
     );
   }
-
 
   return (
     <div className="space-y-6 md:space-y-8 animate-fade-in">
@@ -283,7 +352,6 @@ export default function Dashboard() {
           {isAdmin && <AddTransactionForm triggerLabel={t('dashboard.logTransaction')} />}
         </div>
       </div>
-
 
       {/* Key Metrics - Balance Summary */}
       <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
@@ -374,7 +442,7 @@ export default function Dashboard() {
               {overdueMembers.map((member) => {
                 const monthlyDebt = member.total_fees_owed - member.total_paid;
                 const eventDebt = memberEventDebts[member.member_id] || 0;
-                const monthlyFeeRate = currentMonthFees[member.fee_type] || 0;
+                const monthlyFeeRate = effectiveFees[member.fee_type] || 0;
                 const isMonthlyOverdue = monthlyDebt > monthlyFeeRate;
                 const hasEventDebt = eventDebt > 0;
                 
@@ -424,7 +492,11 @@ export default function Dashboard() {
       )}
 
       {/* Member Fee Matrix */}
-      <MemberFeeMatrix filterMemberId={isMemberOnly ? (userMemberId ?? null) : undefined} />
+      <MemberFeeMatrix
+        filterMemberId={isMemberOnly ? (userMemberId ?? null) : undefined}
+        referenceMonth={selectedDate}
+        adjustedTotalPaid={adjustedTotalPaidMap}
+      />
     </div>
   );
 }
