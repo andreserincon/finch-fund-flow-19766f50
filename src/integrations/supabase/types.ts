@@ -191,6 +191,138 @@ export type Database = {
           },
         ]
       }
+      budget_lines: {
+        Row: {
+          account: Database["public"]["Enums"]["account_type"]
+          budget_scenario_id: string
+          budgeted_amount: number
+          category: Database["public"]["Enums"]["transaction_category"]
+          created_at: string
+          id: string
+          month: number
+          transaction_type: Database["public"]["Enums"]["transaction_type"]
+          updated_at: string
+        }
+        Insert: {
+          account: Database["public"]["Enums"]["account_type"]
+          budget_scenario_id: string
+          budgeted_amount?: number
+          category: Database["public"]["Enums"]["transaction_category"]
+          created_at?: string
+          id?: string
+          month: number
+          transaction_type: Database["public"]["Enums"]["transaction_type"]
+          updated_at?: string
+        }
+        Update: {
+          account?: Database["public"]["Enums"]["account_type"]
+          budget_scenario_id?: string
+          budgeted_amount?: number
+          category?: Database["public"]["Enums"]["transaction_category"]
+          created_at?: string
+          id?: string
+          month?: number
+          transaction_type?: Database["public"]["Enums"]["transaction_type"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "budget_lines_budget_scenario_id_fkey"
+            columns: ["budget_scenario_id"]
+            isOneToOne: false
+            referencedRelation: "budget_scenarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      budget_scenario_parameters: {
+        Row: {
+          budget_scenario_id: string
+          created_at: string
+          extraordinary_income_multiplier: number
+          id: string
+          inflation_percent: number
+          membership_growth_percent: number
+          updated_at: string
+        }
+        Insert: {
+          budget_scenario_id: string
+          created_at?: string
+          extraordinary_income_multiplier?: number
+          id?: string
+          inflation_percent?: number
+          membership_growth_percent?: number
+          updated_at?: string
+        }
+        Update: {
+          budget_scenario_id?: string
+          created_at?: string
+          extraordinary_income_multiplier?: number
+          id?: string
+          inflation_percent?: number
+          membership_growth_percent?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "budget_scenario_parameters_budget_scenario_id_fkey"
+            columns: ["budget_scenario_id"]
+            isOneToOne: true
+            referencedRelation: "budget_scenarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      budget_scenarios: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          notes: string | null
+          parent_scenario_id: string | null
+          revision_month: number | null
+          revision_number: number
+          scenario_name: string
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          parent_scenario_id?: string | null
+          revision_month?: number | null
+          revision_number?: number
+          scenario_name: string
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          parent_scenario_id?: string | null
+          revision_month?: number | null
+          revision_number?: number
+          scenario_name?: string
+          updated_at?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "budget_scenarios_parent_scenario_id_fkey"
+            columns: ["parent_scenario_id"]
+            isOneToOne: false
+            referencedRelation: "budget_scenarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       digital_books: {
         Row: {
           approved_at: string | null
