@@ -20,6 +20,7 @@
  *   /expense-categories → extraordinary expense types (treasury staff)
  *   /fee-calculator   → fee calculator tool (treasury staff)
  *   /reports          → monthly report generation (treasury staff)
+ *   /budget           → annual budget planning (treasury staff)
  *   /library          → book library (any authenticated user)
  *   /admin/members    → member CRUD (super-admin)
  *   /user-management  → user roles & accounts (super-admin)
@@ -50,6 +51,7 @@ import FeeCalculator from "./pages/FeeCalculator";
 import AccountTransfer from "./pages/AccountTransfer";
 import UserManagement from "./pages/UserManagement";
 import Reports from "./pages/Reports";
+import Budget from "./pages/Budget";
 import Library from "./pages/Library";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
@@ -248,6 +250,7 @@ const App = () => (
         <Route path="/expense-categories" element={<TreasuryStaffRoute><ExtraordinaryExpenses /></TreasuryStaffRoute>} />
         <Route path="/fee-calculator" element={<TreasuryStaffRoute><FeeCalculator /></TreasuryStaffRoute>} />
         <Route path="/reports" element={<TreasuryStaffRoute><Reports /></TreasuryStaffRoute>} />
+        <Route path="/budget" element={<TreasuryStaffRoute><Budget /></TreasuryStaffRoute>} />
 
         {/* Treasury – admin-only write routes */}
         <Route path="/log-payment" element={<AdminRoute><LogPayment /></AdminRoute>} />

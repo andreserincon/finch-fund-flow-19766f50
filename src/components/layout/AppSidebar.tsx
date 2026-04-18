@@ -23,7 +23,8 @@ import {
   ClipboardList,
   ChevronDown,
   Plus,
-  Home
+  Home,
+  PieChart
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -102,6 +103,7 @@ export function AppSidebar() {
       { title: t('nav.transactions'), url: '/transactions', icon: Receipt },
       { title: t('nav.loans'), url: '/loans', icon: HandCoins },
       { title: t('nav.reports'), url: '/reports', icon: FileText },
+      { title: t('nav.budget'), url: '/budget', icon: PieChart },
     ] : []),
   ];
 

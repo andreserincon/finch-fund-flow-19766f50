@@ -53,6 +53,7 @@ export default {
       transactions: 'Transacciones',
       loans: 'Préstamos',
       reports: 'Reportes',
+      budget: 'Presupuesto',
       quickActions: 'Acciones Rápidas',
       logPayment: 'Registrar Pago',
       logExpense: 'Registrar Gasto',

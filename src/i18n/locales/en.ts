@@ -53,6 +53,7 @@ export default {
       transactions: 'Transactions',
       loans: 'Loans',
       reports: 'Reports',
+      budget: 'Budget',
       quickActions: 'Quick Actions',
       logPayment: 'Log Payment',
       logExpense: 'Log Expense',
