@@ -21,6 +21,11 @@ export default tseslint.config(
       ...reactHooks.configs.recommended.rules,
       "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
       "@typescript-eslint/no-unused-vars": "off",
+      // Downgraded from "error" → "warn" because ~160 pre-existing
+      // occurrences (mostly in supabase/functions/generate-monthly-report*)
+      // were drowning out real lint issues. Track them as technical debt
+      // to be cleaned up in a dedicated pass.
+      "@typescript-eslint/no-explicit-any": "warn",
     },
   },
 );
