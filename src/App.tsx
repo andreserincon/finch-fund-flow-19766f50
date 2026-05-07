@@ -47,7 +47,9 @@ import LogPayment from "./pages/LogPayment";
 import LogExpense from "./pages/LogExpense";
 import MonthlyFees from "./pages/MonthlyFees";
 import ExtraordinaryExpenses from "./pages/ExtraordinaryExpenses";
+import EventOverview from "./pages/EventOverview";
 import FeeCalculator from "./pages/FeeCalculator";
+import PaymentReminders from "./pages/PaymentReminders";
 import AccountTransfer from "./pages/AccountTransfer";
 import UserManagement from "./pages/UserManagement";
 import Reports from "./pages/Reports";
@@ -248,9 +250,11 @@ const App = () => (
         <Route path="/loans" element={<TreasuryStaffRoute><Loans /></TreasuryStaffRoute>} />
         <Route path="/monthly-fees" element={<TreasuryStaffRoute><MonthlyFees /></TreasuryStaffRoute>} />
         <Route path="/expense-categories" element={<TreasuryStaffRoute><ExtraordinaryExpenses /></TreasuryStaffRoute>} />
+        <Route path="/events/:id" element={<TreasuryStaffRoute><EventOverview /></TreasuryStaffRoute>} />
         <Route path="/fee-calculator" element={<TreasuryStaffRoute><FeeCalculator /></TreasuryStaffRoute>} />
         <Route path="/reports" element={<TreasuryStaffRoute><Reports /></TreasuryStaffRoute>} />
         <Route path="/budget" element={<TreasuryStaffRoute><Budget /></TreasuryStaffRoute>} />
+        <Route path="/recordatorios" element={<TreasuryStaffRoute><PaymentReminders /></TreasuryStaffRoute>} />
 
         {/* Treasury – admin-only write routes */}
         <Route path="/log-payment" element={<AdminRoute><LogPayment /></AdminRoute>} />

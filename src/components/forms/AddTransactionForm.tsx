@@ -25,31 +25,40 @@ import {
 import { useTransactions } from '@/hooks/useTransactions';
 import { useMembers } from '@/hooks/useMembers';
 import { useMonthlyFees } from '@/hooks/useMonthlyFees';
+import { useExtraordinaryExpenses } from '@/hooks/useExtraordinaryExpenses';
 import { TransactionType, TransactionCategory, CATEGORY_LABELS, AccountType, ACCOUNT_LABELS } from '@/lib/types';
 import { PlusCircle } from 'lucide-react';
 
-const transactionSchema = z.object({
-  transaction_date: z.string().min(1, 'Date is required'),
-  amount: z.number().positive('Amount must be positive'),
-  transaction_type: z.enum(['income', 'expense']),
-  category: z.enum([
-    'monthly_fee',
-    'extraordinary_income',
-    'donation',
-    'reimbursement',
-    'event_expense',
-    'parent_organization_fee',
-    'other_expense',
-    'other_income',
-    'event_payment',
-    'loan_disbursement',
-    'loan_repayment',
-    'account_yield',
-  ]),
-  account: z.enum(['bank', 'great_lodge', 'savings']),
-  member_id: z.string().optional(),
-  notes: z.string().max(500).optional(),
-});
+const EVENT_CATEGORIES: TransactionCategory[] = ['event_expense', 'event_payment'];
+
+const transactionSchema = z
+  .object({
+    transaction_date: z.string().min(1, 'Date is required'),
+    amount: z.number().positive('Amount must be positive'),
+    transaction_type: z.enum(['income', 'expense']),
+    category: z.enum([
+      'monthly_fee',
+      'extraordinary_income',
+      'donation',
+      'reimbursement',
+      'event_expense',
+      'parent_organization_fee',
+      'other_expense',
+      'other_income',
+      'event_payment',
+      'loan_disbursement',
+      'loan_repayment',
+      'account_yield',
+    ]),
+    account: z.enum(['bank', 'great_lodge', 'savings']),
+    member_id: z.string().optional(),
+    event_id: z.string().optional(),
+    notes: z.string().max(500).optional(),
+  })
+  .refine(
+    (data) => !EVENT_CATEGORIES.includes(data.category) || !!data.event_id,
+    { path: ['event_id'], message: 'Seleccioná un evento' }
+  );
 
 type TransactionFormData = z.infer<typeof transactionSchema>;
 
@@ -66,6 +75,8 @@ export function AddTransactionForm({
   const { addTransaction } = useTransactions();
   const { members } = useMembers();
   const { currentMonthFees } = useMonthlyFees();
+  const { expenses: events } = useExtraordinaryExpenses();
+  const activeEvents = events.filter((e) => e.is_active);
 
   const incomeCategories: TransactionCategory[] = [
     'monthly_fee',
@@ -73,6 +84,7 @@ export function AddTransactionForm({
     'donation',
     'reimbursement',
     'other_income',
+    'event_payment',
     'account_yield',
   ];
 
@@ -102,6 +114,8 @@ export function AddTransactionForm({
   const transactionType = watch('transaction_type');
   const category = watch('category');
   const selectedAccount = watch('account');
+  const selectedEventId = watch('event_id');
+  const isEventCategory = EVENT_CATEGORIES.includes(category);
 
   // Reset amount when category changes; pre-fill only for monthly_fee
   useEffect(() => {
@@ -111,6 +125,22 @@ export function AddTransactionForm({
       setValue('amount', 0);
     }
   }, [category, currentMonthFees.standard, setValue]);
+
+  // Clear event_id when leaving an event-related category
+  useEffect(() => {
+    if (!isEventCategory && selectedEventId) {
+      setValue('event_id', undefined);
+    }
+  }, [isEventCategory, selectedEventId, setValue]);
+
+  // Pre-fill amount with the event's default_amount when picking an event
+  useEffect(() => {
+    if (!isEventCategory || !selectedEventId) return;
+    const evt = activeEvents.find((e) => e.id === selectedEventId);
+    if (evt && evt.default_amount > 0) {
+      setValue('amount', evt.default_amount);
+    }
+  }, [selectedEventId, isEventCategory, activeEvents, setValue]);
 
   const availableCategories = transactionType === 'income' ? incomeCategories : expenseCategories;
 
@@ -122,6 +152,7 @@ export function AddTransactionForm({
       category: data.category,
       account: data.account,
       member_id: data.member_id || null,
+      event_id: EVENT_CATEGORIES.includes(data.category) ? data.event_id || null : null,
       notes: data.notes || null,
     });
     reset();
@@ -231,15 +262,15 @@ export function AddTransactionForm({
             </div>
           </div>
 
-          {category === 'monthly_fee' && (
+          {(category === 'monthly_fee' || category === 'event_payment') && (
             <div className="space-y-2">
-              <Label>Member</Label>
+              <Label>Miembro</Label>
               <Select
                 value={watch('member_id') || ''}
                 onValueChange={(value) => setValue('member_id', value || undefined)}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select member..." />
+                  <SelectValue placeholder="Seleccionar miembro..." />
                 </SelectTrigger>
                 <SelectContent>
                   {members.map((member) => (
@@ -249,6 +280,35 @@ export function AddTransactionForm({
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+          )}
+
+          {isEventCategory && (
+            <div className="space-y-2">
+              <Label>Evento</Label>
+              <Select
+                value={selectedEventId || ''}
+                onValueChange={(value) => setValue('event_id', value || undefined, { shouldValidate: true })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar evento..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {activeEvents.length === 0 && (
+                    <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                      No hay eventos activos
+                    </div>
+                  )}
+                  {activeEvents.map((evt) => (
+                    <SelectItem key={evt.id} value={evt.id}>
+                      {evt.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.event_id && (
+                <p className="text-sm text-destructive">{errors.event_id.message}</p>
+              )}
             </div>
           )}
 

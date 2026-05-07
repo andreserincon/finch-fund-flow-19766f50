@@ -23,3 +23,9 @@ verify_jwt = false
 
 [functions.describe-pdf]
 verify_jwt = false
+
+[functions.queue-overdue-reminders]
+verify_jwt = false
+
+[functions.send-whatsapp-reminder]
+verify_jwt = false

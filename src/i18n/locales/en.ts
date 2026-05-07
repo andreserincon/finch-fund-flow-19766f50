@@ -61,6 +61,7 @@ export default {
       settings: 'Settings',
       monthlyFees: 'Monthly Fees',
       events: 'Events',
+      reminders: 'Reminders',
       treasurer: 'Treasurer',
       viewer: 'Viewer',
       userManagement: 'User Management',

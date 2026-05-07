@@ -41,6 +41,14 @@ export type PaymentStatus = 'up_to_date' | 'ahead' | 'overdue';
 /** Masonic degree level */
 export type MasonicGrade = 'profano' | 'aprendiz' | 'companero' | 'maestro';
 
+/** Status of an outgoing payment reminder (Twilio WhatsApp queue) */
+export type ReminderStatus =
+  | 'pending_review'
+  | 'approved'
+  | 'sent'
+  | 'failed'
+  | 'dismissed';
+
 /* ================================================================== */
 /*  Interfaces                                                        */
 /* ================================================================== */
@@ -49,7 +57,15 @@ export type MasonicGrade = 'profano' | 'aprendiz' | 'companero' | 'maestro';
 export interface Member {
   id: string;
   full_name: string;
+  /**
+   * Stores the member's lodge enrollment number (Matrícula). Despite the
+   * column name this is NOT a phone number — see whatsapp_number for that.
+   */
   phone_number: string;
+  /** Real WhatsApp contact number in E.164 format (+5491155551234) */
+  whatsapp_number: string | null;
+  /** When true, the member opts out of automated WhatsApp reminders */
+  whatsapp_opt_out: boolean;
   monthly_fee_amount: number;
   fee_type: FeeType;
   masonic_grade: MasonicGrade;
@@ -67,6 +83,11 @@ export interface Transaction {
   transaction_type: TransactionType;
   category: TransactionCategory;
   member_id: string | null;
+  /**
+   * When category is event_expense or event_payment, links to the
+   * specific event in extraordinary_expenses.
+   */
+  event_id: string | null;
   notes: string | null;
   account: AccountType;
   created_at: string;
@@ -111,6 +132,8 @@ export interface MemberBalance {
   member_id: string;
   full_name: string;
   phone_number: string;
+  whatsapp_number: string | null;
+  whatsapp_opt_out: boolean;
   monthly_fee_amount: number;
   fee_type: FeeType;
   is_active: boolean;
@@ -119,6 +142,49 @@ export interface MemberBalance {
   months_since_join: number;
   total_fees_owed: number;
   total_paid: number;
+}
+
+/**
+ * Row in the `event_member_payments` table. Either member_id is set
+ * (regular member participation) or guest_name is set (non-member
+ * invitee), never both. Validated by a CHECK constraint in SQL.
+ */
+export interface EventMemberPayment {
+  id: string;
+  event_id: string;
+  member_id: string | null;
+  guest_name: string | null;
+  guest_phone: string | null;
+  amount_owed: number;
+  amount_paid: number;
+  created_at: string;
+  updated_at: string;
+  /** Joined member data when member_id is non-null */
+  member?: { id: string; full_name: string } | null;
+}
+
+/**
+ * Row in the `payment_reminders` table — queue of outgoing WhatsApp
+ * overdue reminders that the treasurer reviews and dispatches manually.
+ */
+export interface PaymentReminder {
+  id: string;
+  member_id: string;
+  period_year: number;
+  period_month: number;
+  amount_owed: number;
+  whatsapp_number: string | null;
+  draft_message: string;
+  final_message: string | null;
+  status: ReminderStatus;
+  twilio_message_sid: string | null;
+  failure_reason: string | null;
+  sent_at: string | null;
+  reviewed_by: string | null;
+  created_at: string;
+  updated_at: string;
+  /** Joined member data populated by the hook */
+  member?: { id: string; full_name: string; whatsapp_number: string | null } | null;
 }
 
 /** Global organisation settings (key-value numbers) */
@@ -185,4 +251,12 @@ export const LOAN_STATUS_LABELS: Record<LoanStatus, string> = {
   active: 'Activo',
   paid: 'Pagado',
   cancelled: 'Cancelado',
+};
+
+export const REMINDER_STATUS_LABELS: Record<ReminderStatus, string> = {
+  pending_review: 'Pendiente de revisión',
+  approved: 'Aprobado',
+  sent: 'Enviado',
+  failed: 'Falló',
+  dismissed: 'Descartado',
 };

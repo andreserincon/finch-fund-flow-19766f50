@@ -48,6 +48,8 @@ export function useMembers() {
     mutationFn: async (member: {
       full_name: string;
       phone_number: string;
+      whatsapp_number?: string | null;
+      whatsapp_opt_out?: boolean;
       monthly_fee_amount: number;
       fee_type: FeeType;
       join_date: string;

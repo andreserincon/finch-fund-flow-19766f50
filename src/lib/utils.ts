@@ -5,6 +5,7 @@
 
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { isWeekend } from "date-fns";
 
 /**
  * Merge Tailwind CSS classes, resolving conflicts automatically.
@@ -51,4 +52,43 @@ export function formatCurrencyCompact(amount: number, currency: Currency = 'ARS'
 /** Determine the display currency based on the account type */
 export function getCurrencyForAccount(account: string): Currency {
   return account === 'savings' ? 'USD' : 'ARS';
+}
+
+/**
+ * Return the date of the Nth business day of a given month (1 = January).
+ * Saturdays and Sundays are skipped. Argentine public holidays are NOT
+ * skipped — that's a deliberate v1 choice; add a holiday calendar later
+ * if needed.
+ *
+ * @example getNthBusinessDayOfMonth(2026, 5, 3) // → Wed 2026-05-06
+ */
+export function getNthBusinessDayOfMonth(year: number, month: number, n: number): Date {
+  if (n < 1) throw new Error('n must be at least 1');
+  let day = 1;
+  let business = 0;
+  while (true) {
+    const d = new Date(year, month - 1, day);
+    if (d.getMonth() !== month - 1) {
+      throw new Error(`Month ${year}-${month} does not have ${n} business days`);
+    }
+    if (!isWeekend(d)) {
+      business++;
+      if (business === n) return d;
+    }
+    day++;
+  }
+}
+
+/**
+ * True if the given date is exactly the Nth business day of its month.
+ * Used by scheduled edge functions to self-gate ("only run today if
+ * today is the 3rd business day").
+ */
+export function isNthBusinessDayOfMonth(date: Date, n: number): boolean {
+  const target = getNthBusinessDayOfMonth(date.getFullYear(), date.getMonth() + 1, n);
+  return (
+    target.getFullYear() === date.getFullYear() &&
+    target.getMonth() === date.getMonth() &&
+    target.getDate() === date.getDate()
+  );
 }

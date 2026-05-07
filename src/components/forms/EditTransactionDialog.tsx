@@ -23,29 +23,38 @@ import {
 } from '@/components/ui/dialog';
 import { useTransactions } from '@/hooks/useTransactions';
 import { useMembers } from '@/hooks/useMembers';
+import { useExtraordinaryExpenses } from '@/hooks/useExtraordinaryExpenses';
 import { Transaction, TransactionType, TransactionCategory, CATEGORY_LABELS } from '@/lib/types';
 
-const transactionSchema = z.object({
-  transaction_date: z.string().min(1, 'Date is required'),
-  amount: z.number().positive('Amount must be positive'),
-  transaction_type: z.enum(['income', 'expense']),
-  category: z.enum([
-    'monthly_fee',
-    'extraordinary_income',
-    'donation',
-    'reimbursement',
-    'event_expense',
-    'parent_organization_fee',
-    'other_expense',
-    'other_income',
-    'event_payment',
-    'loan_disbursement',
-    'loan_repayment',
-    'account_yield',
-  ]),
-  member_id: z.string().optional(),
-  notes: z.string().max(500).optional(),
-});
+const EVENT_CATEGORIES: TransactionCategory[] = ['event_expense', 'event_payment'];
+
+const transactionSchema = z
+  .object({
+    transaction_date: z.string().min(1, 'Date is required'),
+    amount: z.number().positive('Amount must be positive'),
+    transaction_type: z.enum(['income', 'expense']),
+    category: z.enum([
+      'monthly_fee',
+      'extraordinary_income',
+      'donation',
+      'reimbursement',
+      'event_expense',
+      'parent_organization_fee',
+      'other_expense',
+      'other_income',
+      'event_payment',
+      'loan_disbursement',
+      'loan_repayment',
+      'account_yield',
+    ]),
+    member_id: z.string().optional(),
+    event_id: z.string().optional(),
+    notes: z.string().max(500).optional(),
+  })
+  .refine(
+    (data) => !EVENT_CATEGORIES.includes(data.category) || !!data.event_id,
+    { path: ['event_id'], message: 'Seleccioná un evento' }
+  );
 
 type TransactionFormData = z.infer<typeof transactionSchema>;
 
@@ -62,6 +71,10 @@ export function EditTransactionDialog({
 }: EditTransactionDialogProps) {
   const { updateTransaction } = useTransactions();
   const { members } = useMembers();
+  const { expenses: events } = useExtraordinaryExpenses();
+  const activeEvents = events.filter(
+    (e) => e.is_active || e.id === transaction.event_id
+  );
 
   const incomeCategories: TransactionCategory[] = [
     'monthly_fee',
@@ -94,6 +107,7 @@ export function EditTransactionDialog({
       transaction_date: transaction.transaction_date,
       amount: transaction.amount,
       member_id: transaction.member_id || undefined,
+      event_id: transaction.event_id || undefined,
       notes: transaction.notes || undefined,
     },
   });
@@ -106,6 +120,7 @@ export function EditTransactionDialog({
         transaction_date: transaction.transaction_date,
         amount: transaction.amount,
         member_id: transaction.member_id || undefined,
+        event_id: transaction.event_id || undefined,
         notes: transaction.notes || undefined,
       });
     }
@@ -113,6 +128,15 @@ export function EditTransactionDialog({
 
   const transactionType = watch('transaction_type');
   const category = watch('category');
+  const selectedEventId = watch('event_id');
+  const isEventCategory = EVENT_CATEGORIES.includes(category);
+
+  // Clear event_id when category leaves the event-related set
+  useEffect(() => {
+    if (!isEventCategory && selectedEventId) {
+      setValue('event_id', undefined);
+    }
+  }, [isEventCategory, selectedEventId, setValue]);
 
   const availableCategories = transactionType === 'income' ? incomeCategories : expenseCategories;
 
@@ -124,6 +148,7 @@ export function EditTransactionDialog({
       transaction_type: data.transaction_type,
       category: data.category,
       member_id: data.member_id || null,
+      event_id: EVENT_CATEGORIES.includes(data.category) ? data.event_id || null : null,
       notes: data.notes || null,
     });
     onOpenChange(false);
@@ -211,13 +236,13 @@ export function EditTransactionDialog({
 
           {showMemberSelect && (
             <div className="space-y-2">
-              <Label>Member</Label>
+              <Label>Miembro</Label>
               <Select
                 value={watch('member_id') || ''}
                 onValueChange={(value) => setValue('member_id', value || undefined)}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select member..." />
+                  <SelectValue placeholder="Seleccionar miembro..." />
                 </SelectTrigger>
                 <SelectContent>
                   {members.map((member) => (
@@ -227,6 +252,35 @@ export function EditTransactionDialog({
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+          )}
+
+          {isEventCategory && (
+            <div className="space-y-2">
+              <Label>Evento</Label>
+              <Select
+                value={selectedEventId || ''}
+                onValueChange={(value) => setValue('event_id', value || undefined, { shouldValidate: true })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar evento..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {activeEvents.length === 0 && (
+                    <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                      No hay eventos activos
+                    </div>
+                  )}
+                  {activeEvents.map((evt) => (
+                    <SelectItem key={evt.id} value={evt.id}>
+                      {evt.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.event_id && (
+                <p className="text-sm text-destructive">{errors.event_id.message}</p>
+              )}
             </div>
           )}
 

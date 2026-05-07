@@ -61,6 +61,7 @@ export default {
       settings: 'Configuración',
       monthlyFees: 'Cuotas Mensuales',
       events: 'Eventos',
+      reminders: 'Recordatorios',
       treasurer: 'Tesorero',
       viewer: 'Visualizador',
       userManagement: 'Gestión de Usuarios',

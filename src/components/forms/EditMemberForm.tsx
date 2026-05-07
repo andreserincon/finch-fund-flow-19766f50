@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Calendar } from '@/components/ui/calendar';
 import {
   Popover,
@@ -33,9 +34,20 @@ import { useMembers } from '@/hooks/useMembers';
 import { FeeType, FEE_TYPE_LABELS, MemberBalance } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
+const E164_REGEX = /^\+[0-9]{8,15}$/;
+
 const memberSchema = z.object({
   full_name: z.string().min(1, 'El nombre es obligatorio').max(100),
   phone_number: z.string().max(20).optional().default(''),
+  whatsapp_number: z
+    .string()
+    .max(20)
+    .optional()
+    .default('')
+    .refine((v) => !v || E164_REGEX.test(v), {
+      message: 'Formato esperado: +5491155551234',
+    }),
+  whatsapp_opt_out: z.boolean().optional().default(false),
   monthly_fee_amount: z.number().min(0, 'La cuota debe ser positiva'),
   fee_type: z.enum(['standard', 'solidarity']),
   is_active: z.boolean(),
@@ -67,6 +79,7 @@ export function EditMemberForm({ member, open, onOpenChange }: EditMemberFormPro
 
   const feeType = watch('fee_type');
   const isActive = watch('is_active');
+  const whatsappOptOut = watch('whatsapp_opt_out');
 
   useEffect(() => {
     if (member) {
@@ -75,6 +88,8 @@ export function EditMemberForm({ member, open, onOpenChange }: EditMemberFormPro
       reset({
         full_name: member.full_name,
         phone_number: member.phone_number,
+        whatsapp_number: member.whatsapp_number ?? '',
+        whatsapp_opt_out: member.whatsapp_opt_out ?? false,
         monthly_fee_amount: member.monthly_fee_amount,
         fee_type: member.fee_type,
         is_active: member.is_active,
@@ -85,11 +100,13 @@ export function EditMemberForm({ member, open, onOpenChange }: EditMemberFormPro
 
   const onSubmit = async (data: MemberFormData) => {
     if (!member) return;
-    
+
     await updateMember.mutateAsync({
       id: member.member_id,
       full_name: data.full_name,
       phone_number: data.phone_number,
+      whatsapp_number: data.whatsapp_number || null,
+      whatsapp_opt_out: !!data.whatsapp_opt_out,
       monthly_fee_amount: data.monthly_fee_amount,
       fee_type: data.fee_type,
       is_active: data.is_active,
@@ -137,6 +154,37 @@ export function EditMemberForm({ member, open, onOpenChange }: EditMemberFormPro
             {errors.phone_number && (
               <p className="text-sm text-destructive">{errors.phone_number.message}</p>
             )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="edit_whatsapp_number">WhatsApp</Label>
+            <Input
+              id="edit_whatsapp_number"
+              {...register('whatsapp_number')}
+              placeholder="+5491155551234"
+            />
+            <p className="text-xs text-muted-foreground">
+              Formato internacional con código de país.
+            </p>
+            {errors.whatsapp_number && (
+              <p className="text-sm text-destructive">{errors.whatsapp_number.message}</p>
+            )}
+          </div>
+
+          <div className="flex items-start space-x-2">
+            <Checkbox
+              id="edit_whatsapp_opt_out"
+              checked={!!whatsappOptOut}
+              onCheckedChange={(checked) => setValue('whatsapp_opt_out', !!checked)}
+            />
+            <div className="space-y-0.5">
+              <Label htmlFor="edit_whatsapp_opt_out" className="cursor-pointer">
+                No enviar recordatorios por WhatsApp
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Excluí al miembro de la cola de recordatorios automáticos.
+              </p>
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">

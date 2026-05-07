@@ -2,13 +2,13 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -21,8 +21,7 @@ import { useExtraordinaryExpenses, ExtraordinaryExpense } from '@/hooks/useExtra
 import { useEventMemberPayments } from '@/hooks/useEventMemberPayments';
 import { useMembers } from '@/hooks/useMembers';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
-import { PlusCircle, Pencil, Trash2, Tag, Users, Check, X } from 'lucide-react';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { PlusCircle, Pencil, Trash2, Tag, ExternalLink } from 'lucide-react';
 
 const expenseSchema = z.object({
   name: z.string().min(1, 'El nombre es obligatorio').max(100),
@@ -157,130 +156,17 @@ function EditExpenseDialog({ expense }: { expense: ExtraordinaryExpense }) {
   );
 }
 
-function ViewPaymentsDialog({ expense }: { expense: ExtraordinaryExpense }) {
-  const [open, setOpen] = useState(false);
-  const { payments, isLoading, updatePayment, addMemberToEvent, removeMemberFromEvent } = useEventMemberPayments(expense.id);
-  const { memberBalances } = useMembers();
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editAmount, setEditAmount] = useState<string>('');
-
-  const memberIdsInEvent = new Set(payments.map((p: any) => p.member_id));
-  const sortedPayments = [...payments].sort((a: any, b: any) => (a.member?.full_name || '').localeCompare(b.member?.full_name || ''));
-  const membersNotInEvent = memberBalances.filter(m => m.is_active && !memberIdsInEvent.has(m.member_id)).sort((a, b) => a.full_name.localeCompare(b.full_name));
-
-  const handleMarkPaid = async (paymentId: string, amountOwed: number) => {
-    await updatePayment.mutateAsync({ id: paymentId, amount_paid: amountOwed });
-  };
-  const handleToggleMember = async (payment: any) => { await removeMemberFromEvent.mutateAsync(payment.id); };
-  const handleAddMember = async (memberId: string) => {
-    await addMemberToEvent.mutateAsync({ eventId: expense.id, memberId, amountOwed: expense.default_amount });
-  };
-  const handleStartEdit = (paymentId: string, currentAmount: number) => { setEditingId(paymentId); setEditAmount(currentAmount.toString()); };
-  const handleSaveEdit = async (paymentId: string) => {
-    const newAmount = parseFloat(editAmount);
-    if (!isNaN(newAmount) && newAmount >= 0) await updatePayment.mutateAsync({ id: paymentId, amount_owed: newAmount });
-    setEditingId(null); setEditAmount('');
-  };
-  const handleCancelEdit = () => { setEditingId(null); setEditAmount(''); };
-
-  const totalOwed = payments.reduce((sum, p) => sum + Number(p.amount_owed), 0);
-  const totalPaid = payments.reduce((sum, p) => sum + Number(p.amount_paid), 0);
-
+function OpenOverviewButton({ expense }: { expense: ExtraordinaryExpense }) {
+  const navigate = useNavigate();
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="ghost" size="icon"><Users className="h-4 w-4" /></Button>
-      </DialogTrigger>
-      <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col overflow-hidden">
-        <DialogHeader className="flex-shrink-0">
-          <DialogTitle>{expense.name} - Pagos de Miembros</DialogTitle>
-          <DialogDescription>
-            {payments.length} miembros asignados • ARS {totalPaid.toFixed(2)} / ARS {totalOwed.toFixed(2)} recaudados
-          </DialogDescription>
-        </DialogHeader>
-        {isLoading ? (
-          <div className="text-center py-4">Cargando...</div>
-        ) : (
-          <div className="flex-1 overflow-auto min-h-0">
-            <div className="min-w-[600px]">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[60px]">Incluir</TableHead>
-                    <TableHead className="min-w-[150px]">Miembro</TableHead>
-                    <TableHead className="text-right min-w-[120px]">Cuota Adeudada</TableHead>
-                    <TableHead className="text-right min-w-[100px]">Pagado</TableHead>
-                    <TableHead className="text-center min-w-[80px]">Estado</TableHead>
-                    <TableHead className="min-w-[100px]"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {payments.length === 0 && membersNotInEvent.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center py-4 text-muted-foreground">
-                        No hay miembros disponibles.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                  {sortedPayments.map((payment: any) => {
-                    const isPaid = Number(payment.amount_paid) >= Number(payment.amount_owed);
-                    const isEditing = editingId === payment.id;
-                    return (
-                      <TableRow key={payment.id}>
-                        <TableCell>
-                          <Checkbox checked={true} onCheckedChange={() => handleToggleMember(payment)} disabled={isPaid} />
-                        </TableCell>
-                        <TableCell>{payment.member?.full_name || 'Desconocido'}</TableCell>
-                        <TableCell className="text-right">
-                          {isEditing ? (
-                            <div className="flex items-center justify-end gap-1">
-                              <Input type="number" value={editAmount} onChange={(e) => setEditAmount(e.target.value)} className="w-24 h-8 text-right" step="0.01" autoFocus />
-                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleSaveEdit(payment.id)}>
-                                <Check className="h-4 w-4 text-success" />
-                              </Button>
-                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleCancelEdit}>
-                                <X className="h-4 w-4 text-destructive" />
-                              </Button>
-                            </div>
-                          ) : (
-                            <Button variant="ghost" size="sm" className="h-8 px-2 font-mono" onClick={() => handleStartEdit(payment.id, Number(payment.amount_owed))} disabled={isPaid}>
-                              ARS {Number(payment.amount_owed).toFixed(2)}
-                            </Button>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right font-mono">ARS {Number(payment.amount_paid).toFixed(2)}</TableCell>
-                        <TableCell className="text-center">
-                          <Badge variant={isPaid ? 'default' : 'destructive'}>{isPaid ? 'Pagado' : 'Pendiente'}</Badge>
-                        </TableCell>
-                        <TableCell>
-                          {!isPaid && (
-                            <Button variant="outline" size="sm" onClick={() => handleMarkPaid(payment.id, payment.amount_owed)}>
-                              Marcar Pagado
-                            </Button>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                  {membersNotInEvent.map((member) => (
-                    <TableRow key={member.member_id} className="opacity-60">
-                      <TableCell>
-                        <Checkbox checked={false} onCheckedChange={() => handleAddMember(member.member_id)} />
-                      </TableCell>
-                      <TableCell>{member.full_name}</TableCell>
-                      <TableCell className="text-right text-muted-foreground">ARS {expense.default_amount.toFixed(2)}</TableCell>
-                      <TableCell className="text-right text-muted-foreground">—</TableCell>
-                      <TableCell className="text-center"><Badge variant="outline">No asignado</Badge></TableCell>
-                      <TableCell></TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </div>
-        )}
-      </DialogContent>
-    </Dialog>
+    <Button
+      variant="ghost"
+      size="icon"
+      onClick={() => navigate(`/events/${expense.id}`)}
+      title="Abrir resumen del evento"
+    >
+      <ExternalLink className="h-4 w-4" />
+    </Button>
   );
 }
 
@@ -312,6 +198,7 @@ function DeleteExpenseDialog({ expense }: { expense: ExtraordinaryExpense }) {
 export default function ExtraordinaryExpenses() {
   const { expenses, isLoading, updateExpense } = useExtraordinaryExpenses();
   const { isAdmin } = useIsAdmin();
+  const navigate = useNavigate();
 
   const handleToggleActive = (expense: ExtraordinaryExpense) => {
     updateExpense.mutate({ id: expense.id, is_active: !expense.is_active });
@@ -333,7 +220,7 @@ export default function ExtraordinaryExpenses() {
             <Tag className="h-5 w-5 text-primary" />
             Eventos
           </CardTitle>
-          <CardDescription>Las cuotas de eventos se agregan automáticamente a los saldos de miembros</CardDescription>
+          <CardDescription>Hacé clic en un evento para ver el resumen completo</CardDescription>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -355,16 +242,20 @@ export default function ExtraordinaryExpenses() {
               </TableHeader>
               <TableBody>
                 {expenses.map((expense) => (
-                  <TableRow key={expense.id}>
+                  <TableRow
+                    key={expense.id}
+                    className="cursor-pointer hover:bg-muted/40"
+                    onClick={() => navigate(`/events/${expense.id}`)}
+                  >
                     <TableCell className="font-medium">{expense.name}</TableCell>
                     <TableCell className="text-muted-foreground max-w-xs truncate">{expense.description || '—'}</TableCell>
                     <TableCell className="text-right">ARS {expense.default_amount.toFixed(2)}</TableCell>
-                    <TableCell className="text-center">
+                    <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
                       <Switch checked={expense.is_active} onCheckedChange={() => handleToggleActive(expense)} disabled={!isAdmin} />
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                       <div className="flex justify-end gap-1">
-                        <ViewPaymentsDialog expense={expense} />
+                        <OpenOverviewButton expense={expense} />
                         {isAdmin && (
                           <>
                             <EditExpenseDialog expense={expense} />

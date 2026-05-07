@@ -24,7 +24,8 @@ import {
   ChevronDown,
   Plus,
   Home,
-  PieChart
+  PieChart,
+  MessageSquare
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -114,11 +115,12 @@ export function AppSidebar() {
     { title: t('nav.transferFunds'), url: '/account-transfer', icon: ArrowLeftRight },
   ];
 
-  /** Treasury settings pages (fees, events, calculator) */
+  /** Treasury settings pages (fees, events, calculator, reminders) */
   const settingsItems = [
     { title: t('nav.monthlyFees'), url: '/monthly-fees', icon: Settings },
     { title: t('nav.events'), url: '/expense-categories', icon: Wallet },
     { title: t('nav.feeCalculator'), url: '/fee-calculator', icon: Calculator },
+    { title: t('nav.reminders'), url: '/recordatorios', icon: MessageSquare },
   ];
 
   /* ── Admin module nav items ── */
