@@ -635,8 +635,6 @@ export type Database = {
           monthly_fee_amount: number
           phone_number: string
           updated_at: string
-          whatsapp_number: string | null
-          whatsapp_opt_out: boolean
         }
         Insert: {
           created_at?: string
@@ -649,8 +647,6 @@ export type Database = {
           monthly_fee_amount?: number
           phone_number: string
           updated_at?: string
-          whatsapp_number?: string | null
-          whatsapp_opt_out?: boolean
         }
         Update: {
           created_at?: string
@@ -663,79 +659,8 @@ export type Database = {
           monthly_fee_amount?: number
           phone_number?: string
           updated_at?: string
-          whatsapp_number?: string | null
-          whatsapp_opt_out?: boolean
         }
         Relationships: []
-      }
-      payment_reminders: {
-        Row: {
-          amount_owed: number
-          created_at: string
-          draft_message: string
-          failure_reason: string | null
-          final_message: string | null
-          id: string
-          member_id: string
-          period_month: number
-          period_year: number
-          reviewed_by: string | null
-          sent_at: string | null
-          status: Database["public"]["Enums"]["reminder_status"]
-          twilio_message_sid: string | null
-          updated_at: string
-          whatsapp_number: string | null
-        }
-        Insert: {
-          amount_owed: number
-          created_at?: string
-          draft_message: string
-          failure_reason?: string | null
-          final_message?: string | null
-          id?: string
-          member_id: string
-          period_month: number
-          period_year: number
-          reviewed_by?: string | null
-          sent_at?: string | null
-          status?: Database["public"]["Enums"]["reminder_status"]
-          twilio_message_sid?: string | null
-          updated_at?: string
-          whatsapp_number?: string | null
-        }
-        Update: {
-          amount_owed?: number
-          created_at?: string
-          draft_message?: string
-          failure_reason?: string | null
-          final_message?: string | null
-          id?: string
-          member_id?: string
-          period_month?: number
-          period_year?: number
-          reviewed_by?: string | null
-          sent_at?: string | null
-          status?: Database["public"]["Enums"]["reminder_status"]
-          twilio_message_sid?: string | null
-          updated_at?: string
-          whatsapp_number?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "payment_reminders_member_id_fkey"
-            columns: ["member_id"]
-            isOneToOne: false
-            referencedRelation: "member_balances"
-            referencedColumns: ["member_id"]
-          },
-          {
-            foreignKeyName: "payment_reminders_member_id_fkey"
-            columns: ["member_id"]
-            isOneToOne: false
-            referencedRelation: "members"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       monthly_fees: {
         Row: {
@@ -1186,8 +1111,6 @@ export type Database = {
           phone_number: string | null
           total_fees_owed: number | null
           total_paid: number | null
-          whatsapp_number: string | null
-          whatsapp_opt_out: boolean | null
         }
         Relationships: []
       }
@@ -1234,12 +1157,6 @@ export type Database = {
       fee_type: "standard" | "solidarity"
       loan_status: "active" | "paid" | "cancelled"
       masonic_grade: "profano" | "aprendiz" | "companero" | "maestro"
-      reminder_status:
-        | "pending_review"
-        | "approved"
-        | "sent"
-        | "failed"
-        | "dismissed"
       report_status: "generating" | "generated" | "failed"
       transaction_category:
         | "monthly_fee"
