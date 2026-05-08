@@ -70,6 +70,7 @@ export function useEventMemberPayments(eventId?: string) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['event-member-payments'] });
+      queryClient.invalidateQueries({ queryKey: ['event-overview'] });
       queryClient.invalidateQueries({ queryKey: ['member-balances'] });
       toast({ title: 'Cuotas asignadas a todos los miembros' });
     },
@@ -105,6 +106,7 @@ export function useEventMemberPayments(eventId?: string) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['event-member-payments'] });
+      queryClient.invalidateQueries({ queryKey: ['event-overview'] });
       queryClient.invalidateQueries({ queryKey: ['member-balances'] });
       queryClient.invalidateQueries({ queryKey: ['member-event-debts'] });
       toast({ title: 'Pago actualizado' });
@@ -130,6 +132,7 @@ export function useEventMemberPayments(eventId?: string) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['event-member-payments'] });
+      queryClient.invalidateQueries({ queryKey: ['event-overview'] });
       queryClient.invalidateQueries({ queryKey: ['member-balances'] });
       queryClient.invalidateQueries({ queryKey: ['member-event-debts'] });
       toast({ title: 'Miembro agregado al evento' });
@@ -167,6 +170,7 @@ export function useEventMemberPayments(eventId?: string) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['event-member-payments'] });
+      queryClient.invalidateQueries({ queryKey: ['event-overview'] });
       toast({ title: 'Invitado agregado al evento' });
     },
     onError: (error) => {
@@ -186,6 +190,7 @@ export function useEventMemberPayments(eventId?: string) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['event-member-payments'] });
+      queryClient.invalidateQueries({ queryKey: ['event-overview'] });
       queryClient.invalidateQueries({ queryKey: ['member-balances'] });
       queryClient.invalidateQueries({ queryKey: ['member-event-debts'] });
       toast({ title: 'Participante removido del evento' });
@@ -207,6 +212,7 @@ export function useEventMemberPayments(eventId?: string) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['event-member-payments'] });
+      queryClient.invalidateQueries({ queryKey: ['event-overview'] });
       queryClient.invalidateQueries({ queryKey: ['member-balances'] });
     },
     onError: (error) => {
