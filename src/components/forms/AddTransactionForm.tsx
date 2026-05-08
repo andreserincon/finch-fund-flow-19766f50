@@ -26,6 +26,7 @@ import { useTransactions } from '@/hooks/useTransactions';
 import { useMembers } from '@/hooks/useMembers';
 import { useMonthlyFees } from '@/hooks/useMonthlyFees';
 import { useExtraordinaryExpenses } from '@/hooks/useExtraordinaryExpenses';
+import { useEventMemberPayments } from '@/hooks/useEventMemberPayments';
 import { TransactionType, TransactionCategory, CATEGORY_LABELS, AccountType, ACCOUNT_LABELS } from '@/lib/types';
 import { PlusCircle } from 'lucide-react';
 
@@ -53,11 +54,16 @@ const transactionSchema = z
     account: z.enum(['bank', 'great_lodge', 'savings']),
     member_id: z.string().optional(),
     event_id: z.string().optional(),
+    event_member_payment_id: z.string().optional(),
     notes: z.string().max(500).optional(),
   })
   .refine(
     (data) => !EVENT_CATEGORIES.includes(data.category) || !!data.event_id,
     { path: ['event_id'], message: 'Seleccioná un evento' }
+  )
+  .refine(
+    (data) => data.category !== 'event_payment' || !!data.event_member_payment_id,
+    { path: ['event_member_payment_id'], message: 'Seleccioná el participante' }
   );
 
 type TransactionFormData = z.infer<typeof transactionSchema>;
@@ -115,7 +121,15 @@ export function AddTransactionForm({
   const category = watch('category');
   const selectedAccount = watch('account');
   const selectedEventId = watch('event_id');
+  const selectedParticipantId = watch('event_member_payment_id');
   const isEventCategory = EVENT_CATEGORIES.includes(category);
+  const isEventPayment = category === 'event_payment';
+
+  // Participants of the selected event (members + guests). Only fetched
+  // when the form actually needs them (event_payment category).
+  const { payments: eventParticipants } = useEventMemberPayments(
+    isEventPayment ? selectedEventId : undefined
+  );
 
   // Reset amount when category changes; pre-fill only for monthly_fee
   useEffect(() => {
@@ -133,6 +147,17 @@ export function AddTransactionForm({
     }
   }, [isEventCategory, selectedEventId, setValue]);
 
+  // Clear participant when leaving event_payment or when the event changes
+  useEffect(() => {
+    if (!isEventPayment && selectedParticipantId) {
+      setValue('event_member_payment_id', undefined);
+    }
+  }, [isEventPayment, selectedParticipantId, setValue]);
+
+  useEffect(() => {
+    setValue('event_member_payment_id', undefined);
+  }, [selectedEventId, setValue]);
+
   // Pre-fill amount with the event's default_amount when picking an event
   useEffect(() => {
     if (!isEventCategory || !selectedEventId) return;
@@ -142,17 +167,39 @@ export function AddTransactionForm({
     }
   }, [selectedEventId, isEventCategory, activeEvents, setValue]);
 
+  // When picking a participant, pre-fill amount with their outstanding
+  // balance (amount_owed - amount_paid) for the typical "marcar pagado" case
+  useEffect(() => {
+    if (!isEventPayment || !selectedParticipantId) return;
+    const p = eventParticipants.find((row) => row.id === selectedParticipantId);
+    if (!p) return;
+    const balance = Number(p.amount_owed) - Number(p.amount_paid);
+    if (balance > 0) {
+      setValue('amount', balance);
+    }
+  }, [selectedParticipantId, isEventPayment, eventParticipants, setValue]);
+
   const availableCategories = transactionType === 'income' ? incomeCategories : expenseCategories;
 
   const onSubmit = async (data: TransactionFormData) => {
+    // Resolve member_id from the participant when this is an event payment
+    let memberIdToSend: string | null | undefined = data.member_id || null;
+    let participantIdToSend: string | null = null;
+    if (data.category === 'event_payment' && data.event_member_payment_id) {
+      const p = eventParticipants.find((row) => row.id === data.event_member_payment_id);
+      participantIdToSend = data.event_member_payment_id;
+      memberIdToSend = p?.member_id ?? null;
+    }
+
     await addTransaction.mutateAsync({
       transaction_date: data.transaction_date,
       amount: data.amount,
       transaction_type: data.transaction_type,
       category: data.category,
       account: data.account,
-      member_id: data.member_id || null,
+      member_id: memberIdToSend ?? null,
       event_id: EVENT_CATEGORIES.includes(data.category) ? data.event_id || null : null,
+      event_member_payment_id: participantIdToSend,
       notes: data.notes || null,
     });
     reset();
@@ -262,7 +309,7 @@ export function AddTransactionForm({
             </div>
           </div>
 
-          {(category === 'monthly_fee' || category === 'event_payment') && (
+          {category === 'monthly_fee' && (
             <div className="space-y-2">
               <Label>Miembro</Label>
               <Select
@@ -308,6 +355,42 @@ export function AddTransactionForm({
               </Select>
               {errors.event_id && (
                 <p className="text-sm text-destructive">{errors.event_id.message}</p>
+              )}
+            </div>
+          )}
+
+          {isEventPayment && selectedEventId && (
+            <div className="space-y-2">
+              <Label>Participante (miembro o invitado)</Label>
+              <Select
+                value={selectedParticipantId || ''}
+                onValueChange={(value) =>
+                  setValue('event_member_payment_id', value || undefined, { shouldValidate: true })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar participante..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {eventParticipants.length === 0 && (
+                    <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                      Este evento no tiene participantes asignados todavía.
+                    </div>
+                  )}
+                  {eventParticipants.map((p) => {
+                    const name = p.member?.full_name || p.guest_name || 'Sin nombre';
+                    const tag = p.member_id ? 'Miembro' : 'Invitado';
+                    const balance = Number(p.amount_owed) - Number(p.amount_paid);
+                    return (
+                      <SelectItem key={p.id} value={p.id}>
+                        {name} ({tag}) — saldo {balance.toFixed(2)}
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+              {errors.event_member_payment_id && (
+                <p className="text-sm text-destructive">{errors.event_member_payment_id.message}</p>
               )}
             </div>
           )}

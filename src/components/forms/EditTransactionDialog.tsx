@@ -24,6 +24,7 @@ import {
 import { useTransactions } from '@/hooks/useTransactions';
 import { useMembers } from '@/hooks/useMembers';
 import { useExtraordinaryExpenses } from '@/hooks/useExtraordinaryExpenses';
+import { useEventMemberPayments } from '@/hooks/useEventMemberPayments';
 import { Transaction, TransactionType, TransactionCategory, CATEGORY_LABELS } from '@/lib/types';
 
 const EVENT_CATEGORIES: TransactionCategory[] = ['event_expense', 'event_payment'];
@@ -49,11 +50,16 @@ const transactionSchema = z
     ]),
     member_id: z.string().optional(),
     event_id: z.string().optional(),
+    event_member_payment_id: z.string().optional(),
     notes: z.string().max(500).optional(),
   })
   .refine(
     (data) => !EVENT_CATEGORIES.includes(data.category) || !!data.event_id,
     { path: ['event_id'], message: 'Seleccioná un evento' }
+  )
+  .refine(
+    (data) => data.category !== 'event_payment' || !!data.event_member_payment_id,
+    { path: ['event_member_payment_id'], message: 'Seleccioná el participante' }
   );
 
 type TransactionFormData = z.infer<typeof transactionSchema>;
@@ -108,6 +114,7 @@ export function EditTransactionDialog({
       amount: transaction.amount,
       member_id: transaction.member_id || undefined,
       event_id: transaction.event_id || undefined,
+      event_member_payment_id: transaction.event_member_payment_id || undefined,
       notes: transaction.notes || undefined,
     },
   });
@@ -121,6 +128,7 @@ export function EditTransactionDialog({
         amount: transaction.amount,
         member_id: transaction.member_id || undefined,
         event_id: transaction.event_id || undefined,
+        event_member_payment_id: transaction.event_member_payment_id || undefined,
         notes: transaction.notes || undefined,
       });
     }
@@ -129,7 +137,13 @@ export function EditTransactionDialog({
   const transactionType = watch('transaction_type');
   const category = watch('category');
   const selectedEventId = watch('event_id');
+  const selectedParticipantId = watch('event_member_payment_id');
   const isEventCategory = EVENT_CATEGORIES.includes(category);
+  const isEventPayment = category === 'event_payment';
+
+  const { payments: eventParticipants } = useEventMemberPayments(
+    isEventPayment ? selectedEventId : undefined
+  );
 
   // Clear event_id when category leaves the event-related set
   useEffect(() => {
@@ -138,23 +152,39 @@ export function EditTransactionDialog({
     }
   }, [isEventCategory, selectedEventId, setValue]);
 
+  // Clear participant when leaving event_payment
+  useEffect(() => {
+    if (!isEventPayment && selectedParticipantId) {
+      setValue('event_member_payment_id', undefined);
+    }
+  }, [isEventPayment, selectedParticipantId, setValue]);
+
   const availableCategories = transactionType === 'income' ? incomeCategories : expenseCategories;
 
   const onSubmit = async (data: TransactionFormData) => {
+    let memberIdToSend: string | null | undefined = data.member_id || null;
+    let participantIdToSend: string | null = null;
+    if (data.category === 'event_payment' && data.event_member_payment_id) {
+      const p = eventParticipants.find((row) => row.id === data.event_member_payment_id);
+      participantIdToSend = data.event_member_payment_id;
+      memberIdToSend = p?.member_id ?? null;
+    }
+
     await updateTransaction.mutateAsync({
       id: transaction.id,
       transaction_date: data.transaction_date,
       amount: data.amount,
       transaction_type: data.transaction_type,
       category: data.category,
-      member_id: data.member_id || null,
+      member_id: memberIdToSend ?? null,
       event_id: EVENT_CATEGORIES.includes(data.category) ? data.event_id || null : null,
+      event_member_payment_id: participantIdToSend,
       notes: data.notes || null,
     });
     onOpenChange(false);
   };
 
-  const showMemberSelect = category === 'monthly_fee' || category === 'event_payment';
+  const showMemberSelect = category === 'monthly_fee';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -280,6 +310,42 @@ export function EditTransactionDialog({
               </Select>
               {errors.event_id && (
                 <p className="text-sm text-destructive">{errors.event_id.message}</p>
+              )}
+            </div>
+          )}
+
+          {isEventPayment && selectedEventId && (
+            <div className="space-y-2">
+              <Label>Participante (miembro o invitado)</Label>
+              <Select
+                value={selectedParticipantId || ''}
+                onValueChange={(value) =>
+                  setValue('event_member_payment_id', value || undefined, { shouldValidate: true })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar participante..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {eventParticipants.length === 0 && (
+                    <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                      Este evento no tiene participantes asignados todavía.
+                    </div>
+                  )}
+                  {eventParticipants.map((p) => {
+                    const name = p.member?.full_name || p.guest_name || 'Sin nombre';
+                    const tag = p.member_id ? 'Miembro' : 'Invitado';
+                    const balance = Number(p.amount_owed) - Number(p.amount_paid);
+                    return (
+                      <SelectItem key={p.id} value={p.id}>
+                        {name} ({tag}) — saldo {balance.toFixed(2)}
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+              {errors.event_member_payment_id && (
+                <p className="text-sm text-destructive">{errors.event_member_payment_id.message}</p>
               )}
             </div>
           )}

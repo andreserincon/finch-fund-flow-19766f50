@@ -2,8 +2,10 @@
  * @file EventOverview.tsx
  * @description Per-event summary page at /events/:id. Shows projected
  *   vs. paid income from participants, real income/expense from tagged
- *   transactions, and the participant list (members + guests) with
- *   inline payment edits. Treasurers can add non-member guests here.
+ *   transactions, and the participant list (members + guests). Payments
+ *   are registered via a dialog that creates a real `transactions` row
+ *   tagged with event_id + event_member_payment_id; the participant's
+ *   amount_paid is then auto-recomputed by useTransactions.
  */
 
 import { useMemo, useState } from 'react';
@@ -11,13 +13,16 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { ArrowLeft, PlusCircle, UserPlus, Trash2, Pencil, Check, X } from 'lucide-react';
+import { ArrowLeft, PlusCircle, UserPlus, Trash2, Check, X, Receipt, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
 } from '@/components/ui/dialog';
@@ -28,8 +33,9 @@ import { useEventOverview } from '@/hooks/useEventOverview';
 import { useEventMemberPayments } from '@/hooks/useEventMemberPayments';
 import { useMembers } from '@/hooks/useMembers';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
+import { useTransactions } from '@/hooks/useTransactions';
 import { formatCurrency, parseLocalDate } from '@/lib/utils';
-import { CATEGORY_LABELS, EventMemberPayment } from '@/lib/types';
+import { ACCOUNT_LABELS, AccountType, CATEGORY_LABELS, EventMemberPayment } from '@/lib/types';
 
 const guestSchema = z.object({
   guest_name: z.string().min(1, 'El nombre es obligatorio').max(100),
@@ -116,18 +122,169 @@ function AddGuestDialog({ eventId, defaultAmount }: { eventId: string; defaultAm
   );
 }
 
+/* ----------------------------- payment dialog ---------------------------- */
+
+const paymentSchema = z.object({
+  amount: z.number().positive('El monto debe ser positivo'),
+  account: z.enum(['bank', 'great_lodge', 'savings']),
+  transaction_date: z.string().min(1, 'La fecha es obligatoria'),
+  notes: z.string().max(500).optional(),
+});
+type PaymentFormData = z.infer<typeof paymentSchema>;
+
+function RegisterPaymentDialog({
+  payment,
+  eventId,
+  trigger,
+}: {
+  payment: EventMemberPayment;
+  eventId: string;
+  trigger: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  const { addTransaction } = useTransactions();
+
+  const balance = Math.max(0, Number(payment.amount_owed) - Number(payment.amount_paid));
+  const displayName = payment.member?.full_name || payment.guest_name || 'Participante';
+
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useForm<PaymentFormData>({
+    resolver: zodResolver(paymentSchema),
+    defaultValues: {
+      amount: balance > 0 ? balance : Number(payment.amount_owed),
+      account: 'bank',
+      transaction_date: new Date().toISOString().split('T')[0],
+    },
+  });
+  const account = watch('account');
+
+  const onSubmit = async (data: PaymentFormData) => {
+    await addTransaction.mutateAsync({
+      transaction_date: data.transaction_date,
+      amount: data.amount,
+      transaction_type: 'income',
+      category: 'event_payment',
+      account: data.account,
+      member_id: payment.member_id ?? null,
+      event_id: eventId,
+      event_member_payment_id: payment.id,
+      notes: data.notes || null,
+    });
+    reset({
+      amount: balance > 0 ? balance : Number(payment.amount_owed),
+      account: 'bank',
+      transaction_date: new Date().toISOString().split('T')[0],
+    });
+    setOpen(false);
+  };
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (!next) {
+          reset({
+            amount: balance > 0 ? balance : Number(payment.amount_owed),
+            account: 'bank',
+            transaction_date: new Date().toISOString().split('T')[0],
+          });
+        }
+      }}
+    >
+      <DialogTrigger asChild>{trigger}</DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Registrar pago — {displayName}</DialogTitle>
+          <DialogDescription>
+            Crea una transacción de ingreso vinculada a este participante. El saldo del evento
+            y de la cuenta seleccionada se actualizan automáticamente.
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="amount">Monto</Label>
+              <Input
+                id="amount"
+                type="number"
+                step="0.01"
+                {...register('amount', { valueAsNumber: true })}
+              />
+              {errors.amount && (
+                <p className="text-sm text-destructive">{errors.amount.message}</p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="transaction_date">Fecha</Label>
+              <Input
+                id="transaction_date"
+                type="date"
+                {...register('transaction_date')}
+              />
+              {errors.transaction_date && (
+                <p className="text-sm text-destructive">{errors.transaction_date.message}</p>
+              )}
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label>Cuenta</Label>
+            <Select
+              value={account}
+              onValueChange={(value) => setValue('account', value as AccountType)}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {(['bank', 'great_lodge', 'savings'] as AccountType[]).map((acc) => (
+                  <SelectItem key={acc} value={acc}>
+                    {ACCOUNT_LABELS[acc]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="notes">Notas (opcional)</Label>
+            <Input id="notes" {...register('notes')} placeholder="Detalle del pago..." />
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? 'Registrando...' : 'Registrar pago'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* ----------------------------- participant row --------------------------- */
+
 function ParticipantRow({
   payment,
   eventId,
   canEdit,
+  hasTransactions,
 }: {
   payment: EventMemberPayment;
   eventId: string;
   canEdit: boolean;
+  hasTransactions: boolean;
 }) {
   const { updatePayment, removeMemberFromEvent } = useEventMemberPayments(eventId);
-  const [editingField, setEditingField] = useState<'owed' | 'paid' | null>(null);
-  const [draftValue, setDraftValue] = useState<string>('');
+  const [editingOwed, setEditingOwed] = useState(false);
+  const [draftOwed, setDraftOwed] = useState<string>('');
 
   const isMember = !!payment.member_id;
   const displayName = isMember ? (payment.member?.full_name || 'Miembro desconocido') : payment.guest_name;
@@ -135,25 +292,17 @@ function ParticipantRow({
   const amountPaid = Number(payment.amount_paid);
   const balance = amountOwed - amountPaid;
   const isPaid = amountPaid >= amountOwed && amountOwed > 0;
+  const isOrphanPaid = amountPaid > 0 && !hasTransactions;
 
-  const startEdit = (field: 'owed' | 'paid', current: number) => {
-    setEditingField(field);
-    setDraftValue(current.toString());
-  };
-
-  const saveEdit = async () => {
-    const value = parseFloat(draftValue);
+  const saveOwed = async () => {
+    const value = parseFloat(draftOwed);
     if (isNaN(value) || value < 0) {
-      setEditingField(null);
+      setEditingOwed(false);
       return;
     }
-    if (editingField === 'owed') {
-      await updatePayment.mutateAsync({ id: payment.id, amount_owed: value });
-    } else if (editingField === 'paid') {
-      await updatePayment.mutateAsync({ id: payment.id, amount_paid: value });
-    }
-    setEditingField(null);
-    setDraftValue('');
+    await updatePayment.mutateAsync({ id: payment.id, amount_owed: value });
+    setEditingOwed(false);
+    setDraftOwed('');
   };
 
   return (
@@ -172,20 +321,20 @@ function ParticipantRow({
         </Badge>
       </TableCell>
       <TableCell className="text-right">
-        {editingField === 'owed' ? (
+        {editingOwed ? (
           <div className="flex items-center justify-end gap-1">
             <Input
               type="number"
               step="0.01"
-              value={draftValue}
-              onChange={(e) => setDraftValue(e.target.value)}
+              value={draftOwed}
+              onChange={(e) => setDraftOwed(e.target.value)}
               className="w-24 h-8 text-right"
               autoFocus
             />
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={saveEdit}>
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={saveOwed}>
               <Check className="h-4 w-4 text-success" />
             </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditingField(null)}>
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditingOwed(false)}>
               <X className="h-4 w-4 text-destructive" />
             </Button>
           </div>
@@ -194,42 +343,26 @@ function ParticipantRow({
             variant="ghost"
             size="sm"
             className="h-8 px-2 font-mono"
-            onClick={() => canEdit && startEdit('owed', amountOwed)}
+            onClick={() => {
+              if (!canEdit) return;
+              setEditingOwed(true);
+              setDraftOwed(amountOwed.toString());
+            }}
             disabled={!canEdit}
           >
             {formatCurrency(amountOwed)}
           </Button>
         )}
       </TableCell>
-      <TableCell className="text-right">
-        {editingField === 'paid' ? (
-          <div className="flex items-center justify-end gap-1">
-            <Input
-              type="number"
-              step="0.01"
-              value={draftValue}
-              onChange={(e) => setDraftValue(e.target.value)}
-              className="w-24 h-8 text-right"
-              autoFocus
-            />
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={saveEdit}>
-              <Check className="h-4 w-4 text-success" />
-            </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditingField(null)}>
-              <X className="h-4 w-4 text-destructive" />
-            </Button>
-          </div>
-        ) : (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 px-2 font-mono"
-            onClick={() => canEdit && startEdit('paid', amountPaid)}
-            disabled={!canEdit}
-          >
-            {formatCurrency(amountPaid)}
-          </Button>
-        )}
+      <TableCell className="text-right font-mono">
+        <div className="flex items-center justify-end gap-1.5">
+          {isOrphanPaid && (
+            <span title="Pago marcado manualmente sin transacción asociada. Registrar pago para reflejarlo en el saldo de la cuenta.">
+              <AlertTriangle className="h-3.5 w-3.5 text-warning" />
+            </span>
+          )}
+          {formatCurrency(amountPaid)}
+        </div>
       </TableCell>
       <TableCell className="text-right font-mono">{formatCurrency(balance)}</TableCell>
       <TableCell className="text-center">
@@ -238,33 +371,47 @@ function ParticipantRow({
         </Badge>
       </TableCell>
       <TableCell className="text-right">
-        {canEdit && (
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>¿Quitar a {displayName}?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Se eliminará su registro de cuota para este evento. Los pagos ya registrados como
-                  transacciones no se modifican.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={() => removeMemberFromEvent.mutate(payment.id)}
-                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                >
-                  Quitar
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        )}
+        <div className="flex justify-end gap-1">
+          {canEdit && (
+            <RegisterPaymentDialog
+              payment={payment}
+              eventId={eventId}
+              trigger={
+                <Button variant="outline" size="sm">
+                  <Receipt className="mr-1 h-4 w-4" />
+                  Registrar pago
+                </Button>
+              }
+            />
+          )}
+          {canEdit && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>¿Quitar a {displayName}?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Se eliminará su registro de cuota para este evento. Las transacciones ya
+                    registradas no se modifican.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => removeMemberFromEvent.mutate(payment.id)}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    Quitar
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
+        </div>
       </TableCell>
     </TableRow>
   );
@@ -306,6 +453,25 @@ export default function EventOverview() {
   const membersAvailable = useMemo(
     () => members.filter((m) => m.is_active && !memberIdsAlreadyIn.has(m.id)),
     [members, memberIdsAlreadyIn]
+  );
+
+  // Set of participant ids that already have at least one transaction
+  // referencing them. Used to flag "Pagado" rows that pre-date the
+  // event_member_payment_id link and need a transaction registered.
+  const participantsWithTransactions = useMemo(() => {
+    const s = new Set<string>();
+    for (const tx of transactions) {
+      if (tx.event_member_payment_id) s.add(tx.event_member_payment_id);
+    }
+    return s;
+  }, [transactions]);
+
+  const orphanCount = useMemo(
+    () =>
+      payments.filter(
+        (p) => Number(p.amount_paid) > 0 && !participantsWithTransactions.has(p.id)
+      ).length,
+    [payments, participantsWithTransactions]
   );
 
   const kpis = useMemo(() => {
@@ -430,6 +596,19 @@ export default function EventOverview() {
         <CardHeader>
           <CardTitle>Participantes</CardTitle>
           <CardDescription>Miembros e invitados con cuotas asignadas a este evento</CardDescription>
+          {orphanCount > 0 && (
+            <div className="mt-2 flex items-start gap-2 rounded-md border border-warning/50 bg-warning/10 p-3 text-sm">
+              <AlertTriangle className="h-4 w-4 mt-0.5 text-warning shrink-0" />
+              <div>
+                <p className="font-medium text-warning-foreground">
+                  {orphanCount} pago(s) marcado(s) como pagado pero sin transacción asociada.
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Estos saldos no se reflejan en las cuentas. Usá "Registrar pago" en cada fila marcada para crear la transacción correspondiente.
+                </p>
+              </div>
+            </div>
+          )}
         </CardHeader>
         <CardContent>
           {isAdmin && membersAvailable.length > 0 && (
@@ -483,7 +662,13 @@ export default function EventOverview() {
               </TableHeader>
               <TableBody>
                 {sortedPayments.map((p) => (
-                  <ParticipantRow key={p.id} payment={p} eventId={event.id} canEdit={isAdmin} />
+                  <ParticipantRow
+                    key={p.id}
+                    payment={p}
+                    eventId={event.id}
+                    canEdit={isAdmin}
+                    hasTransactions={participantsWithTransactions.has(p.id)}
+                  />
                 ))}
               </TableBody>
             </Table>

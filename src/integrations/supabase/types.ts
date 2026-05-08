@@ -1083,6 +1083,7 @@ export type Database = {
           category: Database["public"]["Enums"]["transaction_category"]
           created_at: string
           event_id: string | null
+          event_member_payment_id: string | null
           id: string
           member_id: string | null
           notes: string | null
@@ -1096,6 +1097,7 @@ export type Database = {
           category: Database["public"]["Enums"]["transaction_category"]
           created_at?: string
           event_id?: string | null
+          event_member_payment_id?: string | null
           id?: string
           member_id?: string | null
           notes?: string | null
@@ -1109,6 +1111,7 @@ export type Database = {
           category?: Database["public"]["Enums"]["transaction_category"]
           created_at?: string
           event_id?: string | null
+          event_member_payment_id?: string | null
           id?: string
           member_id?: string | null
           notes?: string | null
@@ -1122,6 +1125,13 @@ export type Database = {
             columns: ["event_id"]
             isOneToOne: false
             referencedRelation: "extraordinary_expenses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_event_member_payment_id_fkey"
+            columns: ["event_member_payment_id"]
+            isOneToOne: false
+            referencedRelation: "event_member_payments"
             referencedColumns: ["id"]
           },
           {

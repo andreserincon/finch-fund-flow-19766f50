@@ -88,6 +88,13 @@ export interface Transaction {
    * specific event in extraordinary_expenses.
    */
   event_id: string | null;
+  /**
+   * When category is event_payment, links to the specific participant
+   * (member or guest) in event_member_payments. The participant's
+   * amount_paid is kept in sync with the sum of transactions referencing
+   * this id (see useTransactions).
+   */
+  event_member_payment_id: string | null;
   notes: string | null;
   account: AccountType;
   created_at: string;
