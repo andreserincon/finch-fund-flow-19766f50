@@ -90,6 +90,13 @@ function AddExpenseDialog() {
             <Input id="default_amount" type="number" step="0.01" {...register('default_amount', { valueAsNumber: true })} />
             {errors.default_amount && <p className="text-sm text-destructive">{errors.default_amount.message}</p>}
           </div>
+          <div className="space-y-2">
+            <Label htmlFor="payment_deadline">Fecha límite de pago (opcional)</Label>
+            <Input id="payment_deadline" type="date" {...register('payment_deadline')} />
+            <p className="text-xs text-muted-foreground">
+              A 15 días o menos del vencimiento, los miembros impagos quedan "demorados". Pasado el vencimiento, "morosos".
+            </p>
+          </div>
           <div className="flex items-center space-x-2 p-3 bg-muted rounded-lg">
             <Checkbox id="assign_to_members" checked={assignToMembers} onCheckedChange={(checked) => setValue('assign_to_members', !!checked)} />
             <div className="flex-1">
