@@ -260,6 +260,7 @@ export default function ExtraordinaryExpenses() {
                   <TableHead>Nombre del Evento</TableHead>
                   <TableHead>Descripción</TableHead>
                   <TableHead className="text-right">Cuota/Miembro</TableHead>
+                  <TableHead>Vencimiento</TableHead>
                   <TableHead className="text-center">Activo</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
@@ -274,6 +275,7 @@ export default function ExtraordinaryExpenses() {
                     <TableCell className="font-medium">{expense.name}</TableCell>
                     <TableCell className="text-muted-foreground max-w-xs truncate">{expense.description || '—'}</TableCell>
                     <TableCell className="text-right">ARS {expense.default_amount.toFixed(2)}</TableCell>
+                    <TableCell className="text-muted-foreground">{expense.payment_deadline || '—'}</TableCell>
                     <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
                       <Switch checked={expense.is_active} onCheckedChange={() => handleToggleActive(expense)} disabled={!isAdmin} />
                     </TableCell>
