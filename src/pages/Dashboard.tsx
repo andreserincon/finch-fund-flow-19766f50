@@ -335,8 +335,7 @@ export default function Dashboard() {
       const aOwed = a.total_fees_owed - a.total_paid;
       const bOwed = b.total_fees_owed - b.total_paid;
       return bOwed - aOwed;
-    })
-    .slice(0, 5);
+    });
 
   const formatCurrency = (amount: number, currency: 'ARS' | 'USD' = 'ARS') => {
     return new Intl.NumberFormat(currency === 'ARS' ? 'es-AR' : 'en-US', {
