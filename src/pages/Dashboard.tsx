@@ -319,7 +319,7 @@ export default function Dashboard() {
     return map;
   }, [adjustedMemberBalances]);
 
-  // Members requiring attention - uses adjusted balances
+  // Members requiring attention - only capita moroso or evento demorado
   const overdueMembers = adjustedMemberBalances
     .filter(m => {
       if (!m.is_active) return false;
@@ -327,9 +327,12 @@ export default function Dashboard() {
       
       const amountOwed = m.total_fees_owed - m.total_paid;
       const monthlyFeeRate = effectiveFees[m.fee_type] || 0;
-      const hasUnpaidEvents = (memberEventDebts[m.member_id] || 0) > 0;
+      const isMonthlyOverdue = amountOwed > monthlyFeeRate;
       
-      return amountOwed > monthlyFeeRate || hasUnpaidEvents;
+      const eventStatus = memberEventStatuses[m.member_id];
+      const isEventDemorado = !!eventStatus?.demorado && !eventStatus?.moroso;
+      
+      return isMonthlyOverdue || isEventDemorado;
     })
     .sort((a, b) => {
       const aOwed = a.total_fees_owed - a.total_paid;
