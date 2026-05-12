@@ -18,8 +18,19 @@ import "./i18n";
 /*  Service-worker handling (preview vs production)                   */
 /* ------------------------------------------------------------------ */
 
-/** Detect whether we're running inside the Lovable preview iframe */
-const isLovablePreview = window.location.hostname.includes("id-preview--");
+/** Detect whether we're running inside any Lovable preview/editor iframe */
+const isInIframe = (() => {
+  try {
+    return window.self !== window.top;
+  } catch {
+    return true;
+  }
+})();
+
+const isLovablePreview =
+  window.location.hostname.includes("id-preview--") ||
+  window.location.hostname.includes("lovableproject.com") ||
+  isInIframe;
 
 if (isLovablePreview && "serviceWorker" in navigator) {
   // ── Preview mode: unregister all SWs and flush caches so the UI
