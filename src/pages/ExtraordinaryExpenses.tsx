@@ -166,6 +166,10 @@ function EditExpenseDialog({ expense }: { expense: ExtraordinaryExpense }) {
             <Input id="edit-default_amount" type="number" step="0.01" {...register('default_amount', { valueAsNumber: true })} />
             {errors.default_amount && <p className="text-sm text-destructive">{errors.default_amount.message}</p>}
           </div>
+          <div className="space-y-2">
+            <Label htmlFor="edit-payment_deadline">Fecha límite de pago (opcional)</Label>
+            <Input id="edit-payment_deadline" type="date" {...register('payment_deadline')} />
+          </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
             <Button type="submit" disabled={isSubmitting}>{isSubmitting ? 'Guardando...' : 'Guardar Cambios'}</Button>
