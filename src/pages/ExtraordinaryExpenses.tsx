@@ -53,6 +53,7 @@ function AddExpenseDialog() {
       name: data.name,
       description: data.description,
       default_amount: data.default_amount,
+      payment_deadline: data.payment_deadline || null,
     });
     if (data.assign_to_members && result?.id && data.default_amount > 0) {
       await createPaymentsForAllMembers.mutateAsync({
