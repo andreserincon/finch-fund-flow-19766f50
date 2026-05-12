@@ -122,11 +122,22 @@ function EditExpenseDialog({ expense }: { expense: ExtraordinaryExpense }) {
 
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<ExpenseFormData>({
     resolver: zodResolver(expenseSchema),
-    defaultValues: { name: expense.name, description: expense.description || '', default_amount: expense.default_amount },
+    defaultValues: {
+      name: expense.name,
+      description: expense.description || '',
+      default_amount: expense.default_amount,
+      payment_deadline: expense.payment_deadline || '',
+    },
   });
 
   const onSubmit = async (data: ExpenseFormData) => {
-    await updateExpense.mutateAsync({ id: expense.id, name: data.name, description: data.description, default_amount: data.default_amount });
+    await updateExpense.mutateAsync({
+      id: expense.id,
+      name: data.name,
+      description: data.description,
+      default_amount: data.default_amount,
+      payment_deadline: data.payment_deadline || null,
+    });
     setOpen(false);
   };
 
