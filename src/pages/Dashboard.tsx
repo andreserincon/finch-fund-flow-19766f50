@@ -441,7 +441,7 @@ export default function Dashboard() {
         />
       </div>
 
-      {/* Key Metrics - Capitas (cuotas mensuales) */}
+      {/* Key Metrics - Capita */}
       <div className="grid gap-3 grid-cols-2">
         <StatCard
           title={t('dashboard.membersUnpaid')}

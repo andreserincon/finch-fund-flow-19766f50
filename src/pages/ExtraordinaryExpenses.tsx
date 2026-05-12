@@ -73,7 +73,7 @@ function AddExpenseDialog() {
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Agregar Evento / Categoría de Gasto</DialogTitle>
-          <DialogDescription>Crear un nuevo evento con cuotas para todos los miembros.</DialogDescription>
+          <DialogDescription>Crear un nuevo evento con capita para todos los miembros.</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-2">
@@ -233,7 +233,7 @@ export default function ExtraordinaryExpenses() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Eventos y Gastos</h1>
-          <p className="text-muted-foreground">Gestionar eventos con cuotas por miembro</p>
+          <p className="text-muted-foreground">Gestionar eventos con capita por miembro</p>
         </div>
         {isAdmin && <AddExpenseDialog />}
       </div>

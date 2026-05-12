@@ -95,7 +95,7 @@ export function AddMemberForm() {
         <DialogHeader>
           <DialogTitle>Agregar Nuevo Miembro</DialogTitle>
           <DialogDescription>
-            Agregar un nuevo miembro a la organización. Comenzará a acumular cuotas desde la fecha de ingreso.
+            Agregar un nuevo miembro a la organización. Comenzará a acumular capita desde la fecha de ingreso.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">

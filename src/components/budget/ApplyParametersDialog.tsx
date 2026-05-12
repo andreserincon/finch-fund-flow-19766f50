@@ -274,7 +274,7 @@ export function ApplyParametersDialog({
               </p>
               <p>
                 <strong>Crecimiento membresía:</strong>{' '}
-                {membershipGrowthPercent}% (aplicado a cuotas mensuales)
+                {membershipGrowthPercent}% (aplicado a capita mensual)
               </p>
               <p>
                 <strong>Multiplicador ingresos extraord.:</strong>{' '}
