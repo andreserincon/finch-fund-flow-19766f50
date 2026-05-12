@@ -261,7 +261,6 @@ export const LOAN_STATUS_LABELS: Record<LoanStatus, string> = {
 
 export const REMINDER_STATUS_LABELS: Record<ReminderStatus, string> = {
   pending_review: 'Pendiente de revisión',
-  approved: 'Aprobado',
   sent: 'Enviado',
   failed: 'Falló',
   dismissed: 'Descartado',
