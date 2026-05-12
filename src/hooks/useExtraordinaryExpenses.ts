@@ -17,6 +17,7 @@ export interface ExtraordinaryExpense {
   description: string | null;
   default_amount: number;
   is_active: boolean;
+  payment_deadline: string | null;
   created_at: string;
   updated_at: string;
 }
