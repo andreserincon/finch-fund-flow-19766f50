@@ -27,6 +27,7 @@ const expenseSchema = z.object({
   name: z.string().min(1, 'El nombre es obligatorio').max(100),
   description: z.string().max(500).optional(),
   default_amount: z.number().min(0, 'El monto debe ser positivo'),
+  payment_deadline: z.string().optional(),
   assign_to_members: z.boolean().optional(),
 });
 
@@ -52,6 +53,7 @@ function AddExpenseDialog() {
       name: data.name,
       description: data.description,
       default_amount: data.default_amount,
+      payment_deadline: data.payment_deadline || null,
     });
     if (data.assign_to_members && result?.id && data.default_amount > 0) {
       await createPaymentsForAllMembers.mutateAsync({
@@ -88,6 +90,13 @@ function AddExpenseDialog() {
             <Input id="default_amount" type="number" step="0.01" {...register('default_amount', { valueAsNumber: true })} />
             {errors.default_amount && <p className="text-sm text-destructive">{errors.default_amount.message}</p>}
           </div>
+          <div className="space-y-2">
+            <Label htmlFor="payment_deadline">Fecha límite de pago (opcional)</Label>
+            <Input id="payment_deadline" type="date" {...register('payment_deadline')} />
+            <p className="text-xs text-muted-foreground">
+              A 15 días o menos del vencimiento, los miembros impagos quedan "demorados". Pasado el vencimiento, "morosos".
+            </p>
+          </div>
           <div className="flex items-center space-x-2 p-3 bg-muted rounded-lg">
             <Checkbox id="assign_to_members" checked={assignToMembers} onCheckedChange={(checked) => setValue('assign_to_members', !!checked)} />
             <div className="flex-1">
@@ -113,11 +122,22 @@ function EditExpenseDialog({ expense }: { expense: ExtraordinaryExpense }) {
 
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<ExpenseFormData>({
     resolver: zodResolver(expenseSchema),
-    defaultValues: { name: expense.name, description: expense.description || '', default_amount: expense.default_amount },
+    defaultValues: {
+      name: expense.name,
+      description: expense.description || '',
+      default_amount: expense.default_amount,
+      payment_deadline: expense.payment_deadline || '',
+    },
   });
 
   const onSubmit = async (data: ExpenseFormData) => {
-    await updateExpense.mutateAsync({ id: expense.id, name: data.name, description: data.description, default_amount: data.default_amount });
+    await updateExpense.mutateAsync({
+      id: expense.id,
+      name: data.name,
+      description: data.description,
+      default_amount: data.default_amount,
+      payment_deadline: data.payment_deadline || null,
+    });
     setOpen(false);
   };
 
@@ -145,6 +165,10 @@ function EditExpenseDialog({ expense }: { expense: ExtraordinaryExpense }) {
             <Label htmlFor="edit-default_amount">Cuota por Miembro (ARS)</Label>
             <Input id="edit-default_amount" type="number" step="0.01" {...register('default_amount', { valueAsNumber: true })} />
             {errors.default_amount && <p className="text-sm text-destructive">{errors.default_amount.message}</p>}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="edit-payment_deadline">Fecha límite de pago (opcional)</Label>
+            <Input id="edit-payment_deadline" type="date" {...register('payment_deadline')} />
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
@@ -236,6 +260,7 @@ export default function ExtraordinaryExpenses() {
                   <TableHead>Nombre del Evento</TableHead>
                   <TableHead>Descripción</TableHead>
                   <TableHead className="text-right">Cuota/Miembro</TableHead>
+                  <TableHead>Vencimiento</TableHead>
                   <TableHead className="text-center">Activo</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
@@ -250,6 +275,7 @@ export default function ExtraordinaryExpenses() {
                     <TableCell className="font-medium">{expense.name}</TableCell>
                     <TableCell className="text-muted-foreground max-w-xs truncate">{expense.description || '—'}</TableCell>
                     <TableCell className="text-right">ARS {expense.default_amount.toFixed(2)}</TableCell>
+                    <TableCell className="text-muted-foreground">{expense.payment_deadline || '—'}</TableCell>
                     <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
                       <Switch checked={expense.is_active} onCheckedChange={() => handleToggleActive(expense)} disabled={!isAdmin} />
                     </TableCell>

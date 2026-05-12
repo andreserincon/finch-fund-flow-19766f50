@@ -163,26 +163,55 @@ export default function Dashboard() {
     });
   }, [memberBalances, filteredTransactions, selectedDate, monthlyFees]);
 
-  // Query unpaid event amounts per member
-  const { data: memberEventDebts = {} } = useQuery({
-    queryKey: ['member-event-debts'],
+  // Query unpaid event amounts per member, classified by deadline status.
+  // - 'moroso': today > deadline
+  // - 'demorado': within 15 days of deadline (today >= deadline - 15)
+  // - 'pending': has debt but not yet within demorado window (or no deadline set)
+  // Only ACTIVE events are considered for status flags.
+  const { data: memberEventInfo = { totals: {}, statuses: {} } } = useQuery<{
+    totals: Record<string, number>;
+    statuses: Record<string, { demorado: boolean; moroso: boolean }>;
+  }>({
+    queryKey: ['member-event-debts-classified'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('event_member_payments')
-        .select('member_id, amount_owed, amount_paid');
-      
+        .select('member_id, amount_owed, amount_paid, extraordinary_expenses!inner(is_active, payment_deadline)');
+
       if (error) throw error;
-      
-      const debts: Record<string, number> = {};
-      data?.forEach((payment) => {
-        const unpaid = payment.amount_owed - payment.amount_paid;
-        if (unpaid > 0) {
-          debts[payment.member_id] = (debts[payment.member_id] || 0) + unpaid;
+
+      const totals: Record<string, number> = {};
+      const statuses: Record<string, { demorado: boolean; moroso: boolean }> = {};
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      data?.forEach((row: any) => {
+        const unpaid = Number(row.amount_owed) - Number(row.amount_paid);
+        if (unpaid <= 0 || !row.member_id) return;
+        const event = row.extraordinary_expenses;
+        if (!event?.is_active) return;
+
+        totals[row.member_id] = (totals[row.member_id] || 0) + unpaid;
+
+        if (event.payment_deadline) {
+          const deadline = parseLocalDate(event.payment_deadline);
+          const warningStart = new Date(deadline);
+          warningStart.setDate(warningStart.getDate() - 15);
+
+          if (!statuses[row.member_id]) statuses[row.member_id] = { demorado: false, moroso: false };
+          if (today > deadline) {
+            statuses[row.member_id].moroso = true;
+          } else if (today >= warningStart) {
+            statuses[row.member_id].demorado = true;
+          }
         }
       });
-      return debts;
+      return { totals, statuses };
     },
   });
+
+  const memberEventDebts = memberEventInfo.totals;
+  const memberEventStatuses = memberEventInfo.statuses;
 
   const isLoading = membersLoading || transactionsLoading || feesLoading || transfersLoading || loansLoading || historyLoading;
 
@@ -244,6 +273,7 @@ export default function Dashboard() {
     ? selectedMonthFees
     : currentMonthFees;
 
+  // Capita-only metrics (events excluded)
   const membersUnpaid = adjustedMemberBalances.filter(m => {
     if (!m.is_active) return false;
     return m.total_paid < m.total_fees_owed;
@@ -253,9 +283,15 @@ export default function Dashboard() {
     if (!m.is_active) return false;
     const amountOwed = m.total_fees_owed - m.total_paid;
     const monthlyFeeRate = effectiveFees[m.fee_type] || 0;
-    const hasUnpaidEvents = (memberEventDebts[m.member_id] || 0) > 0;
-    return amountOwed > monthlyFeeRate || hasUnpaidEvents;
+    return amountOwed > monthlyFeeRate;
   }).length;
+
+  // Event-only metrics
+  const activeMemberIds = new Set(adjustedMemberBalances.filter(m => m.is_active).map(m => m.member_id));
+  const eventDemoradoCount = Object.entries(memberEventStatuses)
+    .filter(([id, s]) => activeMemberIds.has(id) && s.demorado && !s.moroso).length;
+  const eventMorosoCount = Object.entries(memberEventStatuses)
+    .filter(([id, s]) => activeMemberIds.has(id) && s.moroso).length;
   
   // Calculate monthly income/expenses for selected month
   const monthlyIncomeARS = filteredTransactions
@@ -403,7 +439,7 @@ export default function Dashboard() {
         />
       </div>
 
-      {/* Key Metrics - Row 3 */}
+      {/* Key Metrics - Capitas (cuotas mensuales) */}
       <div className="grid gap-3 grid-cols-2">
         <StatCard
           title={t('dashboard.membersUnpaid')}
@@ -418,6 +454,24 @@ export default function Dashboard() {
           subtitle={t('dashboard.oweMoreThanOne')}
           icon={<AlertTriangle className="h-8 w-8 text-overdue/20" />}
           variant={membersOverdue > 0 ? 'danger' : 'success'}
+        />
+      </div>
+
+      {/* Key Metrics - Eventos (separado de capitas) */}
+      <div className="grid gap-3 grid-cols-2">
+        <StatCard
+          title="Demorado Evento"
+          value={eventDemoradoCount}
+          subtitle="≤ 15 días del vencimiento"
+          icon={<AlertTriangle className="h-8 w-8 text-warning/20" />}
+          variant={eventDemoradoCount > 0 ? 'warning' : 'success'}
+        />
+        <StatCard
+          title="Moroso Evento"
+          value={eventMorosoCount}
+          subtitle="vencimiento superado"
+          icon={<AlertTriangle className="h-8 w-8 text-overdue/20" />}
+          variant={eventMorosoCount > 0 ? 'danger' : 'success'}
         />
       </div>
 
@@ -445,6 +499,9 @@ export default function Dashboard() {
                 const monthlyFeeRate = effectiveFees[member.fee_type] || 0;
                 const isMonthlyOverdue = monthlyDebt > monthlyFeeRate;
                 const hasEventDebt = eventDebt > 0;
+                const eventStatus = memberEventStatuses[member.member_id];
+                const isEventMoroso = !!eventStatus?.moroso;
+                const isEventDemorado = !!eventStatus?.demorado && !isEventMoroso;
                 
                 return (
                   <div
@@ -471,14 +528,24 @@ export default function Dashboard() {
                         )}
                       </div>
                     </div>
-                    <div className="flex gap-1 flex-shrink-0">
+                    <div className="flex gap-1 flex-shrink-0 flex-wrap justify-end">
                       {isMonthlyOverdue && (
                         <span className="text-[10px] px-1.5 py-0.5 rounded bg-destructive/10 text-destructive font-medium">
                           {t('dashboard.fees')}
                         </span>
                       )}
-                      {hasEventDebt && (
+                      {isEventMoroso && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-destructive/10 text-destructive font-medium">
+                          Evento moroso
+                        </span>
+                      )}
+                      {isEventDemorado && (
                         <span className="text-[10px] px-1.5 py-0.5 rounded bg-warning/10 text-warning font-medium">
+                          Evento demorado
+                        </span>
+                      )}
+                      {hasEventDebt && !isEventMoroso && !isEventDemorado && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-medium">
                           {t('dashboard.event')}
                         </span>
                       )}
