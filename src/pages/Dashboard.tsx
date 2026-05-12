@@ -439,7 +439,7 @@ export default function Dashboard() {
         />
       </div>
 
-      {/* Key Metrics - Row 3 */}
+      {/* Key Metrics - Capitas (cuotas mensuales) */}
       <div className="grid gap-3 grid-cols-2">
         <StatCard
           title={t('dashboard.membersUnpaid')}
@@ -454,6 +454,24 @@ export default function Dashboard() {
           subtitle={t('dashboard.oweMoreThanOne')}
           icon={<AlertTriangle className="h-8 w-8 text-overdue/20" />}
           variant={membersOverdue > 0 ? 'danger' : 'success'}
+        />
+      </div>
+
+      {/* Key Metrics - Eventos (separado de capitas) */}
+      <div className="grid gap-3 grid-cols-2">
+        <StatCard
+          title="Demorado Evento"
+          value={eventDemoradoCount}
+          subtitle="≤ 15 días del vencimiento"
+          icon={<AlertTriangle className="h-8 w-8 text-warning/20" />}
+          variant={eventDemoradoCount > 0 ? 'warning' : 'success'}
+        />
+        <StatCard
+          title="Moroso Evento"
+          value={eventMorosoCount}
+          subtitle="vencimiento superado"
+          icon={<AlertTriangle className="h-8 w-8 text-overdue/20" />}
+          variant={eventMorosoCount > 0 ? 'danger' : 'success'}
         />
       </div>
 
