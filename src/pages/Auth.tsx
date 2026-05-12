@@ -109,7 +109,7 @@ export default function Auth() {
       }
 
       reset();
-      navigate('/home');
+      navigate('/');
     } catch (err) {
       setError('An unexpected error occurred. Please try again.');
     } finally {
@@ -169,9 +169,9 @@ export default function Auth() {
       setPasswordUpdateSuccess(true);
       resetNewPasswordForm();
       
-      // Redirect to home after successful password update
+      // Redirect to treasury dashboard after successful password update
       setTimeout(() => {
-        navigate('/home');
+        navigate('/');
       }, 2000);
     } catch (err) {
       setPasswordUpdateError('An unexpected error occurred. Please try again.');

@@ -41,10 +41,9 @@ export type PaymentStatus = 'up_to_date' | 'ahead' | 'overdue';
 /** Masonic degree level */
 export type MasonicGrade = 'profano' | 'aprendiz' | 'companero' | 'maestro';
 
-/** Status of an outgoing payment reminder (Twilio WhatsApp queue) */
+/** Status of an outgoing payment reminder */
 export type ReminderStatus =
   | 'pending_review'
-  | 'approved'
   | 'sent'
   | 'failed'
   | 'dismissed';
@@ -191,7 +190,7 @@ export interface PaymentReminder {
   created_at: string;
   updated_at: string;
   /** Joined member data populated by the hook */
-  member?: { id: string; full_name: string; whatsapp_number: string | null } | null;
+  member?: { id: string; full_name: string } | null;
 }
 
 /** Global organisation settings (key-value numbers) */
@@ -262,7 +261,6 @@ export const LOAN_STATUS_LABELS: Record<LoanStatus, string> = {
 
 export const REMINDER_STATUS_LABELS: Record<ReminderStatus, string> = {
   pending_review: 'Pendiente de revisión',
-  approved: 'Aprobado',
   sent: 'Enviado',
   failed: 'Falló',
   dismissed: 'Descartado',

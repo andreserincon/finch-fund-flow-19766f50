@@ -24,7 +24,7 @@ export function usePaymentReminders({ year, month }: UsePaymentRemindersArgs) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('payment_reminders')
-        .select('*, member:members(id, full_name, whatsapp_number)')
+        .select('*, member:members(id, full_name)')
         .eq('period_year', year)
         .eq('period_month', month)
         .order('created_at');
