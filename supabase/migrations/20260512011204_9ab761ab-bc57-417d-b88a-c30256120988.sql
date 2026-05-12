@@ -1,0 +1,1 @@
+ALTER TABLE public.extraordinary_expenses ADD COLUMN IF NOT EXISTS payment_deadline DATE;
