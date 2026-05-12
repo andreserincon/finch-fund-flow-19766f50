@@ -101,13 +101,23 @@ export default function Members() {
   const getMonthlyBalance = (member: MemberBalance) => getMonthlyPaid(member) - getMonthlyOwed(member);
   const getOverallBalance = (member: MemberBalance) => getMonthlyBalance(member) + getEventsBalance(member.member_id);
 
+  /**
+   * Capita-only status. Event debt is reported separately so a member who
+   * is up-to-date with monthly fees but owes an event isn't shown as
+   * Moroso/Impago by mistake.
+   */
   const getPaymentStatus = (member: MemberBalance) => {
-    const overallBalance = getOverallBalance(member);
+    const monthlyBalance = getMonthlyBalance(member);
     const monthlyFeeRate = currentMonthFees[member.fee_type] || 0;
-    if (overallBalance < -monthlyFeeRate) return 'overdue';
-    if (overallBalance < 0) return 'unpaid';
-    if (overallBalance > monthlyFeeRate) return 'ahead';
+    if (monthlyBalance < -monthlyFeeRate) return 'overdue';
+    if (monthlyBalance < 0) return 'unpaid';
+    if (monthlyBalance > monthlyFeeRate) return 'ahead';
     return 'up_to_date';
+  };
+
+  /** Event-only status: "Al día" if balance >= 0, else "Pendiente". */
+  const getEventStatus = (memberId: string) => {
+    return getEventsBalance(memberId) >= 0 ? 'event_ok' : 'event_pending';
   };
 
   const getStatusBadge = (status: string) => {
@@ -116,6 +126,8 @@ export default function Members() {
       up_to_date: { label: 'Al día', className: 'status-up-to-date' },
       unpaid: { label: 'Impago', className: 'status-unpaid' },
       overdue: { label: 'Moroso', className: 'status-overdue' },
+      event_ok: { label: 'Al día', className: 'status-up-to-date' },
+      event_pending: { label: 'Pendiente', className: 'status-unpaid' },
     };
     const c = config[status as keyof typeof config] || config.up_to_date;
     return <span className={`status-badge ${c.className}`}>{c.label}</span>;
