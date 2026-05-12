@@ -163,26 +163,55 @@ export default function Dashboard() {
     });
   }, [memberBalances, filteredTransactions, selectedDate, monthlyFees]);
 
-  // Query unpaid event amounts per member
-  const { data: memberEventDebts = {} } = useQuery({
-    queryKey: ['member-event-debts'],
+  // Query unpaid event amounts per member, classified by deadline status.
+  // - 'moroso': today > deadline
+  // - 'demorado': within 15 days of deadline (today >= deadline - 15)
+  // - 'pending': has debt but not yet within demorado window (or no deadline set)
+  // Only ACTIVE events are considered for status flags.
+  const { data: memberEventInfo = { totals: {}, statuses: {} } } = useQuery<{
+    totals: Record<string, number>;
+    statuses: Record<string, { demorado: boolean; moroso: boolean }>;
+  }>({
+    queryKey: ['member-event-debts-classified'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('event_member_payments')
-        .select('member_id, amount_owed, amount_paid');
-      
+        .select('member_id, amount_owed, amount_paid, extraordinary_expenses!inner(is_active, payment_deadline)');
+
       if (error) throw error;
-      
-      const debts: Record<string, number> = {};
-      data?.forEach((payment) => {
-        const unpaid = payment.amount_owed - payment.amount_paid;
-        if (unpaid > 0) {
-          debts[payment.member_id] = (debts[payment.member_id] || 0) + unpaid;
+
+      const totals: Record<string, number> = {};
+      const statuses: Record<string, { demorado: boolean; moroso: boolean }> = {};
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      data?.forEach((row: any) => {
+        const unpaid = Number(row.amount_owed) - Number(row.amount_paid);
+        if (unpaid <= 0 || !row.member_id) return;
+        const event = row.extraordinary_expenses;
+        if (!event?.is_active) return;
+
+        totals[row.member_id] = (totals[row.member_id] || 0) + unpaid;
+
+        if (event.payment_deadline) {
+          const deadline = parseLocalDate(event.payment_deadline);
+          const warningStart = new Date(deadline);
+          warningStart.setDate(warningStart.getDate() - 15);
+
+          if (!statuses[row.member_id]) statuses[row.member_id] = { demorado: false, moroso: false };
+          if (today > deadline) {
+            statuses[row.member_id].moroso = true;
+          } else if (today >= warningStart) {
+            statuses[row.member_id].demorado = true;
+          }
         }
       });
-      return debts;
+      return { totals, statuses };
     },
   });
+
+  const memberEventDebts = memberEventInfo.totals;
+  const memberEventStatuses = memberEventInfo.statuses;
 
   const isLoading = membersLoading || transactionsLoading || feesLoading || transfersLoading || loansLoading || historyLoading;
 
