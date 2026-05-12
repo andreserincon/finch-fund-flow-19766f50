@@ -243,6 +243,7 @@ const App = () => (
 
         {/* Treasury – view-only routes */}
         <Route path="/" element={<TreasuryRoute><Dashboard /></TreasuryRoute>} />
+        <Route path="/index" element={<Navigate to="/" replace />} />
         <Route path="/members" element={<TreasuryRoute><Members /></TreasuryRoute>} />
 
         {/* Treasury – staff routes (no member-only) */}
