@@ -34,20 +34,24 @@ const isLovablePreview =
 
 if (isLovablePreview && "serviceWorker" in navigator) {
   // ── Preview mode: unregister all SWs and flush caches so the UI
-  //    always reflects the latest code changes instantly.
-  navigator.serviceWorker.getRegistrations().then((registrations) => {
-    registrations.forEach((registration) => {
-      void registration.unregister();
-    });
-  });
+  //    always reflects the latest code changes instantly. If an older SW
+  //    was controlling the page, reload once after cleanup to escape it.
+  void (async () => {
+    const registrations = await navigator.serviceWorker.getRegistrations();
+    const hadServiceWorker = registrations.length > 0 || !!navigator.serviceWorker.controller;
 
-  if ("caches" in window) {
-    caches.keys().then((keys) => {
-      keys.forEach((key) => {
-        void caches.delete(key);
-      });
-    });
-  }
+    await Promise.all(registrations.map((registration) => registration.unregister()));
+
+    if ("caches" in window) {
+      const keys = await window.caches.keys();
+      await Promise.all(keys.map((key) => window.caches.delete(key)));
+    }
+
+    if (hadServiceWorker && sessionStorage.getItem("preview-sw-cleaned") !== "true") {
+      sessionStorage.setItem("preview-sw-cleaned", "true");
+      window.location.reload();
+    }
+  })();
 } else if ("serviceWorker" in navigator) {
   // ── Production mode: register the SW with auto-update behaviour.
 
