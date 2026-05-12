@@ -40,8 +40,6 @@ function statusBadgeVariant(status: ReminderStatus): 'default' | 'destructive' |
       return 'destructive';
     case 'pending_review':
       return 'secondary';
-    case 'approved':
-      return 'secondary';
     case 'dismissed':
     default:
       return 'outline';
@@ -67,7 +65,7 @@ function ReminderRow({
   const [editing, setEditing] = useState(false);
 
   const isPending = reminder.status === 'pending_review';
-  const phone = reminder.whatsapp_number || reminder.member?.whatsapp_number || '—';
+  const phone = reminder.whatsapp_number || '—';
 
   return (
     <TableRow>
