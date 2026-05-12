@@ -72,10 +72,10 @@ export function useEventMemberPayments(eventId?: string) {
       queryClient.invalidateQueries({ queryKey: ['event-member-payments'] });
       queryClient.invalidateQueries({ queryKey: ['event-overview'] });
       queryClient.invalidateQueries({ queryKey: ['member-balances'] });
-      toast({ title: 'Cuotas asignadas a todos los miembros' });
+      toast({ title: 'Capita asignada a todos los miembros' });
     },
     onError: (error) => {
-      toast({ title: 'Error al asignar cuotas', description: error.message, variant: 'destructive' });
+      toast({ title: 'Error al asignar capita', description: error.message, variant: 'destructive' });
     },
   });
 

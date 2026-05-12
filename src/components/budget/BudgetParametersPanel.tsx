@@ -120,7 +120,7 @@ export function BudgetParametersPanel({
         <ParameterField
           icon={<Users className="h-3 w-3" />}
           label="Crecimiento membresía (%)"
-          hint="Aplicado a la categoría cuotas mensuales."
+          hint="Aplicado a la categoría capita mensual."
           value={draft.membership_growth_percent}
           onChange={(v) =>
             setDraft((d) => ({ ...d, membership_growth_percent: v }))

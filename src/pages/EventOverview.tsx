@@ -87,7 +87,7 @@ function AddGuestDialog({ eventId, defaultAmount }: { eventId: string; defaultAm
         <DialogHeader>
           <DialogTitle>Agregar invitado al evento</DialogTitle>
           <DialogDescription>
-            Sumá a un no-miembro a la lista de cuotas del evento.
+            Sumá a un no-miembro a la lista de capita del evento.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -595,7 +595,7 @@ export default function EventOverview() {
       <Card>
         <CardHeader>
           <CardTitle>Participantes</CardTitle>
-          <CardDescription>Miembros e invitados con cuotas asignadas a este evento</CardDescription>
+          <CardDescription>Miembros e invitados con capita asignada a este evento</CardDescription>
           {orphanCount > 0 && (
             <div className="mt-2 flex items-start gap-2 rounded-md border border-warning/50 bg-warning/10 p-3 text-sm">
               <AlertTriangle className="h-4 w-4 mt-0.5 text-warning shrink-0" />
