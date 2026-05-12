@@ -815,12 +815,15 @@ export type Database = {
           created_at: string
           draft_message: string | null
           failure_reason: string | null
+          final_message: string | null
           id: string
           member_id: string
           period_month: number
           period_year: number
+          reviewed_by: string | null
           sent_at: string | null
           status: Database["public"]["Enums"]["reminder_status"]
+          twilio_message_sid: string | null
           updated_at: string
           whatsapp_number: string | null
         }
@@ -829,12 +832,15 @@ export type Database = {
           created_at?: string
           draft_message?: string | null
           failure_reason?: string | null
+          final_message?: string | null
           id?: string
           member_id: string
           period_month: number
           period_year: number
+          reviewed_by?: string | null
           sent_at?: string | null
           status?: Database["public"]["Enums"]["reminder_status"]
+          twilio_message_sid?: string | null
           updated_at?: string
           whatsapp_number?: string | null
         }
@@ -843,12 +849,15 @@ export type Database = {
           created_at?: string
           draft_message?: string | null
           failure_reason?: string | null
+          final_message?: string | null
           id?: string
           member_id?: string
           period_month?: number
           period_year?: number
+          reviewed_by?: string | null
           sent_at?: string | null
           status?: Database["public"]["Enums"]["reminder_status"]
+          twilio_message_sid?: string | null
           updated_at?: string
           whatsapp_number?: string | null
         }
