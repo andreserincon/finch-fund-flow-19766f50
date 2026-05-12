@@ -253,12 +253,15 @@ export default function Members() {
         ) : (
           sortedMembers.map((member) => (
             <div key={member.member_id} className="rounded-lg border bg-card p-4 space-y-3">
-              <div className="flex items-start justify-between">
-                <div>
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
                   {member.phone_number && <p className="text-xs text-muted-foreground">Mat. {member.phone_number}</p>}
-                  <p className="font-semibold">{displayName(member.full_name, member.phone_number)}</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-semibold">{displayName(member.full_name, member.phone_number)}</p>
+                    <Badge variant="secondary">{FEE_TYPE_LABELS[member.fee_type]}</Badge>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 shrink-0">
                   {!member.is_active && <Badge variant="outline">Inactivo</Badge>}
                   {!isMemberOnly && (
                     <FeeTypeHistoryDialog memberId={member.member_id} memberName={member.full_name} />
@@ -284,26 +287,21 @@ export default function Members() {
                   )}
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <div>
-                  <p className="text-muted-foreground text-xs">Tipo de Cuota</p>
-                  <Badge variant="secondary" className="mt-1">{FEE_TYPE_LABELS[member.fee_type]}</Badge>
-                </div>
-                <div>
-                  <p className="text-muted-foreground text-xs">Saldo General</p>
-                  <p className={`font-mono text-sm font-semibold ${getOverallBalance(member) < 0 ? 'text-destructive' : 'text-emerald-600'}`}>
-                    {formatCurrency(getOverallBalance(member))}
+              {/* Capita and Evento split: each shows its own balance + status */}
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="space-y-1">
+                  <p className="text-muted-foreground text-xs">Capita</p>
+                  <p className={`font-mono text-sm font-semibold ${getMonthlyBalance(member) < 0 ? 'text-destructive' : 'text-emerald-600'}`}>
+                    {formatCurrency(getMonthlyBalance(member))}
                   </p>
+                  {member.is_active && getStatusBadge(getPaymentStatus(member))}
                 </div>
-                <div>
-                  <p className="text-muted-foreground text-xs">Estado</p>
-                  <div className="mt-1">
-                    {member.is_active ? getStatusBadge(getPaymentStatus(member)) : <Badge variant="outline">Inactivo</Badge>}
-                  </div>
-                </div>
-                <div>
-                  <p className="text-muted-foreground text-xs">Ingreso</p>
-                  <p className="font-mono text-sm">{format(parseLocalDate(member.join_date), 'd MMM yyyy', { locale: es })}</p>
+                <div className="space-y-1">
+                  <p className="text-muted-foreground text-xs">Evento</p>
+                  <p className={`font-mono text-sm font-semibold ${getEventsBalance(member.member_id) < 0 ? 'text-destructive' : 'text-emerald-600'}`}>
+                    {formatCurrency(getEventsBalance(member.member_id))}
+                  </p>
+                  {member.is_active && getStatusBadge(getEventStatus(member.member_id))}
                 </div>
               </div>
             </div>
