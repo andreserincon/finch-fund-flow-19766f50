@@ -273,6 +273,7 @@ export default function Dashboard() {
     ? selectedMonthFees
     : currentMonthFees;
 
+  // Capita-only metrics (events excluded)
   const membersUnpaid = adjustedMemberBalances.filter(m => {
     if (!m.is_active) return false;
     return m.total_paid < m.total_fees_owed;
@@ -282,9 +283,15 @@ export default function Dashboard() {
     if (!m.is_active) return false;
     const amountOwed = m.total_fees_owed - m.total_paid;
     const monthlyFeeRate = effectiveFees[m.fee_type] || 0;
-    const hasUnpaidEvents = (memberEventDebts[m.member_id] || 0) > 0;
-    return amountOwed > monthlyFeeRate || hasUnpaidEvents;
+    return amountOwed > monthlyFeeRate;
   }).length;
+
+  // Event-only metrics
+  const activeMemberIds = new Set(adjustedMemberBalances.filter(m => m.is_active).map(m => m.member_id));
+  const eventDemoradoCount = Object.entries(memberEventStatuses)
+    .filter(([id, s]) => activeMemberIds.has(id) && s.demorado && !s.moroso).length;
+  const eventMorosoCount = Object.entries(memberEventStatuses)
+    .filter(([id, s]) => activeMemberIds.has(id) && s.moroso).length;
   
   // Calculate monthly income/expenses for selected month
   const monthlyIncomeARS = filteredTransactions
