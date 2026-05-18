@@ -43,7 +43,7 @@ export function useExtraordinaryExpenses() {
 
   /** Create a new expense category */
   const addExpense = useMutation({
-    mutationFn: async (expense: { name: string; description?: string; default_amount: number; payment_deadline?: string | null }) => {
+    mutationFn: async (expense: { name: string; description?: string; default_amount: number; payment_deadline?: string | null; charge_from_date?: string | null }) => {
       const { data, error } = await supabase
         .from('extraordinary_expenses')
         .insert({
@@ -51,6 +51,7 @@ export function useExtraordinaryExpenses() {
           description: expense.description || null,
           default_amount: expense.default_amount,
           payment_deadline: expense.payment_deadline || null,
+          charge_from_date: expense.charge_from_date || null,
         })
         .select()
         .single();
