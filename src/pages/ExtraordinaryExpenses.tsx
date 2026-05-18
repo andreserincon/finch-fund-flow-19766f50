@@ -136,6 +136,7 @@ function EditExpenseDialog({ expense }: { expense: ExtraordinaryExpense }) {
       description: expense.description || '',
       default_amount: expense.default_amount,
       payment_deadline: expense.payment_deadline || '',
+      charge_from_date: expense.charge_from_date || '',
     },
   });
 
@@ -146,6 +147,7 @@ function EditExpenseDialog({ expense }: { expense: ExtraordinaryExpense }) {
       description: data.description,
       default_amount: data.default_amount,
       payment_deadline: data.payment_deadline || null,
+      charge_from_date: data.charge_from_date || null,
     });
     setOpen(false);
   };
