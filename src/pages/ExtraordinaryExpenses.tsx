@@ -93,6 +93,13 @@ function AddExpenseDialog() {
             {errors.default_amount && <p className="text-sm text-destructive">{errors.default_amount.message}</p>}
           </div>
           <div className="space-y-2">
+            <Label htmlFor="charge_from_date">Cobrar a partir de (opcional)</Label>
+            <Input id="charge_from_date" type="date" {...register('charge_from_date')} />
+            <p className="text-xs text-muted-foreground">
+              Si se completa, este evento no se incluirá en reportes anteriores a esa fecha.
+            </p>
+          </div>
+          <div className="space-y-2">
             <Label htmlFor="payment_deadline">Fecha límite de pago (opcional)</Label>
             <Input id="payment_deadline" type="date" {...register('payment_deadline')} />
             <p className="text-xs text-muted-foreground">
