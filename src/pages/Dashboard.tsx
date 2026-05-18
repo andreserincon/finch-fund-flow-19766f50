@@ -282,7 +282,8 @@ export default function Dashboard() {
   const membersOverdue = adjustedMemberBalances.filter(m => {
     if (!m.is_active) return false;
     const amountOwed = m.total_fees_owed - m.total_paid;
-    const monthlyFeeRate = effectiveFees[m.fee_type] || 0;
+    const historicalFeeType = getMemberFeeType(m.member_id, selectedMonthKey, m.fee_type);
+    const monthlyFeeRate = effectiveFees[historicalFeeType] || 0;
     return amountOwed > monthlyFeeRate;
   }).length;
 
@@ -326,7 +327,8 @@ export default function Dashboard() {
       if (isMemberOnly && (!userMemberId || m.member_id !== userMemberId)) return false;
       
       const amountOwed = m.total_fees_owed - m.total_paid;
-      const monthlyFeeRate = effectiveFees[m.fee_type] || 0;
+      const historicalFeeType = getMemberFeeType(m.member_id, selectedMonthKey, m.fee_type);
+      const monthlyFeeRate = effectiveFees[historicalFeeType] || 0;
       const isMonthlyOverdue = amountOwed > monthlyFeeRate;
       
       const eventStatus = memberEventStatuses[m.member_id];
