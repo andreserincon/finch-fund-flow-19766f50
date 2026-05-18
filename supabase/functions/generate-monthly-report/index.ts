@@ -389,24 +389,25 @@ Deno.serve(async (req) => {
       reportId = newReport.id;
     }
 
-    // Create member snapshots
+    // Create member snapshots — status is derived from capita balance only.
     const memberSnapshots = memberBalances.map((mb: any) => {
-      const balance = Number(mb.current_balance || 0);
+      const capitaBalance = Number(mb.capita_balance || 0);
+      const eventBalance = Number(mb.event_balance || 0);
       const monthlyFeeAmount = mb.fee_type === 'standard' ? standardFee : solidarityFee;
-      
+
       let status = 'up_to_date';
       let monthsAhead = 0;
       let monthsOverdue = 0;
       let overdueAmount = 0;
 
-      if (balance > monthlyFeeAmount) {
+      if (capitaBalance > monthlyFeeAmount) {
         status = 'ahead';
-        monthsAhead = Math.floor(balance / monthlyFeeAmount);
-      } else if (balance < -monthlyFeeAmount) {
+        monthsAhead = monthlyFeeAmount > 0 ? Math.floor(capitaBalance / monthlyFeeAmount) : 0;
+      } else if (capitaBalance < -monthlyFeeAmount) {
         status = 'overdue';
-        monthsOverdue = Math.ceil(Math.abs(balance) / monthlyFeeAmount);
-        overdueAmount = Math.abs(balance);
-      } else if (balance < 0) {
+        monthsOverdue = monthlyFeeAmount > 0 ? Math.ceil(Math.abs(capitaBalance) / monthlyFeeAmount) : 0;
+        overdueAmount = Math.abs(capitaBalance);
+      } else if (capitaBalance < 0) {
         status = 'unpaid';
       }
 
@@ -423,7 +424,9 @@ Deno.serve(async (req) => {
         full_name: mb.full_name,
         fee_type: mb.fee_type,
         monthly_fee_amount: monthlyFeeAmount,
-        balance_at_month_end: balance,
+        balance_at_month_end: capitaBalance + eventBalance,
+        capita_balance: capitaBalance,
+        event_balance: eventBalance,
         status,
         months_ahead: monthsAhead,
         months_overdue: monthsOverdue,
