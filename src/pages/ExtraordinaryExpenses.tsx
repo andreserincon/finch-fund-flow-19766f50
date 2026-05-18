@@ -178,6 +178,10 @@ function EditExpenseDialog({ expense }: { expense: ExtraordinaryExpense }) {
             {errors.default_amount && <p className="text-sm text-destructive">{errors.default_amount.message}</p>}
           </div>
           <div className="space-y-2">
+            <Label htmlFor="edit-charge_from_date">Cobrar a partir de (opcional)</Label>
+            <Input id="edit-charge_from_date" type="date" {...register('charge_from_date')} />
+          </div>
+          <div className="space-y-2">
             <Label htmlFor="edit-payment_deadline">Fecha límite de pago (opcional)</Label>
             <Input id="edit-payment_deadline" type="date" {...register('payment_deadline')} />
           </div>
