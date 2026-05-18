@@ -28,6 +28,7 @@ const expenseSchema = z.object({
   description: z.string().max(500).optional(),
   default_amount: z.number().min(0, 'El monto debe ser positivo'),
   payment_deadline: z.string().optional(),
+  charge_from_date: z.string().optional(),
   assign_to_members: z.boolean().optional(),
 });
 
@@ -54,6 +55,7 @@ function AddExpenseDialog() {
       description: data.description,
       default_amount: data.default_amount,
       payment_deadline: data.payment_deadline || null,
+      charge_from_date: data.charge_from_date || null,
     });
     if (data.assign_to_members && result?.id && data.default_amount > 0) {
       await createPaymentsForAllMembers.mutateAsync({
@@ -89,6 +91,13 @@ function AddExpenseDialog() {
             <Label htmlFor="default_amount">Cuota por Miembro (ARS)</Label>
             <Input id="default_amount" type="number" step="0.01" {...register('default_amount', { valueAsNumber: true })} />
             {errors.default_amount && <p className="text-sm text-destructive">{errors.default_amount.message}</p>}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="charge_from_date">Cobrar a partir de (opcional)</Label>
+            <Input id="charge_from_date" type="date" {...register('charge_from_date')} />
+            <p className="text-xs text-muted-foreground">
+              Si se completa, este evento no se incluirá en reportes anteriores a esa fecha.
+            </p>
           </div>
           <div className="space-y-2">
             <Label htmlFor="payment_deadline">Fecha límite de pago (opcional)</Label>
@@ -127,6 +136,7 @@ function EditExpenseDialog({ expense }: { expense: ExtraordinaryExpense }) {
       description: expense.description || '',
       default_amount: expense.default_amount,
       payment_deadline: expense.payment_deadline || '',
+      charge_from_date: expense.charge_from_date || '',
     },
   });
 
@@ -137,6 +147,7 @@ function EditExpenseDialog({ expense }: { expense: ExtraordinaryExpense }) {
       description: data.description,
       default_amount: data.default_amount,
       payment_deadline: data.payment_deadline || null,
+      charge_from_date: data.charge_from_date || null,
     });
     setOpen(false);
   };
@@ -165,6 +176,10 @@ function EditExpenseDialog({ expense }: { expense: ExtraordinaryExpense }) {
             <Label htmlFor="edit-default_amount">Cuota por Miembro (ARS)</Label>
             <Input id="edit-default_amount" type="number" step="0.01" {...register('default_amount', { valueAsNumber: true })} />
             {errors.default_amount && <p className="text-sm text-destructive">{errors.default_amount.message}</p>}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="edit-charge_from_date">Cobrar a partir de (opcional)</Label>
+            <Input id="edit-charge_from_date" type="date" {...register('charge_from_date')} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="edit-payment_deadline">Fecha límite de pago (opcional)</Label>

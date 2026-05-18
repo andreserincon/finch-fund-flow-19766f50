@@ -157,45 +157,60 @@ Deno.serve(async (req) => {
       return member?.fee_type || 'standard';
     };
 
-    // Calculate member balances as of month end (point-in-time snapshot)
+    // Calculate member balances split into capita (monthly fees) and events,
+    // as of month end (point-in-time snapshot).
     const calculateMemberBalanceAsOfDate = (memberId: string, asOfDate: string, memberJoinDate: string) => {
-      const member = members.find((m: any) => m.id === memberId);
-      if (!member) return 0;
-
-      // Calculate total fees owed up to asOfDate
-      let totalFeesOwed = 0;
+      // ── Capita (monthly fees) ──
+      let capitaOwed = 0;
       allMonthlyFees.forEach((fee: any) => {
         const feeMonth = fee.year_month;
-        // Only count fees from join date to asOfDate
         if (feeMonth >= memberJoinDate.substring(0, 7) + '-01' && feeMonth <= asOfDate) {
           const memberFeeType = getMemberFeeTypeForMonth(memberId, feeMonth);
           if (fee.fee_type === memberFeeType) {
-            totalFeesOwed += Number(fee.amount);
+            capitaOwed += Number(fee.amount);
           }
         }
       });
 
-      // Add event fees owed
-      const memberEventPayments = eventPayments.filter((ep: any) => ep.member_id === memberId);
-      const eventFeesOwed = memberEventPayments.reduce((sum: number, ep: any) => sum + Number(ep.amount_owed), 0);
-      totalFeesOwed += eventFeesOwed;
-
-      // Calculate total payments made up to asOfDate
-      const memberPayments = allTransactions
-        .filter((t: any) => 
-          t.member_id === memberId && 
+      const capitaPaid = allTransactions
+        .filter((t: any) =>
+          t.member_id === memberId &&
           t.transaction_type === 'income' &&
-          (t.category === 'monthly_fee' || t.category === 'event_payment') &&
+          t.category === 'monthly_fee' &&
           t.transaction_date <= asOfDate
         )
         .reduce((sum: number, t: any) => sum + Number(t.amount), 0);
 
-      return memberPayments - totalFeesOwed;
+      // ── Events (only those whose charge_from_date is null or <= asOfDate) ──
+      const eligibleEventIds = new Set(
+        events
+          .filter((e: any) => !e.charge_from_date || e.charge_from_date <= asOfDate)
+          .map((e: any) => e.id)
+      );
+
+      const eventOwed = eventPayments
+        .filter((ep: any) => ep.member_id === memberId && eligibleEventIds.has(ep.event_id))
+        .reduce((sum: number, ep: any) => sum + Number(ep.amount_owed), 0);
+
+      const eventPaid = allTransactions
+        .filter((t: any) =>
+          t.member_id === memberId &&
+          t.transaction_type === 'income' &&
+          t.category === 'event_payment' &&
+          t.transaction_date <= asOfDate &&
+          (!t.event_id || eligibleEventIds.has(t.event_id))
+        )
+        .reduce((sum: number, t: any) => sum + Number(t.amount), 0);
+
+      return {
+        capitaBalance: capitaPaid - capitaOwed,
+        eventBalance: eventPaid - eventOwed,
+      };
     };
 
     // Build point-in-time member balances
     const memberBalances = members.map((m: any) => {
-      const balance = calculateMemberBalanceAsOfDate(m.id, monthEndStr, m.join_date);
+      const { capitaBalance, eventBalance } = calculateMemberBalanceAsOfDate(m.id, monthEndStr, m.join_date);
       return {
         member_id: m.id,
         full_name: m.full_name,
@@ -204,7 +219,9 @@ Deno.serve(async (req) => {
         fee_type: getMemberFeeTypeForMonth(m.id, monthEndStr),
         is_active: m.is_active,
         join_date: m.join_date,
-        current_balance: balance,
+        capita_balance: capitaBalance,
+        event_balance: eventBalance,
+        current_balance: capitaBalance + eventBalance,
       };
     });
 
@@ -372,24 +389,25 @@ Deno.serve(async (req) => {
       reportId = newReport.id;
     }
 
-    // Create member snapshots
+    // Create member snapshots — status is derived from capita balance only.
     const memberSnapshots = memberBalances.map((mb: any) => {
-      const balance = Number(mb.current_balance || 0);
+      const capitaBalance = Number(mb.capita_balance || 0);
+      const eventBalance = Number(mb.event_balance || 0);
       const monthlyFeeAmount = mb.fee_type === 'standard' ? standardFee : solidarityFee;
-      
+
       let status = 'up_to_date';
       let monthsAhead = 0;
       let monthsOverdue = 0;
       let overdueAmount = 0;
 
-      if (balance > monthlyFeeAmount) {
+      if (capitaBalance > monthlyFeeAmount) {
         status = 'ahead';
-        monthsAhead = Math.floor(balance / monthlyFeeAmount);
-      } else if (balance < -monthlyFeeAmount) {
+        monthsAhead = monthlyFeeAmount > 0 ? Math.floor(capitaBalance / monthlyFeeAmount) : 0;
+      } else if (capitaBalance < -monthlyFeeAmount) {
         status = 'overdue';
-        monthsOverdue = Math.ceil(Math.abs(balance) / monthlyFeeAmount);
-        overdueAmount = Math.abs(balance);
-      } else if (balance < 0) {
+        monthsOverdue = monthlyFeeAmount > 0 ? Math.ceil(Math.abs(capitaBalance) / monthlyFeeAmount) : 0;
+        overdueAmount = Math.abs(capitaBalance);
+      } else if (capitaBalance < 0) {
         status = 'unpaid';
       }
 
@@ -406,7 +424,9 @@ Deno.serve(async (req) => {
         full_name: mb.full_name,
         fee_type: mb.fee_type,
         monthly_fee_amount: monthlyFeeAmount,
-        balance_at_month_end: balance,
+        balance_at_month_end: capitaBalance + eventBalance,
+        capita_balance: capitaBalance,
+        event_balance: eventBalance,
         status,
         months_ahead: monthsAhead,
         months_overdue: monthsOverdue,
@@ -436,8 +456,11 @@ Deno.serve(async (req) => {
       await supabase.from('report_loan_snapshots').insert(loanSnapshots);
     }
 
-    // Create event snapshots
-    const eventSnapshots = events.map((event: any) => {
+    // Create event snapshots — exclude events whose charge_from_date is after month end.
+    const eligibleEventsForReport = events.filter(
+      (e: any) => !e.charge_from_date || e.charge_from_date <= monthEndStr
+    );
+    const eventSnapshots = eligibleEventsForReport.map((event: any) => {
       const eventPaymentsForEvent = eventPayments.filter((ep: any) => ep.event_id === event.id);
       const totalAmount = eventPaymentsForEvent.reduce((sum: number, ep: any) => sum + Number(ep.amount_owed), 0);
       const amountCollected = eventPaymentsForEvent.reduce((sum: number, ep: any) => sum + Number(ep.amount_paid), 0);
@@ -826,28 +849,34 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
   const loansSectionNum = '3';
   const eventsSectionNum = isLite ? '4' : '5';
 
-  // Build member rows
-  const memberRows = membersToShow.map((m: any) => `
+  // Build member rows — separate Saldo Capita and Saldo Eventos columns.
+  const memberRows = membersToShow.map((m: any) => {
+    const capita = Number(m.capita_balance ?? m.balance_at_month_end ?? 0);
+    const events = Number(m.event_balance ?? 0);
+    return `
     <tr>
       <td>${m.full_name}</td>
       <td class="text-center">${feeTypeLabels[m.fee_type] || m.fee_type}</td>
       <td class="text-right">${formatCurrency(m.monthly_fee_amount)}</td>
-      <td class="text-right ${m.balance_at_month_end >= 0 ? 'positive' : 'negative'}">${formatCurrency(m.balance_at_month_end)}</td>
+      <td class="text-right ${capita >= 0 ? 'positive' : 'negative'}">${formatCurrency(capita)}</td>
+      <td class="text-right ${events >= 0 ? 'positive' : 'negative'}">${formatCurrency(events)}</td>
       <td class="text-center"><span class="status-badge status-${m.status}">${statusLabels[m.status] || m.status}</span></td>
       <td class="text-center">${m.months_ahead > 0 ? `+${m.months_ahead}` : m.months_overdue > 0 ? `-${m.months_overdue}` : '0'}</td>
       <td class="text-center">${m.last_payment_date ? new Date(m.last_payment_date).toLocaleDateString('es-AR') : '-'}</td>
     </tr>
-  `).join('');
+  `;
+  }).join('');
 
   // Build member section
-  const memberSection = membersToShow.length > 0 
+  const memberSection = membersToShow.length > 0
     ? `<table>
         <thead>
           <tr>
             <th>Miembro</th>
             <th class="text-center">Tipo Cuota</th>
-            <th class="text-right">Cuota Mensual</th>
-            <th class="text-right">Saldo</th>
+            <th class="text-right">Capita Mensual</th>
+            <th class="text-right">Saldo Capita</th>
+            <th class="text-right">Saldo Eventos</th>
             <th class="text-center">Estado</th>
             <th class="text-center">Meses</th>
             <th class="text-center">Último Pago</th>
