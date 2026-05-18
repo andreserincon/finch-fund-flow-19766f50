@@ -157,45 +157,60 @@ Deno.serve(async (req) => {
       return member?.fee_type || 'standard';
     };
 
-    // Calculate member balances as of month end (point-in-time snapshot)
+    // Calculate member balances split into capita (monthly fees) and events,
+    // as of month end (point-in-time snapshot).
     const calculateMemberBalanceAsOfDate = (memberId: string, asOfDate: string, memberJoinDate: string) => {
-      const member = members.find((m: any) => m.id === memberId);
-      if (!member) return 0;
-
-      // Calculate total fees owed up to asOfDate
-      let totalFeesOwed = 0;
+      // ── Capita (monthly fees) ──
+      let capitaOwed = 0;
       allMonthlyFees.forEach((fee: any) => {
         const feeMonth = fee.year_month;
-        // Only count fees from join date to asOfDate
         if (feeMonth >= memberJoinDate.substring(0, 7) + '-01' && feeMonth <= asOfDate) {
           const memberFeeType = getMemberFeeTypeForMonth(memberId, feeMonth);
           if (fee.fee_type === memberFeeType) {
-            totalFeesOwed += Number(fee.amount);
+            capitaOwed += Number(fee.amount);
           }
         }
       });
 
-      // Add event fees owed
-      const memberEventPayments = eventPayments.filter((ep: any) => ep.member_id === memberId);
-      const eventFeesOwed = memberEventPayments.reduce((sum: number, ep: any) => sum + Number(ep.amount_owed), 0);
-      totalFeesOwed += eventFeesOwed;
-
-      // Calculate total payments made up to asOfDate
-      const memberPayments = allTransactions
-        .filter((t: any) => 
-          t.member_id === memberId && 
+      const capitaPaid = allTransactions
+        .filter((t: any) =>
+          t.member_id === memberId &&
           t.transaction_type === 'income' &&
-          (t.category === 'monthly_fee' || t.category === 'event_payment') &&
+          t.category === 'monthly_fee' &&
           t.transaction_date <= asOfDate
         )
         .reduce((sum: number, t: any) => sum + Number(t.amount), 0);
 
-      return memberPayments - totalFeesOwed;
+      // ── Events (only those whose charge_from_date is null or <= asOfDate) ──
+      const eligibleEventIds = new Set(
+        events
+          .filter((e: any) => !e.charge_from_date || e.charge_from_date <= asOfDate)
+          .map((e: any) => e.id)
+      );
+
+      const eventOwed = eventPayments
+        .filter((ep: any) => ep.member_id === memberId && eligibleEventIds.has(ep.event_id))
+        .reduce((sum: number, ep: any) => sum + Number(ep.amount_owed), 0);
+
+      const eventPaid = allTransactions
+        .filter((t: any) =>
+          t.member_id === memberId &&
+          t.transaction_type === 'income' &&
+          t.category === 'event_payment' &&
+          t.transaction_date <= asOfDate &&
+          (!t.event_id || eligibleEventIds.has(t.event_id))
+        )
+        .reduce((sum: number, t: any) => sum + Number(t.amount), 0);
+
+      return {
+        capitaBalance: capitaPaid - capitaOwed,
+        eventBalance: eventPaid - eventOwed,
+      };
     };
 
     // Build point-in-time member balances
     const memberBalances = members.map((m: any) => {
-      const balance = calculateMemberBalanceAsOfDate(m.id, monthEndStr, m.join_date);
+      const { capitaBalance, eventBalance } = calculateMemberBalanceAsOfDate(m.id, monthEndStr, m.join_date);
       return {
         member_id: m.id,
         full_name: m.full_name,
@@ -204,7 +219,9 @@ Deno.serve(async (req) => {
         fee_type: getMemberFeeTypeForMonth(m.id, monthEndStr),
         is_active: m.is_active,
         join_date: m.join_date,
-        current_balance: balance,
+        capita_balance: capitaBalance,
+        event_balance: eventBalance,
+        current_balance: capitaBalance + eventBalance,
       };
     });
 
