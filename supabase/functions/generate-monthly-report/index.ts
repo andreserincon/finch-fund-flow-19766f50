@@ -849,28 +849,34 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
   const loansSectionNum = '3';
   const eventsSectionNum = isLite ? '4' : '5';
 
-  // Build member rows
-  const memberRows = membersToShow.map((m: any) => `
+  // Build member rows — separate Saldo Capita and Saldo Eventos columns.
+  const memberRows = membersToShow.map((m: any) => {
+    const capita = Number(m.capita_balance ?? m.balance_at_month_end ?? 0);
+    const events = Number(m.event_balance ?? 0);
+    return `
     <tr>
       <td>${m.full_name}</td>
       <td class="text-center">${feeTypeLabels[m.fee_type] || m.fee_type}</td>
       <td class="text-right">${formatCurrency(m.monthly_fee_amount)}</td>
-      <td class="text-right ${m.balance_at_month_end >= 0 ? 'positive' : 'negative'}">${formatCurrency(m.balance_at_month_end)}</td>
+      <td class="text-right ${capita >= 0 ? 'positive' : 'negative'}">${formatCurrency(capita)}</td>
+      <td class="text-right ${events >= 0 ? 'positive' : 'negative'}">${formatCurrency(events)}</td>
       <td class="text-center"><span class="status-badge status-${m.status}">${statusLabels[m.status] || m.status}</span></td>
       <td class="text-center">${m.months_ahead > 0 ? `+${m.months_ahead}` : m.months_overdue > 0 ? `-${m.months_overdue}` : '0'}</td>
       <td class="text-center">${m.last_payment_date ? new Date(m.last_payment_date).toLocaleDateString('es-AR') : '-'}</td>
     </tr>
-  `).join('');
+  `;
+  }).join('');
 
   // Build member section
-  const memberSection = membersToShow.length > 0 
+  const memberSection = membersToShow.length > 0
     ? `<table>
         <thead>
           <tr>
             <th>Miembro</th>
             <th class="text-center">Tipo Cuota</th>
-            <th class="text-right">Cuota Mensual</th>
-            <th class="text-right">Saldo</th>
+            <th class="text-right">Capita Mensual</th>
+            <th class="text-right">Saldo Capita</th>
+            <th class="text-right">Saldo Eventos</th>
             <th class="text-center">Estado</th>
             <th class="text-center">Meses</th>
             <th class="text-center">Último Pago</th>
