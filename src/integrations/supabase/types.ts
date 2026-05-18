@@ -431,6 +431,7 @@ export type Database = {
       }
       extraordinary_expenses: {
         Row: {
+          charge_from_date: string | null
           created_at: string
           default_amount: number
           description: string | null
@@ -441,6 +442,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          charge_from_date?: string | null
           created_at?: string
           default_amount?: number
           description?: string | null
@@ -451,6 +453,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          charge_from_date?: string | null
           created_at?: string
           default_amount?: number
           description?: string | null
@@ -1020,7 +1023,9 @@ export type Database = {
       report_member_snapshots: {
         Row: {
           balance_at_month_end: number
+          capita_balance: number
           created_at: string
+          event_balance: number
           fee_type: Database["public"]["Enums"]["fee_type"]
           full_name: string
           id: string
@@ -1035,7 +1040,9 @@ export type Database = {
         }
         Insert: {
           balance_at_month_end: number
+          capita_balance?: number
           created_at?: string
+          event_balance?: number
           fee_type: Database["public"]["Enums"]["fee_type"]
           full_name: string
           id?: string
@@ -1050,7 +1057,9 @@ export type Database = {
         }
         Update: {
           balance_at_month_end?: number
+          capita_balance?: number
           created_at?: string
+          event_balance?: number
           fee_type?: Database["public"]["Enums"]["fee_type"]
           full_name?: string
           id?: string
