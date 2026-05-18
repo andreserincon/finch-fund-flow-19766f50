@@ -456,8 +456,11 @@ Deno.serve(async (req) => {
       await supabase.from('report_loan_snapshots').insert(loanSnapshots);
     }
 
-    // Create event snapshots
-    const eventSnapshots = events.map((event: any) => {
+    // Create event snapshots — exclude events whose charge_from_date is after month end.
+    const eligibleEventsForReport = events.filter(
+      (e: any) => !e.charge_from_date || e.charge_from_date <= monthEndStr
+    );
+    const eventSnapshots = eligibleEventsForReport.map((event: any) => {
       const eventPaymentsForEvent = eventPayments.filter((ep: any) => ep.event_id === event.id);
       const totalAmount = eventPaymentsForEvent.reduce((sum: number, ep: any) => sum + Number(ep.amount_owed), 0);
       const amountCollected = eventPaymentsForEvent.reduce((sum: number, ep: any) => sum + Number(ep.amount_paid), 0);
