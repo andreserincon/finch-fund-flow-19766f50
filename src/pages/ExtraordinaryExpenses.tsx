@@ -28,6 +28,7 @@ const expenseSchema = z.object({
   description: z.string().max(500).optional(),
   default_amount: z.number().min(0, 'El monto debe ser positivo'),
   payment_deadline: z.string().optional(),
+  charge_from_date: z.string().optional(),
   assign_to_members: z.boolean().optional(),
 });
 
