@@ -595,9 +595,11 @@ Deno.serve(async (req) => {
 
     const categoryFlows: Record<string, { incomeARS: number; incomeUSD: number; expenseARS: number; expenseUSD: number }> = {};
     transactions.forEach((t: any) => {
-      // event_expense transactions are rendered individually below the
-      // category table (with event name + short summary), not aggregated.
-      if (t.category === 'event_expense') return;
+      // event_expense AND event_payment transactions are rendered grouped
+      // per-event below the category table (one cuota-aggregate row per
+      // event plus individual gasto rows). Skip them here to avoid double
+      // counting.
+      if (t.category === 'event_expense' || t.category === 'event_payment') return;
       const cat = t.category as string;
       if (!categoryFlows[cat]) categoryFlows[cat] = { incomeARS: 0, incomeUSD: 0, expenseARS: 0, expenseUSD: 0 };
       const isUSD = t.account === 'savings';
@@ -610,23 +612,89 @@ Deno.serve(async (req) => {
       }
     });
 
-    // Individual event_expense rows for the flujo de mes (rendered after
-    // the category-aggregated rows). Each row carries the event name and
-    // the short summary entered on the transaction form.
+    // Per-event movement rows for the flujo de mes. Grouped by event,
+    // sorted alphabetically. For each event with activity we emit:
+    //   1. one aggregated "Abono Cuota Evento - <name>" row (if any cuota came in)
+    //   2. one row per individual event_expense with date + short summary
+    // Events with no event_id (legacy data) bucket under "Sin evento".
     const eventNameById = new Map<string, string>(
       eligibleEventsForReport.map((e: any) => [e.id as string, e.name as string])
     );
-    const eventExpenseDetails = transactions
-      .filter((t: any) => t.category === 'event_expense')
-      .map((t: any) => ({
-        date: t.transaction_date,
-        event_id: t.event_id as string | null,
-        event_name: t.event_id ? (eventNameById.get(t.event_id) ?? 'Evento desconocido') : 'Sin evento',
-        event_summary: t.event_summary as string | null,
-        amount: Number(t.amount),
-        currency: t.account === 'savings' ? 'USD' : 'ARS',
+    const SIN_EVENTO_KEY = '__sin_evento__';
+    const cuotaByEvent = new Map<string, { ars: number; usd: number }>();
+    const expensesByEvent = new Map<string, Array<{
+      date: string;
+      summary: string | null;
+      amount: number;
+      currency: 'ARS' | 'USD';
+    }>>();
+    transactions.forEach((t: any) => {
+      if (t.category === 'event_payment') {
+        const key = (t.event_id as string | null) ?? SIN_EVENTO_KEY;
+        const acc = cuotaByEvent.get(key) ?? { ars: 0, usd: 0 };
+        if (t.account === 'savings') acc.usd += Number(t.amount);
+        else acc.ars += Number(t.amount);
+        cuotaByEvent.set(key, acc);
+      } else if (t.category === 'event_expense') {
+        const key = (t.event_id as string | null) ?? SIN_EVENTO_KEY;
+        const arr = expensesByEvent.get(key) ?? [];
+        arr.push({
+          date: t.transaction_date,
+          summary: (t.event_summary as string | null) ?? null,
+          amount: Number(t.amount),
+          currency: t.account === 'savings' ? 'USD' : 'ARS',
+        });
+        expensesByEvent.set(key, arr);
+      }
+    });
+
+    const allEventKeys = Array.from(new Set([
+      ...cuotaByEvent.keys(),
+      ...expensesByEvent.keys(),
+    ]));
+    const eventsSortedByName = allEventKeys
+      .map((id) => ({
+        id,
+        name: id === SIN_EVENTO_KEY ? 'Sin evento' : (eventNameById.get(id) ?? 'Evento desconocido'),
       }))
-      .sort((a: any, b: any) => a.date.localeCompare(b.date));
+      .sort((a, b) => a.name.localeCompare(b.name, 'es'));
+
+    const eventMovementRows: Array<{
+      type: 'cuota' | 'expense';
+      event_name: string;
+      summary: string | null;
+      income_ars: number;
+      income_usd: number;
+      expense_ars: number;
+      expense_usd: number;
+    }> = [];
+    for (const ev of eventsSortedByName) {
+      const cuota = cuotaByEvent.get(ev.id);
+      if (cuota && (cuota.ars > 0 || cuota.usd > 0)) {
+        eventMovementRows.push({
+          type: 'cuota',
+          event_name: ev.name,
+          summary: null,
+          income_ars: cuota.ars,
+          income_usd: cuota.usd,
+          expense_ars: 0,
+          expense_usd: 0,
+        });
+      }
+      const expenses = expensesByEvent.get(ev.id) ?? [];
+      expenses.sort((a, b) => a.date.localeCompare(b.date));
+      for (const ex of expenses) {
+        eventMovementRows.push({
+          type: 'expense',
+          event_name: ev.name,
+          summary: ex.summary,
+          income_ars: 0,
+          income_usd: 0,
+          expense_ars: ex.currency === 'ARS' ? ex.amount : 0,
+          expense_usd: ex.currency === 'USD' ? ex.amount : 0,
+        });
+      }
+    }
 
     // Per-event detail blocks (rendered as a new section after the events
     // summary table). One block per event with activity this month
@@ -704,7 +772,7 @@ Deno.serve(async (req) => {
       // Category flows
       categoryFlows,
       categoryLabels,
-      eventExpenseDetails,
+      eventMovementRows,
       perEventDetails,
       initialARS,
       initialUSD,
@@ -833,24 +901,38 @@ function buildFlowTable(data: any, formatCurrency: (amount: number, currency?: s
   // computed correctly elsewhere using the same transfers data.
   const transferRow = '';
 
-  // Individual rows for event_expense transactions (one per movement)
-  // shown after the category-aggregated rows. Format:
-  //   Gasto Evento - "<event name>" - <short summary>
+  // Per-event movement rows. Each event's cuota aggregate row and its
+  // individual gasto rows are grouped together (cuota first, then gastos
+  // sorted by date). Events are alphabetical so the same event always
+  // sits in the same place across reports.
+  //   Abono Cuota Evento - "<event name>"           (income)
+  //   Gasto Evento - "<event name>" - <summary>     (expense)
   const truncate = (s: string, n: number) => (s.length > n ? s.slice(0, n - 1) + '…' : s);
-  const eventExpenseRows = (data.eventExpenseDetails || []).map((ev: any) => {
-    const summary = ev.event_summary && ev.event_summary.trim().length > 0
-      ? ev.event_summary
-      : '(sin resumen)';
-    const concepto = `Gasto Evento - "${truncate(ev.event_name, 40)}" - ${summary}`;
-    const isUSD = ev.currency === 'USD';
-    if (isUSD) totalExpUSD += ev.amount;
-    else totalExpARS += ev.amount;
+  const eventRows = (data.eventMovementRows || []).map((row: any) => {
+    const eventNameTrunc = truncate(row.event_name, 40);
+    let concepto: string;
+    if (row.type === 'cuota') {
+      concepto = `Abono Cuota Evento - "${eventNameTrunc}"`;
+    } else {
+      const summary = row.summary && String(row.summary).trim().length > 0
+        ? row.summary
+        : '(sin resumen)';
+      concepto = `Gasto Evento - "${eventNameTrunc}" - ${summary}`;
+    }
+    totalIncARS += Number(row.income_ars || 0);
+    totalIncUSD += Number(row.income_usd || 0);
+    totalExpARS += Number(row.expense_ars || 0);
+    totalExpUSD += Number(row.expense_usd || 0);
+    const incARS = Number(row.income_ars || 0);
+    const incUSD = Number(row.income_usd || 0);
+    const expARS = Number(row.expense_ars || 0);
+    const expUSD = Number(row.expense_usd || 0);
     return '<tr>'
       + '<td>' + concepto + '</td>'
-      + '<td class="text-right">-</td>'
-      + '<td class="text-right">-</td>'
-      + '<td class="text-right ' + (!isUSD ? 'negative' : '') + '">' + (!isUSD ? formatCurrency(ev.amount) : '-') + '</td>'
-      + '<td class="text-right ' + (isUSD ? 'negative' : '') + '">' + (isUSD ? formatCurrency(ev.amount, 'USD') : '-') + '</td>'
+      + '<td class="text-right ' + (incARS > 0 ? 'positive' : '') + '">' + (incARS > 0 ? formatCurrency(incARS) : '-') + '</td>'
+      + '<td class="text-right ' + (incUSD > 0 ? 'positive' : '') + '">' + (incUSD > 0 ? formatCurrency(incUSD, 'USD') : '-') + '</td>'
+      + '<td class="text-right ' + (expARS > 0 ? 'negative' : '') + '">' + (expARS > 0 ? formatCurrency(expARS) : '-') + '</td>'
+      + '<td class="text-right ' + (expUSD > 0 ? 'negative' : '') + '">' + (expUSD > 0 ? formatCurrency(expUSD, 'USD') : '-') + '</td>'
       + '</tr>';
   }).join('');
 
@@ -874,7 +956,7 @@ function buildFlowTable(data: any, formatCurrency: (amount: number, currency?: s
     + '<td class="text-right">-</td>'
     + '</tr>'
     + catRows
-    + eventExpenseRows
+    + eventRows
     + transferRow
     + '<tr class="summary-row">'
     + '<td>Total Movimientos</td>'
