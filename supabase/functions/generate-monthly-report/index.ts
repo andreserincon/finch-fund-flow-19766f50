@@ -614,10 +614,14 @@ Deno.serve(async (req) => {
     const categoryFlows: Record<string, { incomeARS: number; incomeUSD: number; expenseARS: number; expenseUSD: number }> = {};
     transactions.forEach((t: any) => {
       // event_expense AND event_payment transactions are rendered grouped
-      // per-event below the category table (one cuota-aggregate row per
-      // event plus individual gasto rows). Skip them here to avoid double
-      // counting.
-      if (t.category === 'event_expense' || t.category === 'event_payment') return;
+      // per-event below the category table. other_expense is rendered as
+      // individual rows (with expense_summary) right after the event
+      // block. All three are skipped here to avoid double counting.
+      if (
+        t.category === 'event_expense' ||
+        t.category === 'event_payment' ||
+        t.category === 'other_expense'
+      ) return;
       const cat = t.category as string;
       if (!categoryFlows[cat]) categoryFlows[cat] = { incomeARS: 0, incomeUSD: 0, expenseARS: 0, expenseUSD: 0 };
       const isUSD = t.account === 'savings';
@@ -629,6 +633,19 @@ Deno.serve(async (req) => {
         else categoryFlows[cat].expenseARS += Number(t.amount);
       }
     });
+
+    // Individual "Otro Gasto" rows for the flujo de mes, sorted by date.
+    // Each row uses the optional expense_summary as the detail; "(sin
+    // resumen)" if the treasurer didn't fill one in.
+    const otherExpenseRows = transactions
+      .filter((t: any) => t.category === 'other_expense')
+      .map((t: any) => ({
+        date: t.transaction_date,
+        summary: (t.expense_summary as string | null) ?? null,
+        amount: Number(t.amount),
+        currency: t.account === 'savings' ? 'USD' : 'ARS' as 'ARS' | 'USD',
+      }))
+      .sort((a: any, b: any) => a.date.localeCompare(b.date));
 
     // Per-event movement rows for the flujo de mes. Grouped by event,
     // sorted alphabetically. For each event with activity we emit:
@@ -658,7 +675,7 @@ Deno.serve(async (req) => {
         const arr = expensesByEvent.get(key) ?? [];
         arr.push({
           date: t.transaction_date,
-          summary: (t.event_summary as string | null) ?? null,
+          summary: (t.expense_summary as string | null) ?? null,
           amount: Number(t.amount),
           currency: t.account === 'savings' ? 'USD' : 'ARS',
         });
@@ -741,7 +758,7 @@ Deno.serve(async (req) => {
           expenses: expenseTxs
             .map((t: any) => ({
               date: t.transaction_date,
-              summary: (t.event_summary as string | null) || '',
+              summary: (t.expense_summary as string | null) || '',
               description: (t.notes as string | null) || '',
               amount: Number(t.amount),
               currency: t.account === 'savings' ? 'USD' : 'ARS',
@@ -791,6 +808,7 @@ Deno.serve(async (req) => {
       categoryFlows,
       categoryLabels,
       eventMovementRows,
+      otherExpenseRows,
       perEventDetails,
       initialARS,
       initialUSD,
@@ -912,6 +930,26 @@ function buildFlowTable(data: any, formatCurrency: (amount: number, currency?: s
       + '</tr>';
   }).join('');
 
+  // Individual rows for other_expense transactions (sorted by date),
+  // each tagged with its short summary. Replaces the previous aggregated
+  // "Otro Gasto" row.
+  const otherExpenseRowsHtml = (data.otherExpenseRows || []).map((row: any) => {
+    const summary = row.summary && row.summary.trim().length > 0
+      ? row.summary
+      : '(sin resumen)';
+    const concepto = `Otro Gasto - ${summary}`;
+    const isUSD = row.currency === 'USD';
+    if (isUSD) totalExpUSD += row.amount;
+    else totalExpARS += row.amount;
+    return '<tr>'
+      + '<td>' + concepto + '</td>'
+      + '<td class="text-right">-</td>'
+      + '<td class="text-right">-</td>'
+      + '<td class="text-right ' + (!isUSD ? 'negative' : '') + '">' + (!isUSD ? formatCurrency(row.amount) : '-') + '</td>'
+      + '<td class="text-right ' + (isUSD ? 'negative' : '') + '">' + (isUSD ? formatCurrency(row.amount, 'USD') : '-') + '</td>'
+      + '</tr>';
+  }).join('');
+
   // Transfers between owned accounts (account_transfers) are a wash at
   // the organization level — same money moving between cuentas. They
   // shouldn't appear in the category-flow table since they have zero
@@ -975,6 +1013,7 @@ function buildFlowTable(data: any, formatCurrency: (amount: number, currency?: s
     + '</tr>'
     + catRows
     + eventRows
+    + otherExpenseRowsHtml
     + transferRow
     + '<tr class="summary-row">'
     + '<td>Total Movimientos</td>'

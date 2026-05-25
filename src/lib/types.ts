@@ -95,11 +95,11 @@ export interface Transaction {
    */
   event_member_payment_id: string | null;
   /**
-   * Short summary (max 40 chars) shown next to the event name in the
-   * monthly report's flujo de mes. Only populated when
-   * category === 'event_expense'.
+   * Short summary (max 40 chars) shown in the monthly report's flujo
+   * de mes alongside the row. Only populated when category is
+   * 'event_expense' (paired with event name) or 'other_expense'.
    */
-  event_summary: string | null;
+  expense_summary: string | null;
   notes: string | null;
   account: AccountType;
   created_at: string;

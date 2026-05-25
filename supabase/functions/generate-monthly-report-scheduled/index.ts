@@ -486,7 +486,7 @@ Deno.serve(async (req) => {
           expenses: expenseTxs
             .map((t: any) => ({
               date: t.transaction_date,
-              summary: (t.event_summary as string | null) || '',
+              summary: (t.expense_summary as string | null) || '',
               description: (t.notes as string | null) || '',
               amount: Number(t.amount),
               currency: t.account === 'savings' ? 'USD' : 'ARS',
