@@ -502,6 +502,16 @@ Deno.serve(async (req) => {
       const membersIncluded = eventPaymentsForEvent.length;
       const membersUnpaid = eventPaymentsForEvent.filter((ep: any) => ep.amount_paid < ep.amount_owed).length;
 
+      // Gastos del evento ESTE MES (ARS only — USD gastos en eventos son
+      // edge case, se ven en la sección Detalle por Evento si los hay).
+      const expensesArs = transactions
+        .filter((t: any) =>
+          t.category === 'event_expense' &&
+          t.event_id === event.id &&
+          t.account !== 'savings'
+        )
+        .reduce((sum: number, t: any) => sum + Number(t.amount), 0);
+
       return {
         report_id: reportId,
         event_id: event.id,
@@ -509,6 +519,9 @@ Deno.serve(async (req) => {
         total_amount: totalAmount,
         amount_collected: amountCollected,
         outstanding_amount: totalAmount - amountCollected,
+        // Render-only fields (stripped before DB insert below).
+        expenses_ars: expensesArs,
+        balance_ars: amountCollected - expensesArs,
         members_included: membersIncluded,
         members_unpaid: membersUnpaid,
         event_status: amountCollected >= totalAmount ? 'settled' : 'pending',
@@ -516,7 +529,12 @@ Deno.serve(async (req) => {
     });
 
     if (eventSnapshots.length > 0) {
-      await supabase.from('report_event_snapshots').insert(eventSnapshots);
+      // expenses_ars and balance_ars are render-only; strip before
+      // persisting since report_event_snapshots doesn't have those columns.
+      const eventSnapshotsForDb = eventSnapshots.map(
+        ({ expenses_ars, balance_ars, ...rest }: any) => rest
+      );
+      await supabase.from('report_event_snapshots').insert(eventSnapshotsForDb);
     }
 
     // Generate PDF content
@@ -1169,21 +1187,31 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
   // Build events section
   let eventsSection = '';
   if (data.eventSnapshots.length > 0) {
-    const eventRows = data.eventSnapshots.map((e: any) => `
+    const eventRows = data.eventSnapshots.map((e: any) => {
+      const expensesArs = Number(e.expenses_ars ?? 0);
+      const balanceArs = Number(e.balance_ars ?? (Number(e.amount_collected) - expensesArs));
+      const balanceClass = balanceArs >= 0 ? 'positive' : 'negative';
+      return `
       <tr>
         <td>${e.event_name}</td>
         <td class="text-right">${formatCurrency(e.total_amount)}</td>
         <td class="text-right positive">${formatCurrency(e.amount_collected)}</td>
         <td class="text-right negative">${formatCurrency(e.outstanding_amount)}</td>
+        <td class="text-right ${expensesArs > 0 ? 'negative' : ''}">${expensesArs > 0 ? formatCurrency(expensesArs) : '-'}</td>
+        <td class="text-right ${balanceClass}"><strong>${formatCurrency(balanceArs)}</strong></td>
         <td class="text-center">${e.members_included}</td>
         <td class="text-center">${e.members_unpaid}</td>
         <td class="text-center">${e.event_status === 'settled' ? '✅ Saldado' : '⏳ Pendiente'}</td>
       </tr>
-    `).join('');
+    `;
+    }).join('');
 
     const totalEventAmount = data.eventSnapshots.reduce((s: number, e: any) => s + e.total_amount, 0);
     const totalEventCollected = data.eventSnapshots.reduce((s: number, e: any) => s + e.amount_collected, 0);
     const totalEventOutstanding = data.eventSnapshots.reduce((s: number, e: any) => s + e.outstanding_amount, 0);
+    const totalEventExpenses = data.eventSnapshots.reduce((s: number, e: any) => s + Number(e.expenses_ars ?? 0), 0);
+    const totalEventBalance = totalEventCollected - totalEventExpenses;
+    const totalBalanceClass = totalEventBalance >= 0 ? 'positive' : 'negative';
 
     eventsSection = `
       <div class="section">
@@ -1192,9 +1220,11 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
           <thead>
             <tr>
               <th>Evento</th>
-              <th class="text-right">Total</th>
-              <th class="text-right">Recaudado</th>
-              <th class="text-right">Pendiente</th>
+              <th class="text-right">Total Cuota</th>
+              <th class="text-right">Cuota Recaudada</th>
+              <th class="text-right">Cuota Pendiente</th>
+              <th class="text-right">Gastos</th>
+              <th class="text-right">Balance Evento</th>
               <th class="text-center">Miembros</th>
               <th class="text-center">Sin Pagar</th>
               <th class="text-center">Estado</th>
@@ -1207,6 +1237,8 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
               <td class="text-right">${formatCurrency(totalEventAmount)}</td>
               <td class="text-right positive">${formatCurrency(totalEventCollected)}</td>
               <td class="text-right negative">${formatCurrency(totalEventOutstanding)}</td>
+              <td class="text-right ${totalEventExpenses > 0 ? 'negative' : ''}">${totalEventExpenses > 0 ? formatCurrency(totalEventExpenses) : '-'}</td>
+              <td class="text-right ${totalBalanceClass}"><strong>${formatCurrency(totalEventBalance)}</strong></td>
               <td colspan="3"></td>
             </tr>
           </tbody>
