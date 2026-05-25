@@ -765,25 +765,12 @@ function buildFlowTable(data: any, formatCurrency: (amount: number, currency?: s
       + '</tr>';
   }).join('');
 
-  // Transfer rows
-  let transferInARS = 0, transferInUSD = 0, transferOutARS = 0, transferOutUSD = 0;
-  (data.monthTransfers || []).forEach((tr: any) => {
-    const amt = Number(tr.amount);
-    if (tr.from_account === 'savings') transferOutUSD += amt;
-    else transferOutARS += amt;
-    if (tr.to_account === 'savings') transferInUSD += amt;
-    else transferInARS += amt;
-  });
-
-  const hasTransfers = transferInARS > 0 || transferInUSD > 0 || transferOutARS > 0 || transferOutUSD > 0;
-  const transferRow = hasTransfers
-    ? '<tr><td>Transferencias entre Cuentas</td>'
-      + '<td class="text-right ' + (transferInARS > 0 ? 'positive' : '') + '">' + (transferInARS > 0 ? formatCurrency(transferInARS) : '-') + '</td>'
-      + '<td class="text-right ' + (transferInUSD > 0 ? 'positive' : '') + '">' + (transferInUSD > 0 ? formatCurrency(transferInUSD, 'USD') : '-') + '</td>'
-      + '<td class="text-right ' + (transferOutARS > 0 ? 'negative' : '') + '">' + (transferOutARS > 0 ? formatCurrency(transferOutARS) : '-') + '</td>'
-      + '<td class="text-right ' + (transferOutUSD > 0 ? 'negative' : '') + '">' + (transferOutUSD > 0 ? formatCurrency(transferOutUSD, 'USD') : '-') + '</td>'
-      + '</tr>'
-    : '';
+  // Transfers between owned accounts (account_transfers) are a wash at
+  // the organization level — same money moving between cuentas. They
+  // shouldn't appear in the category-flow table since they have zero
+  // net impact on total holdings. Per-account balances are still
+  // computed correctly elsewhere using the same transfers data.
+  const transferRow = '';
 
   const finalARS = data.initialARS + totalIncARS - totalExpARS;
   const finalUSD = data.initialUSD + totalIncUSD - totalExpUSD;
