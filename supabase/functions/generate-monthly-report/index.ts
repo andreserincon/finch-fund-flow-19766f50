@@ -965,6 +965,20 @@ function buildFlowTable(data: any, formatCurrency: (amount: number, currency?: s
     + '<td class="text-right negative">' + formatCurrency(totalExpARS) + '</td>'
     + '<td class="text-right negative">' + formatCurrency(totalExpUSD, 'USD') + '</td>'
     + '</tr>'
+    // Balance del Mes = ingresos - egresos del mes (sin contar el balance
+    // inicial). Resultado neto del mes — útil para ver si el mes fue
+    // superavitario o deficitario sin tener que restar mentalmente.
+    + (() => {
+        const monthBalanceARS = totalIncARS - totalExpARS;
+        const monthBalanceUSD = totalIncUSD - totalExpUSD;
+        return '<tr class="summary-row">'
+          + '<td>Balance del Mes</td>'
+          + '<td class="text-right ' + (monthBalanceARS >= 0 ? 'positive' : 'negative') + '">' + formatCurrency(monthBalanceARS) + '</td>'
+          + '<td class="text-right ' + (monthBalanceUSD >= 0 ? 'positive' : 'negative') + '">' + formatCurrency(monthBalanceUSD, 'USD') + '</td>'
+          + '<td class="text-right">-</td>'
+          + '<td class="text-right">-</td>'
+          + '</tr>';
+      })()
     + '<tr class="summary-row">'
     + '<td><strong>Balance Final</strong></td>'
     + '<td class="text-right ' + (finalARS >= 0 ? 'positive' : 'negative') + '"><strong>' + formatCurrency(finalARS) + '</strong></td>'
