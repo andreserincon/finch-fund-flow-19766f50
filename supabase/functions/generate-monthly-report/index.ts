@@ -449,6 +449,7 @@ Deno.serve(async (req) => {
         report_id: reportId,
         member_id: mb.member_id,
         full_name: mb.full_name,
+        phone_number: mb.phone_number,
         fee_type: mb.fee_type,
         monthly_fee_amount: monthlyFeeAmount,
         balance_at_month_end: capitaBalance + eventBalance,
@@ -463,7 +464,10 @@ Deno.serve(async (req) => {
     });
 
     if (memberSnapshots.length > 0) {
-      await supabase.from('report_member_snapshots').insert(memberSnapshots);
+      // phone_number is render-only here; strip before persisting in case
+      // report_member_snapshots doesn't have that column.
+      const memberSnapshotsForDb = memberSnapshots.map(({ phone_number, ...rest }: any) => rest);
+      await supabase.from('report_member_snapshots').insert(memberSnapshotsForDb);
     }
 
     // Create loan snapshots
