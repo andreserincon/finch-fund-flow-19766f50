@@ -51,6 +51,7 @@ const transactionSchema = z
     member_id: z.string().optional(),
     event_id: z.string().optional(),
     event_member_payment_id: z.string().optional(),
+    event_summary: z.string().max(40, 'Máximo 40 caracteres').optional(),
     notes: z.string().max(500).optional(),
   })
   .refine(
@@ -115,6 +116,7 @@ export function EditTransactionDialog({
       member_id: transaction.member_id || undefined,
       event_id: transaction.event_id || undefined,
       event_member_payment_id: transaction.event_member_payment_id || undefined,
+      event_summary: transaction.event_summary || undefined,
       notes: transaction.notes || undefined,
     },
   });
@@ -129,6 +131,7 @@ export function EditTransactionDialog({
         member_id: transaction.member_id || undefined,
         event_id: transaction.event_id || undefined,
         event_member_payment_id: transaction.event_member_payment_id || undefined,
+        event_summary: transaction.event_summary || undefined,
         notes: transaction.notes || undefined,
       });
     }
@@ -138,8 +141,10 @@ export function EditTransactionDialog({
   const category = watch('category');
   const selectedEventId = watch('event_id');
   const selectedParticipantId = watch('event_member_payment_id');
+  const eventSummary = watch('event_summary');
   const isEventCategory = EVENT_CATEGORIES.includes(category);
   const isEventPayment = category === 'event_payment';
+  const isEventExpense = category === 'event_expense';
 
   const { payments: eventParticipants } = useEventMemberPayments(
     isEventPayment ? selectedEventId : undefined
@@ -158,6 +163,13 @@ export function EditTransactionDialog({
       setValue('event_member_payment_id', undefined);
     }
   }, [isEventPayment, selectedParticipantId, setValue]);
+
+  // Clear event_summary when leaving event_expense category
+  useEffect(() => {
+    if (!isEventExpense) {
+      setValue('event_summary', undefined);
+    }
+  }, [isEventExpense, setValue]);
 
   const availableCategories = transactionType === 'income' ? incomeCategories : expenseCategories;
 
@@ -179,6 +191,7 @@ export function EditTransactionDialog({
       member_id: memberIdToSend ?? null,
       event_id: EVENT_CATEGORIES.includes(data.category) ? data.event_id || null : null,
       event_member_payment_id: participantIdToSend,
+      event_summary: data.category === 'event_expense' ? data.event_summary?.trim() || null : null,
       notes: data.notes || null,
     });
     onOpenChange(false);
@@ -314,6 +327,29 @@ export function EditTransactionDialog({
             </div>
           )}
 
+          {isEventExpense && selectedEventId && (
+            <div className="space-y-2">
+              <Label htmlFor="event_summary_edit">
+                Resumen breve del gasto
+                <span className="text-xs text-muted-foreground ml-1">
+                  ({(eventSummary?.length ?? 0)}/40)
+                </span>
+              </Label>
+              <Input
+                id="event_summary_edit"
+                {...register('event_summary')}
+                maxLength={40}
+                placeholder="Ej: Catering bebidas y mozo"
+              />
+              <p className="text-xs text-muted-foreground">
+                Aparece junto al nombre del evento en el flujo de mes y en el resumen del evento.
+              </p>
+              {errors.event_summary && (
+                <p className="text-sm text-destructive">{errors.event_summary.message}</p>
+              )}
+            </div>
+          )}
+
           {isEventPayment && selectedEventId && (
             <div className="space-y-2">
               <Label>Participante (miembro o invitado)</Label>
@@ -351,11 +387,13 @@ export function EditTransactionDialog({
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="notes">Notes (Optional)</Label>
+            <Label htmlFor="notes">
+              {isEventExpense ? 'Descripción detallada del gasto (opcional)' : 'Notes (Optional)'}
+            </Label>
             <Textarea
               id="notes"
               {...register('notes')}
-              placeholder="Additional details..."
+              placeholder={isEventExpense ? 'Detalle completo del gasto, proveedor, condiciones...' : 'Additional details...'}
               rows={3}
             />
             {errors.notes && (

@@ -443,6 +443,44 @@ Deno.serve(async (req) => {
       await supabase.from('report_event_snapshots').insert(eventSnapshots);
     }
 
+    // Per-event detail blocks (rendered as a new section in the comprehensive
+    // report). One block per event with activity this month
+    // (cuota income > 0 OR any event_expense).
+    const perEventDetails = events
+      .map((event: any) => {
+        const eventTxs = transactions.filter((t: any) => t.event_id === event.id);
+        const expenseTxs = eventTxs.filter((t: any) => t.category === 'event_expense');
+        const cuotaTxs = eventTxs.filter((t: any) => t.category === 'event_payment');
+        const cuotaCollectedARS = cuotaTxs
+          .filter((t: any) => t.account !== 'savings')
+          .reduce((s: number, t: any) => s + Number(t.amount), 0);
+        const cuotaCollectedUSD = cuotaTxs
+          .filter((t: any) => t.account === 'savings')
+          .reduce((s: number, t: any) => s + Number(t.amount), 0);
+        const participants = eventPayments.filter((ep: any) => ep.event_id === event.id);
+        const memberCount = participants.filter((ep: any) => ep.member_id !== null).length;
+        const guestCount = participants.filter((ep: any) => ep.guest_name !== null).length;
+        return {
+          event_id: event.id,
+          event_name: event.name as string,
+          cuota_collected_ars: cuotaCollectedARS,
+          cuota_collected_usd: cuotaCollectedUSD,
+          member_count: memberCount,
+          guest_count: guestCount,
+          expenses: expenseTxs
+            .map((t: any) => ({
+              date: t.transaction_date,
+              summary: (t.event_summary as string | null) || '',
+              description: (t.notes as string | null) || '',
+              amount: Number(t.amount),
+              currency: t.account === 'savings' ? 'USD' : 'ARS',
+            }))
+            .sort((a: any, b: any) => a.date.localeCompare(b.date)),
+          has_activity: cuotaCollectedARS > 0 || cuotaCollectedUSD > 0 || expenseTxs.length > 0,
+        };
+      })
+      .filter((d: any) => d.has_activity);
+
     // Generate PDF content
     const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
                         'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
@@ -474,6 +512,7 @@ Deno.serve(async (req) => {
       memberSnapshots,
       loanSnapshots,
       eventSnapshots,
+      perEventDetails,
       totalActiveLoans,
       totalLoanAmount,
       totalLoanDue,
@@ -784,6 +823,90 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
             </tr>
           </tbody>
         </table>
+      </div>
+    `;
+  }
+
+  // Per-event detail blocks: one card per event with activity this month.
+  // Cuota collected, member/guest counts, plus a table of individual
+  // expenses with their short summary and full description. Lite report
+  // skips this — too detailed for the single-page version.
+  let perEventDetailsSection = '';
+  if (!isLite && Array.isArray(data.perEventDetails) && data.perEventDetails.length > 0) {
+    const blocks = data.perEventDetails.map((ev: any) => {
+      const expensesTotal = ev.expenses.reduce(
+        (acc: { ars: number; usd: number }, x: any) => {
+          if (x.currency === 'USD') acc.usd += x.amount;
+          else acc.ars += x.amount;
+          return acc;
+        },
+        { ars: 0, usd: 0 }
+      );
+      const expenseRows = ev.expenses.length === 0
+        ? '<tr><td colspan="4" class="text-center" style="color:#666;">Sin gastos registrados este mes.</td></tr>'
+        : ev.expenses.map((x: any) => {
+            const fecha = new Date(x.date).toLocaleDateString('es-AR');
+            const summary = x.summary || '(sin resumen)';
+            const desc = x.description || '-';
+            const monto = x.currency === 'USD' ? formatCurrency(x.amount, 'USD') : formatCurrency(x.amount);
+            return '<tr>'
+              + `<td>${fecha}</td>`
+              + `<td>${summary}</td>`
+              + `<td style="font-size: 10px; color: #444;">${desc}</td>`
+              + `<td class="text-right negative">${monto}</td>`
+              + '</tr>';
+          }).join('');
+      const expensesFooter = ev.expenses.length === 0 ? '' : `
+        <tr class="summary-row">
+          <td colspan="3" class="text-right">Total Gastos</td>
+          <td class="text-right negative">
+            ${expensesTotal.ars > 0 ? formatCurrency(expensesTotal.ars) : ''}
+            ${expensesTotal.usd > 0 ? ' / ' + formatCurrency(expensesTotal.usd, 'USD') : ''}
+          </td>
+        </tr>
+      `;
+      const cuotaDisplay = [
+        ev.cuota_collected_ars > 0 ? formatCurrency(ev.cuota_collected_ars) : null,
+        ev.cuota_collected_usd > 0 ? formatCurrency(ev.cuota_collected_usd, 'USD') : null,
+      ].filter(Boolean).join(' / ') || formatCurrency(0);
+      return `
+        <div class="section" style="page-break-inside: avoid; margin-top: 16px;">
+          <h3 style="margin: 0 0 8px 0; font-size: 14px;">${ev.event_name}</h3>
+          <div class="grid">
+            <div class="stat-card">
+              <div class="stat-label">Ingresos por Capita (mes)</div>
+              <div class="stat-value positive">${cuotaDisplay}</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Miembros Asistiendo</div>
+              <div class="stat-value">${ev.member_count}</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Invitados Asistiendo</div>
+              <div class="stat-value">${ev.guest_count}</div>
+            </div>
+          </div>
+          <table style="margin-top: 8px;">
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Resumen</th>
+                <th>Descripción detallada</th>
+                <th class="text-right">Monto</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${expenseRows}
+              ${expensesFooter}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }).join('');
+    perEventDetailsSection = `
+      <div class="section">
+        <h2 class="section-title">${eventsSectionNum}.1 Detalle por Evento</h2>
+        ${blocks}
       </div>
     `;
   }
@@ -1309,6 +1432,8 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
   ${loansSection}
 
   ${eventsSection}
+
+  ${perEventDetailsSection}
 
   <div class="footer">
     <p>R.·.L.·. Simón Bolívar N° 646 · Tesorería · ${data.monthName} ${data.year}${isLite ? ' (Resumen)' : ''}</p>

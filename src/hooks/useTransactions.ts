@@ -91,6 +91,7 @@ export function useTransactions() {
       member_id?: string | null;
       event_id?: string | null;
       event_member_payment_id?: string | null;
+      event_summary?: string | null;
       notes?: string | null;
       account?: AccountType;
     }) => {

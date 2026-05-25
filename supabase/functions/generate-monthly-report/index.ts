@@ -595,6 +595,9 @@ Deno.serve(async (req) => {
 
     const categoryFlows: Record<string, { incomeARS: number; incomeUSD: number; expenseARS: number; expenseUSD: number }> = {};
     transactions.forEach((t: any) => {
+      // event_expense transactions are rendered individually below the
+      // category table (with event name + short summary), not aggregated.
+      if (t.category === 'event_expense') return;
       const cat = t.category as string;
       if (!categoryFlows[cat]) categoryFlows[cat] = { incomeARS: 0, incomeUSD: 0, expenseARS: 0, expenseUSD: 0 };
       const isUSD = t.account === 'savings';
@@ -606,6 +609,62 @@ Deno.serve(async (req) => {
         else categoryFlows[cat].expenseARS += Number(t.amount);
       }
     });
+
+    // Individual event_expense rows for the flujo de mes (rendered after
+    // the category-aggregated rows). Each row carries the event name and
+    // the short summary entered on the transaction form.
+    const eventNameById = new Map<string, string>(
+      eligibleEventsForReport.map((e: any) => [e.id as string, e.name as string])
+    );
+    const eventExpenseDetails = transactions
+      .filter((t: any) => t.category === 'event_expense')
+      .map((t: any) => ({
+        date: t.transaction_date,
+        event_id: t.event_id as string | null,
+        event_name: t.event_id ? (eventNameById.get(t.event_id) ?? 'Evento desconocido') : 'Sin evento',
+        event_summary: t.event_summary as string | null,
+        amount: Number(t.amount),
+        currency: t.account === 'savings' ? 'USD' : 'ARS',
+      }))
+      .sort((a: any, b: any) => a.date.localeCompare(b.date));
+
+    // Per-event detail blocks (rendered as a new section after the events
+    // summary table). One block per event with activity this month
+    // (cuota income > 0 OR any event_expense).
+    const perEventDetails = eligibleEventsForReport
+      .map((event: any) => {
+        const eventTxs = transactions.filter((t: any) => t.event_id === event.id);
+        const expenseTxs = eventTxs.filter((t: any) => t.category === 'event_expense');
+        const cuotaTxs = eventTxs.filter((t: any) => t.category === 'event_payment');
+        const cuotaCollectedARS = cuotaTxs
+          .filter((t: any) => t.account !== 'savings')
+          .reduce((s: number, t: any) => s + Number(t.amount), 0);
+        const cuotaCollectedUSD = cuotaTxs
+          .filter((t: any) => t.account === 'savings')
+          .reduce((s: number, t: any) => s + Number(t.amount), 0);
+        const participants = eventPayments.filter((ep: any) => ep.event_id === event.id);
+        const memberCount = participants.filter((ep: any) => ep.member_id !== null).length;
+        const guestCount = participants.filter((ep: any) => ep.guest_name !== null).length;
+        return {
+          event_id: event.id,
+          event_name: event.name as string,
+          cuota_collected_ars: cuotaCollectedARS,
+          cuota_collected_usd: cuotaCollectedUSD,
+          member_count: memberCount,
+          guest_count: guestCount,
+          expenses: expenseTxs
+            .map((t: any) => ({
+              date: t.transaction_date,
+              summary: (t.event_summary as string | null) || '',
+              description: (t.notes as string | null) || '',
+              amount: Number(t.amount),
+              currency: t.account === 'savings' ? 'USD' : 'ARS',
+            }))
+            .sort((a: any, b: any) => a.date.localeCompare(b.date)),
+          has_activity: cuotaCollectedARS > 0 || cuotaCollectedUSD > 0 || expenseTxs.length > 0,
+        };
+      })
+      .filter((d: any) => d.has_activity);
 
     // Also account for transfers in/out this month
     const monthTransfers = allTransfers.filter((t: any) => t.transfer_date >= monthStartStr && t.transfer_date <= monthEndStr);
@@ -645,6 +704,8 @@ Deno.serve(async (req) => {
       // Category flows
       categoryFlows,
       categoryLabels,
+      eventExpenseDetails,
+      perEventDetails,
       initialARS,
       initialUSD,
       monthTransfers,
@@ -772,6 +833,27 @@ function buildFlowTable(data: any, formatCurrency: (amount: number, currency?: s
   // computed correctly elsewhere using the same transfers data.
   const transferRow = '';
 
+  // Individual rows for event_expense transactions (one per movement)
+  // shown after the category-aggregated rows. Format:
+  //   Gasto Evento - "<event name>" - <short summary>
+  const truncate = (s: string, n: number) => (s.length > n ? s.slice(0, n - 1) + '…' : s);
+  const eventExpenseRows = (data.eventExpenseDetails || []).map((ev: any) => {
+    const summary = ev.event_summary && ev.event_summary.trim().length > 0
+      ? ev.event_summary
+      : '(sin resumen)';
+    const concepto = `Gasto Evento - "${truncate(ev.event_name, 40)}" - ${summary}`;
+    const isUSD = ev.currency === 'USD';
+    if (isUSD) totalExpUSD += ev.amount;
+    else totalExpARS += ev.amount;
+    return '<tr>'
+      + '<td>' + concepto + '</td>'
+      + '<td class="text-right">-</td>'
+      + '<td class="text-right">-</td>'
+      + '<td class="text-right ' + (!isUSD ? 'negative' : '') + '">' + (!isUSD ? formatCurrency(ev.amount) : '-') + '</td>'
+      + '<td class="text-right ' + (isUSD ? 'negative' : '') + '">' + (isUSD ? formatCurrency(ev.amount, 'USD') : '-') + '</td>'
+      + '</tr>';
+  }).join('');
+
   const finalARS = data.initialARS + totalIncARS - totalExpARS;
   const finalUSD = data.initialUSD + totalIncUSD - totalExpUSD;
 
@@ -792,6 +874,7 @@ function buildFlowTable(data: any, formatCurrency: (amount: number, currency?: s
     + '<td class="text-right">-</td>'
     + '</tr>'
     + catRows
+    + eventExpenseRows
     + transferRow
     + '<tr class="summary-row">'
     + '<td>Total Movimientos</td>'
@@ -1032,6 +1115,91 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
             </tr>
           </tbody>
         </table>
+      </div>
+    `;
+  }
+
+  // Per-event detail blocks: one card per event with activity this month.
+  // Cuota collected, member/guest counts, plus a table of individual
+  // expenses with their short summary and full description. Lite report
+  // skips this — too detailed for the single-page version.
+  let perEventDetailsSection = '';
+  if (!isLite && Array.isArray(data.perEventDetails) && data.perEventDetails.length > 0) {
+    const cardSubNum = isLite ? (eventsSectionNum + '.1') : (eventsSectionNum + '.1');
+    const blocks = data.perEventDetails.map((ev: any) => {
+      const expensesTotal = ev.expenses.reduce(
+        (acc: { ars: number; usd: number }, x: any) => {
+          if (x.currency === 'USD') acc.usd += x.amount;
+          else acc.ars += x.amount;
+          return acc;
+        },
+        { ars: 0, usd: 0 }
+      );
+      const expenseRows = ev.expenses.length === 0
+        ? '<tr><td colspan="4" class="text-center" style="color:#666;">Sin gastos registrados este mes.</td></tr>'
+        : ev.expenses.map((x: any) => {
+            const fecha = new Date(x.transaction_date || x.date).toLocaleDateString('es-AR');
+            const summary = x.summary || '(sin resumen)';
+            const desc = x.description || '-';
+            const monto = x.currency === 'USD' ? formatCurrency(x.amount, 'USD') : formatCurrency(x.amount);
+            return '<tr>'
+              + `<td>${fecha}</td>`
+              + `<td>${summary}</td>`
+              + `<td style="font-size: 10px; color: #444;">${desc}</td>`
+              + `<td class="text-right negative">${monto}</td>`
+              + '</tr>';
+          }).join('');
+      const expensesFooter = ev.expenses.length === 0 ? '' : `
+        <tr class="summary-row">
+          <td colspan="3" class="text-right">Total Gastos</td>
+          <td class="text-right negative">
+            ${expensesTotal.ars > 0 ? formatCurrency(expensesTotal.ars) : ''}
+            ${expensesTotal.usd > 0 ? ' / ' + formatCurrency(expensesTotal.usd, 'USD') : ''}
+          </td>
+        </tr>
+      `;
+      const cuotaDisplay = [
+        ev.cuota_collected_ars > 0 ? formatCurrency(ev.cuota_collected_ars) : null,
+        ev.cuota_collected_usd > 0 ? formatCurrency(ev.cuota_collected_usd, 'USD') : null,
+      ].filter(Boolean).join(' / ') || formatCurrency(0);
+      return `
+        <div class="section" style="page-break-inside: avoid; margin-top: 16px;">
+          <h3 style="margin: 0 0 8px 0; font-size: 14px;">${ev.event_name}</h3>
+          <div class="grid">
+            <div class="stat-card">
+              <div class="stat-label">Ingresos por Capita (mes)</div>
+              <div class="stat-value positive">${cuotaDisplay}</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Miembros Asistiendo</div>
+              <div class="stat-value">${ev.member_count}</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Invitados Asistiendo</div>
+              <div class="stat-value">${ev.guest_count}</div>
+            </div>
+          </div>
+          <table style="margin-top: 8px;">
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Resumen</th>
+                <th>Descripción detallada</th>
+                <th class="text-right">Monto</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${expenseRows}
+              ${expensesFooter}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }).join('');
+    perEventDetailsSection = `
+      <div class="section">
+        <h2 class="section-title">${cardSubNum} Detalle por Evento</h2>
+        ${blocks}
       </div>
     `;
   }
@@ -1560,6 +1728,8 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
   ${loansSection}
 
   ${eventsSection}
+
+  ${perEventDetailsSection}
 
   ${isLite ? '' : `<div class="page-break"></div>
   

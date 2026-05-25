@@ -94,6 +94,12 @@ export interface Transaction {
    * this id (see useTransactions).
    */
   event_member_payment_id: string | null;
+  /**
+   * Short summary (max 40 chars) shown next to the event name in the
+   * monthly report's flujo de mes. Only populated when
+   * category === 'event_expense'.
+   */
+  event_summary: string | null;
   notes: string | null;
   account: AccountType;
   created_at: string;

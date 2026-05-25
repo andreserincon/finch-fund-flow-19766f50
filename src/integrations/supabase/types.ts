@@ -1090,6 +1090,7 @@ export type Database = {
           created_at: string
           event_id: string | null
           event_member_payment_id: string | null
+          event_summary: string | null
           id: string
           member_id: string | null
           notes: string | null
@@ -1104,6 +1105,7 @@ export type Database = {
           created_at?: string
           event_id?: string | null
           event_member_payment_id?: string | null
+          event_summary?: string | null
           id?: string
           member_id?: string | null
           notes?: string | null
@@ -1118,6 +1120,7 @@ export type Database = {
           created_at?: string
           event_id?: string | null
           event_member_payment_id?: string | null
+          event_summary?: string | null
           id?: string
           member_id?: string | null
           notes?: string | null

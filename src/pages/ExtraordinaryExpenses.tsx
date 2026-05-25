@@ -24,7 +24,7 @@ import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { PlusCircle, Pencil, Trash2, Tag, ExternalLink } from 'lucide-react';
 
 const expenseSchema = z.object({
-  name: z.string().min(1, 'El nombre es obligatorio').max(100),
+  name: z.string().min(1, 'El nombre es obligatorio').max(40, 'Máximo 40 caracteres'),
   description: z.string().max(500).optional(),
   default_amount: z.number().min(0, 'El monto debe ser positivo'),
   payment_deadline: z.string().optional(),
