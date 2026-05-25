@@ -117,7 +117,10 @@ Deno.serve(async (req) => {
       supabase.from('members').select('*').eq('is_active', true),
       // Get all monthly fees up to month end for balance calculation
       supabase.from('monthly_fees').select('*').lte('year_month', monthEndStr),
-      supabase.from('loans').select('*, member:members(full_name, phone_number)').eq('status', 'active'),
+      // Pull all loans created on or before month end. We filter for
+      // "active as of month end" in app code below using paid_date so that
+      // historical reports reflect the snapshot, not today's status.
+      supabase.from('loans').select('*, member:members(full_name, phone_number)').lte('loan_date', monthEndStr),
       supabase.from('extraordinary_expenses').select('*').eq('is_active', true),
       supabase.from('event_member_payments').select('*'),
       supabase.from('monthly_fees').select('*').eq('year_month', `${year}-${month.toString().padStart(2, '0')}-01`),
@@ -127,20 +130,44 @@ Deno.serve(async (req) => {
     const transactions = transactionsResult.data || [];
     const members = membersResult.data || [];
     const allMonthlyFees = allMonthlyFeesResult.data || [];
-    const loans = loansResult.data || [];
+    const allLoans = loansResult.data || [];
     const events = eventsResult.data || [];
     const eventPayments = eventPaymentsResult.data || [];
     const monthlyFees = monthlyFeesResult.data || [];
     const feeTypeHistory = feeTypeHistoryResult.data || [];
 
-    // Fetch all transactions and transfers up to month end first (needed for balance calculations)
-    const [allTransactionsResult, allTransfersResult] = await Promise.all([
+    // Fetch all transactions, transfers, and loan payments up to month end —
+    // needed for balance calculations and point-in-time loan snapshots.
+    const [allTransactionsResult, allTransfersResult, loanPaymentsResult] = await Promise.all([
       supabase.from('transactions').select('*').lte('transaction_date', monthEndStr),
       supabase.from('account_transfers').select('*').lte('transfer_date', monthEndStr),
+      supabase.from('loan_payments').select('loan_id, amount, payment_date').lte('payment_date', monthEndStr),
     ]);
 
     const allTransactions = allTransactionsResult.data || [];
     const allTransfers = allTransfersResult.data || [];
+    const loanPaymentsAsOfMonthEnd = loanPaymentsResult.data || [];
+
+    // Build point-in-time loan view: keep only loans that were active on
+    // monthEnd (not cancelled, not yet fully paid as of that date), and
+    // override amount_paid with the sum of payments dated on or before
+    // monthEnd. Downstream code reads `loan.amount_paid` / computes
+    // `amount - amount_paid` — overriding the field keeps the rest of the
+    // function unchanged.
+    const paidByLoanId = new Map<string, number>();
+    for (const p of loanPaymentsAsOfMonthEnd) {
+      paidByLoanId.set(p.loan_id, (paidByLoanId.get(p.loan_id) || 0) + Number(p.amount));
+    }
+    const loans = allLoans
+      .filter((l: any) =>
+        l.status !== 'cancelled' &&
+        (!l.paid_date || l.paid_date > monthEndStr)
+      )
+      .map((l: any) => ({
+        ...l,
+        amount_paid: paidByLoanId.get(l.id) || 0,
+      }))
+      .filter((l: any) => Number(l.amount) - Number(l.amount_paid) > 0);
 
     // Helper function to get member's fee type for a given month
     const getMemberFeeTypeForMonth = (memberId: string, monthDate: string): string => {
