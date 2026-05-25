@@ -73,7 +73,7 @@ Deno.serve(async (req) => {
       supabase.from('members').select('*').eq('is_active', true),
       // Get all monthly fees up to month end for balance calculation
       supabase.from('monthly_fees').select('*').lte('year_month', monthEndStr),
-      supabase.from('loans').select('*, member:members(full_name)').eq('status', 'active'),
+      supabase.from('loans').select('*, member:members(full_name, phone_number)').eq('status', 'active'),
       supabase.from('extraordinary_expenses').select('*').eq('is_active', true),
       supabase.from('event_member_payments').select('*'),
       supabase.from('monthly_fees').select('*').eq('year_month', `${year}-${month.toString().padStart(2, '0')}-01`),
@@ -370,6 +370,7 @@ Deno.serve(async (req) => {
       report_id: reportId,
       loan_id: loan.id,
       borrower_name: loan.member?.full_name || 'Unknown',
+      borrower_matricula: loan.member?.phone_number || '-',
       account: loan.account,
       original_amount: loan.amount,
       amount_paid: loan.amount_paid,
@@ -379,7 +380,10 @@ Deno.serve(async (req) => {
     }));
 
     if (loanSnapshots.length > 0) {
-      await supabase.from('report_loan_snapshots').insert(loanSnapshots);
+      // borrower_matricula is render-only; strip before persisting since the
+      // DB column doesn't exist on report_loan_snapshots.
+      const loanSnapshotsForDb = loanSnapshots.map(({ borrower_matricula, ...rest }: any) => rest);
+      await supabase.from('report_loan_snapshots').insert(loanSnapshotsForDb);
     }
 
     // Create event snapshots
@@ -599,7 +603,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
   // Build member rows
   const memberRows = membersToShow.map((m: any) => `
     <tr>
-      <td>${m.full_name}</td>
+      <td>${m.phone_number || '-'}</td>
       <td class="text-center">${feeTypeLabels[m.fee_type] || m.fee_type}</td>
       <td class="text-right">${formatCurrency(m.monthly_fee_amount)}</td>
       <td class="text-right ${m.balance_at_month_end >= 0 ? 'positive' : 'negative'}">${formatCurrency(m.balance_at_month_end)}</td>
@@ -614,7 +618,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
     ? `<table>
         <thead>
           <tr>
-            <th>Miembro</th>
+            <th>Matrícula</th>
             <th class="text-center">Tipo Cuota</th>
             <th class="text-right">Cuota Mensual</th>
             <th class="text-right">Saldo</th>
@@ -654,7 +658,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
   } else if (data.loanSnapshots.length > 0) {
     const loanRows = data.loanSnapshots.map((l: any) => `
       <tr>
-        <td>${l.borrower_name}</td>
+        <td>${l.borrower_matricula || '-'}</td>
         <td class="text-center">${accountLabels[l.account] || l.account}</td>
         <td class="text-right">${formatCurrency(l.original_amount, l.account === 'savings' ? 'USD' : 'ARS')}</td>
         <td class="text-right positive">${formatCurrency(l.amount_paid, l.account === 'savings' ? 'USD' : 'ARS')}</td>
@@ -677,7 +681,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
         <table>
           <thead>
             <tr>
-              <th>Prestatario</th>
+              <th>Matrícula</th>
               <th class="text-center">Cuenta</th>
               <th class="text-right">Monto Original</th>
               <th class="text-right">Pagado</th>
