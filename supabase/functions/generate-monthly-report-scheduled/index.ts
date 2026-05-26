@@ -1137,8 +1137,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
       body { margin: 0; padding: 20px; }
       .page-break { page-break-before: always; }
       .no-print { display: none; }
-      /* Top/bottom margins reserve space for the running header & footer. */
-      @page { margin: 24mm 15mm 18mm 15mm; size: A4; }
+      @page { margin: 20mm 15mm; }
       thead { display: table-header-group; }
       tfoot { display: table-footer-group; }
       tr { page-break-inside: avoid; }
@@ -1201,50 +1200,20 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
       letter-spacing: 1px;
     }
     
-    /* Running header & footer: hidden on screen, repeated on every
-       printed page via position: fixed within the @page top/bottom
-       margins reserved above. */
-    .print-running-header,
-    .print-running-footer { display: none; }
+    .page-header { display: none; }
 
     @media print {
-      .print-running-header {
+      .page-header {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        position: fixed;
-        top: -20mm;
-        left: 0;
-        right: 0;
-        height: 16mm;
-        padding: 3mm 15mm 2mm 15mm;
-        box-sizing: border-box;
+        padding-bottom: 10px;
         border-bottom: 1px solid #999;
-        background: #fff;
-        font-size: 9px;
-        color: #000;
-        z-index: 1000;
+        margin-bottom: 15px;
+        font-size: 10px;
+        color: #666;
       }
-      .print-running-header .logo-small { width: 14mm; height: auto; }
-      .print-running-header .center { text-align: center; flex: 1; padding: 0 4mm; }
-      .print-running-header .right { text-align: right; min-width: 40mm; }
-
-      .print-running-footer {
-        display: block;
-        position: fixed;
-        bottom: -14mm;
-        left: 0;
-        right: 0;
-        height: 10mm;
-        padding: 2mm 15mm;
-        box-sizing: border-box;
-        border-top: 1px solid #999;
-        background: #fff;
-        text-align: center;
-        font-size: 9px;
-        color: #000;
-        z-index: 1000;
-      }
+      .page-header .logo-small { width: 30px; height: auto; }
     }
 
     .section { margin-bottom: 30px; page-break-inside: avoid; }
@@ -1383,17 +1352,6 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
 <body>
   <button class="print-button no-print" onclick="window.print()">📄 Imprimir / Guardar PDF</button>
 
-  <!-- Running header & footer: rendered once but repeated on every
-       printed page via position: fixed. -->
-  ${isLite ? '' : `<div class="print-running-header">
-    ${logoBase64 ? `<img src="data:image/png;base64,${logoBase64}" alt="" class="logo-small" />` : '<span></span>'}
-    <span class="center"><strong>R.·.L.·. Simón Bolívar N° 646</strong> · ${reportTitleFormatted}</span>
-    <span class="right">${data.monthName} ${data.year}</span>
-  </div>
-  <div class="print-running-footer">
-    R.·.L.·. Simón Bolívar N° 646 · Tesorería · ${data.monthName} ${data.year}${isLite ? ' (Resumen)' : ''}
-  </div>`}
-
   <!-- Main Header -->
   <div class="header">
     <div class="header-top">
@@ -1471,7 +1429,14 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
 
   ${isLite ? '' : `<div class="page-break"></div>
 
-  <!-- Section 2: Member Financial Detail — splittable across pages. -->
+  <!-- Condensed header for page 2+ -->
+  <div class="page-header">
+    ${logoBase64 ? `<img src="data:image/png;base64,${logoBase64}" alt="Logo" class="logo-small" />` : ''}
+    <span>R.·.L.·. Simón Bolívar N° 646</span>
+    <span>${reportTitleFormatted}</span>
+  </div>`}
+
+  ${isLite ? '' : `<!-- Section 2: Member Financial Detail — splittable across pages. -->
   <div class="section section--splittable">
     <h2 class="section-title">${memberSectionTitle}</h2>
     ${memberSection}
