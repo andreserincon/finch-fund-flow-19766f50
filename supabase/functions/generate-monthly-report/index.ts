@@ -50,10 +50,10 @@ async function convertHtmlToPdf(opts: {
   if (opts.headerHtml) {
     // start_at: 2 skips the running header on page 1 (which has the
     // big main header already).
-    body.header = { source: opts.headerHtml, spacing: '4mm', start_at: 2 };
+    body.header = { source: opts.headerHtml.trim(), spacing: '4mm', start_at: 2 };
   }
   if (opts.footerHtml) {
-    body.footer = { source: opts.footerHtml, spacing: '4mm' };
+    body.footer = { source: opts.footerHtml.trim(), spacing: '4mm' };
   }
 
   const res = await fetch('https://api.pdfshift.io/v3/convert/pdf', {
