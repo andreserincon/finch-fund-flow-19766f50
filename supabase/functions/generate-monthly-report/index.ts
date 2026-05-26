@@ -912,6 +912,7 @@ Deno.serve(async (req) => {
     const logoForHeader = logoBase64
       ? `<img src="data:image/png;base64,${logoBase64}" style="width: 28px; height: auto; vertical-align: middle;" />`
       : '';
+    const reportTitleFormatted = `REPORTE FINANCIERO MENSUAL ${monthName.toUpperCase()} ${year}`;
     const runningHeaderHtml = `
       <div style="font-size: 9px; color: #000; width: 100%; padding: 0 8mm; box-sizing: border-box; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #999;">
         <div style="min-width: 35mm;">${logoForHeader}</div>
