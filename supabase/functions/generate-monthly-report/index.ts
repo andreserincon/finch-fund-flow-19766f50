@@ -11,6 +11,69 @@ interface ReportData {
   forceRegenerate?: boolean;
 }
 
+/**
+ * Render an HTML string to a real PDF via PDFShift. Returns the PDF as
+ * a Uint8Array ready to upload to Supabase Storage.
+ *
+ * PDFShift uses Chromium internally and supports proper repeating
+ * header/footer on every page with `<span class="pageNumber"></span>`
+ * and `<span class="totalPages"></span>` placeholders.
+ *
+ * Requires the PDFSHIFT_API_KEY secret to be set in Supabase Edge
+ * Function secrets.
+ */
+async function convertHtmlToPdf(opts: {
+  html: string;
+  headerHtml?: string;
+  footerHtml?: string;
+  marginTopMm?: number;
+  marginBottomMm?: number;
+  marginSideMm?: number;
+}): Promise<Uint8Array> {
+  const apiKey = Deno.env.get('PDFSHIFT_API_KEY');
+  if (!apiKey) {
+    throw new Error('PDFSHIFT_API_KEY is not configured');
+  }
+
+  const body: Record<string, unknown> = {
+    source: opts.html,
+    format: 'A4',
+    landscape: false,
+    use_print: true,
+    margin: {
+      top: `${opts.marginTopMm ?? (opts.headerHtml ? 22 : 15)}mm`,
+      right: `${opts.marginSideMm ?? 12}mm`,
+      bottom: `${opts.marginBottomMm ?? (opts.footerHtml ? 18 : 15)}mm`,
+      left: `${opts.marginSideMm ?? 12}mm`,
+    },
+  };
+  if (opts.headerHtml) {
+    // start_at: 2 skips the running header on page 1 (which has the
+    // big main header already).
+    body.header = { source: opts.headerHtml, spacing: '4mm', start_at: 2 };
+  }
+  if (opts.footerHtml) {
+    body.footer = { source: opts.footerHtml, spacing: '4mm' };
+  }
+
+  const res = await fetch('https://api.pdfshift.io/v3/convert/pdf', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Basic ${btoa(`api:${apiKey}`)}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`PDFShift failed: ${res.status} ${errText}`);
+  }
+
+  const arrayBuffer = await res.arrayBuffer();
+  return new Uint8Array(arrayBuffer);
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -842,21 +905,59 @@ Deno.serve(async (req) => {
     // Generate lite report
     const liteContent = generatePDFHTML(reportData, 'lite', logoBase64);
 
-    // Upload comprehensive report to storage
-    const pdfPath = `${year}/${month.toString().padStart(2, '0')}/Reporte_Financiero_${year}_${month.toString().padStart(2, '0')}.html`;
-    const litePdfPath = `${year}/${month.toString().padStart(2, '0')}/Reporte_Financiero_Lite_${year}_${month.toString().padStart(2, '0')}.html`;
+    // Running header & footer rendered by PDFShift on every page (page 1
+    // skips the running header — the big main header already lives there).
+    // <span class="pageNumber"></span> / <span class="totalPages"></span>
+    // are Chromium placeholders that PDFShift fills in per page.
+    const logoForHeader = logoBase64
+      ? `<img src="data:image/png;base64,${logoBase64}" style="width: 28px; height: auto; vertical-align: middle;" />`
+      : '';
+    const runningHeaderHtml = `
+      <div style="font-size: 9px; color: #000; width: 100%; padding: 0 8mm; box-sizing: border-box; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #999;">
+        <div style="min-width: 35mm;">${logoForHeader}</div>
+        <div style="flex: 1; text-align: center;"><strong>R.·.L.·. Simón Bolívar N° 646</strong> · ${reportTitleFormatted}</div>
+        <div style="min-width: 35mm; text-align: right;">${monthName} ${year}</div>
+      </div>
+    `;
+    const runningFooterHtml = `
+      <div style="font-size: 8px; color: #000; width: 100%; padding: 0 8mm; box-sizing: border-box; text-align: center; border-top: 1px solid #999;">
+        R.·.L.·. Simón Bolívar N° 646 · Tesorería · ${monthName} ${year} · Página <span class="pageNumber"></span> de <span class="totalPages"></span>
+      </div>
+    `;
+
+    // Convert HTML to PDF via PDFShift. Both reports in parallel.
+    const [comprehensivePdf, litePdf] = await Promise.all([
+      convertHtmlToPdf({
+        html: pdfContent,
+        headerHtml: runningHeaderHtml,
+        footerHtml: runningFooterHtml,
+      }),
+      // Lite is single-page; no running header needed but keep a small footer
+      // for a page identifier if it ever spills.
+      convertHtmlToPdf({
+        html: liteContent,
+        footerHtml: runningFooterHtml,
+        marginTopMm: 8,
+      }),
+    ]);
+
+    // Upload PDFs to storage. Filenames mirror the <title> convention so
+    // the signed URL surface a sensible default download name.
+    const monthPad = month.toString().padStart(2, '0');
+    const pdfPath = `${year}/${monthPad}/RLSB646_Reporte_Mensual_${year}-${monthPad}_${monthName}_Completo.pdf`;
+    const litePdfPath = `${year}/${monthPad}/RLSB646_Reporte_Mensual_${year}-${monthPad}_${monthName}_Resumen.pdf`;
 
     const [uploadResult, liteUploadResult] = await Promise.all([
       supabase.storage
         .from('reports')
-        .upload(pdfPath, new Blob([pdfContent], { type: 'text/html' }), {
-          contentType: 'text/html',
+        .upload(pdfPath, comprehensivePdf, {
+          contentType: 'application/pdf',
           upsert: true,
         }),
       supabase.storage
         .from('reports')
-        .upload(litePdfPath, new Blob([liteContent], { type: 'text/html' }), {
-          contentType: 'text/html',
+        .upload(litePdfPath, litePdf, {
+          contentType: 'application/pdf',
           upsert: true,
         }),
     ]);

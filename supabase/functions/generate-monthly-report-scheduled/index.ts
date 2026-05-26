@@ -5,6 +5,54 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+/** Render HTML to PDF via PDFShift. See manual function for full docs. */
+async function convertHtmlToPdf(opts: {
+  html: string;
+  headerHtml?: string;
+  footerHtml?: string;
+  marginTopMm?: number;
+  marginBottomMm?: number;
+  marginSideMm?: number;
+}): Promise<Uint8Array> {
+  const apiKey = Deno.env.get('PDFSHIFT_API_KEY');
+  if (!apiKey) throw new Error('PDFSHIFT_API_KEY is not configured');
+
+  const body: Record<string, unknown> = {
+    source: opts.html,
+    format: 'A4',
+    landscape: false,
+    use_print: true,
+    margin: {
+      top: `${opts.marginTopMm ?? (opts.headerHtml ? 22 : 15)}mm`,
+      right: `${opts.marginSideMm ?? 12}mm`,
+      bottom: `${opts.marginBottomMm ?? (opts.footerHtml ? 18 : 15)}mm`,
+      left: `${opts.marginSideMm ?? 12}mm`,
+    },
+  };
+  if (opts.headerHtml) {
+    body.header = { source: opts.headerHtml, spacing: '4mm', start_at: 2 };
+  }
+  if (opts.footerHtml) {
+    body.footer = { source: opts.footerHtml, spacing: '4mm' };
+  }
+
+  const res = await fetch('https://api.pdfshift.io/v3/convert/pdf', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Basic ${btoa(`api:${apiKey}`)}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`PDFShift failed: ${res.status} ${errText}`);
+  }
+
+  return new Uint8Array(await res.arrayBuffer());
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -561,21 +609,53 @@ Deno.serve(async (req) => {
     // Generate lite report
     const liteContent = generatePDFHTML(reportData, 'lite', logoBase64);
 
-    // Upload both reports to storage
-    const pdfPath = `${year}/${month.toString().padStart(2, '0')}/Reporte_Financiero_${year}_${month.toString().padStart(2, '0')}.html`;
-    const litePdfPath = `${year}/${month.toString().padStart(2, '0')}/Reporte_Financiero_Lite_${year}_${month.toString().padStart(2, '0')}.html`;
+    // Running header & footer via PDFShift.
+    const logoForHeader = logoBase64
+      ? `<img src="data:image/png;base64,${logoBase64}" style="width: 28px; height: auto; vertical-align: middle;" />`
+      : '';
+    const runningHeaderHtml = `
+      <div style="font-size: 9px; color: #000; width: 100%; padding: 0 8mm; box-sizing: border-box; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #999;">
+        <div style="min-width: 35mm;">${logoForHeader}</div>
+        <div style="flex: 1; text-align: center;"><strong>R.·.L.·. Simón Bolívar N° 646</strong> · ${reportTitleFormatted}</div>
+        <div style="min-width: 35mm; text-align: right;">${monthName} ${year}</div>
+      </div>
+    `;
+    const runningFooterHtml = `
+      <div style="font-size: 8px; color: #000; width: 100%; padding: 0 8mm; box-sizing: border-box; text-align: center; border-top: 1px solid #999;">
+        R.·.L.·. Simón Bolívar N° 646 · Tesorería · ${monthName} ${year} · Página <span class="pageNumber"></span> de <span class="totalPages"></span>
+      </div>
+    `;
+
+    // Convert both HTMLs to PDF via PDFShift.
+    const [comprehensivePdf, litePdf] = await Promise.all([
+      convertHtmlToPdf({
+        html: pdfContent,
+        headerHtml: runningHeaderHtml,
+        footerHtml: runningFooterHtml,
+      }),
+      convertHtmlToPdf({
+        html: liteContent,
+        footerHtml: runningFooterHtml,
+        marginTopMm: 8,
+      }),
+    ]);
+
+    // Upload PDFs to storage with sensible default-download filenames.
+    const monthPad = month.toString().padStart(2, '0');
+    const pdfPath = `${year}/${monthPad}/RLSB646_Reporte_Mensual_${year}-${monthPad}_${monthName}_Completo.pdf`;
+    const litePdfPath = `${year}/${monthPad}/RLSB646_Reporte_Mensual_${year}-${monthPad}_${monthName}_Resumen.pdf`;
 
     const [uploadResult, liteUploadResult] = await Promise.all([
       supabase.storage
         .from('reports')
-        .upload(pdfPath, new Blob([pdfContent], { type: 'text/html' }), {
-          contentType: 'text/html',
+        .upload(pdfPath, comprehensivePdf, {
+          contentType: 'application/pdf',
           upsert: true,
         }),
       supabase.storage
         .from('reports')
-        .upload(litePdfPath, new Blob([liteContent], { type: 'text/html' }), {
-          contentType: 'text/html',
+        .upload(litePdfPath, litePdf, {
+          contentType: 'application/pdf',
           upsert: true,
         }),
     ]);

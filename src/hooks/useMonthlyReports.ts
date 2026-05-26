@@ -93,11 +93,18 @@ export function useMonthlyReports() {
   /**
    * Create a 1-hour signed URL for downloading a report PDF.
    * Handles both absolute and relative URLs returned by Supabase.
+   *
+   * @param downloadName Optional. When provided, the signed URL gets a
+   *   Content-Disposition header so the browser uses this name as the
+   *   default filename instead of the storage object name.
    */
-  const getReportPdfUrl = async (pdfPath: string): Promise<string | null> => {
+  const getReportPdfUrl = async (
+    pdfPath: string,
+    downloadName?: string,
+  ): Promise<string | null> => {
     const { data, error } = await supabase.storage
       .from('reports')
-      .createSignedUrl(pdfPath, 3600);
+      .createSignedUrl(pdfPath, 3600, downloadName ? { download: downloadName } : undefined);
 
     if (error) {
       console.error('Error creating signed URL:', error);
