@@ -26,7 +26,7 @@ export function StatCard({
     default: '',
     success: 'border-success/30 bg-success/10',
     warning: 'border-warning/30 bg-warning/10',
-    danger: 'border-overdue/40 bg-overdue/10',
+    danger: 'border-overdue/50 bg-overdue/20',
   };
 
   const valueStyles = {
