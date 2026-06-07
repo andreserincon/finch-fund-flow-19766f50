@@ -140,10 +140,13 @@ function ReminderCard({ item }: { item: ReminderItem }) {
               <Copy className="mr-1.5 h-4 w-4" /> Copiar
             </Button>
             {link && (
-              <Button size="sm" className="press" asChild>
-                <a href={link} target="_blank" rel="noopener noreferrer">
-                  <MessageSquare className="mr-1.5 h-4 w-4" /> Enviar por WhatsApp
-                </a>
+              <Button
+                size="sm"
+                className="press"
+                onClick={() => window.open(link, 'whatsappWeb')}
+                title="Reutiliza una única pestaña de WhatsApp"
+              >
+                <MessageSquare className="mr-1.5 h-4 w-4" /> Enviar por WhatsApp
               </Button>
             )}
           </div>
