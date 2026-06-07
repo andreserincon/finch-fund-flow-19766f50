@@ -130,7 +130,7 @@ export default function AdminMembers() {
       </div>
 
       {/* Mobile Card View */}
-      <div className="md:hidden landscape-hide-cards space-y-3">
+      <div className="md:hidden space-y-3">
         {sortedMembers.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground bg-card rounded-lg border">No se encontraron miembros</div>
         ) : (
@@ -173,7 +173,7 @@ export default function AdminMembers() {
       </div>
 
       {/* Desktop Table View */}
-      <div className="hidden md:block landscape-table rounded-lg border bg-card overflow-x-auto">
+      <div className="hidden md:block rounded-lg border bg-card overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
