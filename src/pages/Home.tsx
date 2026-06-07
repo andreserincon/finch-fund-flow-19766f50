@@ -1,100 +1,238 @@
 /**
  * @file Home.tsx
- * @description Authenticated landing page. Displays module cards
- *   (Treasury, Library, Administration) with role-based visibility
- *   and quick-access shortcut buttons for each module.
+ * @description Authenticated "Inicio" overview. For treasury users it answers
+ *   the first questions of the day (caja, morosos, prestamos, recordatorios)
+ *   and offers one-click "Registrar movimiento", instead of a module launcher.
+ *   Numbers are computed here from the authoritative backend balances; they are
+ *   self-contained and do not touch the Panel's calculation.
  */
 
-import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { ReactNode } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 import { useCanViewTreasury } from '@/hooks/useCanViewTreasury';
 import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
 import { useIsMemberOnly } from '@/hooks/useIsMemberOnly';
-import { useAuth } from '@/hooks/useAuth';
+import { useIsAdmin } from '@/hooks/useIsAdmin';
+import { useMembers } from '@/hooks/useMembers';
+import { useMonthlyFees } from '@/hooks/useMonthlyFees';
+import { useLoans } from '@/hooks/useLoans';
+import { useTransactions } from '@/hooks/useTransactions';
+import { useAccountTransfers } from '@/hooks/useAccountTransfers';
+import { useExchangeRate } from '@/hooks/useExchangeRate';
+import { usePaymentReminders } from '@/hooks/usePaymentReminders';
+import { useHiddenMode } from '@/contexts/HiddenModeContext';
+import { StatCard } from '@/components/dashboard/StatCard';
+import { AddTransactionForm } from '@/components/forms/AddTransactionForm';
+import { StatGridSkeleton } from '@/components/ui/loading';
+import { Button } from '@/components/ui/button';
+import { formatCurrencyCompact } from '@/lib/utils';
 import {
-  Wallet,
-  BookOpen,
-  UserCog,
-  LayoutDashboard,
-  Users,
-  Receipt,
-  HandCoins,
-  FileText,
-  Plus,
-  ClipboardList,
-  Settings,
+  Wallet, AlertTriangle, HandCoins, MessageSquare, ArrowRight, Users,
+  BookOpen, UserCog, FileText, Receipt, HandCoins as LoanIcon, LayoutDashboard,
 } from 'lucide-react';
+import type { AccountType } from '@/lib/types';
 
-/* ------------------------------------------------------------------ */
-/*  ModuleCard – reusable card component for each module              */
-/* ------------------------------------------------------------------ */
+export default function Home() {
+  const navigate = useNavigate();
+  const { canViewTreasury } = useCanViewTreasury();
+  const { isSuperAdmin } = useIsSuperAdmin();
+  const { isMemberOnly } = useIsMemberOnly();
+  const { isAdmin } = useIsAdmin();
+  const { displayName } = useHiddenMode();
 
-/** Props for the ModuleCard component */
-interface ModuleCardProps {
-  /** Card title displayed next to the icon */
-  title: string;
-  /** Short description below the title */
-  subtitle: string;
-  /** Icon rendered inside the coloured badge */
-  icon: React.ReactNode;
-  /** Tailwind gradient class for the icon badge */
-  gradient: string;
-  /** Quick-access links rendered at the bottom of the card */
-  shortcuts: { label: string; icon: React.ReactNode; onClick: () => void }[];
-  /** Callback when the card header area is clicked */
-  onClick: () => void;
-}
+  const { memberBalances, isLoading: membersLoading } = useMembers();
+  const { currentMonthFees, isLoading: feesLoading } = useMonthlyFees();
+  const { loans, isLoading: loansLoading } = useLoans();
+  const { transactions } = useTransactions();
+  const { transfers } = useAccountTransfers();
+  const { exchangeRate } = useExchangeRate();
 
-/**
- * ModuleCard – renders a single module entry with icon, title,
- * description, and an optional grid of shortcut buttons.
- */
-function ModuleCard({ title, subtitle, icon, gradient, shortcuts, onClick }: ModuleCardProps) {
+  const now = new Date();
+  const { reminders } = usePaymentReminders({ year: now.getFullYear(), month: now.getMonth() + 1 });
+
+  const hour = now.getHours();
+  const greeting = hour < 12 ? 'Buenos días' : hour < 19 ? 'Buenas tardes' : 'Buenas noches';
+  const monthLabel = format(now, "MMMM yyyy", { locale: es });
+
+  /* ---- KPIs (self-contained, current state) ---- */
+  const balanceFor = (acc: AccountType) =>
+    transactions
+      .filter((t) => (acc === 'bank' ? t.account === 'bank' || !t.account : t.account === acc))
+      .reduce((s, t) => s + (t.transaction_type === 'income' ? t.amount : -t.amount), 0)
+    - transfers.filter((t) => t.from_account === acc).reduce((s, t) => s + t.amount, 0)
+    + transfers.filter((t) => t.to_account === acc).reduce((s, t) => s + t.amount, 0);
+
+  const bankBalance = balanceFor('bank');
+  const greatLodgeBalance = balanceFor('great_lodge');
+  const savingsBalance = balanceFor('savings'); // USD
+  const totalARSBalance = bankBalance + greatLodgeBalance + savingsBalance * exchangeRate;
+
+  const feeRate = (m: typeof memberBalances[0]) => currentMonthFees[m.fee_type] || 0;
+  const owedOf = (m: typeof memberBalances[0]) => m.total_fees_owed - m.total_paid;
+  const morosos = memberBalances.filter((m) => m.is_active && owedOf(m) > feeRate(m));
+  const attentionTotal = morosos.reduce((s, m) => s + Math.max(0, owedOf(m)), 0);
+  const morosTop = [...morosos].sort((a, b) => owedOf(b) - owedOf(a)).slice(0, 5);
+
+  const activeLoans = loans.filter((l) => l.status === 'active');
+  const loansDueARS = activeLoans.filter((l) => l.account !== 'savings').reduce((s, l) => s + (l.amount - l.amount_paid), 0);
+  const loansDueUSD = activeLoans.filter((l) => l.account === 'savings').reduce((s, l) => s + (l.amount - l.amount_paid), 0);
+
+  const pendingReminders = reminders.filter((r) => r.status === 'pending_review').length;
+
+  const isLoading = membersLoading || feesLoading || loansLoading;
+
+  /* ---- quick links (role-gated) ---- */
+  const quickLinks = [
+    { label: 'Panel', to: '/', icon: LayoutDashboard, show: true },
+    { label: 'Miembros', to: '/members', icon: Users, show: true },
+    { label: 'Transacciones', to: '/transactions', icon: Receipt, show: !isMemberOnly },
+    { label: 'Préstamos', to: '/loans', icon: LoanIcon, show: !isMemberOnly },
+    { label: 'Reportes', to: '/reports', icon: FileText, show: !isMemberOnly },
+    { label: 'Recordatorios', to: '/recordatorios', icon: MessageSquare, show: !isMemberOnly },
+  ].filter((q) => q.show);
+
   return (
-    <div className="group relative overflow-hidden rounded-2xl border bg-card shadow-sm hover:shadow-lg transition-all duration-300">
-      {/* ── Card header (clickable) ── */}
-      <button
-        onClick={onClick}
-        className="w-full text-left p-6 pb-4 focus:outline-none"
-      >
-        <div className="flex items-start gap-4">
-          {/* Icon badge with gradient background */}
-          <div className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-xl ${gradient} shadow-md group-hover:scale-105 transition-transform duration-300`}>
-            {icon}
-          </div>
-          <div className="flex-1 min-w-0">
-            <h2 className="text-lg font-bold text-foreground group-hover:text-primary transition-colors">
-              {title}
-            </h2>
-            <p className="text-sm text-muted-foreground mt-0.5 line-clamp-2">
-              {subtitle}
-            </p>
-          </div>
+    <div className="space-y-6 md:space-y-8 animate-fade-in">
+      {/* Greeting + primary action */}
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+        <div>
+          <h1 className="font-display text-2xl md:text-3xl font-bold text-foreground">{greeting}</h1>
+          <p className="text-sm text-muted-foreground">Logia Simón Bolívar Nº 646 · {monthLabel}</p>
         </div>
-      </button>
+        {isAdmin && canViewTreasury && <AddTransactionForm triggerLabel="Registrar movimiento" />}
+      </div>
 
-      {/* ── Shortcut buttons ── */}
-      {shortcuts.length > 0 && (
-        <div className="px-6 pb-5 pt-1">
-          <div className="border-t border-border/60 pt-4">
-            <p className="text-[10px] uppercase tracking-widest text-muted-foreground/60 font-semibold mb-3">
-              Acceso rápido
-            </p>
-            <div className="grid grid-cols-2 gap-2">
-              {shortcuts.map((shortcut, i) => (
-                <button
-                  key={i}
-                  onClick={(e) => {
-                    e.stopPropagation(); // Prevent card-level click
-                    shortcut.onClick();
-                  }}
-                  className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-xs font-medium text-muted-foreground bg-muted/50 hover:bg-primary/10 hover:text-primary transition-all duration-200 text-left"
-                >
-                  {shortcut.icon}
-                  <span className="truncate">{shortcut.label}</span>
-                </button>
-              ))}
+      {canViewTreasury ? (
+        <>
+          {/* KPIs */}
+          {isLoading ? (
+            <StatGridSkeleton count={4} />
+          ) : (
+            <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+              <StatCard
+                title="Caja total (ARS)"
+                value={formatCurrencyCompact(totalARSBalance)}
+                subtitle="Banco + Gran Logia + ahorro"
+                icon={<Wallet className="h-8 w-8 text-primary/30" />}
+                variant={totalARSBalance >= 0 ? 'success' : 'danger'}
+              />
+              {!isMemberOnly && (
+                <StatCard
+                  title="Miembros morosos"
+                  value={morosos.length}
+                  subtitle={`Deben ${formatCurrencyCompact(attentionTotal)}`}
+                  icon={<AlertTriangle className="h-8 w-8 text-overdue/50" />}
+                  variant={morosos.length > 0 ? 'danger' : 'success'}
+                  to="/members"
+                />
+              )}
+              <StatCard
+                title="Préstamos por cobrar"
+                value={formatCurrencyCompact(loansDueUSD, 'USD')}
+                subtitle={`ARS ${formatCurrencyCompact(loansDueARS)}`}
+                icon={<HandCoins className="h-8 w-8 text-warning/40" />}
+                variant={loansDueUSD > 0 ? 'warning' : 'success'}
+                to={!isMemberOnly ? '/loans' : undefined}
+              />
+              {!isMemberOnly && (
+                <StatCard
+                  title="Recordatorios"
+                  value={pendingReminders}
+                  subtitle="pendientes de enviar"
+                  icon={<MessageSquare className="h-8 w-8 text-primary/40" />}
+                  variant={pendingReminders > 0 ? 'warning' : 'default'}
+                  to="/recordatorios"
+                />
+              )}
             </div>
+          )}
+
+          {/* Attention banner */}
+          {!isMemberOnly && !isLoading && morosos.length > 0 && (
+            <Link
+              to="/members"
+              className="press block rounded-xl border border-overdue/40 bg-overdue/10 p-4 md:p-5"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="h-6 w-6 text-overdue shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-base md:text-lg font-semibold text-foreground">
+                      {morosos.length} miembros requieren atención
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Deben en total {formatCurrencyCompact(attentionTotal)}
+                    </p>
+                  </div>
+                </div>
+                <ArrowRight className="h-5 w-5 text-overdue shrink-0" />
+              </div>
+            </Link>
+          )}
+
+          {/* Attention list */}
+          {!isMemberOnly && (
+            <div className="stat-card">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="section-header mb-0 font-display">Requieren atención</h2>
+                <Link to="/members">
+                  <Button variant="ghost" size="sm">
+                    Ver todos <ArrowRight className="ml-1 h-4 w-4" />
+                  </Button>
+                </Link>
+              </div>
+              {morosTop.length === 0 ? (
+                <div className="text-center py-8">
+                  <Users className="h-12 w-12 text-success/30 mx-auto mb-2" />
+                  <p className="text-muted-foreground">¡Todos los miembros están al día!</p>
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  {morosTop.map((m) => (
+                    <div key={m.member_id} className="flex items-center justify-between py-2 border-b border-border/50 last:border-0">
+                      <p className="font-medium text-sm">{displayName(m.full_name, m.phone_number)}</p>
+                      <span className="font-mono text-sm font-semibold text-destructive">
+                        {formatCurrencyCompact(Math.max(0, owedOf(m)))}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Quick links */}
+          <div className="flex flex-wrap gap-2">
+            {quickLinks.map((q) => (
+              <button
+                key={q.to}
+                onClick={() => navigate(q.to)}
+                className="press flex items-center gap-2 rounded-full border border-border bg-card px-3.5 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors"
+              >
+                <q.icon className="h-4 w-4" />
+                {q.label}
+              </button>
+            ))}
+          </div>
+        </>
+      ) : (
+        /* Non-treasury users land here: lead with their module */
+        <div className="grid gap-4 sm:grid-cols-2">
+          <ModuleTile title="Biblioteca" subtitle="Catálogo de libros de la Logia" icon={<BookOpen className="h-6 w-6 text-primary-foreground" />} onClick={() => navigate('/library')} />
+        </div>
+      )}
+
+      {/* Otros módulos (always available ones) */}
+      {(canViewTreasury) && (
+        <div>
+          <p className="text-[11px] uppercase tracking-widest text-muted-foreground/70 font-semibold mb-3">Otros módulos</p>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <ModuleTile title="Biblioteca" subtitle="Catálogo de libros" icon={<BookOpen className="h-5 w-5 text-primary-foreground" />} onClick={() => navigate('/library')} />
+            {isSuperAdmin && (
+              <ModuleTile title="Administración" subtitle="Gestión de usuarios y miembros" icon={<UserCog className="h-5 w-5 text-primary-foreground" />} onClick={() => navigate('/user-management')} />
+            )}
           </div>
         </div>
       )}
@@ -102,109 +240,20 @@ function ModuleCard({ title, subtitle, icon, gradient, shortcuts, onClick }: Mod
   );
 }
 
-/* ================================================================== */
-/*  Home page component                                               */
-/* ================================================================== */
-
-export default function Home() {
-  const { t } = useTranslation();
-  const navigate = useNavigate();
-
-  // Role-based flags to conditionally render modules
-  const { canViewTreasury } = useCanViewTreasury();
-  const { isSuperAdmin } = useIsSuperAdmin();
-  const { isMemberOnly } = useIsMemberOnly();
-  const { user } = useAuth();
-
-  /* ── Treasury shortcuts (differ for member-only vs staff) ── */
-  const treasuryShortcuts = isMemberOnly
-    ? [
-        { label: t('nav.dashboard'), icon: <LayoutDashboard className="h-4 w-4" />, onClick: () => navigate('/') },
-        { label: t('nav.members'), icon: <Users className="h-4 w-4" />, onClick: () => navigate('/members') },
-      ]
-    : [
-        { label: t('nav.dashboard'), icon: <LayoutDashboard className="h-4 w-4" />, onClick: () => navigate('/') },
-        { label: t('nav.members'), icon: <Users className="h-4 w-4" />, onClick: () => navigate('/members') },
-        { label: t('nav.transactions'), icon: <Receipt className="h-4 w-4" />, onClick: () => navigate('/transactions') },
-        { label: t('nav.loans'), icon: <HandCoins className="h-4 w-4" />, onClick: () => navigate('/loans') },
-        { label: t('nav.reports'), icon: <FileText className="h-4 w-4" />, onClick: () => navigate('/reports') },
-        { label: t('nav.monthlyFees'), icon: <Settings className="h-4 w-4" />, onClick: () => navigate('/monthly-fees') },
-      ];
-
-  /* ── Library shortcuts ── */
-  const libraryShortcuts = [
-    { label: t('library.browse'), icon: <BookOpen className="h-4 w-4" />, onClick: () => navigate('/library') },
-    { label: t('digitalLibrary.title'), icon: <FileText className="h-4 w-4" />, onClick: () => navigate('/library?tab=digital') },
-    { label: t('library.addBook'), icon: <Plus className="h-4 w-4" />, onClick: () => navigate('/library?tab=add') },
-    { label: t('library.requests'), icon: <ClipboardList className="h-4 w-4" />, onClick: () => navigate('/library?tab=requests') },
-  ];
-
-  /* ── Admin shortcuts ── */
-  const adminShortcuts = [
-    { label: t('nav.userManagement'), icon: <UserCog className="h-4 w-4" />, onClick: () => navigate('/user-management') },
-    { label: t('nav.members'), icon: <Users className="h-4 w-4" />, onClick: () => navigate('/admin/members') },
-  ];
-
+/** Compact module entry tile. */
+function ModuleTile({
+  title, subtitle, icon, onClick,
+}: { title: string; subtitle: string; icon: ReactNode; onClick: () => void }) {
   return (
-    <div className="min-h-[80vh] flex flex-col items-center justify-center px-4 py-8 animate-fade-in">
-      {/* ── Welcome header ── */}
-      <div className="text-center mb-10 max-w-lg">
-        <div className="flex justify-center mb-4">
-          <img
-            src="/images/lodge-logo.png"
-            alt="Logo"
-            className="h-16 w-16 rounded-xl shadow-md"
-          />
-        </div>
-        <h1 className="text-2xl md:text-3xl font-bold text-foreground">
-          {t('home.welcome', 'Bienvenido')}
-        </h1>
-        <p className="text-muted-foreground mt-2 text-sm md:text-base">
-          {t('home.selectModule', 'Seleccioná un módulo para comenzar')}
-        </p>
-      </div>
-
-      {/* ── Module cards grid ── */}
-      <div className="w-full max-w-3xl grid gap-5 md:grid-cols-2 lg:grid-cols-2">
-        {/* Treasury module – visible only to users with treasury access */}
-        {canViewTreasury && (
-          <ModuleCard
-            title={t('nav.treasury')}
-            subtitle={t('nav.managementSystem')}
-            icon={<Wallet className="h-7 w-7 text-primary-foreground" />}
-            gradient="gradient-primary"
-            shortcuts={treasuryShortcuts}
-            onClick={() => navigate('/')}
-          />
-        )}
-
-        {/* Library module – visible to all authenticated users */}
-        <ModuleCard
-          title={t('nav.library')}
-          subtitle={t('library.subtitle')}
-          icon={<BookOpen className="h-7 w-7 text-primary-foreground" />}
-          gradient="bg-gradient-to-br from-amber-600 to-amber-800"
-          shortcuts={libraryShortcuts}
-          onClick={() => navigate('/library')}
-        />
-
-        {/* Administration module – super-admin only */}
-        {isSuperAdmin && (
-          <ModuleCard
-            title={t('nav.administration')}
-            subtitle={t('nav.adminSubtitle')}
-            icon={<UserCog className="h-7 w-7 text-primary-foreground" />}
-            gradient="bg-gradient-to-br from-slate-600 to-slate-800"
-            shortcuts={adminShortcuts}
-            onClick={() => navigate('/user-management')}
-          />
-        )}
-      </div>
-
-      {/* ── Footer with logged-in user email ── */}
-      <p className="text-xs text-muted-foreground/50 mt-10">
-        {user?.email}
-      </p>
-    </div>
+    <button
+      onClick={onClick}
+      className="press flex items-center gap-3 rounded-xl border bg-card p-4 text-left hover:shadow-md hover:border-primary/40 transition-all"
+    >
+      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg gradient-primary">{icon}</span>
+      <span className="min-w-0">
+        <span className="block font-semibold text-foreground truncate">{title}</span>
+        <span className="block text-xs text-muted-foreground truncate">{subtitle}</span>
+      </span>
+    </button>
   );
 }
