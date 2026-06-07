@@ -38,7 +38,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 import { useBudgetLines } from '@/hooks/useBudgetLines';
-import type { BudgetLine, BudgetScenario } from '@/lib/budget-types';
+import type { BudgetCurrency, BudgetLine, BudgetScenario } from '@/lib/budget-types';
 import type { TransactionType } from '@/lib/types';
 import { formatCurrencyCompact } from '@/lib/utils';
 
