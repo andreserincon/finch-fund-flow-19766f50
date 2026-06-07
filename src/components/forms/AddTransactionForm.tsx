@@ -266,12 +266,12 @@ export function AddTransactionForm({ defaultType = 'income', triggerLabel = 'Reg
   };
 
   const footer = (submitting: boolean, disabled = false) => (
-    <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2">
+    <DialogFooter className="flex flex-col-reverse gap-2 sm:flex-row sm:flex-wrap sm:justify-end sm:space-x-0">
       <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
       <Button type="submit" variant="outline" disabled={submitting || disabled} onClick={() => { addAnotherRef.current = true; }}>
-        Registrar y agregar otro
+        Registrar y otro
       </Button>
-      <Button type="submit" disabled={submitting || disabled} onClick={() => { addAnotherRef.current = false; }} className="flex-1">
+      <Button type="submit" disabled={submitting || disabled} onClick={() => { addAnotherRef.current = false; }}>
         {submitting ? 'Registrando...' : 'Registrar movimiento'}
       </Button>
     </DialogFooter>
@@ -287,7 +287,7 @@ export function AddTransactionForm({ defaultType = 'income', triggerLabel = 'Reg
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[520px] max-h-[88vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[520px] max-h-[88vh] overflow-y-auto overflow-x-hidden">
         <DialogHeader>
           <DialogTitle className="font-display">Registrar movimiento</DialogTitle>
           <DialogDescription>Elegí el tipo de movimiento y completá los datos.</DialogDescription>
