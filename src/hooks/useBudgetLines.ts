@@ -2,7 +2,7 @@
  * @file useBudgetLines.ts
  * @description Query + upsert hook for the budget_lines table.
  *
- *   The editor UI treats lines as cells of a (month × account × type ×
+ *   The editor UI treats lines as cells of a (month × currency × type ×
  *   category) matrix. Missing cells simply don't have a row yet; the
  *   upsert mutation inserts-or-updates based on the unique constraint.
  */
@@ -12,9 +12,9 @@ import { supabase } from '@/integrations/supabase/client';
 import {
   BudgetLine,
   budgetLineKey,
+  type BudgetCurrency,
 } from '@/lib/budget-types';
 import type {
-  AccountType,
   TransactionType,
   TransactionCategory,
 } from '@/lib/types';
@@ -26,7 +26,7 @@ const db = supabase as any;
 export interface BudgetLineUpsertInput {
   budget_scenario_id: string;
   month: number;
-  account: AccountType;
+  currency: BudgetCurrency;
   transaction_type: TransactionType;
   category: TransactionCategory;
   budgeted_amount: number;
@@ -53,12 +53,12 @@ export function useBudgetLines(scenarioId: string | null | undefined) {
   const lines: BudgetLine[] = linesQuery.data ?? [];
 
   /**
-   * Build a lookup map keyed by `${month}:${account}:${type}:${category}`
+   * Build a lookup map keyed by `${month}:${currency}:${type}:${category}`
    * so the matrix editor can look up a cell in O(1).
    */
   const linesByKey: Map<string, BudgetLine> = new Map(
     lines.map((l) => [
-      budgetLineKey(l.month, l.account, l.transaction_type, l.category),
+      budgetLineKey(l.month, l.currency, l.transaction_type, l.category),
       l,
     ]),
   );
@@ -76,7 +76,7 @@ export function useBudgetLines(scenarioId: string | null | undefined) {
         .from('budget_lines')
         .upsert(input, {
           onConflict:
-            'budget_scenario_id,month,account,transaction_type,category',
+            'budget_scenario_id,month,currency,transaction_type,category',
         })
         .select()
         .single();
@@ -99,7 +99,7 @@ export function useBudgetLines(scenarioId: string | null | undefined) {
         .from('budget_lines')
         .upsert(inputs, {
           onConflict:
-            'budget_scenario_id,month,account,transaction_type,category',
+            'budget_scenario_id,month,currency,transaction_type,category',
         })
         .select();
       if (error) throw error;

@@ -6,10 +6,12 @@
  */
 
 import type {
-  AccountType,
   TransactionType,
   TransactionCategory,
 } from './types';
+
+/** The budget is planned per currency, not per bank account. */
+export type BudgetCurrency = 'ARS' | 'USD';
 
 /* ================================================================== */
 /*  Interfaces                                                        */
@@ -53,7 +55,7 @@ export interface BudgetLine {
   budget_scenario_id: string;
   /** 1–12 (January = 1). */
   month: number;
-  account: AccountType;
+  currency: BudgetCurrency;
   transaction_type: TransactionType;
   category: TransactionCategory;
   budgeted_amount: number;
@@ -115,14 +117,14 @@ export const MONTH_SHORT_LABELS_ES: Record<number, string> = {
 };
 
 /**
- * Key helper: encode a (month, account, type, category) tuple as a
+ * Key helper: encode a (month, currency, type, category) tuple as a
  * stable string for use in React keys and client-side Maps.
  */
 export function budgetLineKey(
   month: number,
-  account: AccountType,
+  currency: BudgetCurrency,
   transactionType: TransactionType,
   category: TransactionCategory,
 ): string {
-  return `${month}:${account}:${transactionType}:${category}`;
+  return `${month}:${currency}:${transactionType}:${category}`;
 }
