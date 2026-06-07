@@ -36,13 +36,21 @@ interface ReminderItem {
 }
 
 export default function PaymentReminders() {
-  const { memberBalances, isLoading: membersLoading } = useMembers();
+  const { members, memberBalances, isLoading: membersLoading } = useMembers();
   const { monthlyFees, currentMonthFees, isLoading: feesLoading } = useMonthlyFees();
   const { getFeeTypeForMonth, isLoading: historyLoading } = useMemberFeeTypeHistory();
   const { eventTotals, isLoading: eventsLoading } = useMemberEventTotals();
   const { participations, isLoading: partsLoading } = useEventParticipations();
 
   const isLoading = membersLoading || feesLoading || historyLoading || eventsLoading || partsLoading;
+
+  // WhatsApp number is read from the members table (not the member_balances
+  // view), so it works regardless of whether the view exposes the column.
+  const whatsappById = useMemo(() => {
+    const map = new Map<string, string | null>();
+    for (const mm of members) map.set(mm.id, mm.whatsapp_number ?? null);
+    return map;
+  }, [members]);
 
   const reminders = useMemo<ReminderItem[]>(() => {
     const today = new Date();
@@ -59,11 +67,11 @@ export default function PaymentReminders() {
       return {
         member: m,
         message,
-        link: whatsappLink(m.whatsapp_number, message),
+        link: whatsappLink(whatsappById.get(m.member_id), message),
         hasDetail: cLines.length + eLines.length > 0,
       };
     });
-  }, [memberBalances, currentMonthFees, eventTotals, monthlyFees, getFeeTypeForMonth, participations]);
+  }, [memberBalances, currentMonthFees, eventTotals, monthlyFees, getFeeTypeForMonth, participations, whatsappById]);
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -110,7 +118,10 @@ function ReminderCard({ item }: { item: ReminderItem }) {
 
   const saveNumber = async () => {
     const value = number.trim();
-    if (!value) return;
+    if (!/^\+[0-9]{8,15}$/.test(value)) {
+      toast.error('Usá el formato internacional, ej: +5491155551234');
+      return;
+    }
     await updateMember.mutateAsync({ id: member.member_id, whatsapp_number: value });
     setNumber('');
   };
