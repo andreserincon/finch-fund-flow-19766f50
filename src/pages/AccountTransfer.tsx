@@ -183,7 +183,7 @@ export default function AccountTransfer() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>From Account</Label>
                   <Select
@@ -254,7 +254,7 @@ export default function AccountTransfer() {
                 <div className="space-y-4">
                   <div className="p-4 rounded-lg bg-muted/50 border border-border">
                     <p className="text-sm font-medium mb-3">Currency Conversion</p>
-                    <div className="grid grid-cols-[1fr,auto,1fr] gap-3 items-end">
+                    <div className="grid grid-cols-1 sm:grid-cols-[1fr,auto,1fr] gap-3 items-end">
                       <div className="space-y-2">
                         <Label htmlFor="source_amount">Amount ({fromCurrency})</Label>
                         <Input
@@ -266,7 +266,7 @@ export default function AccountTransfer() {
                           placeholder="0.00"
                         />
                       </div>
-                      <ArrowRight className="h-5 w-5 text-muted-foreground mb-2" />
+                      <ArrowRight className="h-5 w-5 text-muted-foreground mb-2 hidden sm:block" />
                       <div className="space-y-2">
                         <Label htmlFor="destination_amount">Amount ({toCurrency})</Label>
                         <Input
