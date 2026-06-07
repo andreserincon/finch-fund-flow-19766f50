@@ -20,7 +20,6 @@ import { useMemberFeeTypeHistory } from '@/hooks/useMemberFeeTypeHistory';
 import { useMemberEventTotals } from '@/hooks/useMemberEventTotals';
 import { useEventParticipations } from '@/hooks/useEventParticipations';
 import { useHiddenMode } from '@/contexts/HiddenModeContext';
-import { useIsMobile } from '@/hooks/use-mobile';
 import { getAttentionMembers } from '@/lib/attention';
 import {
   capitaLines, eventLines, joinDetail, buildReminderMessage, firstName, whatsappLink,
@@ -42,7 +41,6 @@ export default function PaymentReminders() {
   const { getFeeTypeForMonth, isLoading: historyLoading } = useMemberFeeTypeHistory();
   const { eventTotals, isLoading: eventsLoading } = useMemberEventTotals();
   const { participations, isLoading: partsLoading } = useEventParticipations();
-  const isMobile = useIsMobile();
 
   const isLoading = membersLoading || feesLoading || historyLoading || eventsLoading || partsLoading;
 
@@ -69,11 +67,11 @@ export default function PaymentReminders() {
       return {
         member: m,
         message,
-        link: whatsappLink(whatsappById.get(m.member_id), message, !isMobile),
+        link: whatsappLink(whatsappById.get(m.member_id), message),
         hasDetail: cLines.length + eLines.length > 0,
       };
     });
-  }, [memberBalances, currentMonthFees, eventTotals, monthlyFees, getFeeTypeForMonth, participations, whatsappById, isMobile]);
+  }, [memberBalances, currentMonthFees, eventTotals, monthlyFees, getFeeTypeForMonth, participations, whatsappById]);
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -140,13 +138,10 @@ function ReminderCard({ item }: { item: ReminderItem }) {
               <Copy className="mr-1.5 h-4 w-4" /> Copiar
             </Button>
             {link && (
-              <Button
-                size="sm"
-                className="press"
-                onClick={() => window.open(link, 'whatsappWeb')}
-                title="Reutiliza una única pestaña de WhatsApp"
-              >
-                <MessageSquare className="mr-1.5 h-4 w-4" /> Enviar por WhatsApp
+              <Button size="sm" className="press" asChild>
+                <a href={link}>
+                  <MessageSquare className="mr-1.5 h-4 w-4" /> Enviar por WhatsApp
+                </a>
               </Button>
             )}
           </div>
