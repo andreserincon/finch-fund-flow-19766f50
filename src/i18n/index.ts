@@ -1,29 +1,23 @@
 /**
  * @file i18n/index.ts
- * @description Initialises i18next for multilingual support (ES / EN).
- *   Spanish is the default language. Language preference is persisted
- *   in localStorage and auto-detected on first visit.
+ * @description Initialises i18next for the app. The app is Spanish-only
+ *   (there are no English-speaking users), so there is a single locale and
+ *   no language detection or switching. The t() helper is kept purely so the
+ *   existing translation keys resolve to their Spanish strings.
  */
 
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
-import LanguageDetector from 'i18next-browser-languagedetector';
 import es from './locales/es';
-import en from './locales/en';
 
 i18n
-  .use(LanguageDetector)     // Auto-detect from localStorage or browser settings
-  .use(initReactI18next)     // Bind to React via useTranslation()
+  .use(initReactI18next)
   .init({
-    resources: { es, en },
-    lng: 'es',               // Default language
-    fallbackLng: 'es',       // Fallback when a key is missing
+    resources: { es },
+    lng: 'es',
+    fallbackLng: 'es',
     interpolation: {
-      escapeValue: false,    // React already escapes by default
-    },
-    detection: {
-      order: ['localStorage', 'navigator'],
-      caches: ['localStorage'],
+      escapeValue: false, // React already escapes by default
     },
   });
 
