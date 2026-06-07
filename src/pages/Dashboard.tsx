@@ -41,7 +41,8 @@ import {
 } from 'lucide-react';
 import { format, lastDayOfMonth, startOfMonth, startOfYear, addMonths, isAfter } from 'date-fns';
 import { parseLocalDate } from '@/lib/utils';
-import { getAttentionMembers, attentionTotalOwed } from '@/lib/attention';
+import { getAttentionMembers, attentionTotalOwed, capitaOwed } from '@/lib/attention';
+import { useMemberEventTotals } from '@/hooks/useMemberEventTotals';
 import { es } from 'date-fns/locale';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -62,7 +63,8 @@ export default function Dashboard() {
   const { profile } = useAuth();
   const userMemberId = profile?.member_id;
   const { exchangeRate } = useExchangeRate();
-  
+  const { eventTotals, isLoading: eventTotalsLoading } = useMemberEventTotals();
+
   const dateLocale = es;
 
   // Month/Year filter state - default to current month
@@ -228,7 +230,7 @@ export default function Dashboard() {
   const memberEventDebts = memberEventInfo.totals;
   const memberEventStatuses = memberEventInfo.statuses;
 
-  const isLoading = membersLoading || transactionsLoading || feesLoading || transfersLoading || loansLoading || historyLoading;
+  const isLoading = membersLoading || transactionsLoading || feesLoading || transfersLoading || loansLoading || historyLoading || eventTotalsLoading;
 
   // Calculate total loans due (ARS and USD separately)
   const activeLoans = filteredLoans;
@@ -294,14 +296,6 @@ export default function Dashboard() {
     return m.total_paid < m.total_fees_owed;
   }).length;
 
-  const membersOverdue = adjustedMemberBalances.filter(m => {
-    if (!m.is_active) return false;
-    const amountOwed = m.total_fees_owed - m.total_paid;
-    const historicalFeeType = getMemberFeeType(m.member_id, selectedMonthKey, m.fee_type);
-    const monthlyFeeRate = effectiveFees[historicalFeeType] || 0;
-    return amountOwed > monthlyFeeRate;
-  }).length;
-
   // Event-only metrics
   const activeMemberIds = new Set(adjustedMemberBalances.filter(m => m.is_active).map(m => m.member_id));
   const eventDemoradoCount = Object.entries(memberEventStatuses)
@@ -335,10 +329,12 @@ export default function Dashboard() {
     return map;
   }, [adjustedMemberBalances]);
 
-  // Members requiring attention. Shared definition (src/lib/attention) so the
-  // Panel banner, the Inicio overview, and the Members filter always agree.
-  const overdueMembers = getAttentionMembers(memberBalances, currentMonthFees);
-  const attentionTotal = attentionTotalOwed(overdueMembers);
+  // Members requiring attention (capita-only "pago demorado"). Shared
+  // definition (src/lib/attention) so the Panel banner, the "Pago Demorado"
+  // card, the Inicio overview, and the Members filter always agree.
+  const overdueMembers = getAttentionMembers(memberBalances, currentMonthFees, eventTotals);
+  const attentionTotal = attentionTotalOwed(overdueMembers, eventTotals);
+  const membersOverdue = overdueMembers.length;
 
   const formatCurrency = (amount: number, currency: 'ARS' | 'USD' = 'ARS') => {
     return new Intl.NumberFormat(currency === 'ARS' ? 'es-AR' : 'en-US', {
@@ -465,7 +461,7 @@ export default function Dashboard() {
           ) : (
             <div className="space-y-3">
               {overdueMembers.map((member) => {
-                const monthlyDebt = member.total_fees_owed - member.total_paid;
+                const monthlyDebt = capitaOwed(member, eventTotals);
                 const eventDebt = memberEventDebts[member.member_id] || 0;
                 const monthlyFeeRate = effectiveFees[member.fee_type] || 0;
                 const isMonthlyOverdue = monthlyDebt > monthlyFeeRate;

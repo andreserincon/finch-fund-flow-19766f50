@@ -28,7 +28,8 @@ import { AddTransactionForm } from '@/components/forms/AddTransactionForm';
 import { StatGridSkeleton } from '@/components/ui/loading';
 import { Button } from '@/components/ui/button';
 import { formatCurrencyCompact } from '@/lib/utils';
-import { getAttentionMembers, attentionTotalOwed, memberOwed } from '@/lib/attention';
+import { getAttentionMembers, attentionTotalOwed, capitaOwed } from '@/lib/attention';
+import { useMemberEventTotals } from '@/hooks/useMemberEventTotals';
 import {
   Wallet, Landmark, AlertTriangle, HandCoins, MessageSquare, ArrowRight, Users,
   BookOpen, UserCog, FileText, Receipt, HandCoins as LoanIcon, LayoutDashboard,
@@ -49,6 +50,7 @@ export default function Home() {
   const { transactions } = useTransactions();
   const { transfers } = useAccountTransfers();
   const { exchangeRate } = useExchangeRate();
+  const { eventTotals, isLoading: eventTotalsLoading } = useMemberEventTotals();
 
   const now = new Date();
   const { reminders } = usePaymentReminders({ year: now.getFullYear(), month: now.getMonth() + 1 });
@@ -70,8 +72,8 @@ export default function Home() {
   const savingsBalance = balanceFor('savings'); // USD
   const totalARSBalance = bankBalance + greatLodgeBalance + savingsBalance * exchangeRate;
 
-  const morosos = getAttentionMembers(memberBalances, currentMonthFees);
-  const attentionTotal = attentionTotalOwed(morosos);
+  const morosos = getAttentionMembers(memberBalances, currentMonthFees, eventTotals);
+  const attentionTotal = attentionTotalOwed(morosos, eventTotals);
   const morosTop = morosos.slice(0, 5);
 
   const activeLoans = loans.filter((l) => l.status === 'active');
@@ -80,7 +82,7 @@ export default function Home() {
 
   const pendingReminders = reminders.filter((r) => r.status === 'pending_review').length;
 
-  const isLoading = membersLoading || feesLoading || loansLoading;
+  const isLoading = membersLoading || feesLoading || loansLoading || eventTotalsLoading;
 
   /* ---- quick links (role-gated) ---- */
   const quickLinks = [
@@ -201,7 +203,7 @@ export default function Home() {
                     <div key={m.member_id} className="flex items-center justify-between py-2 border-b border-border/50 last:border-0">
                       <p className="font-medium text-sm">{displayName(m.full_name, m.phone_number)}</p>
                       <span className="font-mono text-sm font-semibold text-destructive">
-                        {formatCurrencyCompact(Math.max(0, memberOwed(m)))}
+                        {formatCurrencyCompact(Math.max(0, capitaOwed(m, eventTotals)))}
                       </span>
                     </div>
                   ))}

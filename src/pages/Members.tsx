@@ -151,7 +151,7 @@ export default function Members() {
 
   const filteredMembers = memberBalances.filter((member) => {
     if (isMemberOnly && member.member_id !== userMemberId) return false;
-    if (atencion && !requiresAttention(member, currentMonthFees)) return false;
+    if (atencion && !requiresAttention(member, currentMonthFees, memberEventData)) return false;
     const matchesSearch = member.full_name.toLowerCase().includes(search.toLowerCase()) || (member.phone_number && member.phone_number.includes(search));
     if (selectedStatuses.length === 0) return matchesSearch;
     const status = getPaymentStatus(member);
