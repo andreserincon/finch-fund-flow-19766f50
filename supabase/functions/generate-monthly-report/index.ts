@@ -11,6 +11,69 @@ interface ReportData {
   forceRegenerate?: boolean;
 }
 
+/**
+ * Render an HTML string to a real PDF via PDFShift. Returns the PDF as
+ * a Uint8Array ready to upload to Supabase Storage.
+ *
+ * PDFShift uses Chromium internally and supports proper repeating
+ * header/footer on every page with `<span class="pageNumber"></span>`
+ * and `<span class="totalPages"></span>` placeholders.
+ *
+ * Requires the PDFSHIFT_API_KEY secret to be set in Supabase Edge
+ * Function secrets.
+ */
+async function convertHtmlToPdf(opts: {
+  html: string;
+  headerHtml?: string;
+  footerHtml?: string;
+  marginTopMm?: number;
+  marginBottomMm?: number;
+  marginSideMm?: number;
+}): Promise<Uint8Array> {
+  const apiKey = Deno.env.get('PDFSHIFT_API_KEY');
+  if (!apiKey) {
+    throw new Error('PDFSHIFT_API_KEY is not configured');
+  }
+
+  const body: Record<string, unknown> = {
+    source: opts.html,
+    format: 'A4',
+    landscape: false,
+    use_print: true,
+    margin: {
+      top: `${opts.marginTopMm ?? (opts.headerHtml ? 22 : 15)}mm`,
+      right: `${opts.marginSideMm ?? 12}mm`,
+      bottom: `${opts.marginBottomMm ?? (opts.footerHtml ? 18 : 15)}mm`,
+      left: `${opts.marginSideMm ?? 12}mm`,
+    },
+  };
+  if (opts.headerHtml) {
+    // start_at: 2 skips the running header on page 1 (which has the
+    // big main header already).
+    body.header = { source: opts.headerHtml.trim(), spacing: '4mm', start_at: 2 };
+  }
+  if (opts.footerHtml) {
+    body.footer = { source: opts.footerHtml.trim(), spacing: '4mm' };
+  }
+
+  const res = await fetch('https://api.pdfshift.io/v3/convert/pdf', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Basic ${btoa(`api:${apiKey}`)}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`PDFShift failed: ${res.status} ${errText}`);
+  }
+
+  const arrayBuffer = await res.arrayBuffer();
+  return new Uint8Array(arrayBuffer);
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -117,7 +180,10 @@ Deno.serve(async (req) => {
       supabase.from('members').select('*').eq('is_active', true),
       // Get all monthly fees up to month end for balance calculation
       supabase.from('monthly_fees').select('*').lte('year_month', monthEndStr),
-      supabase.from('loans').select('*, member:members(full_name)').eq('status', 'active'),
+      // Pull all loans created on or before month end. We filter for
+      // "active as of month end" in app code below using paid_date so that
+      // historical reports reflect the snapshot, not today's status.
+      supabase.from('loans').select('*, member:members(full_name, phone_number)').lte('loan_date', monthEndStr),
       supabase.from('extraordinary_expenses').select('*').eq('is_active', true),
       supabase.from('event_member_payments').select('*'),
       supabase.from('monthly_fees').select('*').eq('year_month', `${year}-${month.toString().padStart(2, '0')}-01`),
@@ -127,20 +193,44 @@ Deno.serve(async (req) => {
     const transactions = transactionsResult.data || [];
     const members = membersResult.data || [];
     const allMonthlyFees = allMonthlyFeesResult.data || [];
-    const loans = loansResult.data || [];
+    const allLoans = loansResult.data || [];
     const events = eventsResult.data || [];
     const eventPayments = eventPaymentsResult.data || [];
     const monthlyFees = monthlyFeesResult.data || [];
     const feeTypeHistory = feeTypeHistoryResult.data || [];
 
-    // Fetch all transactions and transfers up to month end first (needed for balance calculations)
-    const [allTransactionsResult, allTransfersResult] = await Promise.all([
+    // Fetch all transactions, transfers, and loan payments up to month end —
+    // needed for balance calculations and point-in-time loan snapshots.
+    const [allTransactionsResult, allTransfersResult, loanPaymentsResult] = await Promise.all([
       supabase.from('transactions').select('*').lte('transaction_date', monthEndStr),
       supabase.from('account_transfers').select('*').lte('transfer_date', monthEndStr),
+      supabase.from('loan_payments').select('loan_id, amount, payment_date').lte('payment_date', monthEndStr),
     ]);
 
     const allTransactions = allTransactionsResult.data || [];
     const allTransfers = allTransfersResult.data || [];
+    const loanPaymentsAsOfMonthEnd = loanPaymentsResult.data || [];
+
+    // Build point-in-time loan view: keep only loans that were active on
+    // monthEnd (not cancelled, not yet fully paid as of that date), and
+    // override amount_paid with the sum of payments dated on or before
+    // monthEnd. Downstream code reads `loan.amount_paid` / computes
+    // `amount - amount_paid` — overriding the field keeps the rest of the
+    // function unchanged.
+    const paidByLoanId = new Map<string, number>();
+    for (const p of loanPaymentsAsOfMonthEnd) {
+      paidByLoanId.set(p.loan_id, (paidByLoanId.get(p.loan_id) || 0) + Number(p.amount));
+    }
+    const loans = allLoans
+      .filter((l: any) =>
+        l.status !== 'cancelled' &&
+        (!l.paid_date || l.paid_date > monthEndStr)
+      )
+      .map((l: any) => ({
+        ...l,
+        amount_paid: paidByLoanId.get(l.id) || 0,
+      }))
+      .filter((l: any) => Number(l.amount) - Number(l.amount_paid) > 0);
 
     // Helper function to get member's fee type for a given month
     const getMemberFeeTypeForMonth = (memberId: string, monthDate: string): string => {
@@ -422,6 +512,7 @@ Deno.serve(async (req) => {
         report_id: reportId,
         member_id: mb.member_id,
         full_name: mb.full_name,
+        phone_number: mb.phone_number,
         fee_type: mb.fee_type,
         monthly_fee_amount: monthlyFeeAmount,
         balance_at_month_end: capitaBalance + eventBalance,
@@ -436,7 +527,10 @@ Deno.serve(async (req) => {
     });
 
     if (memberSnapshots.length > 0) {
-      await supabase.from('report_member_snapshots').insert(memberSnapshots);
+      // phone_number is render-only here; strip before persisting in case
+      // report_member_snapshots doesn't have that column.
+      const memberSnapshotsForDb = memberSnapshots.map(({ phone_number, ...rest }: any) => rest);
+      await supabase.from('report_member_snapshots').insert(memberSnapshotsForDb);
     }
 
     // Create loan snapshots
@@ -444,6 +538,7 @@ Deno.serve(async (req) => {
       report_id: reportId,
       loan_id: loan.id,
       borrower_name: loan.member?.full_name || 'Unknown',
+      borrower_matricula: loan.member?.phone_number || '-',
       account: loan.account,
       original_amount: loan.amount,
       amount_paid: loan.amount_paid,
@@ -453,7 +548,10 @@ Deno.serve(async (req) => {
     }));
 
     if (loanSnapshots.length > 0) {
-      await supabase.from('report_loan_snapshots').insert(loanSnapshots);
+      // borrower_matricula is render-only; strip before persisting since the
+      // DB column doesn't exist on report_loan_snapshots.
+      const loanSnapshotsForDb = loanSnapshots.map(({ borrower_matricula, ...rest }: any) => rest);
+      await supabase.from('report_loan_snapshots').insert(loanSnapshotsForDb);
     }
 
     // Create event snapshots — exclude events whose charge_from_date is after month end.
@@ -467,6 +565,16 @@ Deno.serve(async (req) => {
       const membersIncluded = eventPaymentsForEvent.length;
       const membersUnpaid = eventPaymentsForEvent.filter((ep: any) => ep.amount_paid < ep.amount_owed).length;
 
+      // Gastos del evento ESTE MES (ARS only — USD gastos en eventos son
+      // edge case, se ven en la sección Detalle por Evento si los hay).
+      const expensesArs = transactions
+        .filter((t: any) =>
+          t.category === 'event_expense' &&
+          t.event_id === event.id &&
+          t.account !== 'savings'
+        )
+        .reduce((sum: number, t: any) => sum + Number(t.amount), 0);
+
       return {
         report_id: reportId,
         event_id: event.id,
@@ -474,6 +582,9 @@ Deno.serve(async (req) => {
         total_amount: totalAmount,
         amount_collected: amountCollected,
         outstanding_amount: totalAmount - amountCollected,
+        // Render-only fields (stripped before DB insert below).
+        expenses_ars: expensesArs,
+        balance_ars: amountCollected - expensesArs,
         members_included: membersIncluded,
         members_unpaid: membersUnpaid,
         event_status: amountCollected >= totalAmount ? 'settled' : 'pending',
@@ -481,7 +592,12 @@ Deno.serve(async (req) => {
     });
 
     if (eventSnapshots.length > 0) {
-      await supabase.from('report_event_snapshots').insert(eventSnapshots);
+      // expenses_ars and balance_ars are render-only; strip before
+      // persisting since report_event_snapshots doesn't have those columns.
+      const eventSnapshotsForDb = eventSnapshots.map(
+        ({ expenses_ars, balance_ars, ...rest }: any) => rest
+      );
+      await supabase.from('report_event_snapshots').insert(eventSnapshotsForDb);
     }
 
     // Generate PDF content
@@ -560,6 +676,15 @@ Deno.serve(async (req) => {
 
     const categoryFlows: Record<string, { incomeARS: number; incomeUSD: number; expenseARS: number; expenseUSD: number }> = {};
     transactions.forEach((t: any) => {
+      // event_expense AND event_payment transactions are rendered grouped
+      // per-event below the category table. other_expense is rendered as
+      // individual rows (with expense_summary) right after the event
+      // block. All three are skipped here to avoid double counting.
+      if (
+        t.category === 'event_expense' ||
+        t.category === 'event_payment' ||
+        t.category === 'other_expense'
+      ) return;
       const cat = t.category as string;
       if (!categoryFlows[cat]) categoryFlows[cat] = { incomeARS: 0, incomeUSD: 0, expenseARS: 0, expenseUSD: 0 };
       const isUSD = t.account === 'savings';
@@ -571,6 +696,141 @@ Deno.serve(async (req) => {
         else categoryFlows[cat].expenseARS += Number(t.amount);
       }
     });
+
+    // Individual "Otro Gasto" rows for the flujo de mes, sorted by date.
+    // Each row uses the optional expense_summary as the detail; "(sin
+    // resumen)" if the treasurer didn't fill one in.
+    const otherExpenseRows = transactions
+      .filter((t: any) => t.category === 'other_expense')
+      .map((t: any) => ({
+        date: t.transaction_date,
+        summary: (t.expense_summary as string | null) ?? null,
+        amount: Number(t.amount),
+        currency: t.account === 'savings' ? 'USD' : 'ARS' as 'ARS' | 'USD',
+      }))
+      .sort((a: any, b: any) => a.date.localeCompare(b.date));
+
+    // Per-event movement rows for the flujo de mes. Grouped by event,
+    // sorted alphabetically. For each event with activity we emit:
+    //   1. one aggregated "Abono Cuota Evento - <name>" row (if any cuota came in)
+    //   2. one row per individual event_expense with date + short summary
+    // Events with no event_id (legacy data) bucket under "Sin evento".
+    const eventNameById = new Map<string, string>(
+      eligibleEventsForReport.map((e: any) => [e.id as string, e.name as string])
+    );
+    const SIN_EVENTO_KEY = '__sin_evento__';
+    const cuotaByEvent = new Map<string, { ars: number; usd: number }>();
+    const expensesByEvent = new Map<string, Array<{
+      date: string;
+      summary: string | null;
+      amount: number;
+      currency: 'ARS' | 'USD';
+    }>>();
+    transactions.forEach((t: any) => {
+      if (t.category === 'event_payment') {
+        const key = (t.event_id as string | null) ?? SIN_EVENTO_KEY;
+        const acc = cuotaByEvent.get(key) ?? { ars: 0, usd: 0 };
+        if (t.account === 'savings') acc.usd += Number(t.amount);
+        else acc.ars += Number(t.amount);
+        cuotaByEvent.set(key, acc);
+      } else if (t.category === 'event_expense') {
+        const key = (t.event_id as string | null) ?? SIN_EVENTO_KEY;
+        const arr = expensesByEvent.get(key) ?? [];
+        arr.push({
+          date: t.transaction_date,
+          summary: (t.expense_summary as string | null) ?? null,
+          amount: Number(t.amount),
+          currency: t.account === 'savings' ? 'USD' : 'ARS',
+        });
+        expensesByEvent.set(key, arr);
+      }
+    });
+
+    const allEventKeys = Array.from(new Set([
+      ...cuotaByEvent.keys(),
+      ...expensesByEvent.keys(),
+    ]));
+    const eventsSortedByName = allEventKeys
+      .map((id) => ({
+        id,
+        name: id === SIN_EVENTO_KEY ? 'Sin evento' : (eventNameById.get(id) ?? 'Evento desconocido'),
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name, 'es'));
+
+    const eventMovementRows: Array<{
+      type: 'cuota' | 'expense';
+      event_name: string;
+      summary: string | null;
+      income_ars: number;
+      income_usd: number;
+      expense_ars: number;
+      expense_usd: number;
+    }> = [];
+    for (const ev of eventsSortedByName) {
+      const cuota = cuotaByEvent.get(ev.id);
+      if (cuota && (cuota.ars > 0 || cuota.usd > 0)) {
+        eventMovementRows.push({
+          type: 'cuota',
+          event_name: ev.name,
+          summary: null,
+          income_ars: cuota.ars,
+          income_usd: cuota.usd,
+          expense_ars: 0,
+          expense_usd: 0,
+        });
+      }
+      const expenses = expensesByEvent.get(ev.id) ?? [];
+      expenses.sort((a, b) => a.date.localeCompare(b.date));
+      for (const ex of expenses) {
+        eventMovementRows.push({
+          type: 'expense',
+          event_name: ev.name,
+          summary: ex.summary,
+          income_ars: 0,
+          income_usd: 0,
+          expense_ars: ex.currency === 'ARS' ? ex.amount : 0,
+          expense_usd: ex.currency === 'USD' ? ex.amount : 0,
+        });
+      }
+    }
+
+    // Per-event detail blocks (rendered as a new section after the events
+    // summary table). One block per event with activity this month
+    // (cuota income > 0 OR any event_expense).
+    const perEventDetails = eligibleEventsForReport
+      .map((event: any) => {
+        const eventTxs = transactions.filter((t: any) => t.event_id === event.id);
+        const expenseTxs = eventTxs.filter((t: any) => t.category === 'event_expense');
+        const cuotaTxs = eventTxs.filter((t: any) => t.category === 'event_payment');
+        const cuotaCollectedARS = cuotaTxs
+          .filter((t: any) => t.account !== 'savings')
+          .reduce((s: number, t: any) => s + Number(t.amount), 0);
+        const cuotaCollectedUSD = cuotaTxs
+          .filter((t: any) => t.account === 'savings')
+          .reduce((s: number, t: any) => s + Number(t.amount), 0);
+        const participants = eventPayments.filter((ep: any) => ep.event_id === event.id);
+        const memberCount = participants.filter((ep: any) => ep.member_id !== null).length;
+        const guestCount = participants.filter((ep: any) => ep.guest_name !== null).length;
+        return {
+          event_id: event.id,
+          event_name: event.name as string,
+          cuota_collected_ars: cuotaCollectedARS,
+          cuota_collected_usd: cuotaCollectedUSD,
+          member_count: memberCount,
+          guest_count: guestCount,
+          expenses: expenseTxs
+            .map((t: any) => ({
+              date: t.transaction_date,
+              summary: (t.expense_summary as string | null) || '',
+              description: (t.notes as string | null) || '',
+              amount: Number(t.amount),
+              currency: t.account === 'savings' ? 'USD' : 'ARS',
+            }))
+            .sort((a: any, b: any) => a.date.localeCompare(b.date)),
+          has_activity: cuotaCollectedARS > 0 || cuotaCollectedUSD > 0 || expenseTxs.length > 0,
+        };
+      })
+      .filter((d: any) => d.has_activity);
 
     // Also account for transfers in/out this month
     const monthTransfers = allTransfers.filter((t: any) => t.transfer_date >= monthStartStr && t.transfer_date <= monthEndStr);
@@ -610,6 +870,9 @@ Deno.serve(async (req) => {
       // Category flows
       categoryFlows,
       categoryLabels,
+      eventMovementRows,
+      otherExpenseRows,
+      perEventDetails,
       initialARS,
       initialUSD,
       monthTransfers,
@@ -642,21 +905,60 @@ Deno.serve(async (req) => {
     // Generate lite report
     const liteContent = generatePDFHTML(reportData, 'lite', logoBase64);
 
-    // Upload comprehensive report to storage
-    const pdfPath = `${year}/${month.toString().padStart(2, '0')}/Reporte_Financiero_${year}_${month.toString().padStart(2, '0')}.html`;
-    const litePdfPath = `${year}/${month.toString().padStart(2, '0')}/Reporte_Financiero_Lite_${year}_${month.toString().padStart(2, '0')}.html`;
+    // Running header & footer rendered by PDFShift on every page (page 1
+    // skips the running header — the big main header already lives there).
+    // <span class="pageNumber"></span> / <span class="totalPages"></span>
+    // are Chromium placeholders that PDFShift fills in per page.
+    const logoForHeader = logoBase64
+      ? `<img src="data:image/png;base64,${logoBase64}" style="width: 28px; height: auto; vertical-align: middle;" />`
+      : '';
+    const reportTitleFormatted = `REPORTE FINANCIERO MENSUAL ${monthName.toUpperCase()} ${year}`;
+    const runningHeaderHtml = `
+      <div style="font-size: 9px; color: #000; width: 100%; padding: 0 8mm; box-sizing: border-box; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #999;">
+        <div style="min-width: 35mm;">${logoForHeader}</div>
+        <div style="flex: 1; text-align: center;"><strong>R.·.L.·. Simón Bolívar N° 646</strong> · ${reportTitleFormatted}</div>
+        <div style="min-width: 35mm; text-align: right;">${monthName} ${year}</div>
+      </div>
+    `;
+    const runningFooterHtml = `
+      <div style="font-size: 8px; color: #000; width: 100%; padding: 0 8mm; box-sizing: border-box; text-align: center; border-top: 1px solid #999;">
+        R.·.L.·. Simón Bolívar N° 646 · Tesorería · ${monthName} ${year} · Página <span class="pageNumber"></span> de <span class="totalPages"></span>
+      </div>
+    `;
+
+    // Convert HTML to PDF via PDFShift. Both reports in parallel.
+    const [comprehensivePdf, litePdf] = await Promise.all([
+      convertHtmlToPdf({
+        html: pdfContent,
+        headerHtml: runningHeaderHtml,
+        footerHtml: runningFooterHtml,
+      }),
+      // Lite is single-page; no running header needed but keep a small footer
+      // for a page identifier if it ever spills.
+      convertHtmlToPdf({
+        html: liteContent,
+        footerHtml: runningFooterHtml,
+        marginTopMm: 8,
+      }),
+    ]);
+
+    // Upload PDFs to storage. Filenames mirror the <title> convention so
+    // the signed URL surface a sensible default download name.
+    const monthPad = month.toString().padStart(2, '0');
+    const pdfPath = `${year}/${monthPad}/RLSB646_Reporte_Mensual_${year}-${monthPad}_${monthName}_Completo.pdf`;
+    const litePdfPath = `${year}/${monthPad}/RLSB646_Reporte_Mensual_${year}-${monthPad}_${monthName}_Resumen.pdf`;
 
     const [uploadResult, liteUploadResult] = await Promise.all([
       supabase.storage
         .from('reports')
-        .upload(pdfPath, new Blob([pdfContent], { type: 'text/html' }), {
-          contentType: 'text/html',
+        .upload(pdfPath, comprehensivePdf, {
+          contentType: 'application/pdf',
           upsert: true,
         }),
       supabase.storage
         .from('reports')
-        .upload(litePdfPath, new Blob([liteContent], { type: 'text/html' }), {
-          contentType: 'text/html',
+        .upload(litePdfPath, litePdf, {
+          contentType: 'application/pdf',
           upsert: true,
         }),
     ]);
@@ -730,25 +1032,67 @@ function buildFlowTable(data: any, formatCurrency: (amount: number, currency?: s
       + '</tr>';
   }).join('');
 
-  // Transfer rows
-  let transferInARS = 0, transferInUSD = 0, transferOutARS = 0, transferOutUSD = 0;
-  (data.monthTransfers || []).forEach((tr: any) => {
-    const amt = Number(tr.amount);
-    if (tr.from_account === 'savings') transferOutUSD += amt;
-    else transferOutARS += amt;
-    if (tr.to_account === 'savings') transferInUSD += amt;
-    else transferInARS += amt;
-  });
+  // Individual rows for other_expense transactions (sorted by date),
+  // each tagged with its short summary. Replaces the previous aggregated
+  // "Otro Gasto" row.
+  const otherExpenseRowsHtml = (data.otherExpenseRows || []).map((row: any) => {
+    const summary = row.summary && row.summary.trim().length > 0
+      ? row.summary
+      : '(sin resumen)';
+    const concepto = `Otro Gasto - ${summary}`;
+    const isUSD = row.currency === 'USD';
+    if (isUSD) totalExpUSD += row.amount;
+    else totalExpARS += row.amount;
+    return '<tr>'
+      + '<td>' + concepto + '</td>'
+      + '<td class="text-right">-</td>'
+      + '<td class="text-right">-</td>'
+      + '<td class="text-right ' + (!isUSD ? 'negative' : '') + '">' + (!isUSD ? formatCurrency(row.amount) : '-') + '</td>'
+      + '<td class="text-right ' + (isUSD ? 'negative' : '') + '">' + (isUSD ? formatCurrency(row.amount, 'USD') : '-') + '</td>'
+      + '</tr>';
+  }).join('');
 
-  const hasTransfers = transferInARS > 0 || transferInUSD > 0 || transferOutARS > 0 || transferOutUSD > 0;
-  const transferRow = hasTransfers
-    ? '<tr><td>Transferencias entre Cuentas</td>'
-      + '<td class="text-right ' + (transferInARS > 0 ? 'positive' : '') + '">' + (transferInARS > 0 ? formatCurrency(transferInARS) : '-') + '</td>'
-      + '<td class="text-right ' + (transferInUSD > 0 ? 'positive' : '') + '">' + (transferInUSD > 0 ? formatCurrency(transferInUSD, 'USD') : '-') + '</td>'
-      + '<td class="text-right ' + (transferOutARS > 0 ? 'negative' : '') + '">' + (transferOutARS > 0 ? formatCurrency(transferOutARS) : '-') + '</td>'
-      + '<td class="text-right ' + (transferOutUSD > 0 ? 'negative' : '') + '">' + (transferOutUSD > 0 ? formatCurrency(transferOutUSD, 'USD') : '-') + '</td>'
-      + '</tr>'
-    : '';
+  // Transfers between owned accounts (account_transfers) are a wash at
+  // the organization level — same money moving between cuentas. They
+  // shouldn't appear in the category-flow table since they have zero
+  // net impact on total holdings. Per-account balances are still
+  // computed correctly elsewhere using the same transfers data.
+  const transferRow = '';
+
+  // Per-event movement rows. Each event's cuota aggregate row and its
+  // individual gasto rows are grouped together (cuota first, then gastos
+  // sorted by date). Events are alphabetical so the same event always
+  // sits in the same place across reports.
+  //   Abono Cuota Evento - "<event name>"           (income)
+  //   Gasto Evento - "<event name>" - <summary>     (expense)
+  const truncate = (s: string, n: number) => (s.length > n ? s.slice(0, n - 1) + '…' : s);
+  const eventRows = (data.eventMovementRows || []).map((row: any) => {
+    const eventNameTrunc = truncate(row.event_name, 40);
+    let concepto: string;
+    if (row.type === 'cuota') {
+      concepto = `Abono Cuota Evento - "${eventNameTrunc}"`;
+    } else {
+      const summary = row.summary && String(row.summary).trim().length > 0
+        ? row.summary
+        : '(sin resumen)';
+      concepto = `Gasto Evento - "${eventNameTrunc}" - ${summary}`;
+    }
+    totalIncARS += Number(row.income_ars || 0);
+    totalIncUSD += Number(row.income_usd || 0);
+    totalExpARS += Number(row.expense_ars || 0);
+    totalExpUSD += Number(row.expense_usd || 0);
+    const incARS = Number(row.income_ars || 0);
+    const incUSD = Number(row.income_usd || 0);
+    const expARS = Number(row.expense_ars || 0);
+    const expUSD = Number(row.expense_usd || 0);
+    return '<tr>'
+      + '<td>' + concepto + '</td>'
+      + '<td class="text-right ' + (incARS > 0 ? 'positive' : '') + '">' + (incARS > 0 ? formatCurrency(incARS) : '-') + '</td>'
+      + '<td class="text-right ' + (incUSD > 0 ? 'positive' : '') + '">' + (incUSD > 0 ? formatCurrency(incUSD, 'USD') : '-') + '</td>'
+      + '<td class="text-right ' + (expARS > 0 ? 'negative' : '') + '">' + (expARS > 0 ? formatCurrency(expARS) : '-') + '</td>'
+      + '<td class="text-right ' + (expUSD > 0 ? 'negative' : '') + '">' + (expUSD > 0 ? formatCurrency(expUSD, 'USD') : '-') + '</td>'
+      + '</tr>';
+  }).join('');
 
   const finalARS = data.initialARS + totalIncARS - totalExpARS;
   const finalUSD = data.initialUSD + totalIncUSD - totalExpUSD;
@@ -770,6 +1114,8 @@ function buildFlowTable(data: any, formatCurrency: (amount: number, currency?: s
     + '<td class="text-right">-</td>'
     + '</tr>'
     + catRows
+    + eventRows
+    + otherExpenseRowsHtml
     + transferRow
     + '<tr class="summary-row">'
     + '<td>Total Movimientos</td>'
@@ -778,6 +1124,20 @@ function buildFlowTable(data: any, formatCurrency: (amount: number, currency?: s
     + '<td class="text-right negative">' + formatCurrency(totalExpARS) + '</td>'
     + '<td class="text-right negative">' + formatCurrency(totalExpUSD, 'USD') + '</td>'
     + '</tr>'
+    // Balance del Mes = ingresos - egresos del mes (sin contar el balance
+    // inicial). Resultado neto del mes — útil para ver si el mes fue
+    // superavitario o deficitario sin tener que restar mentalmente.
+    + (() => {
+        const monthBalanceARS = totalIncARS - totalExpARS;
+        const monthBalanceUSD = totalIncUSD - totalExpUSD;
+        return '<tr class="summary-row">'
+          + '<td>Balance del Mes</td>'
+          + '<td class="text-right ' + (monthBalanceARS >= 0 ? 'positive' : 'negative') + '">' + formatCurrency(monthBalanceARS) + '</td>'
+          + '<td class="text-right ' + (monthBalanceUSD >= 0 ? 'positive' : 'negative') + '">' + formatCurrency(monthBalanceUSD, 'USD') + '</td>'
+          + '<td class="text-right">-</td>'
+          + '<td class="text-right">-</td>'
+          + '</tr>';
+      })()
     + '<tr class="summary-row">'
     + '<td><strong>Balance Final</strong></td>'
     + '<td class="text-right ' + (finalARS >= 0 ? 'positive' : 'negative') + '"><strong>' + formatCurrency(finalARS) + '</strong></td>'
@@ -855,7 +1215,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
     const events = Number(m.event_balance ?? 0);
     return `
     <tr>
-      <td>${m.full_name}</td>
+      <td>${m.phone_number || '-'}</td>
       <td class="text-center">${feeTypeLabels[m.fee_type] || m.fee_type}</td>
       <td class="text-right">${formatCurrency(m.monthly_fee_amount)}</td>
       <td class="text-right ${capita >= 0 ? 'positive' : 'negative'}">${formatCurrency(capita)}</td>
@@ -872,7 +1232,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
     ? `<table>
         <thead>
           <tr>
-            <th>Miembro</th>
+            <th>Matrícula</th>
             <th class="text-center">Tipo Cuota</th>
             <th class="text-right">Capita Mensual</th>
             <th class="text-right">Saldo Capita</th>
@@ -917,7 +1277,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
   } else if (data.loanSnapshots.length > 0) {
     const loanRows = data.loanSnapshots.map((l: any) => `
       <tr>
-        <td>${l.borrower_name}</td>
+        <td>${l.borrower_matricula || '-'}</td>
         <td class="text-center">${accountLabels[l.account] || l.account}</td>
         <td class="text-right">${formatCurrency(l.original_amount, l.account === 'savings' ? 'USD' : 'ARS')}</td>
         <td class="text-right positive">${formatCurrency(l.amount_paid, l.account === 'savings' ? 'USD' : 'ARS')}</td>
@@ -939,7 +1299,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
         <table>
           <thead>
             <tr>
-              <th>Prestatario</th>
+              <th>Matrícula</th>
               <th class="text-center">Cuenta</th>
               <th class="text-right">Monto Original</th>
               <th class="text-right">Pagado</th>
@@ -968,21 +1328,31 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
   // Build events section
   let eventsSection = '';
   if (data.eventSnapshots.length > 0) {
-    const eventRows = data.eventSnapshots.map((e: any) => `
+    const eventRows = data.eventSnapshots.map((e: any) => {
+      const expensesArs = Number(e.expenses_ars ?? 0);
+      const balanceArs = Number(e.balance_ars ?? (Number(e.amount_collected) - expensesArs));
+      const balanceClass = balanceArs >= 0 ? 'positive' : 'negative';
+      return `
       <tr>
         <td>${e.event_name}</td>
         <td class="text-right">${formatCurrency(e.total_amount)}</td>
         <td class="text-right positive">${formatCurrency(e.amount_collected)}</td>
         <td class="text-right negative">${formatCurrency(e.outstanding_amount)}</td>
+        <td class="text-right ${expensesArs > 0 ? 'negative' : ''}">${expensesArs > 0 ? formatCurrency(expensesArs) : '-'}</td>
+        <td class="text-right ${balanceClass}"><strong>${formatCurrency(balanceArs)}</strong></td>
         <td class="text-center">${e.members_included}</td>
         <td class="text-center">${e.members_unpaid}</td>
         <td class="text-center">${e.event_status === 'settled' ? '✅ Saldado' : '⏳ Pendiente'}</td>
       </tr>
-    `).join('');
+    `;
+    }).join('');
 
     const totalEventAmount = data.eventSnapshots.reduce((s: number, e: any) => s + e.total_amount, 0);
     const totalEventCollected = data.eventSnapshots.reduce((s: number, e: any) => s + e.amount_collected, 0);
     const totalEventOutstanding = data.eventSnapshots.reduce((s: number, e: any) => s + e.outstanding_amount, 0);
+    const totalEventExpenses = data.eventSnapshots.reduce((s: number, e: any) => s + Number(e.expenses_ars ?? 0), 0);
+    const totalEventBalance = totalEventCollected - totalEventExpenses;
+    const totalBalanceClass = totalEventBalance >= 0 ? 'positive' : 'negative';
 
     eventsSection = `
       <div class="section">
@@ -991,9 +1361,11 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
           <thead>
             <tr>
               <th>Evento</th>
-              <th class="text-right">Total</th>
-              <th class="text-right">Recaudado</th>
-              <th class="text-right">Pendiente</th>
+              <th class="text-right">Total Cuota</th>
+              <th class="text-right">Cuota Recaudada</th>
+              <th class="text-right">Cuota Pendiente</th>
+              <th class="text-right">Gastos</th>
+              <th class="text-right">Balance Evento</th>
               <th class="text-center">Miembros</th>
               <th class="text-center">Sin Pagar</th>
               <th class="text-center">Estado</th>
@@ -1006,10 +1378,97 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
               <td class="text-right">${formatCurrency(totalEventAmount)}</td>
               <td class="text-right positive">${formatCurrency(totalEventCollected)}</td>
               <td class="text-right negative">${formatCurrency(totalEventOutstanding)}</td>
+              <td class="text-right ${totalEventExpenses > 0 ? 'negative' : ''}">${totalEventExpenses > 0 ? formatCurrency(totalEventExpenses) : '-'}</td>
+              <td class="text-right ${totalBalanceClass}"><strong>${formatCurrency(totalEventBalance)}</strong></td>
               <td colspan="3"></td>
             </tr>
           </tbody>
         </table>
+      </div>
+    `;
+  }
+
+  // Per-event detail blocks: one card per event with activity this month.
+  // Cuota collected, member/guest counts, plus a table of individual
+  // expenses with their short summary and full description. Lite report
+  // skips this — too detailed for the single-page version.
+  let perEventDetailsSection = '';
+  if (!isLite && Array.isArray(data.perEventDetails) && data.perEventDetails.length > 0) {
+    const cardSubNum = isLite ? (eventsSectionNum + '.1') : (eventsSectionNum + '.1');
+    const blocks = data.perEventDetails.map((ev: any) => {
+      const expensesTotal = ev.expenses.reduce(
+        (acc: { ars: number; usd: number }, x: any) => {
+          if (x.currency === 'USD') acc.usd += x.amount;
+          else acc.ars += x.amount;
+          return acc;
+        },
+        { ars: 0, usd: 0 }
+      );
+      const expenseRows = ev.expenses.length === 0
+        ? '<tr><td colspan="4" class="text-center" style="color:#666;">Sin gastos registrados este mes.</td></tr>'
+        : ev.expenses.map((x: any) => {
+            const fecha = new Date(x.transaction_date || x.date).toLocaleDateString('es-AR');
+            const summary = x.summary || '(sin resumen)';
+            const desc = x.description || '-';
+            const monto = x.currency === 'USD' ? formatCurrency(x.amount, 'USD') : formatCurrency(x.amount);
+            return '<tr>'
+              + `<td>${fecha}</td>`
+              + `<td>${summary}</td>`
+              + `<td style="font-size: 10px; color: #444;">${desc}</td>`
+              + `<td class="text-right negative">${monto}</td>`
+              + '</tr>';
+          }).join('');
+      const expensesFooter = ev.expenses.length === 0 ? '' : `
+        <tr class="summary-row">
+          <td colspan="3" class="text-right">Total Gastos</td>
+          <td class="text-right negative">
+            ${expensesTotal.ars > 0 ? formatCurrency(expensesTotal.ars) : ''}
+            ${expensesTotal.usd > 0 ? ' / ' + formatCurrency(expensesTotal.usd, 'USD') : ''}
+          </td>
+        </tr>
+      `;
+      const cuotaDisplay = [
+        ev.cuota_collected_ars > 0 ? formatCurrency(ev.cuota_collected_ars) : null,
+        ev.cuota_collected_usd > 0 ? formatCurrency(ev.cuota_collected_usd, 'USD') : null,
+      ].filter(Boolean).join(' / ') || formatCurrency(0);
+      return `
+        <div class="section" style="page-break-inside: avoid; margin-top: 16px;">
+          <h3 style="margin: 0 0 8px 0; font-size: 14px;">${ev.event_name}</h3>
+          <div class="grid">
+            <div class="stat-card">
+              <div class="stat-label">Ingresos por Capita (mes)</div>
+              <div class="stat-value positive">${cuotaDisplay}</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Miembros Asistiendo</div>
+              <div class="stat-value">${ev.member_count}</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Invitados Asistiendo</div>
+              <div class="stat-value">${ev.guest_count}</div>
+            </div>
+          </div>
+          <table style="margin-top: 8px;">
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Resumen</th>
+                <th>Descripción detallada</th>
+                <th class="text-right">Monto</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${expenseRows}
+              ${expensesFooter}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }).join('');
+    perEventDetailsSection = `
+      <div class="section">
+        <h2 class="section-title">${cardSubNum} Detalle por Evento</h2>
+        ${blocks}
       </div>
     `;
   }
@@ -1213,6 +1672,10 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
       .no-print { display: none; }
       @page { margin: 15mm 15mm; size: A4; }
       @page :first { margin-top: 15mm; }
+      /* Table headers repeat when a table is split across pages. */
+      thead { display: table-header-group; }
+      tfoot { display: table-footer-group; }
+      tr { page-break-inside: avoid; }
     }
     
     * { box-sizing: border-box; }
@@ -1275,7 +1738,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
     
     .page-header { display: none; }
     .page-footer { display: none; }
-    
+
     @media print {
       .page-header {
         display: flex;
@@ -1298,8 +1761,13 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
         margin-top: 15px;
       }
     }
-    
+
+    /* By default sections try to stay on one page (avoid awkward splits
+       of small cards/tables). The .section--splittable modifier opts
+       a section in to flowing across pages. */
     .section { margin-bottom: 15px; page-break-inside: avoid; }
+    .section.section--splittable { page-break-inside: auto; }
+    .section.section--splittable table { page-break-inside: auto; }
     
     .section-title {
       background: #000;
@@ -1418,7 +1886,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Reporte Mensual ${data.monthName.substring(0,3)}-${data.year}${isLite ? ' Resumen' : ' Completo'}</title>
+  <title>RLSB646 Reporte Mensual ${data.year}-${String(data.month).padStart(2, '0')} ${data.monthName}${isLite ? ' Resumen' : ' Completo'}</title>
   <style>
     ${liteStyles}
   </style>
@@ -1539,17 +2007,22 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
 
   ${eventsSection}
 
+  ${perEventDetailsSection}
+
   ${isLite ? '' : `<div class="page-break"></div>
-  
-  <!-- Page 2 header -->
+
+  <!-- Page 2 header (only shows when printing, before the member table) -->
   <div class="page-header">
     ${logoBase64 ? `<img src="data:image/png;base64,${logoBase64}" alt="Logo" class="logo-small" />` : ''}
     <span>R.·.L.·. Simón Bolívar N° 646</span>
     <span>${reportTitleFormatted}</span>
   </div>`}
 
-  ${isLite ? '' : `<!-- Section 4: Member Financial Detail -->
-  <div class="section">
+  ${isLite ? '' : `<!-- Section 4: Member Financial Detail — marked splittable so
+       a long member list flows across pages instead of leaving a
+       half-empty page above it. Column headers repeat on each new
+       page thanks to thead { display: table-header-group }. -->
+  <div class="section section--splittable">
     <h2 class="section-title">${memberSectionTitle}</h2>
     ${memberSection}
   </div>`}

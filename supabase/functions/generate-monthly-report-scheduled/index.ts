@@ -5,6 +5,54 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+/** Render HTML to PDF via PDFShift. See manual function for full docs. */
+async function convertHtmlToPdf(opts: {
+  html: string;
+  headerHtml?: string;
+  footerHtml?: string;
+  marginTopMm?: number;
+  marginBottomMm?: number;
+  marginSideMm?: number;
+}): Promise<Uint8Array> {
+  const apiKey = Deno.env.get('PDFSHIFT_API_KEY');
+  if (!apiKey) throw new Error('PDFSHIFT_API_KEY is not configured');
+
+  const body: Record<string, unknown> = {
+    source: opts.html,
+    format: 'A4',
+    landscape: false,
+    use_print: true,
+    margin: {
+      top: `${opts.marginTopMm ?? (opts.headerHtml ? 22 : 15)}mm`,
+      right: `${opts.marginSideMm ?? 12}mm`,
+      bottom: `${opts.marginBottomMm ?? (opts.footerHtml ? 18 : 15)}mm`,
+      left: `${opts.marginSideMm ?? 12}mm`,
+    },
+  };
+  if (opts.headerHtml) {
+    body.header = { source: opts.headerHtml, spacing: '4mm', start_at: 2 };
+  }
+  if (opts.footerHtml) {
+    body.footer = { source: opts.footerHtml, spacing: '4mm' };
+  }
+
+  const res = await fetch('https://api.pdfshift.io/v3/convert/pdf', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Basic ${btoa(`api:${apiKey}`)}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`PDFShift failed: ${res.status} ${errText}`);
+  }
+
+  return new Uint8Array(await res.arrayBuffer());
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -73,7 +121,10 @@ Deno.serve(async (req) => {
       supabase.from('members').select('*').eq('is_active', true),
       // Get all monthly fees up to month end for balance calculation
       supabase.from('monthly_fees').select('*').lte('year_month', monthEndStr),
-      supabase.from('loans').select('*, member:members(full_name)').eq('status', 'active'),
+      // Pull all loans created on or before month end. We filter for
+      // "active as of month end" in app code below using paid_date so that
+      // historical reports reflect the snapshot, not today's status.
+      supabase.from('loans').select('*, member:members(full_name, phone_number)').lte('loan_date', monthEndStr),
       supabase.from('extraordinary_expenses').select('*').eq('is_active', true),
       supabase.from('event_member_payments').select('*'),
       supabase.from('monthly_fees').select('*').eq('year_month', `${year}-${month.toString().padStart(2, '0')}-01`),
@@ -83,17 +134,42 @@ Deno.serve(async (req) => {
     const transactions = transactionsResult.data || [];
     const members = membersResult.data || [];
     const allMonthlyFees = allMonthlyFeesResult.data || [];
-    const loans = loansResult.data || [];
+    const allLoans = loansResult.data || [];
     const events = eventsResult.data || [];
     const eventPayments = eventPaymentsResult.data || [];
     const monthlyFees = monthlyFeesResult.data || [];
     const feeTypeHistory = feeTypeHistoryResult.data || [];
 
-    // Fetch all transactions and transfers up to month end first (needed for balance calculations)
-    const [allTransactionsResult, allTransfersResult] = await Promise.all([
+    // Fetch all transactions, transfers, and loan payments up to month end —
+    // needed for balance calculations and point-in-time loan snapshots.
+    const [allTransactionsResult, allTransfersResult, loanPaymentsResult] = await Promise.all([
       supabase.from('transactions').select('*').lte('transaction_date', monthEndStr),
       supabase.from('account_transfers').select('*').lte('transfer_date', monthEndStr),
+      supabase.from('loan_payments').select('loan_id, amount, payment_date').lte('payment_date', monthEndStr),
     ]);
+
+    const loanPaymentsAsOfMonthEnd = loanPaymentsResult.data || [];
+
+    // Build point-in-time loan view: keep only loans that were active on
+    // monthEnd (not cancelled, not yet fully paid as of that date), and
+    // override amount_paid with the sum of payments dated on or before
+    // monthEnd. Downstream code reads `loan.amount_paid` / computes
+    // `amount - amount_paid` — overriding the field keeps the rest of the
+    // function unchanged.
+    const paidByLoanId = new Map<string, number>();
+    for (const p of loanPaymentsAsOfMonthEnd) {
+      paidByLoanId.set(p.loan_id, (paidByLoanId.get(p.loan_id) || 0) + Number(p.amount));
+    }
+    const loans = allLoans
+      .filter((l: any) =>
+        l.status !== 'cancelled' &&
+        (!l.paid_date || l.paid_date > monthEndStr)
+      )
+      .map((l: any) => ({
+        ...l,
+        amount_paid: paidByLoanId.get(l.id) || 0,
+      }))
+      .filter((l: any) => Number(l.amount) - Number(l.amount_paid) > 0);
 
     const allTransactions = allTransactionsResult.data || [];
     const allTransfers = allTransfersResult.data || [];
@@ -350,6 +426,7 @@ Deno.serve(async (req) => {
         report_id: reportId,
         member_id: mb.member_id,
         full_name: mb.full_name,
+        phone_number: mb.phone_number,
         fee_type: mb.fee_type,
         monthly_fee_amount: monthlyFeeAmount,
         balance_at_month_end: balance,
@@ -362,7 +439,10 @@ Deno.serve(async (req) => {
     });
 
     if (memberSnapshots.length > 0) {
-      await supabase.from('report_member_snapshots').insert(memberSnapshots);
+      // phone_number is render-only here; strip before persisting in case
+      // report_member_snapshots doesn't have that column.
+      const memberSnapshotsForDb = memberSnapshots.map(({ phone_number, ...rest }: any) => rest);
+      await supabase.from('report_member_snapshots').insert(memberSnapshotsForDb);
     }
 
     // Create loan snapshots
@@ -370,6 +450,7 @@ Deno.serve(async (req) => {
       report_id: reportId,
       loan_id: loan.id,
       borrower_name: loan.member?.full_name || 'Unknown',
+      borrower_matricula: loan.member?.phone_number || '-',
       account: loan.account,
       original_amount: loan.amount,
       amount_paid: loan.amount_paid,
@@ -379,7 +460,10 @@ Deno.serve(async (req) => {
     }));
 
     if (loanSnapshots.length > 0) {
-      await supabase.from('report_loan_snapshots').insert(loanSnapshots);
+      // borrower_matricula is render-only; strip before persisting since the
+      // DB column doesn't exist on report_loan_snapshots.
+      const loanSnapshotsForDb = loanSnapshots.map(({ borrower_matricula, ...rest }: any) => rest);
+      await supabase.from('report_loan_snapshots').insert(loanSnapshotsForDb);
     }
 
     // Create event snapshots
@@ -390,6 +474,15 @@ Deno.serve(async (req) => {
       const membersIncluded = eventPaymentsForEvent.length;
       const membersUnpaid = eventPaymentsForEvent.filter((ep: any) => ep.amount_paid < ep.amount_owed).length;
 
+      // Gastos del evento ESTE MES (ARS only).
+      const expensesArs = transactions
+        .filter((t: any) =>
+          t.category === 'event_expense' &&
+          t.event_id === event.id &&
+          t.account !== 'savings'
+        )
+        .reduce((sum: number, t: any) => sum + Number(t.amount), 0);
+
       return {
         report_id: reportId,
         event_id: event.id,
@@ -397,6 +490,9 @@ Deno.serve(async (req) => {
         total_amount: totalAmount,
         amount_collected: amountCollected,
         outstanding_amount: totalAmount - amountCollected,
+        // Render-only (stripped before DB insert).
+        expenses_ars: expensesArs,
+        balance_ars: amountCollected - expensesArs,
         members_included: membersIncluded,
         members_unpaid: membersUnpaid,
         event_status: amountCollected >= totalAmount ? 'settled' : 'pending',
@@ -404,8 +500,50 @@ Deno.serve(async (req) => {
     });
 
     if (eventSnapshots.length > 0) {
-      await supabase.from('report_event_snapshots').insert(eventSnapshots);
+      // expenses_ars and balance_ars are render-only; strip before persisting.
+      const eventSnapshotsForDb = eventSnapshots.map(
+        ({ expenses_ars, balance_ars, ...rest }: any) => rest
+      );
+      await supabase.from('report_event_snapshots').insert(eventSnapshotsForDb);
     }
+
+    // Per-event detail blocks (rendered as a new section in the comprehensive
+    // report). One block per event with activity this month
+    // (cuota income > 0 OR any event_expense).
+    const perEventDetails = events
+      .map((event: any) => {
+        const eventTxs = transactions.filter((t: any) => t.event_id === event.id);
+        const expenseTxs = eventTxs.filter((t: any) => t.category === 'event_expense');
+        const cuotaTxs = eventTxs.filter((t: any) => t.category === 'event_payment');
+        const cuotaCollectedARS = cuotaTxs
+          .filter((t: any) => t.account !== 'savings')
+          .reduce((s: number, t: any) => s + Number(t.amount), 0);
+        const cuotaCollectedUSD = cuotaTxs
+          .filter((t: any) => t.account === 'savings')
+          .reduce((s: number, t: any) => s + Number(t.amount), 0);
+        const participants = eventPayments.filter((ep: any) => ep.event_id === event.id);
+        const memberCount = participants.filter((ep: any) => ep.member_id !== null).length;
+        const guestCount = participants.filter((ep: any) => ep.guest_name !== null).length;
+        return {
+          event_id: event.id,
+          event_name: event.name as string,
+          cuota_collected_ars: cuotaCollectedARS,
+          cuota_collected_usd: cuotaCollectedUSD,
+          member_count: memberCount,
+          guest_count: guestCount,
+          expenses: expenseTxs
+            .map((t: any) => ({
+              date: t.transaction_date,
+              summary: (t.expense_summary as string | null) || '',
+              description: (t.notes as string | null) || '',
+              amount: Number(t.amount),
+              currency: t.account === 'savings' ? 'USD' : 'ARS',
+            }))
+            .sort((a: any, b: any) => a.date.localeCompare(b.date)),
+          has_activity: cuotaCollectedARS > 0 || cuotaCollectedUSD > 0 || expenseTxs.length > 0,
+        };
+      })
+      .filter((d: any) => d.has_activity);
 
     // Generate PDF content
     const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
@@ -438,6 +576,7 @@ Deno.serve(async (req) => {
       memberSnapshots,
       loanSnapshots,
       eventSnapshots,
+      perEventDetails,
       totalActiveLoans,
       totalLoanAmount,
       totalLoanDue,
@@ -470,21 +609,53 @@ Deno.serve(async (req) => {
     // Generate lite report
     const liteContent = generatePDFHTML(reportData, 'lite', logoBase64);
 
-    // Upload both reports to storage
-    const pdfPath = `${year}/${month.toString().padStart(2, '0')}/Reporte_Financiero_${year}_${month.toString().padStart(2, '0')}.html`;
-    const litePdfPath = `${year}/${month.toString().padStart(2, '0')}/Reporte_Financiero_Lite_${year}_${month.toString().padStart(2, '0')}.html`;
+    // Running header & footer via PDFShift.
+    const logoForHeader = logoBase64
+      ? `<img src="data:image/png;base64,${logoBase64}" style="width: 28px; height: auto; vertical-align: middle;" />`
+      : '';
+    const runningHeaderHtml = `
+      <div style="font-size: 9px; color: #000; width: 100%; padding: 0 8mm; box-sizing: border-box; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #999;">
+        <div style="min-width: 35mm;">${logoForHeader}</div>
+        <div style="flex: 1; text-align: center;"><strong>R.·.L.·. Simón Bolívar N° 646</strong> · ${reportTitleFormatted}</div>
+        <div style="min-width: 35mm; text-align: right;">${monthName} ${year}</div>
+      </div>
+    `;
+    const runningFooterHtml = `
+      <div style="font-size: 8px; color: #000; width: 100%; padding: 0 8mm; box-sizing: border-box; text-align: center; border-top: 1px solid #999;">
+        R.·.L.·. Simón Bolívar N° 646 · Tesorería · ${monthName} ${year} · Página <span class="pageNumber"></span> de <span class="totalPages"></span>
+      </div>
+    `;
+
+    // Convert both HTMLs to PDF via PDFShift.
+    const [comprehensivePdf, litePdf] = await Promise.all([
+      convertHtmlToPdf({
+        html: pdfContent,
+        headerHtml: runningHeaderHtml,
+        footerHtml: runningFooterHtml,
+      }),
+      convertHtmlToPdf({
+        html: liteContent,
+        footerHtml: runningFooterHtml,
+        marginTopMm: 8,
+      }),
+    ]);
+
+    // Upload PDFs to storage with sensible default-download filenames.
+    const monthPad = month.toString().padStart(2, '0');
+    const pdfPath = `${year}/${monthPad}/RLSB646_Reporte_Mensual_${year}-${monthPad}_${monthName}_Completo.pdf`;
+    const litePdfPath = `${year}/${monthPad}/RLSB646_Reporte_Mensual_${year}-${monthPad}_${monthName}_Resumen.pdf`;
 
     const [uploadResult, liteUploadResult] = await Promise.all([
       supabase.storage
         .from('reports')
-        .upload(pdfPath, new Blob([pdfContent], { type: 'text/html' }), {
-          contentType: 'text/html',
+        .upload(pdfPath, comprehensivePdf, {
+          contentType: 'application/pdf',
           upsert: true,
         }),
       supabase.storage
         .from('reports')
-        .upload(litePdfPath, new Blob([liteContent], { type: 'text/html' }), {
-          contentType: 'text/html',
+        .upload(litePdfPath, litePdf, {
+          contentType: 'application/pdf',
           upsert: true,
         }),
     ]);
@@ -599,7 +770,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
   // Build member rows
   const memberRows = membersToShow.map((m: any) => `
     <tr>
-      <td>${m.full_name}</td>
+      <td>${m.phone_number || '-'}</td>
       <td class="text-center">${feeTypeLabels[m.fee_type] || m.fee_type}</td>
       <td class="text-right">${formatCurrency(m.monthly_fee_amount)}</td>
       <td class="text-right ${m.balance_at_month_end >= 0 ? 'positive' : 'negative'}">${formatCurrency(m.balance_at_month_end)}</td>
@@ -614,7 +785,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
     ? `<table>
         <thead>
           <tr>
-            <th>Miembro</th>
+            <th>Matrícula</th>
             <th class="text-center">Tipo Cuota</th>
             <th class="text-right">Cuota Mensual</th>
             <th class="text-right">Saldo</th>
@@ -654,7 +825,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
   } else if (data.loanSnapshots.length > 0) {
     const loanRows = data.loanSnapshots.map((l: any) => `
       <tr>
-        <td>${l.borrower_name}</td>
+        <td>${l.borrower_matricula || '-'}</td>
         <td class="text-center">${accountLabels[l.account] || l.account}</td>
         <td class="text-right">${formatCurrency(l.original_amount, l.account === 'savings' ? 'USD' : 'ARS')}</td>
         <td class="text-right positive">${formatCurrency(l.amount_paid, l.account === 'savings' ? 'USD' : 'ARS')}</td>
@@ -677,7 +848,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
         <table>
           <thead>
             <tr>
-              <th>Prestatario</th>
+              <th>Matrícula</th>
               <th class="text-center">Cuenta</th>
               <th class="text-right">Monto Original</th>
               <th class="text-right">Pagado</th>
@@ -706,21 +877,31 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
   // Build events section
   let eventsSection = '';
   if (data.eventSnapshots.length > 0) {
-    const eventRows = data.eventSnapshots.map((e: any) => `
+    const eventRows = data.eventSnapshots.map((e: any) => {
+      const expensesArs = Number(e.expenses_ars ?? 0);
+      const balanceArs = Number(e.balance_ars ?? (Number(e.amount_collected) - expensesArs));
+      const balanceClass = balanceArs >= 0 ? 'positive' : 'negative';
+      return `
       <tr>
         <td>${e.event_name}</td>
         <td class="text-right">${formatCurrency(e.total_amount)}</td>
         <td class="text-right positive">${formatCurrency(e.amount_collected)}</td>
         <td class="text-right negative">${formatCurrency(e.outstanding_amount)}</td>
+        <td class="text-right ${expensesArs > 0 ? 'negative' : ''}">${expensesArs > 0 ? formatCurrency(expensesArs) : '-'}</td>
+        <td class="text-right ${balanceClass}"><strong>${formatCurrency(balanceArs)}</strong></td>
         <td class="text-center">${e.members_included}</td>
         <td class="text-center">${e.members_unpaid}</td>
         <td class="text-center">${e.event_status === 'settled' ? '✅ Saldado' : '⏳ Pendiente'}</td>
       </tr>
-    `).join('');
+    `;
+    }).join('');
 
     const totalEventAmount = data.eventSnapshots.reduce((s: number, e: any) => s + e.total_amount, 0);
     const totalEventCollected = data.eventSnapshots.reduce((s: number, e: any) => s + e.amount_collected, 0);
     const totalEventOutstanding = data.eventSnapshots.reduce((s: number, e: any) => s + e.outstanding_amount, 0);
+    const totalEventExpenses = data.eventSnapshots.reduce((s: number, e: any) => s + Number(e.expenses_ars ?? 0), 0);
+    const totalEventBalance = totalEventCollected - totalEventExpenses;
+    const totalBalanceClass = totalEventBalance >= 0 ? 'positive' : 'negative';
 
     eventsSection = `
       <div class="section">
@@ -729,9 +910,11 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
           <thead>
             <tr>
               <th>Evento</th>
-              <th class="text-right">Total</th>
-              <th class="text-right">Recaudado</th>
-              <th class="text-right">Pendiente</th>
+              <th class="text-right">Total Cuota</th>
+              <th class="text-right">Cuota Recaudada</th>
+              <th class="text-right">Cuota Pendiente</th>
+              <th class="text-right">Gastos</th>
+              <th class="text-right">Balance Evento</th>
               <th class="text-center">Miembros</th>
               <th class="text-center">Sin Pagar</th>
               <th class="text-center">Estado</th>
@@ -744,10 +927,96 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
               <td class="text-right">${formatCurrency(totalEventAmount)}</td>
               <td class="text-right positive">${formatCurrency(totalEventCollected)}</td>
               <td class="text-right negative">${formatCurrency(totalEventOutstanding)}</td>
+              <td class="text-right ${totalEventExpenses > 0 ? 'negative' : ''}">${totalEventExpenses > 0 ? formatCurrency(totalEventExpenses) : '-'}</td>
+              <td class="text-right ${totalBalanceClass}"><strong>${formatCurrency(totalEventBalance)}</strong></td>
               <td colspan="3"></td>
             </tr>
           </tbody>
         </table>
+      </div>
+    `;
+  }
+
+  // Per-event detail blocks: one card per event with activity this month.
+  // Cuota collected, member/guest counts, plus a table of individual
+  // expenses with their short summary and full description. Lite report
+  // skips this — too detailed for the single-page version.
+  let perEventDetailsSection = '';
+  if (!isLite && Array.isArray(data.perEventDetails) && data.perEventDetails.length > 0) {
+    const blocks = data.perEventDetails.map((ev: any) => {
+      const expensesTotal = ev.expenses.reduce(
+        (acc: { ars: number; usd: number }, x: any) => {
+          if (x.currency === 'USD') acc.usd += x.amount;
+          else acc.ars += x.amount;
+          return acc;
+        },
+        { ars: 0, usd: 0 }
+      );
+      const expenseRows = ev.expenses.length === 0
+        ? '<tr><td colspan="4" class="text-center" style="color:#666;">Sin gastos registrados este mes.</td></tr>'
+        : ev.expenses.map((x: any) => {
+            const fecha = new Date(x.date).toLocaleDateString('es-AR');
+            const summary = x.summary || '(sin resumen)';
+            const desc = x.description || '-';
+            const monto = x.currency === 'USD' ? formatCurrency(x.amount, 'USD') : formatCurrency(x.amount);
+            return '<tr>'
+              + `<td>${fecha}</td>`
+              + `<td>${summary}</td>`
+              + `<td style="font-size: 10px; color: #444;">${desc}</td>`
+              + `<td class="text-right negative">${monto}</td>`
+              + '</tr>';
+          }).join('');
+      const expensesFooter = ev.expenses.length === 0 ? '' : `
+        <tr class="summary-row">
+          <td colspan="3" class="text-right">Total Gastos</td>
+          <td class="text-right negative">
+            ${expensesTotal.ars > 0 ? formatCurrency(expensesTotal.ars) : ''}
+            ${expensesTotal.usd > 0 ? ' / ' + formatCurrency(expensesTotal.usd, 'USD') : ''}
+          </td>
+        </tr>
+      `;
+      const cuotaDisplay = [
+        ev.cuota_collected_ars > 0 ? formatCurrency(ev.cuota_collected_ars) : null,
+        ev.cuota_collected_usd > 0 ? formatCurrency(ev.cuota_collected_usd, 'USD') : null,
+      ].filter(Boolean).join(' / ') || formatCurrency(0);
+      return `
+        <div class="section" style="page-break-inside: avoid; margin-top: 16px;">
+          <h3 style="margin: 0 0 8px 0; font-size: 14px;">${ev.event_name}</h3>
+          <div class="grid">
+            <div class="stat-card">
+              <div class="stat-label">Ingresos por Capita (mes)</div>
+              <div class="stat-value positive">${cuotaDisplay}</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Miembros Asistiendo</div>
+              <div class="stat-value">${ev.member_count}</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Invitados Asistiendo</div>
+              <div class="stat-value">${ev.guest_count}</div>
+            </div>
+          </div>
+          <table style="margin-top: 8px;">
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Resumen</th>
+                <th>Descripción detallada</th>
+                <th class="text-right">Monto</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${expenseRows}
+              ${expensesFooter}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }).join('');
+    perEventDetailsSection = `
+      <div class="section">
+        <h2 class="section-title">${eventsSectionNum}.1 Detalle por Evento</h2>
+        ${blocks}
       </div>
     `;
   }
@@ -949,6 +1218,9 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
       .page-break { page-break-before: always; }
       .no-print { display: none; }
       @page { margin: 20mm 15mm; }
+      thead { display: table-header-group; }
+      tfoot { display: table-footer-group; }
+      tr { page-break-inside: avoid; }
     }
     
     * { box-sizing: border-box; }
@@ -1009,7 +1281,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
     }
     
     .page-header { display: none; }
-    
+
     @media print {
       .page-header {
         display: flex;
@@ -1023,8 +1295,10 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
       }
       .page-header .logo-small { width: 30px; height: auto; }
     }
-    
-    .section { margin-bottom: 30px; }
+
+    .section { margin-bottom: 30px; page-break-inside: avoid; }
+    .section.section--splittable { page-break-inside: auto; }
+    .section.section--splittable table { page-break-inside: auto; }
     
     .section-title {
       background: #000;
@@ -1150,7 +1424,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Reporte Financiero${isLite ? ' Resumen' : ''} - ${data.monthName} ${data.year}</title>
+  <title>RLSB646 Reporte Mensual ${data.year}-${String(data.month).padStart(2, '0')} ${data.monthName}${isLite ? ' Resumen' : ' Completo'}</title>
   <style>
     ${liteStyles}
   </style>
@@ -1234,7 +1508,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
   </div>
 
   ${isLite ? '' : `<div class="page-break"></div>
-  
+
   <!-- Condensed header for page 2+ -->
   <div class="page-header">
     ${logoBase64 ? `<img src="data:image/png;base64,${logoBase64}" alt="Logo" class="logo-small" />` : ''}
@@ -1242,8 +1516,8 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
     <span>${reportTitleFormatted}</span>
   </div>`}
 
-  ${isLite ? '' : `<!-- Section 2: Member Financial Detail -->
-  <div class="section">
+  ${isLite ? '' : `<!-- Section 2: Member Financial Detail — splittable across pages. -->
+  <div class="section section--splittable">
     <h2 class="section-title">${memberSectionTitle}</h2>
     ${memberSection}
   </div>`}
@@ -1273,6 +1547,8 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
   ${loansSection}
 
   ${eventsSection}
+
+  ${perEventDetailsSection}
 
   <div class="footer">
     <p>R.·.L.·. Simón Bolívar N° 646 · Tesorería · ${data.monthName} ${data.year}${isLite ? ' (Resumen)' : ''}</p>

@@ -43,68 +43,60 @@ export default function Reports() {
     setForceRegenerate(false);
   };
 
+  /** Build the default filename the browser shows when saving. */
+  const buildReportFilename = (year: number, month: number, isLite: boolean) => {
+    const monthPad = month.toString().padStart(2, '0');
+    const type = isLite ? 'Resumen' : 'Completo';
+    return `RLSB646_Reporte_Mensual_${year}-${monthPad}_${monthNames[month - 1]}_${type}.pdf`;
+  };
+
   const handleDownloadReport = async (pdfPath: string, year: number, month: number) => {
-    const url = await getReportPdfUrl(pdfPath);
-    if (url) {
-      try {
-        // Fetch the HTML content
-        const response = await fetch(url);
-        const htmlContent = await response.text();
-        
-        // Open a new window with the HTML content and trigger print dialog
-        const printWindow = window.open('', '_blank');
-        if (printWindow) {
-          printWindow.document.write(htmlContent);
-          printWindow.document.close();
-          // Give the browser time to render, then trigger print
-          setTimeout(() => {
-            printWindow.print();
-          }, 500);
-        }
-      } catch (error) {
-        console.error('Error downloading report:', error);
-        // Fallback: open in new tab
-        window.open(url, '_blank');
-      }
+    const isLite = pdfPath.toLowerCase().includes('resumen') || pdfPath.toLowerCase().includes('lite');
+    const url = await getReportPdfUrl(pdfPath, buildReportFilename(year, month, isLite));
+    if (!url) return;
+    try {
+      // Trigger native download via a temporary anchor with the suggested
+      // filename. Browser uses Content-Disposition from the signed URL.
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = buildReportFilename(year, month, isLite);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error('Error downloading report:', error);
+      window.open(url, '_blank');
     }
   };
 
   const handleShareReport = async (pdfPath: string, year: number, month: number, isLite: boolean) => {
-    const url = await getReportPdfUrl(pdfPath);
+    const url = await getReportPdfUrl(pdfPath, buildReportFilename(year, month, isLite));
     if (!url) return;
 
     try {
+      const fileName = buildReportFilename(year, month, isLite);
       const response = await fetch(url);
-      const htmlContent = await response.text();
-      
-      // Create a blob from HTML content
-      const blob = new Blob([htmlContent], { type: 'text/html' });
-      const shortMonth = monthNames[month - 1].substring(0, 3);
-      const reportType = isLite ? 'Resumen' : 'Completo';
-      const fileName = `Reporte_Mensual_${shortMonth}-${year}_${reportType}.html`;
-      const file = new File([blob], fileName, { type: 'text/html' });
+      const pdfBlob = await response.blob();
+      const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
 
       if (navigator.share && navigator.canShare({ files: [file] })) {
         await navigator.share({
           files: [file],
           title: `Reporte Financiero ${monthNames[month - 1]} ${year}`,
-          text: `Reporte Financiero ${reportType} - ${monthNames[month - 1]} ${year}`,
+          text: `Reporte Financiero ${isLite ? 'Resumen' : 'Completo'} - ${monthNames[month - 1]} ${year}`,
         });
       } else if (navigator.share) {
-        // Fallback: share URL only if file sharing not supported
         await navigator.share({
           title: `Reporte Financiero ${monthNames[month - 1]} ${year}`,
-          text: `Reporte Financiero ${reportType} - ${monthNames[month - 1]} ${year}`,
-          url: url,
+          text: `Reporte Financiero ${isLite ? 'Resumen' : 'Completo'} - ${monthNames[month - 1]} ${year}`,
+          url,
         });
       } else {
-        // Fallback for browsers without Web Share API
         handleDownloadReport(pdfPath, year, month);
       }
     } catch (error) {
       if ((error as Error).name !== 'AbortError') {
         console.error('Error sharing report:', error);
-        // Fallback to download
         handleDownloadReport(pdfPath, year, month);
       }
     }
