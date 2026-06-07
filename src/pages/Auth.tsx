@@ -461,6 +461,14 @@ export default function Auth() {
       <p className="text-center text-xs text-muted-foreground">
         Toda consulta se trata con absoluta reserva.
       </p>
+
+      <button
+        type="button"
+        onClick={() => navigate('/')}
+        className="mx-auto block text-xs tracking-[0.14em] text-muted-foreground transition-colors hover:text-primary"
+      >
+        ‹ Volver al inicio
+      </button>
     </Threshold>
   );
 }

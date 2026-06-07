@@ -20,10 +20,13 @@ export default function Lock() {
         aria-hidden="true"
       />
 
-      {/* The sun: the hidden entrance */}
-      <div className="relative z-10 flex flex-col items-center text-center">
-        <SecretDoor size={184} spin />
-        <h1 className="font-display mt-8 text-3xl font-semibold leading-none">Logia Simón Bolívar</h1>
+      {/* The sun: the big faint sunburst is the hidden entrance, behind the text */}
+      <div className="absolute left-1/2 top-[42%] z-[1] -translate-x-1/2 -translate-y-1/2">
+        <SecretDoor size="92vmin" dim={0.5} spin />
+      </div>
+
+      <div className="pointer-events-none relative z-10 flex flex-col items-center text-center">
+        <h1 className="font-display text-3xl font-semibold leading-none">Logia Simón Bolívar</h1>
         <span className="mt-3 text-[0.7rem] uppercase tracking-[0.3em] text-[#C8A24B]">Nº 646</span>
         <p className="font-display mt-5 text-lg italic text-[#ECE7DA]/70">«Ciencia, Justicia, Trabajo»</p>
       </div>

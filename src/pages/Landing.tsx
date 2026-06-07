@@ -35,9 +35,13 @@ export default function Landing() {
           style={{ background: 'radial-gradient(circle at 50% 40%, #1b1622 0%, #0c0b0e 52%, #0B0B0D 80%)' }}
           aria-hidden="true"
         />
-        <div className="relative z-10 flex flex-col items-center">
-          <SecretDoor size={300} spin />
-          <h1 className="font-display mt-8 text-4xl font-semibold leading-[1.05] sm:text-6xl">
+        {/* The sun: the big faint sunburst is the hidden entrance, behind the text */}
+        <div className="absolute left-1/2 top-[44%] z-[1] -translate-x-1/2 -translate-y-1/2">
+          <SecretDoor size="122vmin" dim={0.42} spin />
+        </div>
+
+        <div className="pointer-events-none relative z-10 flex flex-col items-center">
+          <h1 className="font-display text-4xl font-semibold leading-[1.05] sm:text-6xl">
             Respetable Logia Simón Bolívar
           </h1>
           <span className="mt-4 text-[0.72rem] uppercase tracking-[0.4em] text-[#C8A24B]">Nº 646</span>
