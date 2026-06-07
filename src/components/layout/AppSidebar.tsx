@@ -56,6 +56,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
+import { RaysMark } from '@/components/lodge/LodgeMarks';
 
 /** The three top-level application modules */
 type AppModule = 'treasury' | 'library' | 'admin';
@@ -152,6 +153,15 @@ export function AppSidebar() {
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
       {/* ── Header: module switcher dropdown ── */}
       <SidebarHeader className="p-2 group-data-[state=collapsed]:p-1">
+        {/* Lodge identity (the frame, not the data) */}
+        <div className="flex items-center gap-2.5 px-2 pb-2 pt-1 group-data-[state=collapsed]:justify-center group-data-[state=collapsed]:px-0">
+          <span className="h-7 w-7 shrink-0 text-sidebar-primary">
+            <RaysMark count={28} className="h-full w-full" />
+          </span>
+          <span className="font-display text-base font-semibold leading-tight text-sidebar-foreground group-data-[state=collapsed]:hidden">
+            Logia Simón Bolívar <span className="text-sidebar-primary">Nº 646</span>
+          </span>
+        </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button className="flex items-center gap-3 w-full rounded-lg p-2 hover:bg-sidebar-accent transition-colors text-left group-data-[state=collapsed]:justify-center group-data-[state=collapsed]:p-1 group-data-[state=collapsed]:gap-0">
