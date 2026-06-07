@@ -28,6 +28,7 @@ import { AddTransactionForm } from '@/components/forms/AddTransactionForm';
 import { StatGridSkeleton } from '@/components/ui/loading';
 import { Button } from '@/components/ui/button';
 import { formatCurrencyCompact } from '@/lib/utils';
+import { getAttentionMembers, attentionTotalOwed, memberOwed } from '@/lib/attention';
 import {
   Wallet, Landmark, AlertTriangle, HandCoins, MessageSquare, ArrowRight, Users,
   BookOpen, UserCog, FileText, Receipt, HandCoins as LoanIcon, LayoutDashboard,
@@ -69,11 +70,9 @@ export default function Home() {
   const savingsBalance = balanceFor('savings'); // USD
   const totalARSBalance = bankBalance + greatLodgeBalance + savingsBalance * exchangeRate;
 
-  const feeRate = (m: typeof memberBalances[0]) => currentMonthFees[m.fee_type] || 0;
-  const owedOf = (m: typeof memberBalances[0]) => m.total_fees_owed - m.total_paid;
-  const morosos = memberBalances.filter((m) => m.is_active && owedOf(m) > feeRate(m));
-  const attentionTotal = morosos.reduce((s, m) => s + Math.max(0, owedOf(m)), 0);
-  const morosTop = [...morosos].sort((a, b) => owedOf(b) - owedOf(a)).slice(0, 5);
+  const morosos = getAttentionMembers(memberBalances, currentMonthFees);
+  const attentionTotal = attentionTotalOwed(morosos);
+  const morosTop = morosos.slice(0, 5);
 
   const activeLoans = loans.filter((l) => l.status === 'active');
   const loansDueARS = activeLoans.filter((l) => l.account !== 'savings').reduce((s, l) => s + (l.amount - l.amount_paid), 0);
@@ -126,7 +125,7 @@ export default function Home() {
                   subtitle={`Deben ${formatCurrencyCompact(attentionTotal)}`}
                   icon={<AlertTriangle className="h-8 w-8 text-overdue/50" />}
                   variant={morosos.length > 0 ? 'danger' : 'success'}
-                  to="/members"
+                  to="/members?atencion=1"
                 />
               )}
               <StatCard
@@ -160,7 +159,7 @@ export default function Home() {
           {/* Attention banner */}
           {!isMemberOnly && !isLoading && morosos.length > 0 && (
             <Link
-              to="/members"
+              to="/members?atencion=1"
               className="press block rounded-xl border border-overdue/40 bg-overdue/10 p-4 md:p-5"
             >
               <div className="flex items-center justify-between gap-3">
@@ -185,7 +184,7 @@ export default function Home() {
             <div className="stat-card">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="section-header mb-0 font-display">Requieren atención</h2>
-                <Link to="/members">
+                <Link to="/members?atencion=1">
                   <Button variant="ghost" size="sm">
                     Ver todos <ArrowRight className="ml-1 h-4 w-4" />
                   </Button>
@@ -202,7 +201,7 @@ export default function Home() {
                     <div key={m.member_id} className="flex items-center justify-between py-2 border-b border-border/50 last:border-0">
                       <p className="font-medium text-sm">{displayName(m.full_name, m.phone_number)}</p>
                       <span className="font-mono text-sm font-semibold text-destructive">
-                        {formatCurrencyCompact(Math.max(0, owedOf(m)))}
+                        {formatCurrencyCompact(Math.max(0, memberOwed(m)))}
                       </span>
                     </div>
                   ))}

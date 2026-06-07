@@ -41,6 +41,7 @@ import {
 } from 'lucide-react';
 import { format, lastDayOfMonth, startOfMonth, startOfYear, addMonths, isAfter } from 'date-fns';
 import { parseLocalDate } from '@/lib/utils';
+import { getAttentionMembers, attentionTotalOwed } from '@/lib/attention';
 import { es } from 'date-fns/locale';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -334,35 +335,10 @@ export default function Dashboard() {
     return map;
   }, [adjustedMemberBalances]);
 
-  // Members requiring attention - only capita moroso or evento demorado
-  const overdueMembers = adjustedMemberBalances
-    .filter(m => {
-      if (!m.is_active) return false;
-      if (isMemberOnly && (!userMemberId || m.member_id !== userMemberId)) return false;
-      
-      const amountOwed = m.total_fees_owed - m.total_paid;
-      const historicalFeeType = getMemberFeeType(m.member_id, selectedMonthKey, m.fee_type);
-      const monthlyFeeRate = effectiveFees[historicalFeeType] || 0;
-      const isMonthlyOverdue = amountOwed > monthlyFeeRate;
-      
-      const eventStatus = memberEventStatuses[m.member_id];
-      const isEventDemorado = !!eventStatus?.demorado && !eventStatus?.moroso;
-      
-      return isMonthlyOverdue || isEventDemorado;
-    })
-    .sort((a, b) => {
-      const aOwed = a.total_fees_owed - a.total_paid;
-      const bOwed = b.total_fees_owed - b.total_paid;
-      return bOwed - aOwed;
-    });
-
-  // Total owed across everyone needing attention (monthly debt + event debt),
-  // shown in the attention banner so the treasurer's first question is answered up top.
-  const attentionTotal = overdueMembers.reduce((sum, m) => {
-    const monthlyDebt = Math.max(0, m.total_fees_owed - m.total_paid);
-    const eventDebt = memberEventDebts[m.member_id] || 0;
-    return sum + monthlyDebt + eventDebt;
-  }, 0);
+  // Members requiring attention. Shared definition (src/lib/attention) so the
+  // Panel banner, the Inicio overview, and the Members filter always agree.
+  const overdueMembers = getAttentionMembers(memberBalances, currentMonthFees);
+  const attentionTotal = attentionTotalOwed(overdueMembers);
 
   const formatCurrency = (amount: number, currency: 'ARS' | 'USD' = 'ARS') => {
     return new Intl.NumberFormat(currency === 'ARS' ? 'es-AR' : 'en-US', {
@@ -415,7 +391,7 @@ export default function Dashboard() {
       {!isMemberOnly && (
         overdueMembers.length > 0 ? (
           <Link
-            to="/members"
+            to="/members?atencion=1"
             className="press block rounded-xl border border-overdue/40 bg-overdue/10 p-4 md:p-5 animate-fade-in"
           >
             <div className="flex items-center justify-between gap-3">
@@ -475,7 +451,7 @@ export default function Dashboard() {
         <div className="stat-card">
           <div className="flex items-center justify-between mb-4">
             <h2 className="section-header mb-0">{t('dashboard.membersRequiringAttention')}</h2>
-            <Link to="/members">
+            <Link to="/members?atencion=1">
               <Button variant="ghost" size="sm">
                 {t('common.viewAll')} <ArrowRight className="ml-1 h-4 w-4" />
               </Button>

@@ -41,6 +41,8 @@ import { FEE_TYPE_LABELS, MemberBalance } from '@/lib/types';
 import { parseLocalDate, formatCurrency } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TableSkeleton } from '@/components/ui/loading';
+import { useSearchParams } from 'react-router-dom';
+import { requiresAttention } from '@/lib/attention';
 
 const STATUS_OPTIONS = [
   { value: 'active', label: 'Activo' },
@@ -67,6 +69,8 @@ export default function Members() {
   const { profile } = useAuth();
   const userMemberId = profile?.member_id;
   const { displayName } = useHiddenMode();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const atencion = searchParams.get('atencion') === '1';
   const [search, setSearch] = useState('');
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
   const [sortConfig, setSortConfig] = useState<SortConfig>({ column: null, direction: 'asc' });
@@ -147,6 +151,7 @@ export default function Members() {
 
   const filteredMembers = memberBalances.filter((member) => {
     if (isMemberOnly && member.member_id !== userMemberId) return false;
+    if (atencion && !requiresAttention(member, currentMonthFees)) return false;
     const matchesSearch = member.full_name.toLowerCase().includes(search.toLowerCase()) || (member.phone_number && member.phone_number.includes(search));
     if (selectedStatuses.length === 0) return matchesSearch;
     const status = getPaymentStatus(member);
@@ -201,6 +206,13 @@ export default function Members() {
         </div>
         {isAdmin && !isMemberOnly && <AddMemberForm />}
       </div>
+
+      {atencion && (
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-overdue/40 bg-overdue/10 px-4 py-2.5">
+          <p className="text-sm font-medium text-foreground">Mostrando solo miembros que requieren atención</p>
+          <Button variant="ghost" size="sm" onClick={() => setSearchParams({})}>Ver todos</Button>
+        </div>
+      )}
 
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">

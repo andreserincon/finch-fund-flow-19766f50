@@ -17,7 +17,7 @@ import { usePaymentReminders } from '@/hooks/usePaymentReminders';
 import { AddTransactionForm } from '@/components/forms/AddTransactionForm';
 
 const tabClass =
-  'press flex flex-1 flex-col items-center justify-center gap-0.5 min-h-[52px] px-1 text-[11px] font-medium text-muted-foreground';
+  'press flex flex-1 items-center justify-center min-h-[52px] px-1 text-muted-foreground';
 
 interface Tab {
   to: string;
@@ -29,14 +29,13 @@ interface Tab {
 
 function TabLink({ to, end, icon: Icon, label, dot }: Tab) {
   return (
-    <NavLink to={to} end={end} className={tabClass} activeClassName="text-primary-strong">
+    <NavLink to={to} end={end} className={tabClass} activeClassName="text-primary-strong" aria-label={label} title={label}>
       <span className="relative">
-        <Icon className="h-5 w-5" />
+        <Icon className="h-6 w-6" />
         {dot && (
           <span className="absolute -right-1.5 -top-1 h-2 w-2 rounded-full bg-overdue" />
         )}
       </span>
-      <span className="truncate max-w-[72px]">{label}</span>
     </NavLink>
   );
 }
