@@ -98,14 +98,14 @@ export default function LogExpense() {
     if (addAnotherRef.current) {
       reset({ transaction_date: data.transaction_date, category: 'event_expense', account: data.account });
     } else {
-      navigate('/');
+      navigate('/panel');
     }
   };
 
   return (
     <div className="max-w-2xl mx-auto space-y-6 animate-fade-in">
       <div className="flex items-center gap-4">
-        <Link to="/">
+        <Link to="/panel">
           <Button variant="ghost" size="icon">
             <ArrowLeft className="h-4 w-4" />
           </Button>
@@ -241,7 +241,7 @@ export default function LogExpense() {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3 pt-4">
-              <Button type="button" variant="outline" onClick={() => navigate('/')}>
+              <Button type="button" variant="outline" onClick={() => navigate('/panel')}>
                 {t('common.cancel')}
               </Button>
               <Button

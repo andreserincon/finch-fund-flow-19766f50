@@ -29,7 +29,7 @@ import { StatGridSkeleton } from '@/components/ui/loading';
 import { Button } from '@/components/ui/button';
 import { formatCurrencyCompact } from '@/lib/utils';
 import {
-  Wallet, AlertTriangle, HandCoins, MessageSquare, ArrowRight, Users,
+  Wallet, Landmark, AlertTriangle, HandCoins, MessageSquare, ArrowRight, Users,
   BookOpen, UserCog, FileText, Receipt, HandCoins as LoanIcon, LayoutDashboard,
 } from 'lucide-react';
 import type { AccountType } from '@/lib/types';
@@ -85,7 +85,7 @@ export default function Home() {
 
   /* ---- quick links (role-gated) ---- */
   const quickLinks = [
-    { label: 'Panel', to: '/', icon: LayoutDashboard, show: true },
+    { label: 'Panel', to: '/panel', icon: LayoutDashboard, show: true },
     { label: 'Miembros', to: '/members', icon: Users, show: true },
     { label: 'Transacciones', to: '/transactions', icon: Receipt, show: !isMemberOnly },
     { label: 'Préstamos', to: '/loans', icon: LoanIcon, show: !isMemberOnly },
@@ -112,11 +112,12 @@ export default function Home() {
           ) : (
             <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
               <StatCard
-                title="Caja total (ARS)"
-                value={formatCurrencyCompact(totalARSBalance)}
-                subtitle="Banco + Gran Logia + ahorro"
-                icon={<Wallet className="h-8 w-8 text-primary/30" />}
-                variant={totalARSBalance >= 0 ? 'success' : 'danger'}
+                title="Banco (ARS)"
+                value={formatCurrencyCompact(bankBalance)}
+                subtitle="Cuenta bancaria principal"
+                icon={<Landmark className="h-8 w-8 text-primary/30" />}
+                variant={bankBalance >= 0 ? 'success' : 'danger'}
+                to={!isMemberOnly ? '/transactions' : undefined}
               />
               {!isMemberOnly && (
                 <StatCard
@@ -128,6 +129,13 @@ export default function Home() {
                   to="/members"
                 />
               )}
+              <StatCard
+                title="Caja total (ARS)"
+                value={formatCurrencyCompact(totalARSBalance)}
+                subtitle="Banco + Gran Logia + ahorro"
+                icon={<Wallet className="h-8 w-8 text-primary/30" />}
+                variant={totalARSBalance >= 0 ? 'success' : 'danger'}
+              />
               <StatCard
                 title="Préstamos por cobrar"
                 value={formatCurrencyCompact(loansDueUSD, 'USD')}

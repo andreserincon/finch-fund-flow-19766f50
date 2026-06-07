@@ -52,7 +52,7 @@ export function BottomNav() {
   const pending = reminders.filter((r) => r.status === 'pending_review').length;
 
   const leftTabs: Tab[] = [
-    { to: '/', end: true, icon: LayoutDashboard, label: t('nav.dashboard') },
+    { to: '/panel', end: true, icon: LayoutDashboard, label: t('nav.dashboard') },
     { to: '/members', icon: Users, label: t('nav.members') },
   ].filter(() => canViewTreasury);
 

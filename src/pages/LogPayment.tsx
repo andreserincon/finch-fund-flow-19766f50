@@ -106,7 +106,7 @@ export default function LogPayment() {
       if (addAnotherRef.current) {
         reset({ transaction_date: data.transaction_date, category: 'monthly_fee', account: data.account });
       } else {
-        navigate('/');
+        navigate('/panel');
       }
     } catch (error) {
       if (import.meta.env.DEV) console.error('Error logging payment:', error);
@@ -118,7 +118,7 @@ export default function LogPayment() {
   return (
     <div className="max-w-2xl mx-auto space-y-6 animate-fade-in">
       <div className="flex items-center gap-4">
-        <Link to="/"><Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button></Link>
+        <Link to="/panel"><Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button></Link>
         <div>
           <h1 className="text-2xl font-bold text-foreground">Registrar Pago</h1>
           <p className="text-muted-foreground">Registrar una transacción de ingreso</p>
@@ -216,7 +216,7 @@ export default function LogPayment() {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3 pt-4">
-              <Button type="button" variant="outline" onClick={() => navigate('/')}>Cancelar</Button>
+              <Button type="button" variant="outline" onClick={() => navigate('/panel')}>Cancelar</Button>
               <Button
                 type="submit"
                 variant="outline"

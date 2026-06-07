@@ -107,7 +107,7 @@ export function AppSidebar() {
 
   /* ── Treasury nav items ── */
   const mainNavItems = [
-    { title: t('nav.dashboard'), url: '/', icon: LayoutDashboard },
+    { title: t('nav.dashboard'), url: '/panel', icon: LayoutDashboard },
     { title: t('nav.members'), url: '/members', icon: Users },
     // Staff-only items (hidden from member-only users)
     ...(!isMemberOnly ? [
@@ -225,7 +225,7 @@ export function AppSidebar() {
                       <SidebarMenuButton asChild>
                         <NavLink
                           to={item.url}
-                          end={item.url === '/'}
+                          end={item.url === '/panel'}
                           className="sidebar-nav-item"
                           activeClassName="active"
                         >

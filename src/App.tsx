@@ -249,11 +249,10 @@ function RootGate() {
     return <Landing />;
   }
 
-  return (
-    <TreasuryRoute>
-      <Dashboard />
-    </TreasuryRoute>
-  );
+  // Signed-in web users land on the dashboard at its own stable route (/panel),
+  // so "/" stays purely the entry gate and the Panel is reachable in the
+  // installed PWA without re-showing the lock screen.
+  return <Navigate to="/panel" replace />;
 }
 
 /* ================================================================== */
@@ -278,8 +277,11 @@ const App = () => (
         {/* Authenticated landing */}
         <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
 
-        {/* Root: public landing, app lock screen, or dashboard (see RootGate) */}
+        {/* Root: public landing, app lock screen, or redirect to /panel (see RootGate) */}
         <Route path="/" element={<RootGate />} />
+
+        {/* Treasury dashboard - stable route, works in the installed PWA */}
+        <Route path="/panel" element={<TreasuryRoute><Dashboard /></TreasuryRoute>} />
 
         {/* Treasury – view-only routes */}
         <Route path="/index" element={<Navigate to="/" replace />} />
