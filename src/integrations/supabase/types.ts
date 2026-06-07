@@ -193,33 +193,33 @@ export type Database = {
       }
       budget_lines: {
         Row: {
-          account: Database["public"]["Enums"]["account_type"]
           budget_scenario_id: string
           budgeted_amount: number
           category: Database["public"]["Enums"]["transaction_category"]
           created_at: string
+          currency: string
           id: string
           month: number
           transaction_type: Database["public"]["Enums"]["transaction_type"]
           updated_at: string
         }
         Insert: {
-          account: Database["public"]["Enums"]["account_type"]
           budget_scenario_id: string
           budgeted_amount?: number
           category: Database["public"]["Enums"]["transaction_category"]
           created_at?: string
+          currency?: string
           id?: string
           month: number
           transaction_type: Database["public"]["Enums"]["transaction_type"]
           updated_at?: string
         }
         Update: {
-          account?: Database["public"]["Enums"]["account_type"]
           budget_scenario_id?: string
           budgeted_amount?: number
           category?: Database["public"]["Enums"]["transaction_category"]
           created_at?: string
+          currency?: string
           id?: string
           month?: number
           transaction_type?: Database["public"]["Enums"]["transaction_type"]
@@ -380,6 +380,7 @@ export type Database = {
           guest_name: string | null
           guest_phone: string | null
           id: string
+          installments: number
           member_id: string | null
           updated_at: string
         }
@@ -391,6 +392,7 @@ export type Database = {
           guest_name?: string | null
           guest_phone?: string | null
           id?: string
+          installments?: number
           member_id?: string | null
           updated_at?: string
         }
@@ -402,6 +404,7 @@ export type Database = {
           guest_name?: string | null
           guest_phone?: string | null
           id?: string
+          installments?: number
           member_id?: string | null
           updated_at?: string
         }
@@ -436,6 +439,7 @@ export type Database = {
           default_amount: number
           description: string | null
           id: string
+          installments: number
           is_active: boolean
           name: string
           payment_deadline: string | null
@@ -447,6 +451,7 @@ export type Database = {
           default_amount?: number
           description?: string | null
           id?: string
+          installments?: number
           is_active?: boolean
           name: string
           payment_deadline?: string | null
@@ -458,6 +463,7 @@ export type Database = {
           default_amount?: number
           description?: string | null
           id?: string
+          installments?: number
           is_active?: boolean
           name?: string
           payment_deadline?: string | null
@@ -641,6 +647,8 @@ export type Database = {
           monthly_fee_amount: number
           phone_number: string
           updated_at: string
+          whatsapp_number: string | null
+          whatsapp_opt_out: boolean
         }
         Insert: {
           created_at?: string
@@ -653,6 +661,8 @@ export type Database = {
           monthly_fee_amount?: number
           phone_number: string
           updated_at?: string
+          whatsapp_number?: string | null
+          whatsapp_opt_out?: boolean
         }
         Update: {
           created_at?: string
@@ -665,6 +675,8 @@ export type Database = {
           monthly_fee_amount?: number
           phone_number?: string
           updated_at?: string
+          whatsapp_number?: string | null
+          whatsapp_opt_out?: boolean
         }
         Relationships: []
       }
