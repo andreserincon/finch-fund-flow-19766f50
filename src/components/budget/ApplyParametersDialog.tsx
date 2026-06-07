@@ -40,7 +40,7 @@ import { toast } from 'sonner';
 import { useBudgetLines } from '@/hooks/useBudgetLines';
 import type { BudgetLine, BudgetScenario } from '@/lib/budget-types';
 import type { TransactionType } from '@/lib/types';
-import { formatCurrencyCompact, getCurrencyForAccount } from '@/lib/utils';
+import { formatCurrencyCompact } from '@/lib/utils';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const db = supabase as any;
@@ -193,7 +193,7 @@ export function ApplyParametersDialog({
       const toInsert = lines.map((l) => ({
         budget_scenario_id: newScenario.id,
         month: l.month,
-        account: l.account,
+        currency: l.currency,
         transaction_type: l.transaction_type,
         category: l.category,
         budgeted_amount: projectAmount(
@@ -295,14 +295,13 @@ export function ApplyParametersDialog({
                 <tbody>
                   {preview.map((row) => {
                     const delta = row.newTotal - row.oldTotal;
-                    const currency = getCurrencyForAccount(row.account);
                     return (
                       <tr
-                        key={`${row.account}-${row.type}`}
+                        key={`${row.currency}-${row.type}`}
                         className="border-b last:border-0"
                       >
                         <td className="px-3 py-1.5 font-mono text-xs">
-                          {row.account} · {row.type}
+                          {row.currency} · {row.type}
                         </td>
                         <td className="px-3 py-1.5 text-right font-mono text-xs">
                           {formatCurrencyCompact(row.oldTotal, currency)}
