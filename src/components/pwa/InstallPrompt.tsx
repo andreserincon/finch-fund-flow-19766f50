@@ -13,13 +13,11 @@ import { Download, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePWAInstall } from "@/hooks/usePWAInstall";
 import { useAuth } from "@/hooks/useAuth";
-import { useIsMobile } from "@/hooks/use-mobile";
 import { useState } from "react";
 
 export function InstallPrompt() {
   const { isInstallable, isInstalled, installApp } = usePWAInstall();
   const { user } = useAuth();
-  const isMobile = useIsMobile();
   /** Persisted dismissal, so the prompt never nags again once closed. */
   const [dismissed, setDismissed] = useState(() => {
     try { return localStorage.getItem('pwa-install-dismissed') === '1'; } catch { return false; }
@@ -29,9 +27,9 @@ export function InstallPrompt() {
     try { localStorage.setItem('pwa-install-dismissed', '1'); } catch { /* ignore */ }
   };
 
-  // "Add to home screen" only makes sense for a logged-in member on a phone.
-  // Never show it on desktop/web, when logged out, already installed, or dismissed.
-  if (!user || !isMobile || !isInstallable || isInstalled || dismissed) {
+  // Offer the install ONLY to a logged-in member (any device: desktop or phone).
+  // Hidden when logged out, not installable, already installed, or dismissed.
+  if (!user || !isInstallable || isInstalled || dismissed) {
     return null;
   }
 
