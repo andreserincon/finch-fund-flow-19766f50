@@ -11,6 +11,8 @@ import { useExchangeRate } from '@/hooks/useExchangeRate';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { MemberFeeMatrix } from '@/components/dashboard/MemberFeeMatrix';
 import { DashboardSkeleton } from '@/components/ui/loading';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { usePaymentReminders } from '@/hooks/usePaymentReminders';
 
 import { useAccountTransfers } from '@/hooks/useAccountTransfers';
 import { useLoans } from '@/hooks/useLoans';
@@ -25,15 +27,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { 
-  Wallet, 
-  Users, 
+import {
+  Wallet,
+  Users,
   AlertTriangle,
   TrendingUp,
   ArrowRight,
   Landmark,
   HandCoins,
-  CalendarDays
+  CalendarDays,
+  ChevronDown,
+  MessageSquare
 } from 'lucide-react';
 import { format, lastDayOfMonth, startOfMonth, startOfYear, addMonths, isAfter } from 'date-fns';
 import { parseLocalDate } from '@/lib/utils';
@@ -64,6 +68,15 @@ export default function Dashboard() {
   const now = new Date();
   const currentYM = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   const [selectedYM, setSelectedYM] = useState<string>(currentYM);
+
+  // Pending WhatsApp reminders for the current period (surfaced on the dashboard)
+  const { reminders: currentPeriodReminders } = usePaymentReminders({
+    year: now.getFullYear(),
+    month: now.getMonth() + 1,
+  });
+  const pendingRemindersCount = currentPeriodReminders.filter(
+    (r) => r.status === 'pending_review',
+  ).length;
 
   // Build available month options from transactions
   const monthOptions = useMemo(() => {
@@ -343,6 +356,14 @@ export default function Dashboard() {
       return bOwed - aOwed;
     });
 
+  // Total owed across everyone needing attention (monthly debt + event debt),
+  // shown in the attention banner so the treasurer's first question is answered up top.
+  const attentionTotal = overdueMembers.reduce((sum, m) => {
+    const monthlyDebt = Math.max(0, m.total_fees_owed - m.total_paid);
+    const eventDebt = memberEventDebts[m.member_id] || 0;
+    return sum + monthlyDebt + eventDebt;
+  }, 0);
+
   const formatCurrency = (amount: number, currency: 'ARS' | 'USD' = 'ARS') => {
     return new Intl.NumberFormat(currency === 'ARS' ? 'es-AR' : 'en-US', {
       style: 'currency',
@@ -390,89 +411,60 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Key Metrics - Balance Summary */}
-      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+      {/* Attention banner: the treasurer's first question, answered up top */}
+      {!isMemberOnly && (
+        overdueMembers.length > 0 ? (
+          <div className="rounded-xl border border-overdue/40 bg-overdue/10 p-4 md:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 animate-fade-in">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="h-6 w-6 text-overdue shrink-0 mt-0.5" />
+              <div>
+                <p className="text-base md:text-lg font-semibold text-foreground">
+                  {t('dashboard.attentionCount', { count: overdueMembers.length })}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {t('dashboard.attentionTotal', { amount: formatCurrency(attentionTotal) })}
+                </p>
+              </div>
+            </div>
+            <Link to="/members">
+              <Button variant="outline" size="sm" className="border-overdue/40 text-overdue hover:bg-overdue/10">
+                {t('common.viewAll')} <ArrowRight className="ml-1 h-4 w-4" />
+              </Button>
+            </Link>
+          </div>
+        ) : (
+          <div className="rounded-xl border border-success/30 bg-success/10 p-4 md:p-5 flex items-center gap-3 animate-fade-in">
+            <Users className="h-6 w-6 text-success shrink-0" />
+            <p className="text-base md:text-lg font-semibold text-foreground">
+              {t('dashboard.allMembersUpToDate')}
+            </p>
+          </div>
+        )
+      )}
+
+      {/* Primary balances: the three accounts, money at a glance */}
+      <div className="grid gap-3 grid-cols-2 lg:grid-cols-3">
         <StatCard
           title={t('dashboard.totalARSBalance')}
           value={formatCurrency(totalARSBalance)}
           subtitle={t('dashboard.bankLodgeCombined')}
-          icon={<Wallet className="h-8 w-8 text-primary/20" />}
+          icon={<Wallet className="h-8 w-8 text-primary/30" />}
           variant={totalARSBalance >= 0 ? 'success' : 'danger'}
         />
         <StatCard
           title={t('dashboard.bankMainAccount')}
           value={formatCurrency(bankBalance)}
           subtitle={`${t('dashboard.greatLodgeAccount')}: ${formatCurrency(greatLodgeBalance)}`}
-          icon={<Landmark className="h-8 w-8 text-primary/20" />}
+          icon={<Landmark className="h-8 w-8 text-primary/30" />}
           variant={bankBalance >= 0 ? 'success' : 'danger'}
-        />
-        <StatCard
-          title={t('dashboard.accountYield')}
-          value={formatCurrency(totalMonthlyYield)}
-          subtitle={`${t('dashboard.annual')}: ${formatCurrency(totalAnnualYield)}`}
-          icon={<TrendingUp className="h-8 w-8 text-success/20" />}
-          variant={totalMonthlyYield >= 0 ? 'success' : 'default'}
+          to={!isMemberOnly ? '/transactions' : undefined}
         />
         <StatCard
           title={t('dashboard.savingsAccount')}
           value={formatCurrency(savingsBalance, 'USD')}
           subtitle={t('dashboard.usdSavings')}
-          icon={<Wallet className="h-8 w-8 text-success/20" />}
+          icon={<Wallet className="h-8 w-8 text-success/30" />}
           variant={savingsBalance >= 0 ? 'success' : 'danger'}
-        />
-      </div>
-
-      {/* Key Metrics - Activity */}
-      <div className="grid gap-3 grid-cols-2">
-        <StatCard
-          title={t('dashboard.loansDueUSD')}
-          value={formatCurrency(totalLoansDueUSD, 'USD')}
-          subtitle={`ARS: ${formatCurrency(totalLoansDueARS)}\n${t('dashboard.activeLoans', { count: loansUSD.length + loansARS.length })}`}
-          icon={<HandCoins className="h-8 w-8 text-warning/20" />}
-          variant={totalLoansDueUSD > 0 ? 'warning' : 'success'}
-        />
-        <StatCard
-          title={t('dashboard.monthlyFlow')}
-          value={formatCurrency(monthlyIncome - monthlyExpenses)}
-          subtitle={`+${formatCurrency(monthlyIncome)} / -${formatCurrency(monthlyExpenses)}`}
-          icon={<TrendingUp className="h-8 w-8 text-success/20" />}
-          variant={monthlyIncome - monthlyExpenses >= 0 ? 'success' : 'danger'}
-        />
-      </div>
-
-      {/* Key Metrics - Capita */}
-      <div className="grid gap-3 grid-cols-2">
-        <StatCard
-          title={t('dashboard.membersUnpaid')}
-          value={membersUnpaid}
-          subtitle={t('dashboard.ofActiveMembers', { count: activeMembersCount })}
-          icon={<Users className="h-8 w-8 text-warning/20" />}
-          variant={membersUnpaid > 0 ? 'warning' : 'success'}
-        />
-        <StatCard
-          title={t('dashboard.membersOverdue')}
-          value={membersOverdue}
-          subtitle={t('dashboard.oweMoreThanOne')}
-          icon={<AlertTriangle className="h-8 w-8 text-overdue/20" />}
-          variant={membersOverdue > 0 ? 'danger' : 'success'}
-        />
-      </div>
-
-      {/* Key Metrics - Eventos (separado de capitas) */}
-      <div className="grid gap-3 grid-cols-2">
-        <StatCard
-          title="Demorado Evento"
-          value={eventDemoradoCount}
-          subtitle="≤ 15 días del vencimiento"
-          icon={<AlertTriangle className="h-8 w-8 text-warning/20" />}
-          variant={eventDemoradoCount > 0 ? 'warning' : 'success'}
-        />
-        <StatCard
-          title="Moroso Evento"
-          value={eventMorosoCount}
-          subtitle="vencimiento superado"
-          icon={<AlertTriangle className="h-8 w-8 text-overdue/20" />}
-          variant={eventMorosoCount > 0 ? 'danger' : 'success'}
         />
       </div>
 
@@ -558,6 +550,80 @@ export default function Dashboard() {
           )}
         </div>
       )}
+
+      {/* Secondary metrics, collapsed by default so the focus stays up top */}
+      <Collapsible className="rounded-xl border bg-card">
+        <CollapsibleTrigger className="flex w-full items-center justify-between px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted/50 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&[data-state=open]>svg]:rotate-180">
+          <span>{t('dashboard.financialDetail')}</span>
+          <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform duration-200" />
+        </CollapsibleTrigger>
+        <CollapsibleContent className="px-3 pb-3 md:px-4 md:pb-4">
+          <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+            <StatCard
+              title={t('dashboard.accountYield')}
+              value={formatCurrency(totalMonthlyYield)}
+              subtitle={`${t('dashboard.annual')}: ${formatCurrency(totalAnnualYield)}`}
+              icon={<TrendingUp className="h-8 w-8 text-success/30" />}
+              variant={totalMonthlyYield >= 0 ? 'success' : 'default'}
+            />
+            <StatCard
+              title={t('dashboard.monthlyFlow')}
+              value={formatCurrency(monthlyIncome - monthlyExpenses)}
+              subtitle={`+${formatCurrency(monthlyIncome)} / -${formatCurrency(monthlyExpenses)}`}
+              icon={<TrendingUp className="h-8 w-8 text-success/30" />}
+              variant={monthlyIncome - monthlyExpenses >= 0 ? 'success' : 'danger'}
+            />
+            <StatCard
+              title={t('dashboard.loansDueUSD')}
+              value={formatCurrency(totalLoansDueUSD, 'USD')}
+              subtitle={`ARS: ${formatCurrency(totalLoansDueARS)}\n${t('dashboard.activeLoans', { count: loansUSD.length + loansARS.length })}`}
+              icon={<HandCoins className="h-8 w-8 text-warning/40" />}
+              variant={totalLoansDueUSD > 0 ? 'warning' : 'success'}
+              to={!isMemberOnly ? '/loans' : undefined}
+            />
+            <StatCard
+              title={t('dashboard.membersUnpaid')}
+              value={membersUnpaid}
+              subtitle={t('dashboard.ofActiveMembers', { count: activeMembersCount })}
+              icon={<Users className="h-8 w-8 text-warning/40" />}
+              variant={membersUnpaid > 0 ? 'warning' : 'success'}
+              to="/members"
+            />
+            <StatCard
+              title={t('dashboard.membersOverdue')}
+              value={membersOverdue}
+              subtitle={t('dashboard.oweMoreThanOne')}
+              icon={<AlertTriangle className="h-8 w-8 text-overdue/50" />}
+              variant={membersOverdue > 0 ? 'danger' : 'success'}
+              to="/members"
+            />
+            <StatCard
+              title={t('dashboard.eventDemorado')}
+              value={eventDemoradoCount}
+              subtitle={t('dashboard.eventDemoradoHint')}
+              icon={<AlertTriangle className="h-8 w-8 text-warning/40" />}
+              variant={eventDemoradoCount > 0 ? 'warning' : 'success'}
+            />
+            <StatCard
+              title={t('dashboard.eventMoroso')}
+              value={eventMorosoCount}
+              subtitle={t('dashboard.eventMorosoHint')}
+              icon={<AlertTriangle className="h-8 w-8 text-overdue/50" />}
+              variant={eventMorosoCount > 0 ? 'danger' : 'success'}
+            />
+            {!isMemberOnly && pendingRemindersCount > 0 && (
+              <StatCard
+                title={t('dashboard.pendingReminders')}
+                value={pendingRemindersCount}
+                subtitle={t('dashboard.pendingRemindersHint')}
+                icon={<MessageSquare className="h-8 w-8 text-primary/40" />}
+                variant="warning"
+                to="/recordatorios"
+              />
+            )}
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
 
       {/* Member Fee Matrix */}
       <MemberFeeMatrix

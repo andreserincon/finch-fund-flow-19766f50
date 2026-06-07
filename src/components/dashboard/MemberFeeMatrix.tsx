@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useHiddenMode } from '@/contexts/HiddenModeContext';
 import { format, subMonths, addMonths, startOfMonth, isBefore, isAfter, parseISO } from 'date-fns';
 import { useMembers } from '@/hooks/useMembers';
@@ -16,7 +17,7 @@ import {
 } from '@/components/ui/table';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { cn } from '@/lib/utils';
+import { cn, formatCurrencyCompact } from '@/lib/utils';
 
 type PaymentStatus = 'paid' | 'overdue' | 'current_unpaid' | 'future' | 'not_member';
 
@@ -29,6 +30,7 @@ interface MemberFeeMatrixProps {
 }
 
 export function MemberFeeMatrix({ filterMemberId, referenceMonth, adjustedTotalPaid }: MemberFeeMatrixProps) {
+  const { t } = useTranslation();
   const [showAllMembers, setShowAllMembers] = useState(false);
   const isMobile = useIsMobile();
   const { displayName } = useHiddenMode();
@@ -149,14 +151,6 @@ export function MemberFeeMatrix({ filterMemberId, referenceMonth, adjustedTotalP
     return { status: 'overdue', amount: pendingAmount };
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('es-AR', {
-      style: 'currency',
-      currency: 'ARS',
-      maximumFractionDigits: 0,
-    }).format(amount);
-  };
-
   const getStatusClasses = (status: PaymentStatus): string => {
     switch (status) {
       case 'paid':
@@ -230,9 +224,9 @@ export function MemberFeeMatrix({ filterMemberId, referenceMonth, adjustedTotalP
       <CardHeader className="pb-3">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
-            <CardTitle className="text-lg md:text-xl">Estado de Capitas Mensuales</CardTitle>
+            <CardTitle className="text-lg md:text-xl font-display">{t('dashboard.feeMatrixTitle')}</CardTitle>
             <CardDescription className="text-xs md:text-sm">
-              Estado de pago de cada miembro por mes
+              {t('dashboard.feeMatrixDesc')}
             </CardDescription>
           </div>
           <div className="flex items-center space-x-2">
@@ -242,7 +236,7 @@ export function MemberFeeMatrix({ filterMemberId, referenceMonth, adjustedTotalP
               onCheckedChange={setShowAllMembers}
             />
             <Label htmlFor="show-all-members" className="text-xs md:text-sm cursor-pointer">
-              Mostrar miembros al día ({paidMembersCount})
+              {t('dashboard.feeMatrixShowAll', { count: paidMembersCount })}
             </Label>
           </div>
         </div>
@@ -274,7 +268,7 @@ export function MemberFeeMatrix({ filterMemberId, referenceMonth, adjustedTotalP
               {displayedMembers.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={months.length + 1} className="text-center py-8 text-muted-foreground">
-                    {showAllMembers ? 'No hay miembros activos' : '¡Todos los miembros están al día!'}
+                    {showAllMembers ? t('dashboard.feeMatrixNoActive') : t('dashboard.feeMatrixAllUpToDate')}
                   </TableCell>
                 </TableRow>
               ) : (
@@ -306,7 +300,7 @@ export function MemberFeeMatrix({ filterMemberId, referenceMonth, adjustedTotalP
                                 getStatusClasses(status)
                               )}
                             >
-                              {formatCurrency(amount)}
+                              {formatCurrencyCompact(amount)}
                             </div>
                           ) : (
                             <span className="text-muted-foreground/30">—</span>
@@ -324,19 +318,19 @@ export function MemberFeeMatrix({ filterMemberId, referenceMonth, adjustedTotalP
         <div className="flex flex-wrap gap-3 md:gap-4 mt-4 text-xs">
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded bg-success/20 border border-success/30" />
-            <span>Pagado</span>
+            <span>{t('dashboard.statusPaid')}</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded bg-warning/20 border border-warning/30" />
-            <span>Actual (impago)</span>
+            <span>{t('dashboard.statusCurrentUnpaid')}</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded bg-destructive/20 border border-destructive/30" />
-            <span>Demorado</span>
+            <span>{t('dashboard.statusOverdue')}</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded bg-muted/50 border border-border" />
-            <span>Futuro</span>
+            <span>{t('dashboard.statusFuture')}</span>
           </div>
         </div>
       </CardContent>

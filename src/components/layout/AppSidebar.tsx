@@ -36,6 +36,7 @@ import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
 import { useIsBibliotecario } from '@/hooks/useIsBibliotecario';
 import { useCanViewTreasury } from '@/hooks/useCanViewTreasury';
 import { useIsMemberOnly } from '@/hooks/useIsMemberOnly';
+import { usePaymentReminders } from '@/hooks/usePaymentReminders';
 import {
   Sidebar,
   SidebarContent,
@@ -70,6 +71,14 @@ export function AppSidebar() {
   const { canViewTreasury } = useCanViewTreasury();
   const { isMemberOnly } = useIsMemberOnly();
   const location = useLocation();
+
+  // Pending reminders count for the current period (drives the nav dot)
+  const reminderNow = new Date();
+  const { reminders: periodReminders } = usePaymentReminders({
+    year: reminderNow.getFullYear(),
+    month: reminderNow.getMonth() + 1,
+  });
+  const pendingRemindersCount = periodReminders.filter((r) => r.status === 'pending_review').length;
 
   /** Derive the active module from the current URL path */
   const deriveModule = (): AppModule => {
@@ -274,7 +283,13 @@ export function AppSidebar() {
                             activeClassName="active"
                           >
                             <item.icon className="h-5 w-5" />
-                            <span>{item.title}</span>
+                            <span className="flex-1">{item.title}</span>
+                            {item.url === '/recordatorios' && pendingRemindersCount > 0 && (
+                              <span
+                                className="ml-auto h-2 w-2 shrink-0 rounded-full bg-overdue"
+                                aria-label={t('dashboard.pendingReminders')}
+                              />
+                            )}
                           </NavLink>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
