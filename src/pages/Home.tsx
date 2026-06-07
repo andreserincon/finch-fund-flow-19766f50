@@ -122,7 +122,7 @@ export default function Home() {
               />
               {!isMemberOnly && (
                 <StatCard
-                  title="Miembros morosos"
+                  title="Miembros demorados"
                   value={morosos.length}
                   subtitle={`Deben ${formatCurrencyCompact(attentionTotal)}`}
                   icon={<AlertTriangle className="h-8 w-8 text-overdue/50" />}

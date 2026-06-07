@@ -7,7 +7,7 @@
  *
  *   Rule: an ACTIVE member requires attention when their MONTHLY CAPITA debt
  *   exceeds one month's fee. Event debt is intentionally excluded: events have
- *   their own status (Evento demorado / Evento moroso) and are not part of the
+ *   their own status (Evento impago / Evento demorado) and are not part of the
  *   "requiere atención" / "pago demorado" count.
  */
 

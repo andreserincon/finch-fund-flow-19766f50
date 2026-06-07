@@ -503,12 +503,12 @@ export default function Dashboard() {
                       )}
                       {isEventMoroso && (
                         <span className="text-[10px] px-1.5 py-0.5 rounded bg-destructive/10 text-destructive font-medium">
-                          Evento moroso
+                          Evento demorado
                         </span>
                       )}
                       {isEventDemorado && (
                         <span className="text-[10px] px-1.5 py-0.5 rounded bg-warning/10 text-warning font-medium">
-                          Evento demorado
+                          Evento impago
                         </span>
                       )}
                       {hasEventDebt && !isEventMoroso && !isEventDemorado && (

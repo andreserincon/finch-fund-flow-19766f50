@@ -103,7 +103,7 @@ function AddExpenseDialog() {
             <Label htmlFor="payment_deadline">Fecha límite de pago (opcional)</Label>
             <Input id="payment_deadline" type="date" {...register('payment_deadline')} />
             <p className="text-xs text-muted-foreground">
-              A 15 días o menos del vencimiento, los miembros impagos quedan "demorados". Pasado el vencimiento, "morosos".
+              A 15 días o menos del vencimiento, los miembros con deuda figuran como "impagos". Pasado el vencimiento, "demorados".
             </p>
           </div>
           <div className="flex items-center space-x-2 p-3 bg-muted rounded-lg">

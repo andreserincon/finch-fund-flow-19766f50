@@ -50,7 +50,7 @@ const STATUS_OPTIONS = [
   { value: 'ahead', label: 'Adelantado' },
   { value: 'up_to_date', label: 'Al día' },
   { value: 'unpaid', label: 'Impago' },
-  { value: 'overdue', label: 'Moroso' },
+  { value: 'overdue', label: 'Demorado' },
 ] as const;
 
 type SortColumn = 'name' | 'fee_type' | 'balance' | 'status' | 'joined';
@@ -106,7 +106,7 @@ export default function Members() {
   /**
    * Capita-only status. Event debt is reported separately so a member who
    * is up-to-date with monthly fees but owes an event isn't shown as
-   * Moroso/Impago by mistake.
+   * Demorado/Impago by mistake.
    */
   const getPaymentStatus = (member: MemberBalance) => {
     const monthlyBalance = getMonthlyBalance(member);
@@ -127,7 +127,7 @@ export default function Members() {
       ahead: { label: 'Adelantado', className: 'status-ahead' },
       up_to_date: { label: 'Al día', className: 'status-up-to-date' },
       unpaid: { label: 'Impago', className: 'status-unpaid' },
-      overdue: { label: 'Moroso', className: 'status-overdue' },
+      overdue: { label: 'Demorado', className: 'status-overdue' },
       event_ok: { label: 'Al día', className: 'status-up-to-date' },
       event_pending: { label: 'Pendiente', className: 'status-unpaid' },
     };

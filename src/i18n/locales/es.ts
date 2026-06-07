@@ -109,8 +109,11 @@ export default {
       attentionCount: '{{count}} miembros requieren atención',
       attentionTotal: 'Deben en total {{amount}}',
       financialDetail: 'Detalle financiero',
-      eventDemorado: 'Demorado Evento',
-      eventMoroso: 'Moroso Evento',
+      // Event stages mirror the capita status. The milder, near-deadline stage
+      // reads "Evento Impago"; once the deadline passes it escalates to
+      // "Evento Demorado". The keys keep their original internal names.
+      eventDemorado: 'Evento Impago',
+      eventMoroso: 'Evento Demorado',
       eventDemoradoHint: '≤ 15 días del vencimiento',
       eventMorosoHint: 'Vencimiento superado',
       pendingReminders: 'Recordatorios pendientes',
@@ -167,7 +170,7 @@ export default {
       ahead: 'Adelantado',
       upToDate: 'Al día',
       unpaid: 'Impago',
-      overdue: 'Moroso',
+      overdue: 'Demorado',
     },
 
     // Fee Types
