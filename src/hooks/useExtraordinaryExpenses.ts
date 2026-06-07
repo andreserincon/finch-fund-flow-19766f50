@@ -10,6 +10,11 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
+// `installments` was added after the generated Supabase types were last
+// regenerated, so we go through an untyped client for these operations.
+/* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+const db = supabase as any;
+
 /** Row shape for the `extraordinary_expenses` table */
 export interface ExtraordinaryExpense {
   id: string;
@@ -17,6 +22,8 @@ export interface ExtraordinaryExpense {
   description: string | null;
   default_amount: number;
   is_active: boolean;
+  /** Default number of monthly installments for new participants (>= 1). */
+  installments: number;
   payment_deadline: string | null;
   charge_from_date: string | null;
   created_at: string;
@@ -31,7 +38,7 @@ export function useExtraordinaryExpenses() {
   const { data: expenses = [], isLoading } = useQuery({
     queryKey: ['extraordinary-expenses'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from('extraordinary_expenses')
         .select('*')
         .order('name');
@@ -43,13 +50,14 @@ export function useExtraordinaryExpenses() {
 
   /** Create a new expense category */
   const addExpense = useMutation({
-    mutationFn: async (expense: { name: string; description?: string; default_amount: number; payment_deadline?: string | null; charge_from_date?: string | null }) => {
-      const { data, error } = await supabase
+    mutationFn: async (expense: { name: string; description?: string; default_amount: number; installments?: number; payment_deadline?: string | null; charge_from_date?: string | null }) => {
+      const { data, error } = await db
         .from('extraordinary_expenses')
         .insert({
           name: expense.name,
           description: expense.description || null,
           default_amount: expense.default_amount,
+          installments: expense.installments ?? 1,
           payment_deadline: expense.payment_deadline || null,
           charge_from_date: expense.charge_from_date || null,
         })
@@ -71,7 +79,7 @@ export function useExtraordinaryExpenses() {
   /** Update an existing expense category */
   const updateExpense = useMutation({
     mutationFn: async ({ id, ...updates }: Partial<ExtraordinaryExpense> & { id: string }) => {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from('extraordinary_expenses')
         .update(updates)
         .eq('id', id)

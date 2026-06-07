@@ -27,6 +27,7 @@ const expenseSchema = z.object({
   name: z.string().min(1, 'El nombre es obligatorio').max(40, 'Máximo 40 caracteres'),
   description: z.string().max(500).optional(),
   default_amount: z.number().min(0, 'El monto debe ser positivo'),
+  installments: z.number({ invalid_type_error: 'Ingresá un número' }).int('Debe ser un entero').min(1, 'Mínimo 1 cuota').max(36, 'Máximo 36 cuotas'),
   payment_deadline: z.string().optional(),
   charge_from_date: z.string().optional(),
   assign_to_members: z.boolean().optional(),
@@ -42,11 +43,12 @@ function AddExpenseDialog() {
 
   const { register, handleSubmit, reset, watch, setValue, formState: { errors, isSubmitting } } = useForm<ExpenseFormData>({
     resolver: zodResolver(expenseSchema),
-    defaultValues: { default_amount: 0, assign_to_members: true },
+    defaultValues: { default_amount: 0, installments: 1, assign_to_members: true },
   });
 
   const assignToMembers = watch('assign_to_members');
   const defaultAmount = watch('default_amount');
+  const installments = watch('installments') || 1;
   const activeMembersCount = members.filter(m => m.is_active).length;
 
   const onSubmit = async (data: ExpenseFormData) => {
@@ -54,6 +56,7 @@ function AddExpenseDialog() {
       name: data.name,
       description: data.description,
       default_amount: data.default_amount,
+      installments: data.installments,
       payment_deadline: data.payment_deadline || null,
       charge_from_date: data.charge_from_date || null,
     });
@@ -93,10 +96,21 @@ function AddExpenseDialog() {
             {errors.default_amount && <p className="text-sm text-destructive">{errors.default_amount.message}</p>}
           </div>
           <div className="space-y-2">
+            <Label htmlFor="installments">Número de cuotas</Label>
+            <Input id="installments" type="number" min="1" max="36" step="1" {...register('installments', { valueAsNumber: true })} />
+            <p className="text-xs text-muted-foreground">
+              Una cuota por mes desde la fecha de cobro.{' '}
+              {installments > 1
+                ? `${installments} cuotas de ARS ${((defaultAmount || 0) / installments).toFixed(2)}.`
+                : 'Pago en una sola cuota.'}
+            </p>
+            {errors.installments && <p className="text-sm text-destructive">{errors.installments.message}</p>}
+          </div>
+          <div className="space-y-2">
             <Label htmlFor="charge_from_date">Cobrar a partir de (opcional)</Label>
             <Input id="charge_from_date" type="date" {...register('charge_from_date')} />
             <p className="text-xs text-muted-foreground">
-              Si se completa, este evento no se incluirá en reportes anteriores a esa fecha.
+              Marca el mes de la primera cuota. Además, excluye al evento de reportes anteriores a esa fecha.
             </p>
           </div>
           <div className="space-y-2">
@@ -129,16 +143,20 @@ function EditExpenseDialog({ expense }: { expense: ExtraordinaryExpense }) {
   const [open, setOpen] = useState(false);
   const { updateExpense } = useExtraordinaryExpenses();
 
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<ExpenseFormData>({
+  const { register, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm<ExpenseFormData>({
     resolver: zodResolver(expenseSchema),
     defaultValues: {
       name: expense.name,
       description: expense.description || '',
       default_amount: expense.default_amount,
+      installments: expense.installments ?? 1,
       payment_deadline: expense.payment_deadline || '',
       charge_from_date: expense.charge_from_date || '',
     },
   });
+
+  const defaultAmount = watch('default_amount') || 0;
+  const installments = watch('installments') || 1;
 
   const onSubmit = async (data: ExpenseFormData) => {
     await updateExpense.mutateAsync({
@@ -146,6 +164,7 @@ function EditExpenseDialog({ expense }: { expense: ExtraordinaryExpense }) {
       name: data.name,
       description: data.description,
       default_amount: data.default_amount,
+      installments: data.installments,
       payment_deadline: data.payment_deadline || null,
       charge_from_date: data.charge_from_date || null,
     });
@@ -176,6 +195,17 @@ function EditExpenseDialog({ expense }: { expense: ExtraordinaryExpense }) {
             <Label htmlFor="edit-default_amount">Cuota por Miembro (ARS)</Label>
             <Input id="edit-default_amount" type="number" step="0.01" {...register('default_amount', { valueAsNumber: true })} />
             {errors.default_amount && <p className="text-sm text-destructive">{errors.default_amount.message}</p>}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="edit-installments">Número de cuotas</Label>
+            <Input id="edit-installments" type="number" min="1" max="36" step="1" {...register('installments', { valueAsNumber: true })} />
+            <p className="text-xs text-muted-foreground">
+              Una cuota por mes desde la fecha de cobro.{' '}
+              {installments > 1
+                ? `${installments} cuotas de ARS ${(defaultAmount / installments).toFixed(2)}.`
+                : 'Pago en una sola cuota.'}
+            </p>
+            {errors.installments && <p className="text-sm text-destructive">{errors.installments.message}</p>}
           </div>
           <div className="space-y-2">
             <Label htmlFor="edit-charge_from_date">Cobrar a partir de (opcional)</Label>
