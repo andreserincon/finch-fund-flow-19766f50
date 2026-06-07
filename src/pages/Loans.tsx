@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { MoreHorizontal, Plus, CheckCircle, XCircle, Trash2, DollarSign, History, Undo2, Pencil } from 'lucide-react';
+import { MoreHorizontal, Plus, CheckCircle, XCircle, Trash2, DollarSign, History, Undo2, Pencil, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Loan, ACCOUNT_LABELS, LOAN_STATUS_LABELS, LoanStatus } from '@/lib/types';
@@ -39,13 +39,39 @@ export default function Loans() {
   const [revertingLoan, setRevertingLoan] = useState<Loan | null>(null);
   const [editingLoan, setEditingLoan] = useState<Loan | null>(null);
 
-  const filteredLoans = showPaid
-    ? loans.filter((loan) => loan.status === 'paid').sort((a, b) => {
+  // Sort state. null column = the default order (active by amount, paid by paid date).
+  type SortColumn = 'date' | 'member' | 'total' | 'remaining';
+  const [sortConfig, setSortConfig] = useState<{ column: SortColumn | null; direction: 'asc' | 'desc' }>({
+    column: null,
+    direction: 'asc',
+  });
+  const handleSort = (column: SortColumn) => {
+    setSortConfig((prev) => ({ column, direction: prev.column === column && prev.direction === 'asc' ? 'desc' : 'asc' }));
+  };
+  const getSortIcon = (column: SortColumn) => {
+    if (sortConfig.column !== column) return <ArrowUpDown className="ml-1 h-4 w-4" />;
+    return sortConfig.direction === 'asc' ? <ArrowUp className="ml-1 h-4 w-4" /> : <ArrowDown className="ml-1 h-4 w-4" />;
+  };
+
+  const baseLoans = loans.filter((loan) => loan.status === (showPaid ? 'paid' : 'active'));
+  const filteredLoans = [...baseLoans].sort((a, b) => {
+    if (!sortConfig.column) {
+      if (showPaid) {
         const dateA = a.paid_date ? new Date(a.paid_date).getTime() : 0;
         const dateB = b.paid_date ? new Date(b.paid_date).getTime() : 0;
         return dateB - dateA;
-      })
-    : loans.filter((loan) => loan.status === 'active').sort((a, b) => b.amount - a.amount);
+      }
+      return b.amount - a.amount;
+    }
+    const direction = sortConfig.direction === 'asc' ? 1 : -1;
+    switch (sortConfig.column) {
+      case 'date': return direction * (parseLocalDate(a.loan_date).getTime() - parseLocalDate(b.loan_date).getTime());
+      case 'member': return direction * (a.member?.full_name || '').localeCompare(b.member?.full_name || '');
+      case 'total': return direction * (a.amount - b.amount);
+      case 'remaining': return direction * ((a.amount - a.amount_paid) - (b.amount - b.amount_paid));
+      default: return 0;
+    }
+  });
 
   const activeLoansARS = loans.filter((l) => l.status === 'active' && l.account !== 'savings');
   const activeLoansUSD = loans.filter((l) => l.status === 'active' && l.account === 'savings');
@@ -250,12 +276,28 @@ export default function Loans() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Fecha</TableHead>
-              <TableHead>Miembro</TableHead>
+              <TableHead>
+                <button onClick={() => handleSort('date')} className="press flex items-center hover:text-foreground">
+                  Fecha {getSortIcon('date')}
+                </button>
+              </TableHead>
+              <TableHead>
+                <button onClick={() => handleSort('member')} className="press flex items-center hover:text-foreground">
+                  Miembro {getSortIcon('member')}
+                </button>
+              </TableHead>
               <TableHead>Cuenta</TableHead>
-              <TableHead>Total</TableHead>
+              <TableHead>
+                <button onClick={() => handleSort('total')} className="press flex items-center hover:text-foreground">
+                  Total {getSortIcon('total')}
+                </button>
+              </TableHead>
               <TableHead>Pagado</TableHead>
-              <TableHead>Pendiente</TableHead>
+              <TableHead>
+                <button onClick={() => handleSort('remaining')} className="press flex items-center hover:text-foreground">
+                  Pendiente {getSortIcon('remaining')}
+                </button>
+              </TableHead>
               <TableHead>Estado</TableHead>
               <TableHead>Notas</TableHead>
               <TableHead className="w-[50px]"></TableHead>

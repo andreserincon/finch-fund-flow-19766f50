@@ -27,7 +27,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Search, TrendingUp, TrendingDown, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import { Search, TrendingUp, TrendingDown, MoreHorizontal, Pencil, Trash2, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn, formatCurrency, getCurrencyForAccount, parseLocalDate } from '@/lib/utils';
@@ -49,6 +49,20 @@ export default function Transactions() {
   
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [deletingTransaction, setDeletingTransaction] = useState<Transaction | null>(null);
+
+  // Sort state. Default: most recent first (matches the backend order).
+  type SortColumn = 'date' | 'category' | 'amount';
+  const [sortConfig, setSortConfig] = useState<{ column: SortColumn; direction: 'asc' | 'desc' }>({
+    column: 'date',
+    direction: 'desc',
+  });
+  const handleSort = (column: SortColumn) => {
+    setSortConfig((prev) => ({ column, direction: prev.column === column && prev.direction === 'asc' ? 'desc' : 'asc' }));
+  };
+  const getSortIcon = (column: SortColumn) => {
+    if (sortConfig.column !== column) return <ArrowUpDown className="ml-1 h-4 w-4" />;
+    return sortConfig.direction === 'asc' ? <ArrowUp className="ml-1 h-4 w-4" /> : <ArrowDown className="ml-1 h-4 w-4" />;
+  };
 
   const formatTransactionCurrency = (amount: number, account: AccountType) => {
     return formatCurrency(amount, getCurrencyForAccount(account));
@@ -80,6 +94,16 @@ export default function Transactions() {
       monthFilter === 'all' || transaction.transaction_date.startsWith(monthFilter);
 
     return matchesSearch && matchesType && matchesCategory && matchesAccount && matchesMonth;
+  });
+
+  const sortedTransactions = [...filteredTransactions].sort((a, b) => {
+    const direction = sortConfig.direction === 'asc' ? 1 : -1;
+    switch (sortConfig.column) {
+      case 'date': return direction * (parseLocalDate(a.transaction_date).getTime() - parseLocalDate(b.transaction_date).getTime());
+      case 'category': return direction * CATEGORY_LABELS[a.category].localeCompare(CATEGORY_LABELS[b.category]);
+      case 'amount': return direction * (a.amount - b.amount);
+      default: return 0;
+    }
   });
 
   const arsTransactions = filteredTransactions.filter(t => t.account !== 'savings');
@@ -247,12 +271,12 @@ export default function Transactions() {
 
       {/* Mobile Card View */}
       <div className="md:hidden space-y-3">
-        {filteredTransactions.length === 0 ? (
+        {sortedTransactions.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground bg-card rounded-lg border">
             No se encontraron transacciones
           </div>
         ) : (
-          filteredTransactions.map((transaction) => (
+          sortedTransactions.map((transaction) => (
             <div key={transaction.id} className="rounded-lg border bg-card p-4 space-y-3">
               <div className="flex items-start justify-between">
                 <div className="space-y-1">
@@ -321,24 +345,36 @@ export default function Transactions() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Fecha</TableHead>
+              <TableHead>
+                <button onClick={() => handleSort('date')} className="press flex items-center hover:text-foreground">
+                  Fecha {getSortIcon('date')}
+                </button>
+              </TableHead>
               <TableHead>Cuenta</TableHead>
-              <TableHead>Categoría</TableHead>
+              <TableHead>
+                <button onClick={() => handleSort('category')} className="press flex items-center hover:text-foreground">
+                  Categoría {getSortIcon('category')}
+                </button>
+              </TableHead>
               <TableHead>Miembro</TableHead>
               <TableHead>Notas</TableHead>
-              <TableHead className="text-right">Monto</TableHead>
+              <TableHead className="text-right">
+                <button onClick={() => handleSort('amount')} className="press ml-auto flex items-center hover:text-foreground">
+                  Monto {getSortIcon('amount')}
+                </button>
+              </TableHead>
               {isAdmin && <TableHead className="w-[50px]"></TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredTransactions.length === 0 ? (
+            {sortedTransactions.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                   No se encontraron transacciones
                 </TableCell>
               </TableRow>
             ) : (
-              filteredTransactions.map((transaction) => (
+              sortedTransactions.map((transaction) => (
                 <TableRow key={transaction.id}>
                   <TableCell className="font-medium">
                     {format(parseLocalDate(transaction.transaction_date), 'd MMM yyyy', { locale: es })}
