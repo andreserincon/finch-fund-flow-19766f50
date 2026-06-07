@@ -38,7 +38,9 @@ import { Search, MoreHorizontal, Pencil, Trash2, Filter, X, ArrowUpDown, ArrowUp
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { FEE_TYPE_LABELS, MemberBalance } from '@/lib/types';
-import { parseLocalDate } from '@/lib/utils';
+import { parseLocalDate, formatCurrency } from '@/lib/utils';
+import { Skeleton } from '@/components/ui/skeleton';
+import { TableSkeleton } from '@/components/ui/loading';
 
 const STATUS_OPTIONS = [
   { value: 'active', label: 'Activo' },
@@ -87,10 +89,6 @@ export default function Members() {
       return { owed, paid };
     },
   });
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(amount);
-  };
 
   const getMonthlyFeeForMember = (feeType: 'standard' | 'solidarity') => currentMonthFees[feeType] ?? 0;
   const getEventOwed = (memberId: string) => memberEventData.owed[memberId] || 0;
@@ -182,8 +180,12 @@ export default function Members() {
 
   if (isLoading || feesLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-pulse text-muted-foreground">Cargando...</div>
+      <div className="space-y-4 md:space-y-6">
+        <div className="space-y-2">
+          <Skeleton className="h-7 w-40" />
+          <Skeleton className="h-4 w-32" />
+        </div>
+        <TableSkeleton rows={8} cols={6} />
       </div>
     );
   }

@@ -22,6 +22,9 @@
     /* Primary - Antique gold (the single accent) */
     --primary: 42 54% 47%;
     --primary-foreground: 240 8% 6%;
+    /* Deeper bronze for gold text/icons on light surfaces (passes AA contrast,
+       where the bright gold above does not). Use for text-primary on warm white. */
+    --primary-strong: 40 60% 30%;
 
     /* Secondary - Warm neutral */
     --secondary: 40 20% 92%;
@@ -60,6 +63,11 @@
 
     --radius: 0.625rem;
 
+    /* Motion - one shared easing + duration scale (low, functional only) */
+    --ease-soft: cubic-bezier(0.32, 0.72, 0, 1);
+    --dur-fast: 120ms;
+    --dur-base: 200ms;
+
     /* Sidebar (dark branded chrome) */
     --sidebar-background: 240 8% 6%;
     --sidebar-foreground: 40 25% 86%;
@@ -90,6 +98,8 @@
 
     --primary: 42 58% 56%;
     --primary-foreground: 240 8% 8%;
+    /* On dark surfaces the readable gold is lighter, not darker */
+    --primary-strong: 42 62% 64%;
 
     --secondary: 240 6% 16%;
     --secondary-foreground: 40 30% 90%;
@@ -146,11 +156,18 @@
 
 @layer components {
   .stat-card {
-    @apply bg-card rounded-xl border border-border p-6 shadow-sm transition-all hover:shadow-md;
+    @apply bg-card rounded-xl border border-border p-6 shadow-sm transition-all;
+  }
+
+  /* Only cards that actually navigate get the lift, so a plain metric never
+     reads as clickable (avoids false affordance). */
+  .stat-card-interactive {
+    @apply cursor-pointer hover:shadow-md hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring;
   }
 
   .stat-value {
     @apply text-3xl font-bold tracking-tight;
+    font-variant-numeric: tabular-nums;
   }
 
   .stat-label {
@@ -179,10 +196,12 @@
 
   .amount-positive {
     @apply text-success font-semibold;
+    font-variant-numeric: tabular-nums;
   }
 
   .amount-negative {
     @apply text-expense font-semibold;
+    font-variant-numeric: tabular-nums;
   }
 
   .data-table {
@@ -202,7 +221,7 @@
   }
 
   .sidebar-nav-item {
-    @apply flex items-center gap-3 px-3 py-2 rounded-lg text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors;
+    @apply flex items-center gap-3 px-3 py-2 rounded-lg text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring;
   }
 
   .sidebar-nav-item.active {

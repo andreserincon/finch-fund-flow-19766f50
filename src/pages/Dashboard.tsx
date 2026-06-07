@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useExchangeRate } from '@/hooks/useExchangeRate';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { MemberFeeMatrix } from '@/components/dashboard/MemberFeeMatrix';
+import { DashboardSkeleton } from '@/components/ui/loading';
 
 import { useAccountTransfers } from '@/hooks/useAccountTransfers';
 import { useLoans } from '@/hooks/useLoans';
@@ -350,11 +351,7 @@ export default function Dashboard() {
   };
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-pulse text-muted-foreground">{t('common.loading')}</div>
-      </div>
-    );
+    return <DashboardSkeleton />;
   }
 
   return (

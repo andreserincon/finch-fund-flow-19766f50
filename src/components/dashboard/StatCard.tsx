@@ -1,4 +1,5 @@
 import { ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 
 interface StatCardProps {
@@ -8,21 +9,24 @@ interface StatCardProps {
   icon?: ReactNode;
   variant?: 'default' | 'success' | 'warning' | 'danger';
   className?: string;
+  /** When set, the card becomes a link to this route and gains a hover lift. */
+  to?: string;
 }
 
-export function StatCard({ 
-  title, 
-  value, 
-  subtitle, 
+export function StatCard({
+  title,
+  value,
+  subtitle,
   icon,
   variant = 'default',
-  className 
+  className,
+  to,
 }: StatCardProps) {
   const variantStyles = {
     default: '',
-    success: 'border-success/20 bg-success/5',
-    warning: 'border-warning/20 bg-warning/5',
-    danger: 'border-overdue/20 bg-overdue/5',
+    success: 'border-success/30 bg-success/10',
+    warning: 'border-warning/30 bg-warning/10',
+    danger: 'border-overdue/40 bg-overdue/10',
   };
 
   const valueStyles = {
@@ -32,24 +36,46 @@ export function StatCard({
     danger: 'text-overdue',
   };
 
-  return (
-    <div className={cn('stat-card landscape:p-3', variantStyles[variant], className)}>
-      <div className="flex items-start justify-between">
-        <div className="flex-1 min-w-0">
-          <p className="stat-label text-xs landscape:text-[10px] md:text-sm">{title}</p>
-          <p className={cn('stat-value mt-1 text-lg landscape:text-base md:text-2xl truncate', valueStyles[variant])}>
-            {value}
-          </p>
-          {subtitle && (
-            <p className="text-xs landscape:text-[10px] md:text-sm text-muted-foreground mt-1 break-words whitespace-pre-line">{subtitle}</p>
+  const content = (
+    <div className="flex items-start justify-between">
+      <div className="flex-1 min-w-0">
+        <p className="stat-label text-xs landscape:text-[10px] md:text-sm">{title}</p>
+        <p
+          className={cn(
+            'stat-value mt-1 text-lg landscape:text-base md:text-2xl truncate font-mono',
+            valueStyles[variant],
           )}
-        </div>
-        {icon && (
-          <div className="flex-shrink-0 ml-2 md:ml-4 hidden sm:block">
-            {icon}
-          </div>
+        >
+          {value}
+        </p>
+        {subtitle && (
+          <p className="text-xs landscape:text-[10px] md:text-sm text-muted-foreground mt-1 break-words whitespace-pre-line">
+            {subtitle}
+          </p>
         )}
       </div>
+      {icon && (
+        <div className="flex-shrink-0 ml-2 md:ml-4 hidden sm:block">
+          {icon}
+        </div>
+      )}
     </div>
   );
+
+  const cardClass = cn(
+    'stat-card landscape:p-3',
+    variantStyles[variant],
+    to && 'stat-card-interactive block',
+    className,
+  );
+
+  if (to) {
+    return (
+      <Link to={to} className={cardClass}>
+        {content}
+      </Link>
+    );
+  }
+
+  return <div className={cardClass}>{content}</div>;
 }
