@@ -414,24 +414,25 @@ export default function Dashboard() {
       {/* Attention banner: the treasurer's first question, answered up top */}
       {!isMemberOnly && (
         overdueMembers.length > 0 ? (
-          <div className="rounded-xl border border-overdue/40 bg-overdue/10 p-4 md:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 animate-fade-in">
-            <div className="flex items-start gap-3">
-              <AlertTriangle className="h-6 w-6 text-overdue shrink-0 mt-0.5" />
-              <div>
-                <p className="text-base md:text-lg font-semibold text-foreground">
-                  {t('dashboard.attentionCount', { count: overdueMembers.length })}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  {t('dashboard.attentionTotal', { amount: formatCurrency(attentionTotal) })}
-                </p>
+          <Link
+            to="/members"
+            className="press block rounded-xl border border-overdue/40 bg-overdue/10 p-4 md:p-5 animate-fade-in"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="h-6 w-6 text-overdue shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-base md:text-lg font-semibold text-foreground">
+                    {t('dashboard.attentionCount', { count: overdueMembers.length })}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {t('dashboard.attentionTotal', { amount: formatCurrency(attentionTotal) })}
+                  </p>
+                </div>
               </div>
+              <ArrowRight className="h-5 w-5 text-overdue shrink-0" />
             </div>
-            <Link to="/members">
-              <Button variant="outline" size="sm" className="border-overdue/40 text-overdue hover:bg-overdue/10">
-                {t('common.viewAll')} <ArrowRight className="ml-1 h-4 w-4" />
-              </Button>
-            </Link>
-          </div>
+          </Link>
         ) : (
           <div className="rounded-xl border border-success/30 bg-success/10 p-4 md:p-5 flex items-center gap-3 animate-fade-in">
             <Users className="h-6 w-6 text-success shrink-0" />
@@ -442,8 +443,9 @@ export default function Dashboard() {
         )
       )}
 
-      {/* Primary balances: the three accounts, money at a glance */}
-      <div className="grid gap-3 grid-cols-2 lg:grid-cols-3">
+      {/* Primary balances: the three accounts, money at a glance.
+          Full-width on phone so large amounts never truncate. */}
+      <div className="grid gap-3 grid-cols-1 sm:grid-cols-3">
         <StatCard
           title={t('dashboard.totalARSBalance')}
           value={formatCurrency(totalARSBalance)}

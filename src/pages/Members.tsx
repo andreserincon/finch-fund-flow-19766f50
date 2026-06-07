@@ -271,7 +271,7 @@ export default function Members() {
                   {isAdmin && (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <Button variant="ghost" size="icon" className="h-10 w-10 press">
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
@@ -290,7 +290,7 @@ export default function Members() {
                 </div>
               </div>
               {/* Capita and Evento split: each shows its own balance + status */}
-              <div className="grid grid-cols-2 gap-3 text-sm">
+              <div className="grid grid-cols-2 gap-3 text-sm border-t border-border/50 pt-3">
                 <div className="space-y-1">
                   <p className="text-muted-foreground text-xs">Capita</p>
                   <p className={`font-mono text-sm font-semibold ${getMonthlyBalance(member) < 0 ? 'text-destructive' : 'text-emerald-600'}`}>

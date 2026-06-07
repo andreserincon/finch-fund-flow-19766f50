@@ -284,7 +284,7 @@ export default function Transactions() {
                   {isAdmin && (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <Button variant="ghost" size="icon" className="h-10 w-10 press">
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
@@ -306,7 +306,7 @@ export default function Transactions() {
                 </div>
               </div>
               {(transaction.member?.full_name || transaction.notes) && (
-                <div className="text-sm text-muted-foreground">
+                <div className="text-sm text-muted-foreground border-t border-border/50 pt-3">
                   {transaction.member?.full_name && <p>Miembro: {transaction.member.full_name}</p>}
                   {transaction.notes && <p className="truncate">Nota: {transaction.notes}</p>}
                 </div>

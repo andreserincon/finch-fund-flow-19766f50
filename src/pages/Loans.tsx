@@ -172,7 +172,7 @@ export default function Loans() {
                     {isAdmin ? (
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="icon" className="h-10 w-10 press"><MoreHorizontal className="h-4 w-4" /></Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="bg-popover">
                           {loan.status === 'active' && (
@@ -210,7 +210,7 @@ export default function Loans() {
                         </DropdownMenuContent>
                       </DropdownMenu>
                     ) : (
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setViewingHistoryLoan(loan)}>
+                      <Button variant="ghost" size="icon" className="h-10 w-10 press" onClick={() => setViewingHistoryLoan(loan)}>
                         <History className="h-4 w-4" />
                       </Button>
                     )}
@@ -225,7 +225,7 @@ export default function Loans() {
                     <Progress value={paidPercentage} className="h-1.5" />
                   </div>
                 )}
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between border-t border-border/50 pt-3">
                   <div className="space-y-0.5">
                     <p className="text-xs text-muted-foreground">{loan.status === 'active' ? 'Pendiente' : 'Total'}</p>
                     <span className={cn("font-mono text-lg font-semibold", loan.status === 'active' && remainingDue > 0 && "text-warning")}>
