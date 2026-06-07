@@ -4,12 +4,15 @@
  *   attention with a ready-to-send reminder message (capitas + event cuotas,
  *   built by src/lib/reminderDetail) and a "Enviar por WhatsApp" button that
  *   opens WhatsApp (web or app) with the message prefilled (wa.me click-to-chat).
- *   The treasurer reviews and sends manually from their own WhatsApp. No Twilio.
+ *   When a member has no WhatsApp number yet, the card lets the treasurer add it
+ *   inline. The treasurer reviews and sends manually from their own WhatsApp.
+ *   No Twilio.
  */
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { MessageSquare, Copy, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useMembers } from '@/hooks/useMembers';
 import { useMonthlyFees } from '@/hooks/useMonthlyFees';
@@ -23,6 +26,14 @@ import {
 } from '@/lib/reminderDetail';
 import { TableSkeleton } from '@/components/ui/loading';
 import { toast } from 'sonner';
+import type { MemberBalance } from '@/lib/types';
+
+interface ReminderItem {
+  member: MemberBalance;
+  message: string;
+  link: string | null;
+  hasDetail: boolean;
+}
 
 export default function PaymentReminders() {
   const { memberBalances, isLoading: membersLoading } = useMembers();
@@ -30,11 +41,10 @@ export default function PaymentReminders() {
   const { getFeeTypeForMonth, isLoading: historyLoading } = useMemberFeeTypeHistory();
   const { eventTotals, isLoading: eventsLoading } = useMemberEventTotals();
   const { participations, isLoading: partsLoading } = useEventParticipations();
-  const { displayName } = useHiddenMode();
 
   const isLoading = membersLoading || feesLoading || historyLoading || eventsLoading || partsLoading;
 
-  const reminders = useMemo(() => {
+  const reminders = useMemo<ReminderItem[]>(() => {
     const today = new Date();
     const attention = getAttentionMembers(memberBalances, currentMonthFees, eventTotals);
     return attention.map((m) => {
@@ -54,13 +64,6 @@ export default function PaymentReminders() {
       };
     });
   }, [memberBalances, currentMonthFees, eventTotals, monthlyFees, getFeeTypeForMonth, participations]);
-
-  const copy = (text: string) => {
-    navigator.clipboard.writeText(text).then(
-      () => toast.success('Mensaje copiado'),
-      () => toast.error('No se pudo copiar'),
-    );
-  };
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -83,45 +86,83 @@ export default function PaymentReminders() {
       ) : (
         <div className="space-y-4">
           <p className="text-sm text-muted-foreground">{reminders.length} socio(s) con saldo pendiente.</p>
-          {reminders.map(({ member, message, link, hasDetail }) => (
-            <Card key={member.member_id}>
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between gap-3 flex-wrap">
-                  <CardTitle className="text-base">
-                    {displayName(member.full_name, member.phone_number)}
-                  </CardTitle>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" className="press" onClick={() => copy(message)}>
-                      <Copy className="mr-1.5 h-4 w-4" /> Copiar
-                    </Button>
-                    {link ? (
-                      <Button size="sm" className="press" asChild>
-                        <a href={link} target="_blank" rel="noopener noreferrer">
-                          <MessageSquare className="mr-1.5 h-4 w-4" /> Enviar por WhatsApp
-                        </a>
-                      </Button>
-                    ) : (
-                      <Button size="sm" disabled title="Este socio no tiene número de WhatsApp cargado">
-                        <MessageSquare className="mr-1.5 h-4 w-4" /> Sin WhatsApp
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <pre className="whitespace-pre-wrap break-words font-sans text-sm text-foreground/90 bg-muted/30 rounded-md p-3 border">
-                  {message}
-                </pre>
-                {!hasDetail && (
-                  <p className="mt-2 text-xs text-warning">
-                    No se pudo desglosar la deuda en cuotas para este socio; revisá su detalle a mano antes de enviar.
-                  </p>
-                )}
-              </CardContent>
-            </Card>
+          {reminders.map((r) => (
+            <ReminderCard key={r.member.member_id} item={r} />
           ))}
         </div>
       )}
     </div>
+  );
+}
+
+function ReminderCard({ item }: { item: ReminderItem }) {
+  const { member, message, link, hasDetail } = item;
+  const { updateMember } = useMembers();
+  const { displayName } = useHiddenMode();
+  const [number, setNumber] = useState('');
+
+  const copy = () => {
+    navigator.clipboard.writeText(message).then(
+      () => toast.success('Mensaje copiado'),
+      () => toast.error('No se pudo copiar'),
+    );
+  };
+
+  const saveNumber = async () => {
+    const value = number.trim();
+    if (!value) return;
+    await updateMember.mutateAsync({ id: member.member_id, whatsapp_number: value });
+    setNumber('');
+  };
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <CardTitle className="text-base">
+            {displayName(member.full_name, member.phone_number)}
+          </CardTitle>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" className="press" onClick={copy}>
+              <Copy className="mr-1.5 h-4 w-4" /> Copiar
+            </Button>
+            {link && (
+              <Button size="sm" className="press" asChild>
+                <a href={link} target="_blank" rel="noopener noreferrer">
+                  <MessageSquare className="mr-1.5 h-4 w-4" /> Enviar por WhatsApp
+                </a>
+              </Button>
+            )}
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <pre className="whitespace-pre-wrap break-words font-sans text-sm text-foreground/90 bg-muted/30 rounded-md p-3 border">
+          {message}
+        </pre>
+
+        {!link && (
+          <div className="mt-3 flex flex-col sm:flex-row sm:items-center gap-2">
+            <span className="text-xs text-warning shrink-0">Falta el número de WhatsApp:</span>
+            <Input
+              value={number}
+              onChange={(e) => setNumber(e.target.value)}
+              placeholder="+5491155551234"
+              className="h-9 sm:w-56"
+              onKeyDown={(e) => { if (e.key === 'Enter') saveNumber(); }}
+            />
+            <Button size="sm" onClick={saveNumber} disabled={!number.trim() || updateMember.isPending}>
+              {updateMember.isPending ? 'Guardando...' : 'Guardar número'}
+            </Button>
+          </div>
+        )}
+
+        {!hasDetail && (
+          <p className="mt-2 text-xs text-warning">
+            No se pudo desglosar la deuda en cuotas para este socio; revisá su detalle a mano antes de enviar.
+          </p>
+        )}
+      </CardContent>
+    </Card>
   );
 }
