@@ -120,7 +120,7 @@ export function ApplyParametersDialog({
   const preview = useMemo(() => {
     const byCurrencyType: Record<
       string,
-      { currency: string; type: TransactionType; oldTotal: number; newTotal: number }
+      { currency: BudgetCurrency; type: TransactionType; oldTotal: number; newTotal: number }
     > = {};
 
     for (const line of lines) {
