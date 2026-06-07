@@ -95,6 +95,41 @@ export function usePaymentReminders({ year, month }: UsePaymentRemindersArgs) {
     },
   });
 
+  /** Manually queue a reminder for a chosen member (outside the scheduled job) */
+  const createReminder = useMutation({
+    mutationFn: async (input: {
+      member_id: string;
+      whatsapp_number: string | null;
+      period_year: number;
+      period_month: number;
+      amount_owed: number;
+      draft_message: string;
+    }) => {
+      const { error } = await supabase.from('payment_reminders').insert({
+        member_id: input.member_id,
+        whatsapp_number: input.whatsapp_number,
+        period_year: input.period_year,
+        period_month: input.period_month,
+        amount_owed: input.amount_owed,
+        draft_message: input.draft_message,
+        status: 'pending_review' as ReminderStatus,
+      });
+      if (error) {
+        if ((error as { code?: string }).code === '23505') {
+          throw new Error('Ya existe un recordatorio para este miembro en este período.');
+        }
+        throw error;
+      }
+    },
+    onSuccess: () => {
+      invalidate();
+      toast.success('Recordatorio agregado a la cola');
+    },
+    onError: (err: Error) => {
+      toast.error(err.message);
+    },
+  });
+
   /** Trigger the queue function manually (force=1) */
   const buildQueueNow = useMutation({
     mutationFn: async () => {
@@ -122,5 +157,6 @@ export function usePaymentReminders({ year, month }: UsePaymentRemindersArgs) {
     dismissReminder,
     sendReminders,
     buildQueueNow,
+    createReminder,
   };
 }

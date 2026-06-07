@@ -7,14 +7,22 @@
  */
 
 import { useMemo, useState } from 'react';
-import { Send, RefreshCw, X, Loader2 } from 'lucide-react';
+import { Send, RefreshCw, X, Loader2, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
+} from '@/components/ui/dialog';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
 import { usePaymentReminders } from '@/hooks/usePaymentReminders';
+import { useMembers } from '@/hooks/useMembers';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { formatCurrency, parseLocalDate } from '@/lib/utils';
 import { TableSkeleton } from '@/components/ui/loading';
@@ -160,6 +168,113 @@ function ReminderRow({
   );
 }
 
+/** Build the same Spanish reminder body the scheduled job uses. */
+function buildDraft(name: string, amount: number, monthLabel: string): string {
+  return (
+    `Hola ${name}, te recordamos que tenés un saldo pendiente de ` +
+    `${formatCurrency(amount)} correspondiente a ${monthLabel}. Podés saldarlo ` +
+    `coordinando con el Tesorero. Gracias.`
+  );
+}
+
+/** Dialog to manually queue a reminder for a chosen member. */
+function AddReminderDialog({
+  period,
+  onCreate,
+  isCreating,
+}: {
+  period: { year: number; month: number };
+  onCreate: (input: {
+    member_id: string;
+    whatsapp_number: string | null;
+    period_year: number;
+    period_month: number;
+    amount_owed: number;
+    draft_message: string;
+  }) => void;
+  isCreating: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [memberId, setMemberId] = useState('');
+  const { memberBalances } = useMembers();
+
+  const activeMembers = useMemo(
+    () => memberBalances.filter((m) => m.is_active).sort((a, b) => a.full_name.localeCompare(b.full_name)),
+    [memberBalances],
+  );
+  const selected = activeMembers.find((m) => m.member_id === memberId);
+  const owed = selected ? Math.max(0, selected.total_fees_owed - selected.total_paid) : 0;
+  const monthLabel = `${MONTH_NAMES_ES[period.month - 1].toLowerCase()} ${period.year}`;
+  const draft = selected ? buildDraft(selected.full_name, owed, monthLabel) : '';
+
+  const handleCreate = () => {
+    if (!selected) return;
+    onCreate({
+      member_id: selected.member_id,
+      whatsapp_number: selected.whatsapp_number ?? null,
+      period_year: period.year,
+      period_month: period.month,
+      amount_owed: owed,
+      draft_message: draft,
+    });
+    setOpen(false);
+    setMemberId('');
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) setMemberId(''); }}>
+      <DialogTrigger asChild>
+        <Button variant="outline" className="press">
+          <Plus className="mr-2 h-4 w-4" />
+          Agregar recordatorio
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-[480px]">
+        <DialogHeader>
+          <DialogTitle className="font-display">Agregar recordatorio</DialogTitle>
+          <DialogDescription>Encolá un recordatorio para un miembro en {monthLabel}.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <Label>Miembro</Label>
+            <Select value={memberId} onValueChange={setMemberId}>
+              <SelectTrigger><SelectValue placeholder="Seleccionar miembro..." /></SelectTrigger>
+              <SelectContent>
+                {activeMembers.map((m) => (
+                  <SelectItem key={m.member_id} value={m.member_id}>
+                    {m.full_name}{!m.whatsapp_number ? ' (sin WhatsApp)' : ''}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          {selected && (
+            <>
+              <p className="text-sm text-muted-foreground">
+                Adeudado: <span className="font-mono text-foreground">{formatCurrency(owed)}</span>
+              </p>
+              <div className="rounded-md border bg-muted/30 p-3 text-xs whitespace-pre-wrap font-mono">
+                {draft}
+              </div>
+              {!selected.whatsapp_number && (
+                <p className="text-xs text-warning">
+                  Este miembro no tiene WhatsApp cargado. Queda en la cola, pero no se podrá enviar hasta cargar el número.
+                </p>
+              )}
+            </>
+          )}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
+          <Button onClick={handleCreate} disabled={!selected || isCreating}>
+            {isCreating ? 'Agregando...' : 'Agregar a la cola'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function PaymentReminders() {
   const today = new Date();
   const [period, setPeriod] = useState({
@@ -176,6 +291,7 @@ export default function PaymentReminders() {
     dismissReminder,
     sendReminders,
     buildQueueNow,
+    createReminder,
   } = usePaymentReminders(period);
 
   const filtered = useMemo(
@@ -204,6 +320,11 @@ export default function PaymentReminders() {
         </div>
         {isAdmin && (
           <div className="flex gap-2 flex-wrap">
+            <AddReminderDialog
+              period={period}
+              onCreate={(input) => createReminder.mutate(input)}
+              isCreating={createReminder.isPending}
+            />
             <Button
               variant="outline"
               onClick={() => buildQueueNow.mutate()}
