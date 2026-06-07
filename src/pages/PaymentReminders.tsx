@@ -20,6 +20,7 @@ import { useMemberFeeTypeHistory } from '@/hooks/useMemberFeeTypeHistory';
 import { useMemberEventTotals } from '@/hooks/useMemberEventTotals';
 import { useEventParticipations } from '@/hooks/useEventParticipations';
 import { useHiddenMode } from '@/contexts/HiddenModeContext';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { getAttentionMembers } from '@/lib/attention';
 import {
   capitaLines, eventLines, joinDetail, buildReminderMessage, firstName, whatsappLink,
@@ -41,6 +42,7 @@ export default function PaymentReminders() {
   const { getFeeTypeForMonth, isLoading: historyLoading } = useMemberFeeTypeHistory();
   const { eventTotals, isLoading: eventsLoading } = useMemberEventTotals();
   const { participations, isLoading: partsLoading } = useEventParticipations();
+  const isMobile = useIsMobile();
 
   const isLoading = membersLoading || feesLoading || historyLoading || eventsLoading || partsLoading;
 
@@ -67,11 +69,11 @@ export default function PaymentReminders() {
       return {
         member: m,
         message,
-        link: whatsappLink(whatsappById.get(m.member_id), message),
+        link: whatsappLink(whatsappById.get(m.member_id), message, !isMobile),
         hasDetail: cLines.length + eLines.length > 0,
       };
     });
-  }, [memberBalances, currentMonthFees, eventTotals, monthlyFees, getFeeTypeForMonth, participations, whatsappById]);
+  }, [memberBalances, currentMonthFees, eventTotals, monthlyFees, getFeeTypeForMonth, participations, whatsappById, isMobile]);
 
   return (
     <div className="space-y-6 animate-fade-in">

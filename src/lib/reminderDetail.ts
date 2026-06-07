@@ -155,10 +155,23 @@ export function buildReminderMessage(memberFirstName: string, detail: string): s
   );
 }
 
-/** wa.me click-to-chat URL with the message prefilled. Null if no number. */
-export function whatsappLink(whatsappNumber: string | null | undefined, message: string): string | null {
+/**
+ * Click-to-chat URL with the message prefilled. Null if no number.
+ * On desktop, links straight to WhatsApp Web (web.whatsapp.com/send) since the
+ * treasurer is already logged in there; wa.me redirects through
+ * api.whatsapp.com, which some browsers/extensions block. On mobile, uses
+ * wa.me so the WhatsApp app opens.
+ */
+export function whatsappLink(
+  whatsappNumber: string | null | undefined,
+  message: string,
+  useWeb = false,
+): string | null {
   if (!whatsappNumber) return null;
   const digits = whatsappNumber.replace(/\D/g, '');
   if (!digits) return null;
-  return `https://wa.me/${digits}?text=${encodeURIComponent(message)}`;
+  const text = encodeURIComponent(message);
+  return useWeb
+    ? `https://web.whatsapp.com/send?phone=${digits}&text=${text}`
+    : `https://wa.me/${digits}?text=${text}`;
 }
