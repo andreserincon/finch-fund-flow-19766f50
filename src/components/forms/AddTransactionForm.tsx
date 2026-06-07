@@ -294,14 +294,14 @@ export function AddTransactionForm({ defaultType = 'income', triggerLabel = 'Reg
         </DialogHeader>
 
         {/* Tipo de movimiento selector */}
-        <div className="flex flex-wrap gap-1.5 rounded-lg bg-muted p-1">
+        <div className="grid grid-cols-3 sm:grid-cols-5 gap-1 rounded-lg bg-muted p-1">
           {MODOS.map((m) => (
             <button
               key={m.key}
               type="button"
               onClick={() => switchModo(m.key)}
               className={cn(
-                'press flex-1 min-w-[72px] rounded-md px-2 py-1.5 text-xs font-semibold transition-colors',
+                'press rounded-md px-1.5 py-1.5 text-[11px] font-semibold leading-tight transition-colors',
                 modo === m.key ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
               )}
             >
