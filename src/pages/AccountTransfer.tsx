@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useAccountTransfers } from '@/hooks/useAccountTransfers';
+import { useExchangeRate } from '@/hooks/useExchangeRate';
 import { TransferList } from '@/components/transfers/TransferList';
 import { AccountType, ACCOUNT_LABELS } from '@/lib/types';
 import { formatCurrency, getCurrencyForAccount } from '@/lib/utils';
@@ -39,6 +40,7 @@ type TransferFormData = z.infer<typeof transferSchema>;
 export default function AccountTransfer() {
   const navigate = useNavigate();
   const { addTransfer } = useAccountTransfers();
+  const { exchangeRate } = useExchangeRate();
   const [showForm, setShowForm] = useState(false);
 
   const {
@@ -278,9 +280,23 @@ export default function AccountTransfer() {
                       </div>
                     </div>
                     {impliedRate && impliedRate > 0 && (
-                      <p className="text-xs text-muted-foreground mt-2">
-                        Implied rate: 1 USD = {impliedRate.toFixed(2)} ARS
-                      </p>
+                      <div className="mt-2 space-y-1">
+                        <p className="text-xs text-muted-foreground">
+                          Implied rate: 1 USD = {impliedRate.toFixed(2)} ARS
+                        </p>
+                        {exchangeRate > 0 && (
+                          <p className="text-xs text-muted-foreground">
+                            Current rate: 1 USD = {exchangeRate.toFixed(2)} ARS
+                          </p>
+                        )}
+                        {exchangeRate > 0 &&
+                          Math.abs(impliedRate - exchangeRate) / exchangeRate > 0.02 && (
+                            <p className="text-xs font-medium text-warning">
+                              Implied rate differs from the current rate by{' '}
+                              {((Math.abs(impliedRate - exchangeRate) / exchangeRate) * 100).toFixed(1)}%. Confirm this is intentional.
+                            </p>
+                          )}
+                      </div>
                     )}
                   </div>
                   {(errors.source_amount || errors.destination_amount) && (

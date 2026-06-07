@@ -3,6 +3,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -56,6 +57,7 @@ export default function LogExpense() {
     handleSubmit,
     setValue,
     watch,
+    reset,
     formState: { errors, isSubmitting },
   } = useForm<ExpenseFormData>({
     resolver: zodResolver(expenseSchema),
@@ -69,6 +71,9 @@ export default function LogExpense() {
   const category = watch('category');
   const selectedAccount = watch('account');
   const selectedEventId = watch('event_id');
+
+  // Whether the current submit should stay on the page to log another expense
+  const addAnotherRef = useRef(false);
 
   const onSubmit = async (data: ExpenseFormData) => {
     // Build notes with event name if event is selected
@@ -89,7 +94,12 @@ export default function LogExpense() {
       account: data.account,
       notes: notes || null,
     });
-    navigate('/');
+    // The mutation hook already toasts on success; just decide where to go next.
+    if (addAnotherRef.current) {
+      reset({ transaction_date: data.transaction_date, category: 'event_expense', account: data.account });
+    } else {
+      navigate('/');
+    }
   };
 
   return (
@@ -230,11 +240,24 @@ export default function LogExpense() {
               )}
             </div>
 
-            <div className="flex gap-3 pt-4">
+            <div className="flex flex-col sm:flex-row gap-3 pt-4">
               <Button type="button" variant="outline" onClick={() => navigate('/')}>
                 {t('common.cancel')}
               </Button>
-              <Button type="submit" disabled={isSubmitting} className="flex-1">
+              <Button
+                type="submit"
+                variant="outline"
+                onClick={() => { addAnotherRef.current = true; }}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? t('logExpense.recording') : t('common.addAnother')}
+              </Button>
+              <Button
+                type="submit"
+                onClick={() => { addAnotherRef.current = false; }}
+                disabled={isSubmitting}
+                className="flex-1"
+              >
                 {isSubmitting ? t('logExpense.recording') : t('logExpense.recordExpense')}
               </Button>
             </div>

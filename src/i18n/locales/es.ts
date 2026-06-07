@@ -34,6 +34,7 @@ export default {
       copy: 'Copiar',
       copied: 'Copiado',
       back: 'Volver',
+      addAnother: 'Registrar y agregar otro',
     },
 
     // Home

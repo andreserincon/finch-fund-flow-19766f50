@@ -34,6 +34,7 @@ export default {
       copy: 'Copy',
       copied: 'Copied',
       back: 'Back',
+      addAnother: 'Save and add another',
     },
 
     // Home

@@ -20,7 +20,7 @@ import { ArrowLeft, PlusCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 const paymentSchema = z.object({
   transaction_date: z.string().min(1, 'La fecha es obligatoria'),
@@ -49,10 +49,13 @@ export default function LogPayment() {
 
   const activeEvents = expenses.filter(e => e.is_active);
 
-  const { register, handleSubmit, setValue, watch, formState: { errors, isSubmitting } } = useForm<PaymentFormData>({
+  const { register, handleSubmit, setValue, watch, reset, formState: { errors, isSubmitting } } = useForm<PaymentFormData>({
     resolver: zodResolver(paymentSchema),
     defaultValues: { transaction_date: new Date().toISOString().split('T')[0], category: 'monthly_fee', account: 'bank' },
   });
+
+  // Whether the current submit should stay on the page to log another entry
+  const addAnotherRef = useRef(false);
 
   const category = watch('category');
   const selectedEventId = watch('event_id');
@@ -99,7 +102,12 @@ export default function LogPayment() {
         account: data.account,
         notes: data.notes || null,
       });
-      navigate('/');
+      // The mutation hook already toasts on success; just decide where to go next.
+      if (addAnotherRef.current) {
+        reset({ transaction_date: data.transaction_date, category: 'monthly_fee', account: data.account });
+      } else {
+        navigate('/');
+      }
     } catch (error) {
       if (import.meta.env.DEV) console.error('Error logging payment:', error);
     }
@@ -207,9 +215,22 @@ export default function LogPayment() {
               {errors.notes && <p className="text-sm text-destructive">{errors.notes.message}</p>}
             </div>
 
-            <div className="flex gap-3 pt-4">
+            <div className="flex flex-col sm:flex-row gap-3 pt-4">
               <Button type="button" variant="outline" onClick={() => navigate('/')}>Cancelar</Button>
-              <Button type="submit" disabled={isSubmitting || (category === 'event_payment' && (!selectedEventId || !selectedMemberId))} className="flex-1">
+              <Button
+                type="submit"
+                variant="outline"
+                onClick={() => { addAnotherRef.current = true; }}
+                disabled={isSubmitting || (category === 'event_payment' && (!selectedEventId || !selectedMemberId))}
+              >
+                {isSubmitting ? 'Registrando...' : 'Registrar y agregar otro'}
+              </Button>
+              <Button
+                type="submit"
+                onClick={() => { addAnotherRef.current = false; }}
+                disabled={isSubmitting || (category === 'event_payment' && (!selectedEventId || !selectedMemberId))}
+                className="flex-1"
+              >
                 {isSubmitting ? 'Registrando...' : 'Registrar Pago'}
               </Button>
             </div>
