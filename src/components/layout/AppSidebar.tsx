@@ -232,7 +232,7 @@ export function AppSidebar() {
 
             {/* Quick actions (admin only) */}
             {isAdmin && (
-              <SidebarGroup>
+              <SidebarGroup className="border-t border-sidebar-border/60 mt-1 pt-1">
                 <SidebarGroupLabel className="text-sidebar-foreground/50 text-xs uppercase tracking-wider px-3">
                   {t('nav.quickActions')}
                 </SidebarGroupLabel>
@@ -259,7 +259,7 @@ export function AppSidebar() {
 
             {/* Settings (staff, not member-only) */}
             {!isMemberOnly && (
-              <SidebarGroup>
+              <SidebarGroup className="border-t border-sidebar-border/60 mt-1 pt-1">
                 <SidebarGroupLabel className="text-sidebar-foreground/50 text-xs uppercase tracking-wider px-3">
                   {t('nav.settings')}
                 </SidebarGroupLabel>

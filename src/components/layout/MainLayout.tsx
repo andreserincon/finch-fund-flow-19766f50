@@ -12,10 +12,9 @@ import { AppSidebar } from './AppSidebar';
 import { useOrientationToggle } from '@/hooks/useOrientationToggle';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useHiddenMode } from '@/contexts/HiddenModeContext';
-import { RotateCcw, Smartphone, EyeOff } from 'lucide-react';
+import { RotateCcw, Smartphone, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
+import { cn } from '@/lib/utils';
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -45,24 +44,29 @@ export function MainLayout({ children }: MainLayoutProps) {
           <div className="sticky top-0 z-10 flex h-14 landscape:h-11 items-center justify-between gap-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 md:px-6">
             <div className="flex items-center gap-4">
               {/* Hamburger / sidebar trigger */}
-              <SidebarTrigger className="-ml-2" />
+              <SidebarTrigger className="-ml-2" aria-label={t('nav.toggleSidebar', 'Abrir o cerrar el menú')} />
               {/* Mobile-only heading */}
               <h2 className="font-semibold text-lg md:hidden">{t('nav.treasury')}</h2>
             </div>
 
             <div className="flex items-center gap-3">
-              {/* Hidden mode toggle */}
-              <div className="flex items-center gap-2">
-                <EyeOff className={`h-4 w-4 ${hiddenMode ? 'text-primary' : 'text-muted-foreground'}`} />
-                <Switch
-                  checked={hiddenMode}
-                  onCheckedChange={toggleHiddenMode}
-                  aria-label="Modo oculto"
-                />
-                <Label className="text-xs text-muted-foreground hidden sm:inline cursor-pointer" onClick={toggleHiddenMode}>
-                  Oculto
-                </Label>
-              </div>
+              {/* Hidden mode toggle: a single labelled pill that tints when active */}
+              <button
+                type="button"
+                onClick={toggleHiddenMode}
+                aria-pressed={hiddenMode}
+                aria-label={t('nav.hiddenMode', 'Modo oculto')}
+                title={t('nav.hiddenModeHint', 'Oculta los nombres de los miembros')}
+                className={cn(
+                  'flex items-center gap-2 rounded-full border px-2.5 py-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                  hiddenMode
+                    ? 'border-primary/40 bg-primary/10 text-primary'
+                    : 'border-transparent text-muted-foreground hover:text-foreground hover:bg-muted',
+                )}
+              >
+                {hiddenMode ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                <span className="text-xs font-medium">{t('nav.hiddenMode', 'Oculto')}</span>
+              </button>
 
               {/* Orientation toggle button (mobile only) */}
               {isMobile && (
@@ -71,7 +75,8 @@ export function MainLayout({ children }: MainLayoutProps) {
                   size="icon"
                   onClick={toggle}
                   className="text-muted-foreground hover:text-foreground"
-                  title={isLandscape ? 'Portrait' : 'Landscape'}
+                  aria-label={isLandscape ? t('nav.portrait', 'Vista vertical') : t('nav.landscape', 'Vista horizontal')}
+                  title={isLandscape ? t('nav.portrait', 'Vista vertical') : t('nav.landscape', 'Vista horizontal')}
                 >
                   {isLandscape ? <Smartphone className="h-5 w-5" /> : <RotateCcw className="h-5 w-5" />}
                 </Button>
