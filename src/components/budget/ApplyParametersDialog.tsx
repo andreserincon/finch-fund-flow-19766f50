@@ -304,10 +304,10 @@ export function ApplyParametersDialog({
                           {row.currency} · {row.type}
                         </td>
                         <td className="px-3 py-1.5 text-right font-mono text-xs">
-                          {formatCurrencyCompact(row.oldTotal, currency)}
+                          {formatCurrencyCompact(row.oldTotal, row.currency)}
                         </td>
                         <td className="px-3 py-1.5 text-right font-mono text-xs">
-                          {formatCurrencyCompact(row.newTotal, currency)}
+                          {formatCurrencyCompact(row.newTotal, row.currency)}
                         </td>
                         <td
                           className={`px-3 py-1.5 text-right font-mono text-xs ${
@@ -315,7 +315,7 @@ export function ApplyParametersDialog({
                           }`}
                         >
                           {delta >= 0 ? '+' : ''}
-                          {formatCurrencyCompact(delta, currency)}
+                          {formatCurrencyCompact(delta, row.currency)}
                         </td>
                       </tr>
                     );
