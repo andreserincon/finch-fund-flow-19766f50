@@ -116,11 +116,11 @@ export function ApplyParametersDialog({
     open ? scenarioId : null,
   );
 
-  /* Compute the projected lines + totals grouped by (account, type). */
+  /* Compute the projected lines + totals grouped by (currency, type). */
   const preview = useMemo(() => {
-    const byAccountType: Record<
+    const byCurrencyType: Record<
       string,
-      { account: string; type: TransactionType; oldTotal: number; newTotal: number }
+      { currency: string; type: TransactionType; oldTotal: number; newTotal: number }
     > = {};
 
     for (const line of lines) {
@@ -130,23 +130,23 @@ export function ApplyParametersDialog({
         membershipGrowthPercent,
         extraordinaryIncomeMultiplier,
       );
-      const key = `${line.account}::${line.transaction_type}`;
-      if (!byAccountType[key]) {
-        byAccountType[key] = {
-          account: line.account,
+      const key = `${line.currency}::${line.transaction_type}`;
+      if (!byCurrencyType[key]) {
+        byCurrencyType[key] = {
+          currency: line.currency,
           type: line.transaction_type,
           oldTotal: 0,
           newTotal: 0,
         };
       }
-      byAccountType[key].oldTotal += Number(line.budgeted_amount) || 0;
-      byAccountType[key].newTotal += projected;
+      byCurrencyType[key].oldTotal += Number(line.budgeted_amount) || 0;
+      byCurrencyType[key].newTotal += projected;
     }
 
-    return Object.values(byAccountType).sort((a, b) =>
-      a.account === b.account
+    return Object.values(byCurrencyType).sort((a, b) =>
+      a.currency === b.currency
         ? a.type.localeCompare(b.type)
-        : a.account.localeCompare(b.account),
+        : a.currency.localeCompare(b.currency),
     );
   }, [
     lines,
