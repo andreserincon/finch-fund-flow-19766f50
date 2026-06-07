@@ -13,17 +13,25 @@ import { Download, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePWAInstall } from "@/hooks/usePWAInstall";
 import { useAuth } from "@/hooks/useAuth";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useState } from "react";
 
 export function InstallPrompt() {
   const { isInstallable, isInstalled, installApp } = usePWAInstall();
   const { user } = useAuth();
-  /** Local state - user dismissed the prompt for this session */
-  const [dismissed, setDismissed] = useState(false);
+  const isMobile = useIsMobile();
+  /** Persisted dismissal, so the prompt never nags again once closed. */
+  const [dismissed, setDismissed] = useState(() => {
+    try { return localStorage.getItem('pwa-install-dismissed') === '1'; } catch { return false; }
+  });
+  const dismiss = () => {
+    setDismissed(true);
+    try { localStorage.setItem('pwa-install-dismissed', '1'); } catch { /* ignore */ }
+  };
 
-  // Only offer the install once a member is logged in (reserved area).
-  // Don't render if logged out, not installable, already installed, or dismissed.
-  if (!user || !isInstallable || isInstalled || dismissed) {
+  // "Add to home screen" only makes sense for a logged-in member on a phone.
+  // Never show it on desktop/web, when logged out, already installed, or dismissed.
+  if (!user || !isMobile || !isInstallable || isInstalled || dismissed) {
     return null;
   }
 
@@ -31,7 +39,7 @@ export function InstallPrompt() {
     <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-80 bg-card border border-border rounded-lg shadow-lg p-4 z-50 animate-in slide-in-from-bottom-4">
       {/* Dismiss button */}
       <button
-        onClick={() => setDismissed(true)}
+        onClick={dismiss}
         className="absolute top-2 right-2 text-muted-foreground hover:text-foreground"
         aria-label="Cerrar"
       >
