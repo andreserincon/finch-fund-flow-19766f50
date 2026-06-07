@@ -42,13 +42,14 @@ import { PlusCircle, ArrowRight } from 'lucide-react';
 const ACCOUNTS: AccountType[] = ['bank', 'great_lodge', 'savings'];
 const today = () => new Date().toISOString().split('T')[0];
 
-type Modo = 'ingreso' | 'gasto' | 'transferencia' | 'prestamo';
+type Modo = 'ingreso' | 'gasto' | 'evento' | 'transferencia' | 'prestamo';
 
 const MODOS: { key: Modo; label: string }[] = [
   { key: 'ingreso', label: 'Ingreso' },
   { key: 'gasto', label: 'Gasto' },
+  { key: 'evento', label: 'Evento' },
   { key: 'transferencia', label: 'Transferencia' },
-  { key: 'prestamo', label: 'Pago de préstamo' },
+  { key: 'prestamo', label: 'Préstamo' },
 ];
 
 /* ---- income/expense schema (the original transaction form) ---- */
@@ -99,10 +100,11 @@ export function AddTransactionForm({ defaultType = 'income', triggerLabel = 'Reg
   const activeLoans = loans.filter((l) => l.status === 'active');
 
   /* ================= Ingreso / Gasto (react-hook-form) ================= */
+  // Event categories live in the dedicated "Evento" tab, not here.
   const incomeCategories: TransactionCategory[] = [
-    'monthly_fee', 'extraordinary_income', 'donation', 'reimbursement', 'other_income', 'event_payment', 'account_yield',
+    'monthly_fee', 'extraordinary_income', 'donation', 'reimbursement', 'other_income', 'account_yield',
   ];
-  const expenseCategories: TransactionCategory[] = ['event_expense', 'parent_organization_fee', 'other_expense'];
+  const expenseCategories: TransactionCategory[] = ['parent_organization_fee', 'other_expense'];
 
   const {
     register, handleSubmit, setValue, watch, reset,
@@ -111,7 +113,7 @@ export function AddTransactionForm({ defaultType = 'income', triggerLabel = 'Reg
     resolver: zodResolver(transactionSchema),
     defaultValues: {
       transaction_type: defaultType,
-      category: defaultType === 'income' ? 'monthly_fee' : 'event_expense',
+      category: defaultType === 'income' ? 'monthly_fee' : 'other_expense',
       transaction_date: today(),
       account: 'bank',
     },
@@ -161,7 +163,10 @@ export function AddTransactionForm({ defaultType = 'income', triggerLabel = 'Reg
       setValue('category', 'monthly_fee');
     } else if (next === 'gasto') {
       setValue('transaction_type', 'expense');
-      setValue('category', 'event_expense');
+      setValue('category', 'other_expense');
+    } else if (next === 'evento') {
+      setValue('transaction_type', 'income');
+      setValue('category', 'event_payment');
     }
   };
 
@@ -187,7 +192,7 @@ export function AddTransactionForm({ defaultType = 'income', triggerLabel = 'Reg
     });
     finishOrReset(() => reset({
       transaction_type: data.transaction_type,
-      category: data.transaction_type === 'income' ? 'monthly_fee' : 'event_expense',
+      category: modo === 'evento' ? data.category : (data.transaction_type === 'income' ? 'monthly_fee' : 'other_expense'),
       transaction_date: data.transaction_date,
       account: data.account,
     }));
@@ -296,7 +301,7 @@ export function AddTransactionForm({ defaultType = 'income', triggerLabel = 'Reg
               type="button"
               onClick={() => switchModo(m.key)}
               className={cn(
-                'press flex-1 min-w-[88px] rounded-md px-2 py-1.5 text-xs font-semibold transition-colors',
+                'press flex-1 min-w-[72px] rounded-md px-2 py-1.5 text-xs font-semibold transition-colors',
                 modo === m.key ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
               )}
             >
@@ -305,20 +310,55 @@ export function AddTransactionForm({ defaultType = 'income', triggerLabel = 'Reg
           ))}
         </div>
 
-        {/* ---------- Ingreso / Gasto ---------- */}
-        {(modo === 'ingreso' || modo === 'gasto') && (
-          <form onSubmit={handleSubmit(onSubmitTransaction)} className="space-y-4">
-            <div className="space-y-2">
-              <Label>Cuenta</Label>
-              <Select value={selectedAccount} onValueChange={(v: AccountType) => setValue('account', v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {ACCOUNTS.map((acc) => <SelectItem key={acc} value={acc}>{ACCOUNT_LABELS[acc]}</SelectItem>)}
-                </SelectContent>
-              </Select>
+        {/* ---------- Ingreso / Gasto / Evento ---------- */}
+        {(modo === 'ingreso' || modo === 'gasto' || modo === 'evento') && (
+          <form onSubmit={handleSubmit(onSubmitTransaction)} className="space-y-3">
+            {modo === 'evento' && (
+              <div className="space-y-2">
+                <Label>Tipo de movimiento del evento</Label>
+                <div className="flex gap-1.5 rounded-lg bg-muted p-1">
+                  <button
+                    type="button"
+                    onClick={() => { setValue('transaction_type', 'income'); setValue('category', 'event_payment'); }}
+                    className={cn('press flex-1 rounded-md px-2 py-1.5 text-xs font-semibold transition-colors', category === 'event_payment' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground')}
+                  >
+                    Cobro a participante
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setValue('transaction_type', 'expense'); setValue('category', 'event_expense'); }}
+                    className={cn('press flex-1 rounded-md px-2 py-1.5 text-xs font-semibold transition-colors', category === 'event_expense' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground')}
+                  >
+                    Gasto del evento
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className={cn('space-y-2', modo === 'evento' && 'sm:col-span-2')}>
+                <Label>Cuenta</Label>
+                <Select value={selectedAccount} onValueChange={(v: AccountType) => setValue('account', v)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {ACCOUNTS.map((acc) => <SelectItem key={acc} value={acc}>{ACCOUNT_LABELS[acc]}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              {modo !== 'evento' && (
+                <div className="space-y-2">
+                  <Label>Categoría</Label>
+                  <Select value={category} onValueChange={(v: TransactionCategory) => setValue('category', v)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {availableCategories.map((cat) => <SelectItem key={cat} value={cat}>{CATEGORY_LABELS[cat]}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label htmlFor="transaction_date">Fecha</Label>
                 <Input id="transaction_date" type="date" {...register('transaction_date')} />
@@ -329,16 +369,6 @@ export function AddTransactionForm({ defaultType = 'income', triggerLabel = 'Reg
                 <Input id="amount" type="number" step="0.01" {...register('amount', { valueAsNumber: true })} placeholder="0.00" />
                 {errors.amount && <p className="text-sm text-destructive">{errors.amount.message}</p>}
               </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Categoría</Label>
-              <Select value={category} onValueChange={(v: TransactionCategory) => setValue('category', v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {availableCategories.map((cat) => <SelectItem key={cat} value={cat}>{CATEGORY_LABELS[cat]}</SelectItem>)}
-                </SelectContent>
-              </Select>
             </div>
 
             {category === 'monthly_fee' && (
@@ -400,7 +430,7 @@ export function AddTransactionForm({ defaultType = 'income', triggerLabel = 'Reg
 
             <div className="space-y-2">
               <Label htmlFor="notes">{supportsSummary ? 'Descripción detallada del gasto (opcional)' : 'Notas (opcional)'}</Label>
-              <Textarea id="notes" {...register('notes')} rows={3}
+              <Textarea id="notes" {...register('notes')} rows={2}
                 placeholder={supportsSummary ? 'Detalle completo del gasto, proveedor, condiciones...' : 'Detalles adicionales...'} />
             </div>
 
