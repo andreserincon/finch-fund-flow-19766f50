@@ -10,12 +10,10 @@ import {
   LayoutDashboard,
   Users,
   Receipt,
-  PlusCircle,
   LogOut,
   Wallet,
   Settings,
   Calculator,
-  ArrowLeftRight,
   HandCoins,
   UserCog,
   FileText,
@@ -116,13 +114,6 @@ export function AppSidebar() {
       { title: t('nav.reports'), url: '/reports', icon: FileText },
       { title: t('nav.budget'), url: '/budget', icon: PieChart },
     ] : []),
-  ];
-
-  /** Admin-only quick actions (log payment, expense, transfer) */
-  const actionItems = [
-    { title: t('nav.logPayment'), url: '/log-payment', icon: PlusCircle },
-    { title: t('nav.logExpense'), url: '/log-expense', icon: Wallet },
-    { title: t('nav.transferFunds'), url: '/account-transfer', icon: ArrowLeftRight },
   ];
 
   /** Treasury settings pages (fees, events, calculator, reminders) */
@@ -238,33 +229,6 @@ export function AppSidebar() {
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>
-
-            {/* Quick actions (admin only) */}
-            {isAdmin && (
-              <SidebarGroup className="border-t border-sidebar-border/60 mt-1 pt-1">
-                <SidebarGroupLabel className="text-sidebar-foreground/50 text-xs uppercase tracking-wider px-3">
-                  {t('nav.quickActions')}
-                </SidebarGroupLabel>
-                <SidebarGroupContent>
-                  <SidebarMenu>
-                    {actionItems.map((item) => (
-                      <SidebarMenuItem key={item.url}>
-                        <SidebarMenuButton asChild>
-                          <NavLink
-                            to={item.url}
-                            className="sidebar-nav-item"
-                            activeClassName="active"
-                          >
-                            <item.icon className="h-5 w-5" />
-                            <span>{item.title}</span>
-                          </NavLink>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    ))}
-                  </SidebarMenu>
-                </SidebarGroupContent>
-              </SidebarGroup>
-            )}
 
             {/* Settings (staff, not member-only) */}
             {!isMemberOnly && (
