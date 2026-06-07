@@ -5,31 +5,16 @@
  *   within thumb reach. Hidden on md+ where the sidebar carries navigation.
  *   Role-gated with the same hooks as AppSidebar. Honors the bottom safe-area.
  */
-import {
-  LayoutDashboard,
-  Users,
-  MessageSquare,
-  BookOpen,
-  Plus,
-  PlusCircle,
-  Wallet,
-  ArrowLeftRight,
-} from 'lucide-react';
+import { LayoutDashboard, Users, MessageSquare, BookOpen, Plus } from 'lucide-react';
 import { ComponentType } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
 import { NavLink } from '@/components/NavLink';
 import { cn } from '@/lib/utils';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { useCanViewTreasury } from '@/hooks/useCanViewTreasury';
 import { useIsMemberOnly } from '@/hooks/useIsMemberOnly';
 import { usePaymentReminders } from '@/hooks/usePaymentReminders';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+import { AddTransactionForm } from '@/components/forms/AddTransactionForm';
 
 const tabClass =
   'press flex flex-1 flex-col items-center justify-center gap-0.5 min-h-[52px] px-1 text-[11px] font-medium text-muted-foreground';
@@ -58,7 +43,6 @@ function TabLink({ to, end, icon: Icon, label, dot }: Tab) {
 
 export function BottomNav() {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const { isAdmin } = useIsAdmin();
   const { canViewTreasury } = useCanViewTreasury();
   const { isMemberOnly } = useIsMemberOnly();
@@ -92,8 +76,8 @@ export function BottomNav() {
 
         {isAdmin && (
           <div className="flex flex-1 items-center justify-center">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
+            <AddTransactionForm
+              trigger={
                 <button
                   type="button"
                   aria-label={t('dashboard.logTransaction')}
@@ -101,19 +85,8 @@ export function BottomNav() {
                 >
                   <Plus className="h-6 w-6" />
                 </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent side="top" align="center" className="mb-2 w-52">
-                <DropdownMenuItem onClick={() => navigate('/log-payment')}>
-                  <PlusCircle className="mr-2 h-4 w-4" /> {t('nav.logPayment')}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate('/log-expense')}>
-                  <Wallet className="mr-2 h-4 w-4" /> {t('nav.logExpense')}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate('/account-transfer')}>
-                  <ArrowLeftRight className="mr-2 h-4 w-4" /> {t('nav.transferFunds')}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+              }
+            />
           </div>
         )}
 

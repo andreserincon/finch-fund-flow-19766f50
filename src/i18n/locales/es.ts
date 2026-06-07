@@ -81,7 +81,7 @@ export default {
     dashboard: {
       title: 'Panel',
       financialOverview: 'Resumen financiero para {{month}}',
-      logTransaction: 'Registrar Transacción',
+      logTransaction: 'Registrar movimiento',
       bankMainAccount: 'Cuenta Bancaria Principal',
       primaryBankBalance: 'Saldo bancario principal',
       greatLodgeAccount: 'Cuenta GL',
