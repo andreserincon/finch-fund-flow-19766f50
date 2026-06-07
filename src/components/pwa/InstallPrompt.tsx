@@ -1,23 +1,29 @@
 /**
  * @file InstallPrompt.tsx
- * @description Floating banner that prompts mobile users to install
- *   the app as a PWA. Appears only when the browser supports
- *   installation and the app is not already installed.
- *   Can be dismissed; re-appears on next page load.
+ * @description Floating banner that prompts members to install the app as a
+ *   PWA. It is offered ONLY to authenticated users inside the reserved area:
+ *   the install event is still captured globally (so it is not missed), but
+ *   the banner renders only once a member has logged in. It never appears on
+ *   the public landing or the login screen.
+ *   Appears only when the browser supports installation and the app is not
+ *   already installed. Can be dismissed; re-appears on next page load.
  */
 
 import { Download, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePWAInstall } from "@/hooks/usePWAInstall";
+import { useAuth } from "@/hooks/useAuth";
 import { useState } from "react";
 
 export function InstallPrompt() {
   const { isInstallable, isInstalled, installApp } = usePWAInstall();
-  /** Local state – user dismissed the prompt for this session */
+  const { user } = useAuth();
+  /** Local state - user dismissed the prompt for this session */
   const [dismissed, setDismissed] = useState(false);
 
-  // Don't render if not installable, already installed, or dismissed
-  if (!isInstallable || isInstalled || dismissed) {
+  // Only offer the install once a member is logged in (reserved area).
+  // Don't render if logged out, not installable, already installed, or dismissed.
+  if (!user || !isInstallable || isInstalled || dismissed) {
     return null;
   }
 
@@ -27,7 +33,7 @@ export function InstallPrompt() {
       <button
         onClick={() => setDismissed(true)}
         className="absolute top-2 right-2 text-muted-foreground hover:text-foreground"
-        aria-label="Dismiss"
+        aria-label="Cerrar"
       >
         <X className="h-4 w-4" />
       </button>
@@ -37,12 +43,12 @@ export function InstallPrompt() {
           <Download className="h-5 w-5 text-primary" />
         </div>
         <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-foreground text-sm">Install Lodge Compass</h3>
+          <h3 className="font-semibold text-foreground text-sm">Instalar la aplicación</h3>
           <p className="text-xs text-muted-foreground mt-1">
-            Add to your home screen for quick access
+            Agréguela a su pantalla de inicio para un acceso rápido y reservado.
           </p>
           <Button onClick={installApp} size="sm" className="mt-3 w-full">
-            Install App
+            Instalar
           </Button>
         </div>
       </div>
