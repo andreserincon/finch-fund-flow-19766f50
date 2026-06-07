@@ -24,6 +24,8 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Loan, ACCOUNT_LABELS, LOAN_STATUS_LABELS, LoanStatus } from '@/lib/types';
 import { formatCurrency, getCurrencyForAccount, cn, parseLocalDate } from '@/lib/utils';
+import { Skeleton } from '@/components/ui/skeleton';
+import { TableSkeleton } from '@/components/ui/loading';
 
 export default function Loans() {
   const { loans, isLoading, cancelLoan } = useLoans();
@@ -67,8 +69,13 @@ export default function Loans() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-pulse text-muted-foreground">Cargando...</div>
+      <div className="space-y-4 md:space-y-6">
+        <Skeleton className="h-7 w-44" />
+        <div className="grid gap-3 grid-cols-1 md:grid-cols-2">
+          <Skeleton className="h-28 rounded-xl" />
+          <Skeleton className="h-28 rounded-xl" />
+        </div>
+        <TableSkeleton rows={6} cols={6} />
       </div>
     );
   }

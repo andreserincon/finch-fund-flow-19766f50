@@ -32,8 +32,13 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn, formatCurrency, getCurrencyForAccount, parseLocalDate } from '@/lib/utils';
 import { CATEGORY_LABELS, ACCOUNT_LABELS, Transaction, AccountType } from '@/lib/types';
+import { useTranslation } from 'react-i18next';
+import { Skeleton } from '@/components/ui/skeleton';
+import { TableSkeleton } from '@/components/ui/loading';
+import { AddTransactionForm } from '@/components/forms/AddTransactionForm';
 
 export default function Transactions() {
+  const { t } = useTranslation();
   const { transactions, isLoading } = useTransactions();
   const { isAdmin } = useIsAdmin();
   const [search, setSearch] = useState('');
@@ -98,19 +103,27 @@ export default function Transactions() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-pulse text-muted-foreground">Cargando...</div>
+      <div className="space-y-4 md:space-y-6">
+        <Skeleton className="h-7 w-44" />
+        <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+          <Skeleton className="h-20 rounded-xl" />
+          <Skeleton className="h-20 rounded-xl" />
+        </div>
+        <TableSkeleton rows={8} cols={6} />
       </div>
     );
   }
 
   return (
     <div className="space-y-4 md:space-y-6 animate-fade-in">
-      <div>
-        <h1 className="text-xl md:text-2xl font-bold text-foreground">Transacciones</h1>
-        <p className="text-sm text-muted-foreground">
-          {transactions.length} transacciones totales
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-xl md:text-2xl font-bold text-foreground">Transacciones</h1>
+          <p className="text-sm text-muted-foreground">
+            {transactions.length} transacciones totales
+          </p>
+        </div>
+        {isAdmin && <AddTransactionForm triggerLabel={t('dashboard.logTransaction')} />}
       </div>
 
       {/* Summary Cards */}
