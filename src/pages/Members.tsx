@@ -194,7 +194,7 @@ export default function Members() {
     <div className="space-y-4 md:space-y-6 animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-xl md:text-2xl font-bold text-foreground">Miembros</h1>
+          <h1 className="text-xl md:text-2xl font-bold text-foreground font-display">Miembros</h1>
           <p className="text-sm text-muted-foreground">
             {memberBalances.filter((m) => m.is_active).length} miembros activos
           </p>

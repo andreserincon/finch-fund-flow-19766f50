@@ -381,7 +381,7 @@ export default function Dashboard() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-3">
           <div>
-            <h1 className="text-xl md:text-2xl font-bold text-foreground">{t('dashboard.title')}</h1>
+            <h1 className="text-xl md:text-2xl font-bold text-foreground font-display">{t('dashboard.title')}</h1>
             <p className="text-sm text-muted-foreground">
               {isCurrentMonth
                 ? t('dashboard.financialOverview', { month: format(selectedDate, 'MMMM yyyy', { locale: dateLocale }) })

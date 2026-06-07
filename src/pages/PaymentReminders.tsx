@@ -17,6 +17,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { usePaymentReminders } from '@/hooks/usePaymentReminders';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { formatCurrency, parseLocalDate } from '@/lib/utils';
+import { TableSkeleton } from '@/components/ui/loading';
 import { PaymentReminder, REMINDER_STATUS_LABELS, ReminderStatus } from '@/lib/types';
 
 const MONTH_NAMES_ES = [
@@ -267,7 +268,7 @@ export default function PaymentReminders() {
           </Tabs>
 
           {isLoading ? (
-            <div className="text-center py-8 text-muted-foreground">Cargando...</div>
+            <TableSkeleton rows={5} cols={4} />
           ) : filtered.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               No hay recordatorios en este filtro.

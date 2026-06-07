@@ -1,6 +1,8 @@
 import { useState, useCallback } from 'react';
 import { useMonthlyFees } from '@/hooks/useMonthlyFees';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
+import { Skeleton } from '@/components/ui/skeleton';
+import { TableSkeleton } from '@/components/ui/loading';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -163,8 +165,9 @@ export default function MonthlyFees() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-pulse text-muted-foreground">Loading...</div>
+      <div className="space-y-4 md:space-y-6">
+        <Skeleton className="h-7 w-44" />
+        <TableSkeleton rows={6} cols={4} />
       </div>
     );
   }
