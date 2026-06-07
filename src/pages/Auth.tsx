@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -11,29 +11,97 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Wallet, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { AlertCircle, CheckCircle2 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const authSchema = z.object({
-  email: z.string().email('Please enter a valid email'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
+  email: z.string().email('Ingrese un correo electrónico válido'),
+  password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres'),
 });
 
 const resetSchema = z.object({
-  email: z.string().email('Please enter a valid email'),
+  email: z.string().email('Ingrese un correo electrónico válido'),
 });
 
 const newPasswordSchema = z.object({
-  password: z.string().min(6, 'Password must be at least 6 characters'),
-  confirmPassword: z.string().min(6, 'Password must be at least 6 characters'),
+  password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres'),
+  confirmPassword: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres'),
 }).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
+  message: 'Las contraseñas no coinciden',
   path: ["confirmPassword"],
 });
 
 type AuthFormData = z.infer<typeof authSchema>;
 type ResetFormData = z.infer<typeof resetSchema>;
 type NewPasswordFormData = z.infer<typeof newPasswordSchema>;
+
+/**
+ * RaysMark - a fragment of the lodge emblem (the radiating rays), never the
+ * full emblem. Rendered in gold as the login threshold mark.
+ */
+function RaysMark({ className }: { className?: string }) {
+  const count = 28;
+  const lines = Array.from({ length: count }, (_, i) => {
+    const a = (i / count) * Math.PI * 2;
+    const isLong = i % 2 === 0;
+    const rIn = 30;
+    const rOut = isLong ? 104 : 66;
+    return (
+      <line
+        key={i}
+        x1={(Math.cos(a) * rIn).toFixed(1)}
+        y1={(Math.sin(a) * rIn).toFixed(1)}
+        x2={(Math.cos(a) * rOut).toFixed(1)}
+        y2={(Math.sin(a) * rOut).toFixed(1)}
+        stroke="currentColor"
+        strokeWidth={isLong ? 3 : 2}
+        strokeLinecap="round"
+        opacity={isLong ? 0.95 : 0.5}
+        strokeDasharray={isLong ? undefined : '3 5'}
+      />
+    );
+  });
+  return (
+    <svg viewBox="-110 -110 220 220" className={className} aria-hidden="true">
+      {lines}
+    </svg>
+  );
+}
+
+/** The dark, atmospheric backdrop shared by every threshold view. */
+function Threshold({ children }: { children: ReactNode }) {
+  return (
+    <div className="dark relative flex min-h-screen items-center justify-center overflow-hidden bg-background p-4">
+      <div className="pointer-events-none absolute inset-0 z-0" aria-hidden="true">
+        <div className="absolute left-1/2 top-1/2 h-[660px] w-[660px] -translate-x-1/2 -translate-y-1/2 text-primary opacity-[0.06]">
+          <RaysMark className="h-full w-full overflow-visible" />
+        </div>
+        <div
+          className="absolute inset-0"
+          style={{ background: 'radial-gradient(circle at 50% 38%, transparent 55%, rgba(2,2,4,.6) 100%)' }}
+        />
+      </div>
+      <div className="relative z-10 w-full max-w-md space-y-6 animate-fade-in">{children}</div>
+    </div>
+  );
+}
+
+/** The lodge wordmark and gold hairline used atop each threshold card. */
+function LodgeHead({ subtitle }: { subtitle: string }) {
+  return (
+    <div className="flex flex-col items-center gap-3 text-center">
+      <div className="h-14 w-14 text-primary">
+        <RaysMark className="h-full w-full overflow-visible" />
+      </div>
+      <h1 className="font-display text-3xl font-semibold leading-none text-foreground">
+        Logia Simón Bolívar
+      </h1>
+      <span className="font-sans text-[0.7rem] uppercase tracking-[0.3em] text-primary">Nº 646</span>
+      <hr className="rule-gold" />
+      <p className="text-sm text-muted-foreground">{subtitle}</p>
+    </div>
+  );
+}
 
 export default function Auth() {
   const navigate = useNavigate();
@@ -99,9 +167,9 @@ export default function Auth() {
 
       if (error) {
         if (error.message.includes('User already registered')) {
-          setError('This email is already registered. Please sign in instead.');
+          setError('Este correo ya está registrado. Ingrese, por favor.');
         } else if (error.message.includes('Invalid login credentials')) {
-          setError('Invalid email or password. Please try again.');
+          setError('Correo o contraseña incorrectos. Intente de nuevo.');
         } else {
           setError(error.message);
         }
@@ -111,7 +179,7 @@ export default function Auth() {
       reset();
       navigate('/');
     } catch (err) {
-      setError('An unexpected error occurred. Please try again.');
+      setError('Ocurrió un error inesperado. Intente de nuevo.');
     } finally {
       setIsLoading(false);
     }
@@ -124,20 +192,20 @@ export default function Auth() {
 
     try {
       const redirectUrl = `${window.location.origin}/auth`;
-      
+
       const { error } = await supabase.auth.resetPasswordForEmail(data.email, {
         redirectTo: redirectUrl,
       });
 
       if (error) {
-        setResetError(error.message || 'Failed to send reset email. Please try again.');
+        setResetError(error.message || 'No pudimos enviar el correo. Intente de nuevo.');
         return;
       }
 
       setResetSuccess(true);
       resetResetForm();
     } catch (err) {
-      setResetError('An unexpected error occurred. Please try again.');
+      setResetError('Ocurrió un error inesperado. Intente de nuevo.');
     } finally {
       setResetLoading(false);
     }
@@ -168,13 +236,13 @@ export default function Auth() {
 
       setPasswordUpdateSuccess(true);
       resetNewPasswordForm();
-      
+
       // Redirect to treasury dashboard after successful password update
       setTimeout(() => {
         navigate('/');
       }, 2000);
     } catch (err) {
-      setPasswordUpdateError('An unexpected error occurred. Please try again.');
+      setPasswordUpdateError('Ocurrió un error inesperado. Intente de nuevo.');
     } finally {
       setPasswordUpdateLoading(false);
     }
@@ -183,238 +251,216 @@ export default function Auth() {
   // Show password reset form if in recovery mode
   if (isRecoveryMode) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <div className="w-full max-w-md space-y-6 animate-fade-in">
-          <div className="flex flex-col items-center gap-2">
-            <div className="flex h-14 w-14 items-center justify-center rounded-xl gradient-primary shadow-lg">
-              <Wallet className="h-7 w-7 text-primary-foreground" />
-            </div>
-            <h1 className="text-2xl font-bold text-foreground">Set New Password</h1>
-            <p className="text-muted-foreground text-center">
-              Enter your new password below
-            </p>
-          </div>
+      <Threshold>
+        <LodgeHead subtitle="Establezca su nueva contraseña" />
 
-          <Card className="border-border/50 shadow-lg">
-            <CardHeader>
-              <CardTitle>Reset Password</CardTitle>
-              <CardDescription>
-                Choose a strong password with at least 6 characters
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {passwordUpdateSuccess ? (
-                <Alert className="border-primary/50 bg-primary/10">
-                  <CheckCircle2 className="h-4 w-4 text-primary" />
-                  <AlertDescription className="text-primary">
-                    Password updated successfully! Redirecting...
-                  </AlertDescription>
-                </Alert>
-              ) : (
-                <form onSubmit={handleSubmitNewPassword(handleNewPassword)} className="space-y-4">
-                  {passwordUpdateError && (
-                    <Alert variant="destructive">
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertDescription>{passwordUpdateError}</AlertDescription>
-                    </Alert>
+        <Card className="border-border/60 bg-card shadow-lg">
+          <CardHeader>
+            <CardTitle className="font-display text-2xl font-semibold">Nueva contraseña</CardTitle>
+            <CardDescription>
+              Elija una contraseña segura, de al menos 6 caracteres.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {passwordUpdateSuccess ? (
+              <Alert className="border-primary/50 bg-primary/10">
+                <CheckCircle2 className="h-4 w-4 text-primary" />
+                <AlertDescription className="text-primary">
+                  Contraseña actualizada. Redirigiendo...
+                </AlertDescription>
+              </Alert>
+            ) : (
+              <form onSubmit={handleSubmitNewPassword(handleNewPassword)} className="space-y-4">
+                {passwordUpdateError && (
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{passwordUpdateError}</AlertDescription>
+                  </Alert>
+                )}
+
+                <div className="space-y-2">
+                  <Label htmlFor="new-password">Nueva contraseña</Label>
+                  <Input
+                    id="new-password"
+                    type="password"
+                    placeholder="••••••••"
+                    {...registerNewPassword('password')}
+                  />
+                  {newPasswordErrors.password && (
+                    <p className="text-sm text-destructive">{newPasswordErrors.password.message}</p>
                   )}
+                </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="new-password">New Password</Label>
-                    <Input
-                      id="new-password"
-                      type="password"
-                      placeholder="••••••••"
-                      {...registerNewPassword('password')}
-                    />
-                    {newPasswordErrors.password && (
-                      <p className="text-sm text-destructive">{newPasswordErrors.password.message}</p>
-                    )}
-                  </div>
+                <div className="space-y-2">
+                  <Label htmlFor="confirm-password">Confirmar contraseña</Label>
+                  <Input
+                    id="confirm-password"
+                    type="password"
+                    placeholder="••••••••"
+                    {...registerNewPassword('confirmPassword')}
+                  />
+                  {newPasswordErrors.confirmPassword && (
+                    <p className="text-sm text-destructive">{newPasswordErrors.confirmPassword.message}</p>
+                  )}
+                </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="confirm-password">Confirm Password</Label>
-                    <Input
-                      id="confirm-password"
-                      type="password"
-                      placeholder="••••••••"
-                      {...registerNewPassword('confirmPassword')}
-                    />
-                    {newPasswordErrors.confirmPassword && (
-                      <p className="text-sm text-destructive">{newPasswordErrors.confirmPassword.message}</p>
-                    )}
-                  </div>
-
-                  <Button type="submit" className="w-full" disabled={passwordUpdateLoading}>
-                    {passwordUpdateLoading ? 'Updating...' : 'Update Password'}
-                  </Button>
-                </form>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+                <Button type="submit" className="w-full" disabled={passwordUpdateLoading}>
+                  {passwordUpdateLoading ? 'Actualizando...' : 'Actualizar contraseña'}
+                </Button>
+              </form>
+            )}
+          </CardContent>
+        </Card>
+      </Threshold>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <div className="w-full max-w-md space-y-6 animate-fade-in">
-        {/* Logo */}
-        <div className="flex flex-col items-center gap-2">
-          <div className="flex h-14 w-14 items-center justify-center rounded-xl gradient-primary shadow-lg">
-            <Wallet className="h-7 w-7 text-primary-foreground" />
-          </div>
-          <h1 className="text-2xl font-bold text-foreground">Treasury Management</h1>
-          <p className="text-muted-foreground text-center">
-            Manage your organization's finances with ease
-          </p>
-        </div>
+    <Threshold>
+      <LodgeHead subtitle="Área reservada para los hermanos" />
 
-        {/* Auth Card */}
-        <Card className="border-border/50 shadow-lg">
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <CardHeader className="pb-4">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="login">Sign In</TabsTrigger>
-                <TabsTrigger value="signup">Sign Up</TabsTrigger>
-              </TabsList>
-            </CardHeader>
+      <Card className="border-border/60 bg-card shadow-lg">
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <CardHeader className="pb-4">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="login">Ingresar</TabsTrigger>
+              <TabsTrigger value="signup">Crear cuenta</TabsTrigger>
+            </TabsList>
+          </CardHeader>
 
-            <CardContent>
-              {error && (
-                <Alert variant="destructive" className="mb-4">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
+          <CardContent>
+            {error && (
+              <Alert variant="destructive" className="mb-4">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
 
-              <TabsContent value="login" className="mt-0">
-                <form onSubmit={handleSubmit((data) => handleAuth(data, false))} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="login-email">Email</Label>
-                    <Input
-                      id="login-email"
-                      type="email"
-                      placeholder="treasurer@organization.com"
-                      {...register('email')}
-                    />
-                    {errors.email && (
-                      <p className="text-sm text-destructive">{errors.email.message}</p>
-                    )}
-                  </div>
+            <TabsContent value="login" className="mt-0">
+              <form onSubmit={handleSubmit((data) => handleAuth(data, false))} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="login-email">Correo electrónico</Label>
+                  <Input
+                    id="login-email"
+                    type="email"
+                    placeholder="correo@ejemplo.com"
+                    {...register('email')}
+                  />
+                  {errors.email && (
+                    <p className="text-sm text-destructive">{errors.email.message}</p>
+                  )}
+                </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="login-password">Password</Label>
-                    <Input
-                      id="login-password"
-                      type="password"
-                      placeholder="••••••••"
-                      {...register('password')}
-                    />
-                    {errors.password && (
-                      <p className="text-sm text-destructive">{errors.password.message}</p>
-                    )}
-                  </div>
+                <div className="space-y-2">
+                  <Label htmlFor="login-password">Contraseña</Label>
+                  <Input
+                    id="login-password"
+                    type="password"
+                    placeholder="••••••••"
+                    {...register('password')}
+                  />
+                  {errors.password && (
+                    <p className="text-sm text-destructive">{errors.password.message}</p>
+                  )}
+                </div>
 
-                  <Button type="submit" className="w-full" disabled={isLoading}>
-                    {isLoading ? 'Signing in...' : 'Sign In'}
-                  </Button>
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading ? 'Ingresando...' : 'Ingresar'}
+                </Button>
 
-                  <Dialog open={resetDialogOpen} onOpenChange={handleResetDialogChange}>
-                    <DialogTrigger asChild>
-                      <Button variant="link" type="button" className="w-full text-sm text-muted-foreground">
-                        Forgot your password?
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-md">
-                      <DialogHeader>
-                        <DialogTitle>Reset Password</DialogTitle>
-                        <DialogDescription>
-                          Enter your email address and we'll send you a link to reset your password.
-                        </DialogDescription>
-                      </DialogHeader>
-                      
-                      {resetSuccess ? (
-                        <Alert className="border-primary/50 bg-primary/10">
-                          <CheckCircle2 className="h-4 w-4 text-primary" />
-                          <AlertDescription className="text-primary">
-                            Password reset email sent! Check your inbox.
-                          </AlertDescription>
-                        </Alert>
-                      ) : (
-                        <form onSubmit={handleSubmitReset(handlePasswordReset)} className="space-y-4">
-                          {resetError && (
-                            <Alert variant="destructive">
-                              <AlertCircle className="h-4 w-4" />
-                              <AlertDescription>{resetError}</AlertDescription>
-                            </Alert>
+                <Dialog open={resetDialogOpen} onOpenChange={handleResetDialogChange}>
+                  <DialogTrigger asChild>
+                    <Button variant="link" type="button" className="w-full text-sm text-muted-foreground">
+                      ¿Olvidó su contraseña?
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="dark sm:max-w-md">
+                    <DialogHeader>
+                      <DialogTitle className="font-display text-2xl font-semibold">Restablecer contraseña</DialogTitle>
+                      <DialogDescription>
+                        Ingrese su correo y le enviaremos un enlace para restablecerla.
+                      </DialogDescription>
+                    </DialogHeader>
+
+                    {resetSuccess ? (
+                      <Alert className="border-primary/50 bg-primary/10">
+                        <CheckCircle2 className="h-4 w-4 text-primary" />
+                        <AlertDescription className="text-primary">
+                          Le enviamos un correo para restablecer su contraseña. Revise su bandeja.
+                        </AlertDescription>
+                      </Alert>
+                    ) : (
+                      <form onSubmit={handleSubmitReset(handlePasswordReset)} className="space-y-4">
+                        {resetError && (
+                          <Alert variant="destructive">
+                            <AlertCircle className="h-4 w-4" />
+                            <AlertDescription>{resetError}</AlertDescription>
+                          </Alert>
+                        )}
+
+                        <div className="space-y-2">
+                          <Label htmlFor="reset-email">Correo electrónico</Label>
+                          <Input
+                            id="reset-email"
+                            type="email"
+                            placeholder="correo@ejemplo.com"
+                            {...registerReset('email')}
+                          />
+                          {resetErrors.email && (
+                            <p className="text-sm text-destructive">{resetErrors.email.message}</p>
                           )}
-                          
-                          <div className="space-y-2">
-                            <Label htmlFor="reset-email">Email</Label>
-                            <Input
-                              id="reset-email"
-                              type="email"
-                              placeholder="your@email.com"
-                              {...registerReset('email')}
-                            />
-                            {resetErrors.email && (
-                              <p className="text-sm text-destructive">{resetErrors.email.message}</p>
-                            )}
-                          </div>
-                          
-                          <Button type="submit" className="w-full" disabled={resetLoading}>
-                            {resetLoading ? 'Sending...' : 'Send Reset Email'}
-                          </Button>
-                        </form>
-                      )}
-                    </DialogContent>
-                  </Dialog>
-                </form>
-              </TabsContent>
+                        </div>
 
-              <TabsContent value="signup" className="mt-0">
-                <form onSubmit={handleSubmit((data) => handleAuth(data, true))} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-email">Email</Label>
-                    <Input
-                      id="signup-email"
-                      type="email"
-                      placeholder="treasurer@organization.com"
-                      {...register('email')}
-                    />
-                    {errors.email && (
-                      <p className="text-sm text-destructive">{errors.email.message}</p>
+                        <Button type="submit" className="w-full" disabled={resetLoading}>
+                          {resetLoading ? 'Enviando...' : 'Enviar enlace'}
+                        </Button>
+                      </form>
                     )}
-                  </div>
+                  </DialogContent>
+                </Dialog>
+              </form>
+            </TabsContent>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-password">Password</Label>
-                    <Input
-                      id="signup-password"
-                      type="password"
-                      placeholder="••••••••"
-                      {...register('password')}
-                    />
-                    {errors.password && (
-                      <p className="text-sm text-destructive">{errors.password.message}</p>
-                    )}
-                  </div>
+            <TabsContent value="signup" className="mt-0">
+              <form onSubmit={handleSubmit((data) => handleAuth(data, true))} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="signup-email">Correo electrónico</Label>
+                  <Input
+                    id="signup-email"
+                    type="email"
+                    placeholder="correo@ejemplo.com"
+                    {...register('email')}
+                  />
+                  {errors.email && (
+                    <p className="text-sm text-destructive">{errors.email.message}</p>
+                  )}
+                </div>
 
-                  <Button type="submit" className="w-full" disabled={isLoading}>
-                    {isLoading ? 'Creating account...' : 'Create Account'}
-                  </Button>
-                </form>
-              </TabsContent>
-            </CardContent>
-          </Tabs>
-        </Card>
+                <div className="space-y-2">
+                  <Label htmlFor="signup-password">Contraseña</Label>
+                  <Input
+                    id="signup-password"
+                    type="password"
+                    placeholder="••••••••"
+                    {...register('password')}
+                  />
+                  {errors.password && (
+                    <p className="text-sm text-destructive">{errors.password.message}</p>
+                  )}
+                </div>
 
-        <p className="text-center text-xs text-muted-foreground">
-          By continuing, you agree to the Terms of Service
-        </p>
-      </div>
-    </div>
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading ? 'Creando cuenta...' : 'Crear cuenta'}
+                </Button>
+              </form>
+            </TabsContent>
+          </CardContent>
+        </Tabs>
+      </Card>
+
+      <p className="text-center text-xs text-muted-foreground">
+        Toda consulta se trata con absoluta reserva.
+      </p>
+    </Threshold>
   );
 }
