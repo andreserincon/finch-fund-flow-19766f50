@@ -58,6 +58,9 @@ import Library from "./pages/Library";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import Home from "./pages/Home";
+import Landing from "./pages/Landing";
+import Lock from "./pages/Lock";
+import { useIsStandalone } from "@/hooks/useIsStandalone";
 
 /* ------------------------------------------------------------------ */
 /*  React Query client (singleton)                                    */
@@ -219,6 +222,40 @@ function AuthRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+/**
+ * RootGate - decides what the app root ("/") shows:
+ *   - installed mobile app (standalone): the sun lock screen, never the landing
+ *   - public web visitor (not signed in): the public landing page
+ *   - signed-in web member: the treasury dashboard (existing behavior)
+ * The reserved area is entered through the hidden door (the sun), not a button.
+ */
+function RootGate() {
+  const { user, loading } = useAuth();
+  const isStandalone = useIsStandalone();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-pulse text-muted-foreground">Cargando...</div>
+      </div>
+    );
+  }
+
+  if (isStandalone) {
+    return <Lock />;
+  }
+
+  if (!user) {
+    return <Landing />;
+  }
+
+  return (
+    <TreasuryRoute>
+      <Dashboard />
+    </TreasuryRoute>
+  );
+}
+
 /* ================================================================== */
 /*  App component                                                     */
 /* ================================================================== */
@@ -241,8 +278,10 @@ const App = () => (
         {/* Authenticated landing */}
         <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
 
+        {/* Root: public landing, app lock screen, or dashboard (see RootGate) */}
+        <Route path="/" element={<RootGate />} />
+
         {/* Treasury – view-only routes */}
-        <Route path="/" element={<TreasuryRoute><Dashboard /></TreasuryRoute>} />
         <Route path="/index" element={<Navigate to="/" replace />} />
         <Route path="/members" element={<TreasuryRoute><Members /></TreasuryRoute>} />
 

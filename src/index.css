@@ -235,6 +235,47 @@
     border: 0;
   }
 
+  /* Slow rotation for the hero sun (the secret door) */
+  .rays-spin {
+    animation: lodgespin 220s linear infinite;
+    transform-origin: center;
+  }
+  @keyframes lodgespin {
+    to { transform: rotate(360deg); }
+  }
+
+  /* The door-opening transition shown when the secret entrance is triggered */
+  .door-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 90;
+    display: flex;
+    pointer-events: none;
+  }
+  .door-panel {
+    width: 50%;
+    height: 100%;
+    background: #060607;
+    transition: transform 0.85s cubic-bezier(0.7, 0, 0.2, 1);
+  }
+  .door-left { border-right: 1px solid hsl(42 54% 47% / 0.5); }
+  .door-right { border-left: 1px solid hsl(42 54% 47% / 0.5); }
+  .door-overlay.open .door-left { transform: translateX(-100%); }
+  .door-overlay.open .door-right { transform: translateX(100%); }
+  .door-glow {
+    position: fixed;
+    inset: 0;
+    opacity: 0;
+    transition: opacity 0.85s ease;
+    background: radial-gradient(circle at 50% 50%, hsl(42 60% 55% / 0.25), transparent 60%);
+  }
+  .door-overlay.open .door-glow { opacity: 1; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .rays-spin { animation: none; }
+    .door-panel, .door-glow { transition: none; }
+  }
+
   .text-balance {
     text-wrap: balance;
   }

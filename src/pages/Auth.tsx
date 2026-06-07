@@ -177,7 +177,7 @@ export default function Auth() {
       }
 
       reset();
-      navigate('/');
+      navigate('/home');
     } catch (err) {
       setError('Ocurrió un error inesperado. Intente de nuevo.');
     } finally {
@@ -237,9 +237,9 @@ export default function Auth() {
       setPasswordUpdateSuccess(true);
       resetNewPasswordForm();
 
-      // Redirect to treasury dashboard after successful password update
+      // Redirect to the members home after successful password update
       setTimeout(() => {
-        navigate('/');
+        navigate('/home');
       }, 2000);
     } catch (err) {
       setPasswordUpdateError('Ocurrió un error inesperado. Intente de nuevo.');
