@@ -38,9 +38,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 import { useBudgetLines } from '@/hooks/useBudgetLines';
-import type { BudgetLine, BudgetScenario } from '@/lib/budget-types';
+import type { BudgetCurrency, BudgetLine, BudgetScenario } from '@/lib/budget-types';
 import type { TransactionType } from '@/lib/types';
-import { formatCurrencyCompact, getCurrencyForAccount } from '@/lib/utils';
+import { formatCurrencyCompact } from '@/lib/utils';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const db = supabase as any;
@@ -116,11 +116,11 @@ export function ApplyParametersDialog({
     open ? scenarioId : null,
   );
 
-  /* Compute the projected lines + totals grouped by (account, type). */
+  /* Compute the projected lines + totals grouped by (currency, type). */
   const preview = useMemo(() => {
-    const byAccountType: Record<
+    const byCurrencyType: Record<
       string,
-      { account: string; type: TransactionType; oldTotal: number; newTotal: number }
+      { currency: BudgetCurrency; type: TransactionType; oldTotal: number; newTotal: number }
     > = {};
 
     for (const line of lines) {
@@ -130,23 +130,23 @@ export function ApplyParametersDialog({
         membershipGrowthPercent,
         extraordinaryIncomeMultiplier,
       );
-      const key = `${line.account}::${line.transaction_type}`;
-      if (!byAccountType[key]) {
-        byAccountType[key] = {
-          account: line.account,
+      const key = `${line.currency}::${line.transaction_type}`;
+      if (!byCurrencyType[key]) {
+        byCurrencyType[key] = {
+          currency: line.currency,
           type: line.transaction_type,
           oldTotal: 0,
           newTotal: 0,
         };
       }
-      byAccountType[key].oldTotal += Number(line.budgeted_amount) || 0;
-      byAccountType[key].newTotal += projected;
+      byCurrencyType[key].oldTotal += Number(line.budgeted_amount) || 0;
+      byCurrencyType[key].newTotal += projected;
     }
 
-    return Object.values(byAccountType).sort((a, b) =>
-      a.account === b.account
+    return Object.values(byCurrencyType).sort((a, b) =>
+      a.currency === b.currency
         ? a.type.localeCompare(b.type)
-        : a.account.localeCompare(b.account),
+        : a.currency.localeCompare(b.currency),
     );
   }, [
     lines,
@@ -193,7 +193,7 @@ export function ApplyParametersDialog({
       const toInsert = lines.map((l) => ({
         budget_scenario_id: newScenario.id,
         month: l.month,
-        account: l.account,
+        currency: l.currency,
         transaction_type: l.transaction_type,
         category: l.category,
         budgeted_amount: projectAmount(
@@ -295,20 +295,19 @@ export function ApplyParametersDialog({
                 <tbody>
                   {preview.map((row) => {
                     const delta = row.newTotal - row.oldTotal;
-                    const currency = getCurrencyForAccount(row.account);
                     return (
                       <tr
-                        key={`${row.account}-${row.type}`}
+                        key={`${row.currency}-${row.type}`}
                         className="border-b last:border-0"
                       >
                         <td className="px-3 py-1.5 font-mono text-xs">
-                          {row.account} · {row.type}
+                          {row.currency} · {row.type}
                         </td>
                         <td className="px-3 py-1.5 text-right font-mono text-xs">
-                          {formatCurrencyCompact(row.oldTotal, currency)}
+                          {formatCurrencyCompact(row.oldTotal, row.currency)}
                         </td>
                         <td className="px-3 py-1.5 text-right font-mono text-xs">
-                          {formatCurrencyCompact(row.newTotal, currency)}
+                          {formatCurrencyCompact(row.newTotal, row.currency)}
                         </td>
                         <td
                           className={`px-3 py-1.5 text-right font-mono text-xs ${
@@ -316,7 +315,7 @@ export function ApplyParametersDialog({
                           }`}
                         >
                           {delta >= 0 ? '+' : ''}
-                          {formatCurrencyCompact(delta, currency)}
+                          {formatCurrencyCompact(delta, row.currency)}
                         </td>
                       </tr>
                     );
