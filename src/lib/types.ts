@@ -169,6 +169,8 @@ export interface EventMemberPayment {
   guest_phone: string | null;
   amount_owed: number;
   amount_paid: number;
+  /** Number of monthly installments this participant pays (>= 1). Defaults to 1. */
+  installments?: number;
   created_at: string;
   updated_at: string;
   /** Joined member data when member_id is non-null */

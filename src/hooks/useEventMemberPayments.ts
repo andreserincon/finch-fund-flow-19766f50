@@ -11,6 +11,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { EventMemberPayment } from '@/lib/types';
 
+// `installments` was added after the generated Supabase types were last
+// regenerated, so writes that touch it go through an untyped client.
+/* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+const db = supabase as any;
+
 /**
  * Re-exported for backwards compatibility with existing imports.
  * Prefer `EventMemberPayment` from `@/lib/types` in new code.
@@ -46,7 +51,7 @@ export function useEventMemberPayments(eventId?: string) {
 
   /** Assign fee records to ALL active members for a given event */
   const createPaymentsForAllMembers = useMutation({
-    mutationFn: async ({ eventId, amountPerMember }: { eventId: string; amountPerMember: number }) => {
+    mutationFn: async ({ eventId, amountPerMember, installments }: { eventId: string; amountPerMember: number; installments?: number }) => {
       const { data: members, error: membersError } = await supabase
         .from('members')
         .select('id')
@@ -60,9 +65,10 @@ export function useEventMemberPayments(eventId?: string) {
         member_id: member.id,
         amount_owed: amountPerMember,
         amount_paid: 0,
+        installments: installments ?? 1,
       }));
 
-      const { error } = await supabase
+      const { error } = await db
         .from('event_member_payments')
         .insert(paymentRecords);
 
@@ -79,25 +85,28 @@ export function useEventMemberPayments(eventId?: string) {
     },
   });
 
-  /** Update a single payment record (amount_paid, amount_owed, or guest_phone) */
+  /** Update a single payment record (amount_paid, amount_owed, guest_phone, installments) */
   const updatePayment = useMutation({
     mutationFn: async ({
       id,
       amount_paid,
       amount_owed,
       guest_phone,
+      installments,
     }: {
       id: string;
       amount_paid?: number;
       amount_owed?: number;
       guest_phone?: string | null;
+      installments?: number;
     }) => {
-      const updateData: Partial<{ amount_paid: number; amount_owed: number; guest_phone: string | null }> = {};
+      const updateData: Record<string, unknown> = {};
       if (amount_paid !== undefined) updateData.amount_paid = amount_paid;
       if (amount_owed !== undefined) updateData.amount_owed = amount_owed;
       if (guest_phone !== undefined) updateData.guest_phone = guest_phone;
+      if (installments !== undefined) updateData.installments = installments;
 
-      const { error } = await supabase
+      const { error } = await db
         .from('event_member_payments')
         .update(updateData)
         .eq('id', id);
@@ -118,14 +127,15 @@ export function useEventMemberPayments(eventId?: string) {
 
   /** Add a single member to an event */
   const addMemberToEvent = useMutation({
-    mutationFn: async ({ eventId, memberId, amountOwed }: { eventId: string; memberId: string; amountOwed: number }) => {
-      const { error } = await supabase
+    mutationFn: async ({ eventId, memberId, amountOwed, installments }: { eventId: string; memberId: string; amountOwed: number; installments?: number }) => {
+      const { error } = await db
         .from('event_member_payments')
         .insert({
           event_id: eventId,
           member_id: memberId,
           amount_owed: amountOwed,
           amount_paid: 0,
+          installments: installments ?? 1,
         });
 
       if (error) throw error;
@@ -149,13 +159,15 @@ export function useEventMemberPayments(eventId?: string) {
       guestName,
       guestPhone,
       amountOwed,
+      installments,
     }: {
       eventId: string;
       guestName: string;
       guestPhone?: string | null;
       amountOwed: number;
+      installments?: number;
     }) => {
-      const { error } = await supabase
+      const { error } = await db
         .from('event_member_payments')
         .insert({
           event_id: eventId,
@@ -164,6 +176,7 @@ export function useEventMemberPayments(eventId?: string) {
           guest_phone: guestPhone || null,
           amount_owed: amountOwed,
           amount_paid: 0,
+          installments: installments ?? 1,
         });
 
       if (error) throw error;

@@ -44,7 +44,7 @@ const guestSchema = z.object({
 });
 type GuestFormData = z.infer<typeof guestSchema>;
 
-function AddGuestDialog({ eventId, defaultAmount }: { eventId: string; defaultAmount: number }) {
+function AddGuestDialog({ eventId, defaultAmount, defaultInstallments }: { eventId: string; defaultAmount: number; defaultInstallments: number }) {
   const [open, setOpen] = useState(false);
   const { addGuestToEvent } = useEventMemberPayments(eventId);
 
@@ -64,6 +64,7 @@ function AddGuestDialog({ eventId, defaultAmount }: { eventId: string; defaultAm
       guestName: data.guest_name,
       guestPhone: data.guest_phone || null,
       amountOwed: data.amount_owed,
+      installments: defaultInstallments,
     });
     reset({ amount_owed: defaultAmount });
     setOpen(false);
@@ -285,12 +286,16 @@ function ParticipantRow({
   const { updatePayment, removeMemberFromEvent } = useEventMemberPayments(eventId);
   const [editingOwed, setEditingOwed] = useState(false);
   const [draftOwed, setDraftOwed] = useState<string>('');
+  const [editingCuotas, setEditingCuotas] = useState(false);
+  const [draftCuotas, setDraftCuotas] = useState<string>('');
 
   const isMember = !!payment.member_id;
   const displayName = isMember ? (payment.member?.full_name || 'Miembro desconocido') : payment.guest_name;
   const amountOwed = Number(payment.amount_owed);
   const amountPaid = Number(payment.amount_paid);
   const balance = amountOwed - amountPaid;
+  const installments = Number(payment.installments) || 1;
+  const perCuota = installments > 0 ? amountOwed / installments : amountOwed;
   const isPaid = amountPaid >= amountOwed && amountOwed > 0;
   const isOrphanPaid = amountPaid > 0 && !hasTransactions;
 
@@ -303,6 +308,17 @@ function ParticipantRow({
     await updatePayment.mutateAsync({ id: payment.id, amount_owed: value });
     setEditingOwed(false);
     setDraftOwed('');
+  };
+
+  const saveCuotas = async () => {
+    const value = parseInt(draftCuotas, 10);
+    if (isNaN(value) || value < 1 || value > 36) {
+      setEditingCuotas(false);
+      return;
+    }
+    await updatePayment.mutateAsync({ id: payment.id, installments: value });
+    setEditingCuotas(false);
+    setDraftCuotas('');
   };
 
   return (
@@ -351,6 +367,46 @@ function ParticipantRow({
             disabled={!canEdit}
           >
             {formatCurrency(amountOwed)}
+          </Button>
+        )}
+      </TableCell>
+      <TableCell className="text-center">
+        {editingCuotas ? (
+          <div className="flex items-center justify-center gap-1">
+            <Input
+              type="number"
+              min="1"
+              max="36"
+              step="1"
+              value={draftCuotas}
+              onChange={(e) => setDraftCuotas(e.target.value)}
+              className="w-16 h-8 text-center"
+              autoFocus
+            />
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={saveCuotas}>
+              <Check className="h-4 w-4 text-success" />
+            </Button>
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditingCuotas(false)}>
+              <X className="h-4 w-4 text-destructive" />
+            </Button>
+          </div>
+        ) : (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 px-2"
+            onClick={() => {
+              if (!canEdit) return;
+              setEditingCuotas(true);
+              setDraftCuotas(String(installments));
+            }}
+            disabled={!canEdit}
+            title={installments > 1 ? `${installments} cuotas de ${formatCurrency(perCuota)}` : 'Pago en una sola cuota'}
+          >
+            <span className="font-mono">{installments}</span>
+            {installments > 1 && (
+              <span className="ml-1 text-xs text-muted-foreground">({formatCurrency(perCuota)})</span>
+            )}
           </Button>
         )}
       </TableCell>
@@ -417,13 +473,13 @@ function ParticipantRow({
   );
 }
 
-function AssignAllMembersButton({ eventId, defaultAmount }: { eventId: string; defaultAmount: number }) {
+function AssignAllMembersButton({ eventId, defaultAmount, defaultInstallments }: { eventId: string; defaultAmount: number; defaultInstallments: number }) {
   const { createPaymentsForAllMembers } = useEventMemberPayments(eventId);
   return (
     <Button
       variant="outline"
       onClick={() =>
-        createPaymentsForAllMembers.mutate({ eventId, amountPerMember: defaultAmount })
+        createPaymentsForAllMembers.mutate({ eventId, amountPerMember: defaultAmount, installments: defaultInstallments })
       }
       disabled={defaultAmount <= 0 || createPaymentsForAllMembers.isPending}
     >
@@ -518,6 +574,8 @@ export default function EventOverview() {
     return an.localeCompare(bn);
   });
 
+  const eventInstallments = (event as { installments?: number }).installments ?? 1;
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
@@ -537,8 +595,8 @@ export default function EventOverview() {
           </div>
           {isAdmin && (
             <div className="flex gap-2 flex-wrap">
-              <AssignAllMembersButton eventId={event.id} defaultAmount={event.default_amount} />
-              <AddGuestDialog eventId={event.id} defaultAmount={event.default_amount} />
+              <AssignAllMembersButton eventId={event.id} defaultAmount={event.default_amount} defaultInstallments={eventInstallments} />
+              <AddGuestDialog eventId={event.id} defaultAmount={event.default_amount} defaultInstallments={eventInstallments} />
             </div>
           )}
         </div>
@@ -633,6 +691,7 @@ export default function EventOverview() {
                     eventId: event.id,
                     memberId: memberToAdd,
                     amountOwed: event.default_amount,
+                    installments: eventInstallments,
                   });
                   setMemberToAdd('');
                 }}
@@ -654,6 +713,7 @@ export default function EventOverview() {
                   <TableHead>Nombre</TableHead>
                   <TableHead>Tipo</TableHead>
                   <TableHead className="text-right">Adeudado</TableHead>
+                  <TableHead className="text-center">Cuotas</TableHead>
                   <TableHead className="text-right">Pagado</TableHead>
                   <TableHead className="text-right">Saldo</TableHead>
                   <TableHead className="text-center">Estado</TableHead>
