@@ -1,427 +1,127 @@
 /**
  * @file PaymentReminders.tsx
- * @description Treasury page at /recordatorios. Shows the queue of
- *   overdue WhatsApp reminders for a given period (defaults to current
- *   month), grouped by status. Treasurer can edit each draft, send
- *   individually, send all pending, or dismiss.
+ * @description Treasury page at /recordatorios. Lists every member who requires
+ *   attention with a ready-to-send reminder message (capitas + event cuotas,
+ *   built by src/lib/reminderDetail) and a "Enviar por WhatsApp" button that
+ *   opens WhatsApp (web or app) with the message prefilled (wa.me click-to-chat).
+ *   The treasurer reviews and sends manually from their own WhatsApp. No Twilio.
  */
 
-import { useMemo, useState } from 'react';
-import { Send, RefreshCw, X, Loader2, Plus } from 'lucide-react';
+import { useMemo } from 'react';
+import { MessageSquare, Copy, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
-} from '@/components/ui/dialog';
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from '@/components/ui/select';
-import { usePaymentReminders } from '@/hooks/usePaymentReminders';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useMembers } from '@/hooks/useMembers';
-import { useIsAdmin } from '@/hooks/useIsAdmin';
-import { formatCurrency, parseLocalDate } from '@/lib/utils';
+import { useMonthlyFees } from '@/hooks/useMonthlyFees';
+import { useMemberFeeTypeHistory } from '@/hooks/useMemberFeeTypeHistory';
+import { useMemberEventTotals } from '@/hooks/useMemberEventTotals';
+import { useEventParticipations } from '@/hooks/useEventParticipations';
+import { useHiddenMode } from '@/contexts/HiddenModeContext';
+import { getAttentionMembers } from '@/lib/attention';
+import {
+  capitaLines, eventLines, joinDetail, buildReminderMessage, firstName, whatsappLink,
+} from '@/lib/reminderDetail';
 import { TableSkeleton } from '@/components/ui/loading';
-import { PaymentReminder, REMINDER_STATUS_LABELS, ReminderStatus } from '@/lib/types';
+import { toast } from 'sonner';
 
-const MONTH_NAMES_ES = [
-  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
-];
+export default function PaymentReminders() {
+  const { memberBalances, isLoading: membersLoading } = useMembers();
+  const { monthlyFees, currentMonthFees, isLoading: feesLoading } = useMonthlyFees();
+  const { getFeeTypeForMonth, isLoading: historyLoading } = useMemberFeeTypeHistory();
+  const { eventTotals, isLoading: eventsLoading } = useMemberEventTotals();
+  const { participations, isLoading: partsLoading } = useEventParticipations();
+  const { displayName } = useHiddenMode();
 
-const STATUS_FILTERS: { key: ReminderStatus | 'all'; label: string }[] = [
-  { key: 'pending_review', label: 'Pendientes' },
-  { key: 'sent', label: 'Enviados' },
-  { key: 'failed', label: 'Fallidos' },
-  { key: 'dismissed', label: 'Descartados' },
-  { key: 'all', label: 'Todos' },
-];
+  const isLoading = membersLoading || feesLoading || historyLoading || eventsLoading || partsLoading;
 
-function statusBadgeVariant(status: ReminderStatus): 'default' | 'destructive' | 'secondary' | 'outline' {
-  switch (status) {
-    case 'sent':
-      return 'default';
-    case 'failed':
-      return 'destructive';
-    case 'pending_review':
-      return 'secondary';
-    case 'dismissed':
-    default:
-      return 'outline';
-  }
-}
-
-function ReminderRow({
-  reminder,
-  canEdit,
-  onSend,
-  onDismiss,
-  onUpdateDraft,
-  isSending,
-}: {
-  reminder: PaymentReminder;
-  canEdit: boolean;
-  onSend: (id: string) => void;
-  onDismiss: (id: string) => void;
-  onUpdateDraft: (id: string, draft: string) => void;
-  isSending: boolean;
-}) {
-  const [draft, setDraft] = useState(reminder.draft_message);
-  const [editing, setEditing] = useState(false);
-
-  const isPending = reminder.status === 'pending_review';
-  const phone = reminder.whatsapp_number || '—';
-
-  return (
-    <TableRow>
-      <TableCell>
-        <div className="flex flex-col">
-          <span className="font-medium">{reminder.member?.full_name || '—'}</span>
-          <span className="text-xs text-muted-foreground font-mono">{phone}</span>
-        </div>
-      </TableCell>
-      <TableCell className="text-right font-mono">
-        {formatCurrency(Number(reminder.amount_owed))}
-      </TableCell>
-      <TableCell>
-        <Badge variant={statusBadgeVariant(reminder.status)}>
-          {REMINDER_STATUS_LABELS[reminder.status]}
-        </Badge>
-        {reminder.failure_reason && (
-          <p className="text-xs text-destructive mt-1">{reminder.failure_reason}</p>
-        )}
-        {reminder.sent_at && (
-          <p className="text-xs text-muted-foreground mt-1">
-            Enviado: {parseLocalDate(reminder.sent_at.slice(0, 10)).toLocaleDateString('es-AR')}
-          </p>
-        )}
-      </TableCell>
-      <TableCell className="min-w-[280px]">
-        {isPending && canEdit ? (
-          editing ? (
-            <div className="space-y-2">
-              <Textarea
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                rows={4}
-                className="text-xs font-mono"
-              />
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  onClick={() => {
-                    onUpdateDraft(reminder.id, draft);
-                    setEditing(false);
-                  }}
-                >
-                  Guardar
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    setDraft(reminder.draft_message);
-                    setEditing(false);
-                  }}
-                >
-                  Cancelar
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <button
-              type="button"
-              className="text-left text-xs whitespace-pre-wrap font-mono hover:underline"
-              onClick={() => setEditing(true)}
-            >
-              {reminder.draft_message}
-            </button>
-          )
-        ) : (
-          <p className="text-xs whitespace-pre-wrap font-mono text-muted-foreground">
-            {reminder.final_message || reminder.draft_message}
-          </p>
-        )}
-      </TableCell>
-      <TableCell className="text-right">
-        {isPending && canEdit && (
-          <div className="flex gap-1 justify-end">
-            <Button
-              size="sm"
-              onClick={() => onSend(reminder.id)}
-              disabled={isSending || !reminder.whatsapp_number}
-              title={!reminder.whatsapp_number ? 'Falta número de WhatsApp' : 'Enviar por WhatsApp'}
-            >
-              {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-            </Button>
-            <Button size="sm" variant="ghost" onClick={() => onDismiss(reminder.id)} title="Descartar">
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-        )}
-      </TableCell>
-    </TableRow>
-  );
-}
-
-/** Build the same Spanish reminder body the scheduled job uses. */
-function buildDraft(name: string, amount: number, monthLabel: string): string {
-  return (
-    `Hola ${name}, te recordamos que tenés un saldo pendiente de ` +
-    `${formatCurrency(amount)} correspondiente a ${monthLabel}. Podés saldarlo ` +
-    `coordinando con el Tesorero. Gracias.`
-  );
-}
-
-/** Dialog to manually queue a reminder for a chosen member. */
-function AddReminderDialog({
-  period,
-  onCreate,
-  isCreating,
-}: {
-  period: { year: number; month: number };
-  onCreate: (input: {
-    member_id: string;
-    whatsapp_number: string | null;
-    period_year: number;
-    period_month: number;
-    amount_owed: number;
-    draft_message: string;
-  }) => void;
-  isCreating: boolean;
-}) {
-  const [open, setOpen] = useState(false);
-  const [memberId, setMemberId] = useState('');
-  const { memberBalances } = useMembers();
-
-  const activeMembers = useMemo(
-    () => memberBalances.filter((m) => m.is_active).sort((a, b) => a.full_name.localeCompare(b.full_name)),
-    [memberBalances],
-  );
-  const selected = activeMembers.find((m) => m.member_id === memberId);
-  const owed = selected ? Math.max(0, selected.total_fees_owed - selected.total_paid) : 0;
-  const monthLabel = `${MONTH_NAMES_ES[period.month - 1].toLowerCase()} ${period.year}`;
-  const draft = selected ? buildDraft(selected.full_name, owed, monthLabel) : '';
-
-  const handleCreate = () => {
-    if (!selected) return;
-    onCreate({
-      member_id: selected.member_id,
-      whatsapp_number: selected.whatsapp_number ?? null,
-      period_year: period.year,
-      period_month: period.month,
-      amount_owed: owed,
-      draft_message: draft,
+  const reminders = useMemo(() => {
+    const today = new Date();
+    const attention = getAttentionMembers(memberBalances, currentMonthFees, eventTotals);
+    return attention.map((m) => {
+      const eventPaid = eventTotals.paid[m.member_id] || 0;
+      const capitaPaid = m.total_paid - eventPaid;
+      const cLines = capitaLines(m, monthlyFees, getFeeTypeForMonth, capitaPaid, today);
+      const myParts = participations.filter((p) => p.member_id === m.member_id);
+      const eLines = eventLines(myParts, today);
+      const detail = joinDetail([...cLines, ...eLines]);
+      const detailText = detail || 'un saldo pendiente en tesorería';
+      const message = buildReminderMessage(firstName(m.full_name), detailText);
+      return {
+        member: m,
+        message,
+        link: whatsappLink(m.whatsapp_number, message),
+        hasDetail: cLines.length + eLines.length > 0,
+      };
     });
-    setOpen(false);
-    setMemberId('');
+  }, [memberBalances, currentMonthFees, eventTotals, monthlyFees, getFeeTypeForMonth, participations]);
+
+  const copy = (text: string) => {
+    navigator.clipboard.writeText(text).then(
+      () => toast.success('Mensaje copiado'),
+      () => toast.error('No se pudo copiar'),
+    );
   };
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) setMemberId(''); }}>
-      <DialogTrigger asChild>
-        <Button variant="outline" className="press">
-          <Plus className="mr-2 h-4 w-4" />
-          Agregar recordatorio
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[480px]">
-        <DialogHeader>
-          <DialogTitle className="font-display">Agregar recordatorio</DialogTitle>
-          <DialogDescription>Encolá un recordatorio para un miembro en {monthLabel}.</DialogDescription>
-        </DialogHeader>
-        <div className="space-y-3">
-          <div className="space-y-1.5">
-            <Label>Miembro</Label>
-            <Select value={memberId} onValueChange={setMemberId}>
-              <SelectTrigger><SelectValue placeholder="Seleccionar miembro..." /></SelectTrigger>
-              <SelectContent>
-                {activeMembers.map((m) => (
-                  <SelectItem key={m.member_id} value={m.member_id}>
-                    {m.full_name}{!m.whatsapp_number ? ' (sin WhatsApp)' : ''}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          {selected && (
-            <>
-              <p className="text-sm text-muted-foreground">
-                Adeudado: <span className="font-mono text-foreground">{formatCurrency(owed)}</span>
-              </p>
-              <div className="rounded-md border bg-muted/30 p-3 text-xs whitespace-pre-wrap font-mono">
-                {draft}
-              </div>
-              {!selected.whatsapp_number && (
-                <p className="text-xs text-warning">
-                  Este miembro no tiene WhatsApp cargado. Queda en la cola, pero no se podrá enviar hasta cargar el número.
-                </p>
-              )}
-            </>
-          )}
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
-          <Button onClick={handleCreate} disabled={!selected || isCreating}>
-            {isCreating ? 'Agregando...' : 'Agregar a la cola'}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-export default function PaymentReminders() {
-  const today = new Date();
-  const [period, setPeriod] = useState({
-    year: today.getFullYear(),
-    month: today.getMonth() + 1,
-  });
-  const [statusFilter, setStatusFilter] = useState<ReminderStatus | 'all'>('pending_review');
-  const { isAdmin } = useIsAdmin();
-
-  const {
-    reminders,
-    isLoading,
-    updateDraft,
-    dismissReminder,
-    sendReminders,
-    buildQueueNow,
-    createReminder,
-  } = usePaymentReminders(period);
-
-  const filtered = useMemo(
-    () => (statusFilter === 'all' ? reminders : reminders.filter((r) => r.status === statusFilter)),
-    [reminders, statusFilter]
-  );
-
-  const pendingWithNumbers = useMemo(
-    () => reminders.filter((r) => r.status === 'pending_review' && !!r.whatsapp_number),
-    [reminders]
-  );
-
-  const yearOptions = useMemo(() => {
-    const current = today.getFullYear();
-    return [current - 1, current, current + 1];
-  }, [today]);
-
-  return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex items-start justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Recordatorios</h1>
-          <p className="text-muted-foreground">
-            Cola de recordatorios automáticos por WhatsApp para miembros con pagos atrasados.
-          </p>
-        </div>
-        {isAdmin && (
-          <div className="flex gap-2 flex-wrap">
-            <AddReminderDialog
-              period={period}
-              onCreate={(input) => createReminder.mutate(input)}
-              isCreating={createReminder.isPending}
-            />
-            <Button
-              variant="outline"
-              onClick={() => buildQueueNow.mutate()}
-              disabled={buildQueueNow.isPending}
-            >
-              {buildQueueNow.isPending ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <RefreshCw className="mr-2 h-4 w-4" />
-              )}
-              Reconstruir cola
-            </Button>
-            <Button
-              onClick={() => sendReminders.mutate(pendingWithNumbers.map((r) => r.id))}
-              disabled={pendingWithNumbers.length === 0 || sendReminders.isPending}
-            >
-              {sendReminders.isPending ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Send className="mr-2 h-4 w-4" />
-              )}
-              Enviar todos los pendientes ({pendingWithNumbers.length})
-            </Button>
-          </div>
-        )}
+      <div>
+        <h1 className="text-2xl font-bold text-foreground font-display">Recordatorios</h1>
+        <p className="text-muted-foreground">
+          Un mensaje listo por cada socio que requiere atención. Revisalo y envialo por WhatsApp con un clic.
+        </p>
       </div>
 
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-3">
-          <div>
-            <CardTitle>{MONTH_NAMES_ES[period.month - 1]} {period.year}</CardTitle>
-            <CardDescription>{reminders.length} recordatorio(s) en este período</CardDescription>
-          </div>
-          <div className="flex gap-2 items-center">
-            <select
-              value={period.month}
-              onChange={(e) => setPeriod({ ...period, month: Number(e.target.value) })}
-              className="h-9 rounded-md border border-input bg-background px-2 text-sm"
-            >
-              {MONTH_NAMES_ES.map((label, idx) => (
-                <option key={idx} value={idx + 1}>{label}</option>
-              ))}
-            </select>
-            <select
-              value={period.year}
-              onChange={(e) => setPeriod({ ...period, year: Number(e.target.value) })}
-              className="h-9 rounded-md border border-input bg-background px-2 text-sm"
-            >
-              {yearOptions.map((y) => (
-                <option key={y} value={y}>{y}</option>
-              ))}
-            </select>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <Tabs value={statusFilter} onValueChange={(v) => setStatusFilter(v as ReminderStatus | 'all')}>
-            <TabsList className="grid grid-cols-5 w-full max-w-2xl mb-4">
-              {STATUS_FILTERS.map((s) => (
-                <TabsTrigger key={s.key} value={s.key}>{s.label}</TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs>
-
-          {isLoading ? (
-            <TableSkeleton rows={5} cols={4} />
-          ) : filtered.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              No hay recordatorios en este filtro.
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Miembro</TableHead>
-                  <TableHead className="text-right">Adeudado</TableHead>
-                  <TableHead>Estado</TableHead>
-                  <TableHead>Mensaje</TableHead>
-                  <TableHead className="text-right">Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filtered.map((r) => (
-                  <ReminderRow
-                    key={r.id}
-                    reminder={r}
-                    canEdit={isAdmin}
-                    isSending={sendReminders.isPending}
-                    onSend={(id) => sendReminders.mutate([id])}
-                    onDismiss={(id) => dismissReminder.mutate(id)}
-                    onUpdateDraft={(id, draft) => updateDraft.mutate({ id, draft_message: draft })}
-                  />
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+      {isLoading ? (
+        <TableSkeleton rows={5} cols={2} />
+      ) : reminders.length === 0 ? (
+        <Card>
+          <CardContent className="py-12 text-center text-muted-foreground">
+            <Users className="h-10 w-10 mx-auto mb-2 text-success/40" />
+            Todos los socios están al día.
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-4">
+          <p className="text-sm text-muted-foreground">{reminders.length} socio(s) con saldo pendiente.</p>
+          {reminders.map(({ member, message, link, hasDetail }) => (
+            <Card key={member.member_id}>
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <CardTitle className="text-base">
+                    {displayName(member.full_name, member.phone_number)}
+                  </CardTitle>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" className="press" onClick={() => copy(message)}>
+                      <Copy className="mr-1.5 h-4 w-4" /> Copiar
+                    </Button>
+                    {link ? (
+                      <Button size="sm" className="press" asChild>
+                        <a href={link} target="_blank" rel="noopener noreferrer">
+                          <MessageSquare className="mr-1.5 h-4 w-4" /> Enviar por WhatsApp
+                        </a>
+                      </Button>
+                    ) : (
+                      <Button size="sm" disabled title="Este socio no tiene número de WhatsApp cargado">
+                        <MessageSquare className="mr-1.5 h-4 w-4" /> Sin WhatsApp
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <pre className="whitespace-pre-wrap break-words font-sans text-sm text-foreground/90 bg-muted/30 rounded-md p-3 border">
+                  {message}
+                </pre>
+                {!hasDetail && (
+                  <p className="mt-2 text-xs text-warning">
+                    No se pudo desglosar la deuda en cuotas para este socio; revisá su detalle a mano antes de enviar.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
