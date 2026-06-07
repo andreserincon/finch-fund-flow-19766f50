@@ -299,6 +299,25 @@
     text-wrap: balance;
   }
 
+  /* Touch press feedback: a slight squish on :active, removed for reduced motion.
+     Apply to cards, rows, pills, and bottom-nav tabs for native-feeling taps. */
+  .press {
+    -webkit-tap-highlight-color: transparent;
+    transition: transform var(--dur-fast) var(--ease-soft), opacity var(--dur-fast) var(--ease-soft);
+  }
+  .press:active {
+    transform: scale(0.97);
+    opacity: 0.9;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .press {
+      transition: none;
+    }
+    .press:active {
+      transform: none;
+    }
+  }
+
   .animate-fade-in {
     animation: fadeIn 0.3s ease-out;
   }
@@ -324,18 +343,5 @@
   }
 }
 
-/* Landscape mobile: show tables, hide cards, compact layout */
-@media (orientation: landscape) and (max-height: 500px) {
-  .landscape-table {
-    display: block !important;
-  }
-  .landscape-hide-cards {
-    display: none !important;
-  }
-  .stat-card {
-    padding: 0.75rem;
-  }
-  .stat-value {
-    font-size: 1.25rem;
-  }
-}
+/* The rotate-to-read landscape hack was removed: the mobile card views are now
+   the canonical phone layout in any orientation, so no forced table flip. */
