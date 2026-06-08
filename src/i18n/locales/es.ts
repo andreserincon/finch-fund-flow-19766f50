@@ -397,7 +397,7 @@ export default {
       roleRemoveError: 'Error al eliminar rol',
       roles: {
         treasurer: 'Tesorero',
-        vm: 'VM',
+        vm: 'Venerable',
         member: 'Miembro',
         bibliotecario: 'Bibliotecario',
         admin: 'Administrador',
@@ -405,7 +405,7 @@ export default {
       permissions: {
         title: 'Permisos',
         treasurer: 'Acceso completo: crear, editar, eliminar',
-        vm: 'Solo lectura: ver información',
+        vm: 'Lectura de toda la tesorería. Puede otorgar accesos.',
         member: 'Acceso limitado a datos propios',
         bibliotecario: 'Gestión completa de la biblioteca',
         admin: 'Acceso total a todos los módulos y funciones',

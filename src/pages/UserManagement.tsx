@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useUserRoles, AppRole, type UserWithRole } from '@/hooks/useUserRoles';
+import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
 import { CreateUserDialog } from '@/components/users/CreateUserDialog';
 import { EditUserDialog } from '@/components/users/EditUserDialog';
 import { ResetPasswordDialog } from '@/components/users/ResetPasswordDialog';
@@ -14,6 +15,10 @@ import { Users, Shield, Eye, User, UserPlus, BookOpen, Crown, Pencil, KeyRound }
 export default function UserManagement() {
   const { t } = useTranslation();
   const { users, isLoading } = useUserRoles();
+  const { isSuperAdmin } = useIsSuperAdmin();
+  const membersWithAccount = (users ?? [])
+    .map((u) => u.member_id)
+    .filter((id): id is string => !!id);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<UserWithRole | null>(null);
   const [resetPasswordEmail, setResetPasswordEmail] = useState<string | null>(null);
@@ -61,7 +66,7 @@ export default function UserManagement() {
         </div>
         <Button onClick={() => setIsCreateDialogOpen(true)}>
           <UserPlus className="h-4 w-4 mr-2" />
-          {t('userManagement.createUser', 'Crear Usuario')}
+          Otorgar acceso
         </Button>
       </div>
 
@@ -130,7 +135,8 @@ export default function UserManagement() {
                           variant="ghost"
                           size="icon"
                           onClick={() => setResetPasswordEmail(user.email)}
-                          title={t('userManagement.resetPassword', 'Cambiar Contraseña')}
+                          title="Restablecer acceso"
+                          aria-label="Restablecer acceso"
                         >
                           <KeyRound className="h-4 w-4" />
                         </Button>
@@ -151,7 +157,12 @@ export default function UserManagement() {
         </CardContent>
       </Card>
 
-      <CreateUserDialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen} />
+      <CreateUserDialog
+        open={isCreateDialogOpen}
+        onOpenChange={setIsCreateDialogOpen}
+        callerIsAdmin={isSuperAdmin}
+        excludeMemberIds={membersWithAccount}
+      />
       {editingUser && (
         <EditUserDialog
           open={!!editingUser}

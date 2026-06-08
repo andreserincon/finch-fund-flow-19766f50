@@ -34,6 +34,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { useIsSuperAdmin } from "@/hooks/useIsSuperAdmin";
+import { useCanManageUsers } from "@/hooks/useCanManageUsers";
 import { useCanViewTreasury } from "@/hooks/useCanViewTreasury";
 import { useIsMemberOnly } from "@/hooks/useIsMemberOnly";
 import { MainLayout } from "@/components/layout/MainLayout";
@@ -203,6 +204,33 @@ function SuperAdminRoute({ children }: { children: React.ReactNode }) {
 }
 
 /**
+ * UserAdminRoute – requires admin OR Venerable (vm). Used for managing accesses
+ * (create accounts, assign roles, send reset links).
+ */
+function UserAdminRoute({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+  const { canManageUsers, isLoading } = useCanManageUsers();
+
+  if (loading || isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <LodgeLoader size={56} />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/auth" replace />;
+  }
+
+  if (!canManageUsers) {
+    return <Navigate to="/" replace />;
+  }
+
+  return <MainLayout>{children}</MainLayout>;
+}
+
+/**
  * AuthRoute – public route that redirects to /home if already logged in.
  */
 function AuthRoute({ children }: { children: React.ReactNode }) {
@@ -309,7 +337,7 @@ const App = () => (
 
         {/* Super-admin */}
         <Route path="/admin/members" element={<SuperAdminRoute><AdminMembers /></SuperAdminRoute>} />
-        <Route path="/user-management" element={<SuperAdminRoute><UserManagement /></SuperAdminRoute>} />
+        <Route path="/user-management" element={<UserAdminRoute><UserManagement /></UserAdminRoute>} />
 
         {/* Fallback */}
         <Route path="*" element={<NotFound />} />

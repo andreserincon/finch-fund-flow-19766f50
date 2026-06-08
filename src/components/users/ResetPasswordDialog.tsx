@@ -11,9 +11,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Copy, Check, KeyRound } from 'lucide-react';
 
 interface ResetPasswordDialogProps {
   open: boolean;
@@ -24,38 +23,34 @@ interface ResetPasswordDialogProps {
 export function ResetPasswordDialog({ open, onOpenChange, userEmail }: ResetPasswordDialogProps) {
   const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(false);
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [link, setLink] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const handleClose = () => {
-    setPassword('');
-    setError('');
+    setLink(null);
+    setCopied(false);
     onOpenChange(false);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
+  const handleCopy = async () => {
+    if (!link) return;
+    await navigator.clipboard.writeText(link);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
-    if (password.length < 6) {
-      setError(t('userManagement.passwordMinLength', 'La contraseña debe tener al menos 6 caracteres'));
-      return;
-    }
-
+  const handleGenerate = async () => {
     setIsLoading(true);
     try {
-      const { data, error: fnError } = await supabase.functions.invoke('admin-set-password', {
-        body: { email: userEmail, password },
+      const { data, error } = await supabase.functions.invoke('admin-reset-link', {
+        body: { email: userEmail, redirectTo: `${window.location.origin}/auth` },
       });
-
-      if (fnError) throw new Error(fnError.message);
+      if (error) throw new Error(error.message);
       if (data?.error) throw new Error(data.error);
-
-      toast.success(t('userManagement.passwordUpdated', 'Contraseña actualizada'));
-      handleClose();
+      setLink(data.actionLink ?? null);
     } catch (err: any) {
-      console.error('Error updating password:', err);
-      toast.error(t('userManagement.passwordUpdateError', 'Error al actualizar contraseña'));
+      console.error('Error generating reset link:', err);
+      toast.error(err.message || 'No se pudo generar el enlace.');
     } finally {
       setIsLoading(false);
     }
@@ -63,37 +58,53 @@ export function ResetPasswordDialog({ open, onOpenChange, userEmail }: ResetPass
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent
+        className="sm:max-w-[460px]"
+        onInteractOutside={link ? (e) => e.preventDefault() : undefined}
+      >
         <DialogHeader>
-          <DialogTitle>{t('userManagement.resetPassword', 'Cambiar Contraseña')}</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <KeyRound className="h-5 w-5 text-primary" />
+            Restablecer acceso
+          </DialogTitle>
           <DialogDescription>{userEmail}</DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit}>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="new-password">{t('userManagement.newPassword', 'Nueva Contraseña')}</Label>
-              <Input
-                id="new-password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                disabled={isLoading}
-                className={error ? 'border-destructive' : ''}
-              />
-              {error && <p className="text-sm text-destructive">{error}</p>}
+
+        {link === null ? (
+          <>
+            <div className="py-2 text-sm text-muted-foreground">
+              Se generara un enlace de un solo uso para que el hermano establezca una contrasena nueva.
+              Vos no veras ni elegiras la contrasena. Envia el enlace por WhatsApp o en persona.
             </div>
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={handleClose} disabled={isLoading}>
-              {t('common.cancel', 'Cancelar')}
-            </Button>
-            <Button type="submit" disabled={isLoading}>
-              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {t('common.save', 'Guardar')}
-            </Button>
-          </DialogFooter>
-        </form>
+            <DialogFooter className="gap-2">
+              <Button variant="outline" onClick={handleClose} disabled={isLoading}>
+                {t('common.cancel', 'Cancelar')}
+              </Button>
+              <Button onClick={handleGenerate} disabled={isLoading}>
+                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Generar enlace
+              </Button>
+            </DialogFooter>
+          </>
+        ) : (
+          <>
+            <div className="space-y-3 py-2">
+              <Label className="text-xs text-muted-foreground">Enlace para restablecer la contrasena</Label>
+              <div className="rounded-lg border bg-muted/50 p-3">
+                <p className="font-mono text-xs break-all">{link || 'No se pudo generar el enlace. Intenta de nuevo.'}</p>
+              </div>
+            </div>
+            <DialogFooter className="gap-2">
+              <Button variant="outline" onClick={handleClose}>
+                {t('common.close', 'Cerrar')}
+              </Button>
+              <Button onClick={handleCopy} disabled={!link}>
+                {copied ? <Check className="h-4 w-4 mr-2" /> : <Copy className="h-4 w-4 mr-2" />}
+                {copied ? t('common.copied', 'Copiado') : 'Copiar enlace'}
+              </Button>
+            </DialogFooter>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   );
