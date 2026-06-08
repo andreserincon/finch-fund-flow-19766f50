@@ -2,14 +2,69 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useUserRoles, AppRole, type UserWithRole } from '@/hooks/useUserRoles';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { useUserRoles, type AppRole, type UserWithRole } from '@/hooks/useUserRoles';
 import { CreateUserDialog } from '@/components/users/CreateUserDialog';
 import { EditUserDialog } from '@/components/users/EditUserDialog';
 import { ResetPasswordDialog } from '@/components/users/ResetPasswordDialog';
-import { Users, Shield, Eye, User, UserPlus, BookOpen, Crown, Pencil, KeyRound } from 'lucide-react';
+import { ROLE_OPTIONS, getRoleLabel } from '@/lib/roles';
+import { Users, UserPlus, Pencil, KeyRound, MoreHorizontal } from 'lucide-react';
+
+const ROLE_CHIP: Record<string, string> = {
+  admin: 'status-up-to-date',
+  treasurer: 'status-ahead',
+  vm: 'bg-secondary text-secondary-foreground',
+  bibliotecario: 'status-unpaid',
+  member: 'bg-muted text-muted-foreground',
+};
+
+const GRADE_LABEL: Record<string, string> = { aprendiz: 'Aprendiz', companero: 'Compañero', maestro: 'Maestro' };
+const GRADE_CHIP: Record<string, string> = {
+  aprendiz: 'border-border text-muted-foreground',
+  companero: 'border-primary/40 text-primary',
+  maestro: 'border-primary text-primary font-semibold',
+};
+
+function RoleChip({ role }: { role: string | null }) {
+  if (!role) return <span className="status-badge bg-muted text-muted-foreground">Sin rol</span>;
+  return <span className={`status-badge ${ROLE_CHIP[role] ?? 'bg-muted text-muted-foreground'}`}>{getRoleLabel(role as AppRole)}</span>;
+}
+
+function GradeChip({ grade }: { grade: string | null }) {
+  if (!grade) return <span className="text-muted-foreground text-sm">Sin grado</span>;
+  return (
+    <span className={`inline-flex items-center rounded-md border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${GRADE_CHIP[grade] ?? 'border-border text-muted-foreground'}`}>
+      {GRADE_LABEL[grade] ?? grade}
+    </span>
+  );
+}
+
+function UserActions({ user, onEdit, onReset }: { user: UserWithRole; onEdit: () => void; onReset: () => void }) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon" className="h-10 w-10 press" aria-label="Acciones del usuario">
+          <MoreHorizontal className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="bg-popover">
+        <DropdownMenuItem onClick={onEdit}>
+          <Pencil className="mr-2 h-4 w-4" /> Editar rol y miembro
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={onReset}>
+          <KeyRound className="mr-2 h-4 w-4" /> Restablecer acceso
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
 
 export default function UserManagement() {
   const { t } = useTranslation();
@@ -21,136 +76,110 @@ export default function UserManagement() {
   const [editingUser, setEditingUser] = useState<UserWithRole | null>(null);
   const [resetPasswordEmail, setResetPasswordEmail] = useState<string | null>(null);
 
-  const getRoleBadge = (role: AppRole | null) => {
-    if (!role) return <Badge variant="outline">{t('userManagement.noRole')}</Badge>;
-    const config: Record<string, { className: string; icon: any; label: string }> = {
-      treasurer: { className: 'bg-primary', icon: Shield, label: t('userManagement.roles.treasurer') },
-      vm: { className: '', icon: Eye, label: t('userManagement.roles.vm') },
-      member: { className: '', icon: User, label: t('userManagement.roles.member') },
-      bibliotecario: { className: 'bg-amber-600', icon: BookOpen, label: t('userManagement.roles.bibliotecario') },
-      admin: { className: 'bg-emerald-600', icon: Crown, label: t('userManagement.roles.admin') },
-    };
-    const c = config[role];
-    if (!c) return <Badge variant="outline">{role}</Badge>;
-    const Icon = c.icon;
-    return (
-      <Badge variant={role === 'vm' ? 'secondary' : role === 'member' ? 'outline' : 'default'} className={c.className}>
-        <Icon className="h-3 w-3 mr-1" />{c.label}
-      </Badge>
-    );
-  };
-
-  const getGradeBadge = (grade: string | null) => {
-    if (!grade) return <span className="text-muted-foreground text-sm">—</span>;
-    const gradeConfig: Record<string, { label: string; className: string }> = {
-      aprendiz: { label: t('userManagement.grades.aprendiz', 'Aprendiz'), className: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' },
-      companero: { label: t('userManagement.grades.companero', 'Compañero'), className: 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200' },
-      maestro: { label: t('userManagement.grades.maestro', 'Maestro'), className: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200' },
-    };
-    const c = gradeConfig[grade];
-    if (!c) return <Badge variant="outline">{grade}</Badge>;
-    return <Badge variant="outline" className={c.className}>{c.label}</Badge>;
-  };
-
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6 animate-fade-in">
+      <div className="flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-            <Users className="h-8 w-8" />
-            {t('userManagement.title')}
+          <h1 className="font-display text-2xl font-semibold tracking-tight flex items-center gap-2">
+            <Users className="h-6 w-6 text-primary" />
+            Accesos y Roles
           </h1>
-          <p className="text-muted-foreground mt-1">{t('userManagement.subtitle')}</p>
+          <div className="rule-gold mt-2" />
+          <p className="text-muted-foreground mt-2">Gestión de usuarios con acceso a la aplicación</p>
         </div>
-        <Button onClick={() => setIsCreateDialogOpen(true)}>
+        <Button className="press shrink-0" onClick={() => setIsCreateDialogOpen(true)}>
           <UserPlus className="h-4 w-4 mr-2" />
           Otorgar acceso
         </Button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        {(['treasurer', 'vm', 'member', 'bibliotecario'] as const).map((role) => {
-          const icons: Record<string, any> = { treasurer: Shield, vm: Eye, member: User, bibliotecario: BookOpen };
-          const colors: Record<string, string> = { treasurer: 'text-primary', vm: 'text-secondary-foreground', member: 'text-muted-foreground', bibliotecario: 'text-amber-600' };
-          const Icon = icons[role];
-          return (
-            <Card key={role}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">{t(`userManagement.roles.${role}`)}</CardTitle>
-                <Icon className={`h-4 w-4 ${colors[role]}`} />
-              </CardHeader>
-              <CardContent>
-                <p className="text-xs text-muted-foreground">{t(`userManagement.permissions.${role}`)}</p>
-              </CardContent>
-            </Card>
-          );
-        })}
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {ROLE_OPTIONS.map((o) => (
+          <div key={o.value} className="stat-card">
+            <div className="flex items-center justify-between">
+              <p className="font-medium">{o.label}</p>
+              <RoleChip role={o.value} />
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">{o.description}</p>
+          </div>
+        ))}
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>{t('userManagement.usersTable')}</CardTitle>
-          <CardDescription>{t('userManagement.usersTableDescription')}</CardDescription>
+          <CardTitle className="section-header">Usuarios</CardTitle>
+          <CardDescription>Cada acceso esta vinculado a un hermano de la logia</CardDescription>
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="space-y-4">
+            <div className="space-y-3" aria-label="Cargando usuarios">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="flex items-center space-x-4">
-                  <Skeleton className="h-12 w-full" />
-                </div>
+                <Skeleton key={i} className="h-16 w-full rounded-lg" />
               ))}
             </div>
+          ) : !users || users.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              Todavia no hay usuarios. Usa "Otorgar acceso" para crear el primero.
+            </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t('userManagement.email')}</TableHead>
-                  <TableHead>{t('userManagement.associatedMember', 'Miembro')}</TableHead>
-                  <TableHead>{t('userManagement.grade', 'Grado')}</TableHead>
-                  <TableHead>{t('userManagement.currentRole')}</TableHead>
-                  <TableHead className="text-right">{t('common.actions')}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {users?.map((user) => (
-                  <TableRow key={user.user_id}>
-                    <TableCell className="font-medium">{user.email}</TableCell>
-                    <TableCell>{user.member_name || <span className="text-muted-foreground text-sm">—</span>}</TableCell>
-                    <TableCell>{getGradeBadge(user.masonic_grade)}</TableCell>
-                    <TableCell>{getRoleBadge(user.role)}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setEditingUser(user)}
-                          title={t('userManagement.editUser', 'Editar Usuario')}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setResetPasswordEmail(user.email)}
-                          title="Restablecer acceso"
-                          aria-label="Restablecer acceso"
-                        >
-                          <KeyRound className="h-4 w-4" />
-                        </Button>
+            <>
+              {/* Mobile card view */}
+              <div className="md:hidden space-y-3">
+                {users.map((user) => (
+                  <div key={user.user_id} className="rounded-lg border bg-card p-4 space-y-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="font-mono text-sm break-all">{user.email}</p>
+                        <p className="text-sm text-muted-foreground mt-0.5">{user.member_name || 'Sin miembro asociado'}</p>
                       </div>
-                    </TableCell>
-                  </TableRow>
+                      <UserActions
+                        user={user}
+                        onEdit={() => setEditingUser(user)}
+                        onReset={() => setResetPasswordEmail(user.email)}
+                      />
+                    </div>
+                    <div className="flex items-center gap-2 border-t border-border/50 pt-3">
+                      <RoleChip role={user.role} />
+                      <GradeChip grade={user.masonic_grade} />
+                    </div>
+                  </div>
                 ))}
-                {(!users || users.length === 0) && (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center text-muted-foreground">
-                      {t('userManagement.noUsers')}
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+              </div>
+
+              {/* Desktop table view */}
+              <div className="hidden md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Correo</TableHead>
+                      <TableHead>Miembro</TableHead>
+                      <TableHead>Grado</TableHead>
+                      <TableHead>Rol</TableHead>
+                      <TableHead className="text-right">{t('common.actions', 'Acciones')}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {users.map((user) => (
+                      <TableRow key={user.user_id}>
+                        <TableCell className="font-mono text-sm">{user.email}</TableCell>
+                        <TableCell>{user.member_name || <span className="text-muted-foreground text-sm">Sin miembro</span>}</TableCell>
+                        <TableCell><GradeChip grade={user.masonic_grade} /></TableCell>
+                        <TableCell><RoleChip role={user.role} /></TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end">
+                            <UserActions
+                              user={user}
+                              onEdit={() => setEditingUser(user)}
+                              onReset={() => setResetPasswordEmail(user.email)}
+                            />
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
