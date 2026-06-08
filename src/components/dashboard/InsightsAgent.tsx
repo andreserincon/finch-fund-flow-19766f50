@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Sparkles, Send, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
+import { LodgeLoader } from '@/components/lodge/LodgeLoader';
 import { cn } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
 import { supabase } from '@/integrations/supabase/client';
@@ -201,10 +202,7 @@ export function InsightsAgent({ context }: InsightsAgentProps) {
                 <ReactMarkdown>{response}</ReactMarkdown>
               </div>
             ) : isLoading ? (
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                <span>{t('common.loading')}</span>
-              </div>
+              <LodgeLoader size={28} />
             ) : null}
           </div>
         )}

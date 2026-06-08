@@ -7,6 +7,7 @@ import { useTransferRequests } from '@/hooks/useTransferRequests';
 import { useDigitalBooks } from '@/hooks/useDigitalBooks';
 import { useAuth } from '@/hooks/useAuth';
 import { format } from 'date-fns';
+import { LodgeLoader } from '@/components/lodge/LodgeLoader';
 
 export function PendingRequestsPanel() {
   const { t } = useTranslation();
@@ -35,7 +36,7 @@ export function PendingRequestsPanel() {
     rejectBook.mutate(book);
   };
 
-  if (isLoading || digitalLoading) return <p className="text-muted-foreground p-4">{t('common.loading')}</p>;
+  if (isLoading || digitalLoading) return <LodgeLoader />;
 
   return (
     <div className="space-y-4">

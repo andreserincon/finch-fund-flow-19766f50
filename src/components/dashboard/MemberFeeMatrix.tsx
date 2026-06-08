@@ -18,6 +18,7 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { cn, formatCurrencyCompact } from '@/lib/utils';
+import { LodgeLoader } from '@/components/lodge/LodgeLoader';
 
 type PaymentStatus = 'paid' | 'overdue' | 'current_unpaid' | 'future' | 'not_member';
 
@@ -213,7 +214,7 @@ export function MemberFeeMatrix({ filterMemberId, referenceMonth, adjustedTotalP
     return (
       <Card>
         <CardContent className="flex items-center justify-center h-32">
-          <div className="animate-pulse text-muted-foreground">Loading...</div>
+          <LodgeLoader />
         </CardContent>
       </Card>
     );

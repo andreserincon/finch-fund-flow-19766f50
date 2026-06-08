@@ -82,7 +82,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="animate-pulse text-muted-foreground">Loading...</div>
+        <LodgeLoader size={56} />
       </div>
     );
   }
@@ -105,7 +105,7 @@ function TreasuryRoute({ children }: { children: React.ReactNode }) {
   if (loading || isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="animate-pulse text-muted-foreground">Loading...</div>
+        <LodgeLoader size={56} />
       </div>
     );
   }
@@ -134,7 +134,7 @@ function TreasuryStaffRoute({ children }: { children: React.ReactNode }) {
   if (loading || isLoading || memberLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="animate-pulse text-muted-foreground">Loading...</div>
+        <LodgeLoader size={56} />
       </div>
     );
   }
@@ -160,7 +160,7 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
   if (loading || adminLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="animate-pulse text-muted-foreground">Loading...</div>
+        <LodgeLoader size={56} />
       </div>
     );
   }
@@ -186,7 +186,7 @@ function SuperAdminRoute({ children }: { children: React.ReactNode }) {
   if (loading || adminLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="animate-pulse text-muted-foreground">Loading...</div>
+        <LodgeLoader size={56} />
       </div>
     );
   }
@@ -211,7 +211,7 @@ function AuthRoute({ children }: { children: React.ReactNode }) {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="animate-pulse text-muted-foreground">Loading...</div>
+        <LodgeLoader size={56} />
       </div>
     );
   }

@@ -10,6 +10,7 @@ import { useBooks } from '@/hooks/useBooks';
 import { supabase } from '@/integrations/supabase/client';
 import { useDigitalBooks, type DigitalBook } from '@/hooks/useDigitalBooks';
 import { useAuth } from '@/hooks/useAuth';
+import { LodgeLoader } from '@/components/lodge/LodgeLoader';
 import { EditBookDialog } from './EditBookDialog';
 import { DeleteBookDialog } from './DeleteBookDialog';
 import { BookQRLabel } from './BookQRLabel';
@@ -31,7 +32,7 @@ export function BookManagementTable() {
   const [editDigitalBook, setEditDigitalBook] = useState<DigitalBook | null>(null);
   const [editGrade, setEditGrade] = useState<MasonicGrade>('aprendiz');
 
-  if (isLoading || digitalLoading) return <p className="text-muted-foreground p-4">{t('common.loading')}</p>;
+  if (isLoading || digitalLoading) return <LodgeLoader />;
 
   const pendingPhysical = books.filter(b => !b.is_approved);
   const approvedPhysical = books.filter(b => b.is_approved);

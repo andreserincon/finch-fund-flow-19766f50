@@ -7,6 +7,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { LodgeLoader } from '@/components/lodge/LodgeLoader';
 import {
   Table,
   TableBody,
@@ -66,9 +67,7 @@ export function PaymentHistoryDialog({
 
           <div className="flex-1 overflow-auto">
             {isLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="animate-pulse text-muted-foreground">Loading...</div>
-              </div>
+              <LodgeLoader />
             ) : payments.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 No payments recorded yet
