@@ -24,7 +24,7 @@ import {
 } from '@/components/ui/select';
 import { Loader2, Copy, Check, Link2 } from 'lucide-react';
 import { useMembers } from '@/hooks/useMembers';
-import { roleOptionsFor } from '@/lib/roles';
+import { ROLE_OPTIONS } from '@/lib/roles';
 
 const createUserSchema = z.object({
   email: z.string().trim().email({ message: 'Correo invalido' }),
@@ -33,13 +33,11 @@ const createUserSchema = z.object({
 interface CreateUserDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** Whether the current officer is an Administrator (vs a Venerable). Caps the role options. */
-  callerIsAdmin: boolean;
   /** member_ids that already have an account, excluded from the picker. */
   excludeMemberIds: string[];
 }
 
-export function CreateUserDialog({ open, onOpenChange, callerIsAdmin, excludeMemberIds }: CreateUserDialogProps) {
+export function CreateUserDialog({ open, onOpenChange, excludeMemberIds }: CreateUserDialogProps) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { members } = useMembers();
@@ -52,7 +50,7 @@ export function CreateUserDialog({ open, onOpenChange, callerIsAdmin, excludeMem
   const [createdLink, setCreatedLink] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const roleOptions = useMemo(() => roleOptionsFor(callerIsAdmin), [callerIsAdmin]);
+  const roleOptions = ROLE_OPTIONS;
   const roleDescription = roleOptions.find((o) => o.value === role)?.description ?? '';
 
   const excluded = useMemo(() => new Set(excludeMemberIds), [excludeMemberIds]);

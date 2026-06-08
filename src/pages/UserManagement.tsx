@@ -6,7 +6,6 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useUserRoles, AppRole, type UserWithRole } from '@/hooks/useUserRoles';
-import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
 import { CreateUserDialog } from '@/components/users/CreateUserDialog';
 import { EditUserDialog } from '@/components/users/EditUserDialog';
 import { ResetPasswordDialog } from '@/components/users/ResetPasswordDialog';
@@ -15,7 +14,6 @@ import { Users, Shield, Eye, User, UserPlus, BookOpen, Crown, Pencil, KeyRound }
 export default function UserManagement() {
   const { t } = useTranslation();
   const { users, isLoading } = useUserRoles();
-  const { isSuperAdmin } = useIsSuperAdmin();
   const membersWithAccount = (users ?? [])
     .map((u) => u.member_id)
     .filter((id): id is string => !!id);
@@ -160,7 +158,6 @@ export default function UserManagement() {
       <CreateUserDialog
         open={isCreateDialogOpen}
         onOpenChange={setIsCreateDialogOpen}
-        callerIsAdmin={isSuperAdmin}
         excludeMemberIds={membersWithAccount}
       />
       {editingUser && (

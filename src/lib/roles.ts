@@ -26,7 +26,8 @@ export interface RoleOption {
   description: string;
 }
 
-// Lowest to highest authority. A Venerable only sees the first two.
+// Lowest to highest authority. Both an Administrator and a Venerable may grant
+// any of these (the Venerable is the head of the lodge and has full authority).
 export const ROLE_OPTIONS: RoleOption[] = [
   { value: 'member', label: 'Miembro', description: 'Ve su propia informacion de pagos y la biblioteca.' },
   { value: 'bibliotecario', label: 'Bibliotecario', description: 'Gestiona el catalogo y el repositorio digital.' },
@@ -34,12 +35,3 @@ export const ROLE_OPTIONS: RoleOption[] = [
   { value: 'treasurer', label: 'Tesorero', description: 'Registra pagos, gastos, prestamos y reportes.' },
   { value: 'admin', label: 'Administrador', description: 'Acceso total. Gestiona usuarios, roles y configuracion.' },
 ];
-
-// Roles a Venerable (vm) may grant. Only an admin may grant the rest.
-export const VM_GRANTABLE_ROLES: AppRole[] = ['member', 'bibliotecario'];
-
-export function roleOptionsFor(callerIsAdmin: boolean): RoleOption[] {
-  return callerIsAdmin
-    ? ROLE_OPTIONS
-    : ROLE_OPTIONS.filter((o) => VM_GRANTABLE_ROLES.includes(o.value));
-}

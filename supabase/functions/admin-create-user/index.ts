@@ -14,11 +14,6 @@ interface CreateUserRequest {
   redirectTo?: string;
 }
 
-// Roles a Venerable (vm) is allowed to grant. Only an admin can grant the
-// higher roles (treasurer, vm, admin). This cap is enforced server-side here,
-// not just hidden in the client dropdown.
-const VM_GRANTABLE_ROLES = ["member", "bibliotecario"];
-
 function generatePassword(length = 16): string {
   const charset = "abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789!@#$%";
   const array = new Uint8Array(length);
@@ -63,10 +58,9 @@ serve(async (req: Request) => {
       .eq("user_id", requestingUserId);
 
     const roles = (callerRoles ?? []).map((r: { role: string }) => r.role);
-    const callerIsAdmin = roles.includes("admin");
-    const callerIsVm = roles.includes("vm");
+    const canManage = roles.includes("admin") || roles.includes("vm");
 
-    if (!callerIsAdmin && !callerIsVm) {
+    if (!canManage) {
       throw new Error("No autorizado: solo el Administrador o el Venerable pueden crear accesos.");
     }
 
@@ -79,11 +73,6 @@ serve(async (req: Request) => {
     // Requirement: every created account must be linked to an existing member.
     if (!memberId) {
       throw new Error("Debes asociar un hermano (miembro) al acceso.");
-    }
-
-    // Role ceiling: a Venerable may only grant the lower roles.
-    if (!callerIsAdmin && role && !VM_GRANTABLE_ROLES.includes(role)) {
-      throw new Error("El Venerable solo puede otorgar los roles Miembro o Bibliotecario.");
     }
 
     // One access per member.
