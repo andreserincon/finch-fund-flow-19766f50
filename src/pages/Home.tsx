@@ -1,15 +1,15 @@
 /**
  * @file Home.tsx
  * @description Authenticated "Inicio" overview. For treasury users it answers
- *   the first questions of the day (caja, morosos, prestamos, recordatorios)
- *   and offers one-click "Registrar movimiento", instead of a module launcher.
- *   Numbers are computed here from the authoritative backend balances; they are
- *   self-contained and do not touch the Panel's calculation.
+ *   the first questions of the day (caja, demorados, prestamos) and surfaces the
+ *   month's recurring tasks (enviar recordatorios on the 5th business day, the
+ *   Gran Logia transfer before day 5). Numbers are computed here from the
+ *   authoritative backend balances; they do not touch the Panel's calculation.
  */
 
 import { ReactNode } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { format } from 'date-fns';
+import { format, isSameDay } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useCanViewTreasury } from '@/hooks/useCanViewTreasury';
 import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
@@ -21,20 +21,19 @@ import { useLoans } from '@/hooks/useLoans';
 import { useTransactions } from '@/hooks/useTransactions';
 import { useAccountTransfers } from '@/hooks/useAccountTransfers';
 import { useExchangeRate } from '@/hooks/useExchangeRate';
-import { usePaymentReminders } from '@/hooks/usePaymentReminders';
 import { useHiddenMode } from '@/contexts/HiddenModeContext';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { AddTransactionForm } from '@/components/forms/AddTransactionForm';
 import { StatGridSkeleton } from '@/components/ui/loading';
 import { Button } from '@/components/ui/button';
-import { formatCurrencyCompact } from '@/lib/utils';
+import { cn, formatCurrencyCompact, getNthBusinessDayOfMonth } from '@/lib/utils';
 import { getAttentionMembers, attentionTotalOwed, capitaOwed } from '@/lib/attention';
 import { useMemberEventTotals } from '@/hooks/useMemberEventTotals';
 import {
   Wallet, Landmark, AlertTriangle, HandCoins, MessageSquare, ArrowRight, Users,
   BookOpen, UserCog, FileText, Receipt, HandCoins as LoanIcon, LayoutDashboard,
 } from 'lucide-react';
-import type { AccountType } from '@/lib/types';
+import type { AccountType, FeeType } from '@/lib/types';
 
 export default function Home() {
   const navigate = useNavigate();
@@ -45,7 +44,7 @@ export default function Home() {
   const { displayName } = useHiddenMode();
 
   const { memberBalances, isLoading: membersLoading } = useMembers();
-  const { currentMonthFees, isLoading: feesLoading } = useMonthlyFees();
+  const { currentMonthFees, monthlyFees, isLoading: feesLoading } = useMonthlyFees();
   const { loans, isLoading: loansLoading } = useLoans();
   const { transactions } = useTransactions();
   const { transfers } = useAccountTransfers();
@@ -53,7 +52,6 @@ export default function Home() {
   const { eventTotals, isLoading: eventTotalsLoading } = useMemberEventTotals();
 
   const now = new Date();
-  const { reminders } = usePaymentReminders({ year: now.getFullYear(), month: now.getMonth() + 1 });
 
   const hour = now.getHours();
   const greeting = hour < 12 ? 'Buenos días' : hour < 19 ? 'Buenas tardes' : 'Buenas noches';
@@ -80,7 +78,37 @@ export default function Home() {
   const loansDueARS = activeLoans.filter((l) => l.account !== 'savings').reduce((s, l) => s + (l.amount - l.amount_paid), 0);
   const loansDueUSD = activeLoans.filter((l) => l.account === 'savings').reduce((s, l) => s + (l.amount - l.amount_paid), 0);
 
-  const pendingReminders = reminders.filter((r) => r.status === 'pending_review').length;
+  /* ---- Month tasks / reminders (computed when the app is opened) ---- */
+  const y = now.getFullYear();
+  const m = now.getMonth() + 1; // 1-12
+
+  // Enviar recordatorios: the 5th business day of the month.
+  const thisFifthBizDay = getNthBusinessDayOfMonth(y, m, 5);
+  const reminderUrgent = isSameDay(now, thisFifthBizDay);
+  const reminderPast = now > thisFifthBizDay && !reminderUrgent;
+  const nextReminderDate = reminderPast
+    ? getNthBusinessDayOfMonth(m === 12 ? y + 1 : y, m === 12 ? 1 : m + 1, 5)
+    : thisFifthBizDay;
+
+  // Gran Logia transfer: the great_lodge account must hold the last completed
+  // month's capitas + 10% before day 5 (GL charges around day 10). Before day 5
+  // the upcoming charge bills last month; from day 5 on, the next deadline bills
+  // the current month. Fee type uses the member's current type as an estimate.
+  const lastCalendarDay = new Date(y, m, 0).getDate();
+  const isLastCalendarDay = now.getDate() === lastCalendarDay;
+  const beforeDay5 = now.getDate() <= 4;
+  const basisDate = new Date(y, now.getMonth() + (beforeDay5 ? -1 : 0), 1);
+  const basisYM = format(basisDate, 'yyyy-MM-dd');
+  const basisLabel = format(basisDate, 'MMMM', { locale: es });
+  const feeFor = (ym: string, ft: FeeType) =>
+    monthlyFees.find((f) => f.year_month === ym && f.fee_type === ft)?.amount ?? 0;
+  const basisCapitas = memberBalances
+    .filter((mm) => mm.is_active)
+    .reduce((s, mm) => s + feeFor(basisYM, mm.fee_type), 0);
+  const glRequired = basisCapitas * 1.1;
+  const glCovered = greatLodgeBalance >= glRequired;
+  const glShortfall = Math.max(0, glRequired - greatLodgeBalance);
+  const glUrgent = isLastCalendarDay || (beforeDay5 && !glCovered);
 
   const isLoading = membersLoading || feesLoading || loansLoading || eventTotalsLoading;
 
@@ -145,16 +173,53 @@ export default function Home() {
                 variant={loansDueUSD > 0 ? 'warning' : 'success'}
                 to={!isMemberOnly ? '/loans' : undefined}
               />
-              {!isMemberOnly && (
-                <StatCard
-                  title="Recordatorios"
-                  value={pendingReminders}
-                  subtitle="pendientes de enviar"
-                  icon={<MessageSquare className="h-8 w-8 text-primary/40" />}
-                  variant={pendingReminders > 0 ? 'warning' : 'default'}
+            </div>
+          )}
+
+          {/* Recordatorios del mes (tareas recurrentes) */}
+          {!isMemberOnly && !isLoading && (
+            <div className="stat-card">
+              <h2 className="section-header mb-4 font-display">Recordatorios del mes</h2>
+              <div className="space-y-3">
+                <Link
                   to="/recordatorios"
-                />
-              )}
+                  className="press flex items-center justify-between gap-3 rounded-lg border p-3 hover:border-primary/40"
+                >
+                  <div className="flex items-start gap-3">
+                    <MessageSquare className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-medium text-sm">Enviar recordatorios por WhatsApp</p>
+                      <p className="text-xs text-muted-foreground">
+                        {morosos.length} pendientes por enviar · 5º día hábil ({format(nextReminderDate, "d 'de' MMM", { locale: es })})
+                      </p>
+                    </div>
+                  </div>
+                  <span className={cn(
+                    'shrink-0 text-[11px] px-2 py-0.5 rounded-full font-medium',
+                    reminderUrgent ? 'bg-overdue/15 text-overdue' : 'bg-muted text-muted-foreground',
+                  )}>
+                    {reminderUrgent ? 'Hoy' : 'Programado'}
+                  </span>
+                </Link>
+
+                <div className="flex items-center justify-between gap-3 rounded-lg border p-3">
+                  <div className="flex items-start gap-3">
+                    <Landmark className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-medium text-sm">Transferencia a la Gran Logia</p>
+                      <p className="text-xs text-muted-foreground">
+                        Saldo necesario antes del día 5: {formatCurrencyCompact(glRequired)} (capitas de {basisLabel} + 10%). Disponible: {formatCurrencyCompact(greatLodgeBalance)}.
+                      </p>
+                    </div>
+                  </div>
+                  <span className={cn(
+                    'shrink-0 text-[11px] px-2 py-0.5 rounded-full font-medium',
+                    glCovered ? 'bg-success/15 text-success' : glUrgent ? 'bg-overdue/15 text-overdue' : 'bg-warning/15 text-warning',
+                  )}>
+                    {glCovered ? 'Cubierto' : `Faltan ${formatCurrencyCompact(glShortfall)}`}
+                  </span>
+                </div>
+              </div>
             </div>
           )}
 
