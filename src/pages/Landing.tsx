@@ -13,8 +13,12 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react';
 import { SecretDoor } from '@/components/lodge/SecretDoor';
 import { MountainRidge, SquareCompass } from '@/components/lodge/LodgeMarks';
+import { useParallax } from '@/hooks/useParallax';
 
 export default function Landing() {
+  // Subtle scroll parallax on the Andean ridge (static under reduced motion).
+  const ridgeRef = useParallax<HTMLDivElement>({ speed: 0.2 });
+
   return (
     <div className="min-h-screen bg-[#0B0B0D] font-sans text-[#ECE7DA]">
       {/* Header (no members button; the way in is the sun) */}
@@ -54,7 +58,12 @@ export default function Landing() {
           </p>
           <p className="font-display mt-6 text-2xl italic text-[#ECE7DA]/75">«Ciencia, Justicia, Trabajo»</p>
         </div>
-        <MountainRidge className="pointer-events-none absolute bottom-0 left-0 z-0 h-[34vh] w-full" />
+        <div
+          ref={ridgeRef}
+          className="pointer-events-none absolute bottom-0 left-0 z-0 h-[34vh] w-full will-change-transform"
+        >
+          <MountainRidge className="h-full w-full" />
+        </div>
       </section>
 
       {/* Nuestra Logia */}
