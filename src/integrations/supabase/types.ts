@@ -1244,6 +1244,7 @@ export type Database = {
       }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
       is_bibliotecario: { Args: { _user_id: string }; Returns: boolean }
+      is_staff_or_vm: { Args: { _user_id: string }; Returns: boolean }
       is_treasurer: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
