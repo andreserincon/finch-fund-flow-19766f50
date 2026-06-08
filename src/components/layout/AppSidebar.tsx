@@ -31,6 +31,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { NavLink } from '@/components/NavLink';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
+import { useCanManageUsers } from '@/hooks/useCanManageUsers';
 import { useIsBibliotecario } from '@/hooks/useIsBibliotecario';
 import { useCanViewTreasury } from '@/hooks/useCanViewTreasury';
 import { useIsMemberOnly } from '@/hooks/useIsMemberOnly';
@@ -65,6 +66,7 @@ export function AppSidebar() {
   const { t } = useTranslation();
   const { isAdmin } = useIsAdmin();
   const { isSuperAdmin } = useIsSuperAdmin();
+  const { canManageUsers } = useCanManageUsers();
   const { isBibliotecario } = useIsBibliotecario();
   const { canViewTreasury } = useCanViewTreasury();
   const { isMemberOnly } = useIsMemberOnly();
@@ -97,7 +99,7 @@ export function AppSidebar() {
   const modules: { key: AppModule; label: string; sublabel: string; icon: any; show: boolean }[] = [
     { key: 'treasury', label: t('nav.treasury'), sublabel: t('nav.managementSystem'), icon: Wallet, show: canViewTreasury },
     { key: 'library', label: t('nav.library'), sublabel: t('library.subtitle'), icon: BookOpen, show: true },
-    { key: 'admin', label: t('nav.administration'), sublabel: t('nav.adminSubtitle'), icon: UserCog, show: isSuperAdmin },
+    { key: 'admin', label: t('nav.administration'), sublabel: t('nav.adminSubtitle'), icon: UserCog, show: canManageUsers },
   ];
 
   const visibleModules = modules.filter(m => m.show);
@@ -127,7 +129,7 @@ export function AppSidebar() {
   /* ── Admin module nav items ── */
   const adminNavItems = [
     { title: t('nav.userManagement'), url: '/user-management', icon: UserCog },
-    { title: t('nav.members'), url: '/admin/members', icon: Users },
+    ...(isSuperAdmin ? [{ title: t('nav.members'), url: '/admin/members', icon: Users }] : []),
   ];
 
   /* ── Library module nav items ── */
