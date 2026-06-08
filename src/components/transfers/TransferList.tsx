@@ -22,6 +22,7 @@ import { MoreHorizontal, Pencil, Trash2, ArrowRight } from 'lucide-react';
 import { format } from 'date-fns';
 import { AccountTransfer, ACCOUNT_LABELS } from '@/lib/types';
 import { formatCurrency, getCurrencyForAccount, parseLocalDate } from '@/lib/utils';
+import { LodgeLoader } from '@/components/lodge/LodgeLoader';
 
 export function TransferList() {
   const { transfers, isLoading } = useAccountTransfers();
@@ -30,9 +31,7 @@ export function TransferList() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-32">
-        <div className="animate-pulse text-muted-foreground">Cargando transferencias...</div>
-      </div>
+      <LodgeLoader />
     );
   }
 

@@ -22,6 +22,7 @@ import { useEventMemberPayments } from '@/hooks/useEventMemberPayments';
 import { useMembers } from '@/hooks/useMembers';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { PlusCircle, Pencil, Trash2, Tag, ExternalLink } from 'lucide-react';
+import { LodgeLoader } from '@/components/lodge/LodgeLoader';
 
 const expenseSchema = z.object({
   name: z.string().min(1, 'El nombre es obligatorio').max(40, 'Máximo 40 caracteres'),
@@ -293,7 +294,7 @@ export default function ExtraordinaryExpenses() {
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="text-center py-8 text-muted-foreground">Cargando...</div>
+            <LodgeLoader />
           ) : expenses.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               Aún no hay eventos. ¡Creá el primero!

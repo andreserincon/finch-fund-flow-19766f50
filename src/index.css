@@ -273,6 +273,15 @@
     to { transform: rotate(360deg); }
   }
 
+  /* Faster spin for loading states (the spinning sunrays loader) */
+  .rays-loader {
+    animation: lodgespin 2.6s linear infinite;
+    transform-origin: center;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .rays-loader { animation-duration: 6s; }
+  }
+
   /* The door-opening transition shown when the secret entrance is triggered */
   .door-overlay {
     position: fixed;

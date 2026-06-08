@@ -36,6 +36,7 @@ import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { useTransactions } from '@/hooks/useTransactions';
 import { formatCurrency, parseLocalDate } from '@/lib/utils';
 import { ACCOUNT_LABELS, AccountType, CATEGORY_LABELS, EventMemberPayment } from '@/lib/types';
+import { LodgeLoader } from '@/components/lodge/LodgeLoader';
 
 const guestSchema = z.object({
   guest_name: z.string().min(1, 'El nombre es obligatorio').max(100),
@@ -548,7 +549,7 @@ export default function EventOverview() {
   }, [payments, transactions]);
 
   if (isLoading) {
-    return <div className="text-center py-8 text-muted-foreground">Cargando...</div>;
+    return <LodgeLoader />;
   }
   if (error) {
     return <div className="text-center py-8 text-destructive">Error al cargar el evento.</div>;

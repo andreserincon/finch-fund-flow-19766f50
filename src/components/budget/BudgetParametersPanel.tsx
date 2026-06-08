@@ -20,6 +20,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useBudgetParameters } from '@/hooks/useBudgetParameters';
 import { ApplyParametersDialog } from '@/components/budget/ApplyParametersDialog';
+import { LodgeLoader } from '@/components/lodge/LodgeLoader';
 
 interface BudgetParametersPanelProps {
   scenarioId: string;
@@ -80,8 +81,8 @@ export function BudgetParametersPanel({
 
   if (isLoading) {
     return (
-      <div className="rounded-lg border bg-card p-4 text-sm text-muted-foreground">
-        Cargando parámetros...
+      <div className="rounded-lg border bg-card p-4">
+        <LodgeLoader size={28} />
       </div>
     );
   }

@@ -29,6 +29,7 @@ import {
   type BudgetCurrency,
 } from '@/lib/budget-types';
 import { useBudgetLines } from '@/hooks/useBudgetLines';
+import { LodgeLoader } from '@/components/lodge/LodgeLoader';
 
 /** Currencies rendered as row groups. */
 const CURRENCIES: ReadonlyArray<BudgetCurrency> = ['ARS', 'USD'];
@@ -166,9 +167,7 @@ export function BudgetMatrixEditor({ scenarioId, readOnly = false }: BudgetMatri
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-16 text-muted-foreground">
-        Cargando celdas...
-      </div>
+      <LodgeLoader />
     );
   }
 
