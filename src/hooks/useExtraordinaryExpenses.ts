@@ -69,10 +69,10 @@ export function useExtraordinaryExpenses() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['extraordinary-expenses'] });
-      toast({ title: 'Event added successfully' });
+      toast({ title: 'Evento agregado correctamente' });
     },
     onError: (error) => {
-      toast({ title: 'Failed to add event', description: error.message, variant: 'destructive' });
+      toast({ title: 'Error al agregar el evento', description: error.message, variant: 'destructive' });
     },
   });
 
@@ -91,10 +91,10 @@ export function useExtraordinaryExpenses() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['extraordinary-expenses'] });
-      toast({ title: 'Expense category updated successfully' });
+      toast({ title: 'Evento actualizado correctamente' });
     },
     onError: (error) => {
-      toast({ title: 'Failed to update expense category', description: error.message, variant: 'destructive' });
+      toast({ title: 'Error al actualizar el evento', description: error.message, variant: 'destructive' });
     },
   });
 
@@ -110,10 +110,10 @@ export function useExtraordinaryExpenses() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['extraordinary-expenses'] });
-      toast({ title: 'Expense category deleted successfully' });
+      toast({ title: 'Evento eliminado correctamente' });
     },
     onError: (error) => {
-      toast({ title: 'Failed to delete expense category', description: error.message, variant: 'destructive' });
+      toast({ title: 'Error al eliminar el evento', description: error.message, variant: 'destructive' });
     },
   });
 

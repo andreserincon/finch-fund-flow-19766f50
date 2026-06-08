@@ -32,6 +32,7 @@ import {
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { format, startOfMonth, isFuture, startOfDay, parseISO } from 'date-fns';
+import { es } from 'date-fns/locale';
 import { CalendarIcon, PlusCircle, Clock, Calculator } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { FEE_TYPE_LABELS, FeeType } from '@/lib/types';
@@ -177,16 +178,16 @@ export default function MonthlyFees() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-xl md:text-2xl font-bold text-foreground">Monthly Fees</h1>
+          <h1 className="text-xl md:text-2xl font-bold text-foreground font-display">Cuotas Mensuales</h1>
           <p className="text-sm text-muted-foreground">
-            Configure fee amounts for Standard and Solidarity members
+            Configurá los montos de cuota para socios Estándar y Solidaria
           </p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" asChild>
             <Link to="/fee-calculator">
               <Calculator className="mr-2 h-4 w-4" />
-              Fee Calculator
+              Calculadora
             </Link>
           </Button>
           {isAdmin && (
@@ -208,10 +209,10 @@ export default function MonthlyFees() {
 
       {/* History - Mobile Card View */}
       <div className="md:hidden space-y-3">
-        <h3 className="font-semibold">Fee History</h3>
+        <h3 className="font-semibold">Historial de cuotas</h3>
         {sortedMonths.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground bg-card rounded-lg border">
-            No monthly fees configured yet
+            Todavía no hay cuotas configuradas
           </div>
         ) : (
           sortedMonths.map((month) => {
@@ -220,31 +221,31 @@ export default function MonthlyFees() {
             return (
               <div key={month} className="rounded-lg border bg-card p-4">
                 <div className="flex items-center gap-2 mb-3">
-                  <span className="font-medium">{format(monthDate, 'MMMM yyyy')}</span>
+                  <span className="font-medium">{format(monthDate, 'MMMM yyyy', { locale: es })}</span>
                   {isUpcoming && (
                     <Badge variant="outline" className="text-xs">
                       <Clock className="mr-1 h-3 w-3" />
-                      Upcoming
+                      Próximo
                     </Badge>
                   )}
                 </div>
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <div>
-                    <p className="text-muted-foreground text-xs">Standard</p>
+                    <p className="text-muted-foreground text-xs">Estándar</p>
                     <EditableCell value={feesByMonth[month].standard} onSave={(v) => handleSave(month, 'standard', v)} disabled={!isAdmin} />
                   </div>
                   <div>
-                    <p className="text-muted-foreground text-xs">Solidarity</p>
+                    <p className="text-muted-foreground text-xs">Solidaria</p>
                     <EditableCell value={feesByMonth[month].solidarity} onSave={(v) => handleSave(month, 'solidarity', v)} disabled={!isAdmin} />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-2 text-sm mt-2 pt-2 border-t border-dashed">
                   <div>
-                    <p className="text-muted-foreground text-xs">GL Standard</p>
+                    <p className="text-muted-foreground text-xs">GL Estándar</p>
                     <EditableCell value={feesByMonth[month].gl_standard} onSave={(v) => handleSave(month, 'gl_standard', v)} disabled={!isAdmin} isMuted />
                   </div>
                   <div>
-                    <p className="text-muted-foreground text-xs">GL Solidarity</p>
+                    <p className="text-muted-foreground text-xs">GL Solidaria</p>
                     <EditableCell value={feesByMonth[month].gl_solidarity} onSave={(v) => handleSave(month, 'gl_solidarity', v)} disabled={!isAdmin} isMuted />
                   </div>
                 </div>
@@ -257,25 +258,25 @@ export default function MonthlyFees() {
       {/* History - Desktop Table View */}
       <Card className="hidden md:block">
         <CardHeader>
-          <CardTitle>Fee History</CardTitle>
-          <CardDescription>Click any value to edit inline</CardDescription>
+          <CardTitle>Historial de cuotas</CardTitle>
+          <CardDescription>Tocá cualquier valor para editarlo</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Month</TableHead>
-                <TableHead className="text-right">Standard Fee</TableHead>
-                <TableHead className="text-right">Solidarity Fee</TableHead>
-                <TableHead className="text-right">GL Std</TableHead>
-                <TableHead className="text-right">GL Sol</TableHead>
+                <TableHead>Mes</TableHead>
+                <TableHead className="text-right">Cuota Estándar</TableHead>
+                <TableHead className="text-right">Cuota Solidaria</TableHead>
+                <TableHead className="text-right">GL Est.</TableHead>
+                <TableHead className="text-right">GL Sol.</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {sortedMonths.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                    No monthly fees configured yet
+                    Todavía no hay cuotas configuradas
                   </TableCell>
                 </TableRow>
               ) : (
@@ -290,7 +291,7 @@ export default function MonthlyFees() {
                           {isUpcoming && (
                             <Badge variant="outline" className="text-xs">
                               <Clock className="mr-1 h-3 w-3" />
-                              Upcoming
+                              Próximo
                             </Badge>
                           )}
                         </div>
@@ -333,13 +334,13 @@ function CurrentMonthFeeCard({
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4">
         <CardTitle className="text-xs md:text-sm font-medium">
-          {FEE_TYPE_LABELS[feeType]} Fee
+          Cuota {FEE_TYPE_LABELS[feeType]}
         </CardTitle>
       </CardHeader>
       <CardContent className="p-4 pt-0">
         <div className="text-lg md:text-2xl font-bold truncate">{formatCurrency(currentFee)}</div>
         <p className="text-xs text-muted-foreground truncate">
-          {format(new Date(), 'MMM yyyy')}
+          {format(new Date(), 'MMM yyyy', { locale: es })}
         </p>
       </CardContent>
     </Card>
@@ -393,17 +394,17 @@ function AddMonthlyFeeDialog({
       <DialogTrigger asChild>
         <Button>
           <PlusCircle className="mr-2 h-4 w-4" />
-          Add Monthly Fees
+          Agregar cuotas
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Add Monthly Fees</DialogTitle>
-          <DialogDescription>Set the fee amounts for a specific month</DialogDescription>
+          <DialogTitle>Agregar cuotas</DialogTitle>
+          <DialogDescription>Definí los montos de cuota para un mes</DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label>Select Month</Label>
+            <Label>Seleccionar mes</Label>
             <Popover>
               <PopoverTrigger asChild>
                 <Button
@@ -411,7 +412,7 @@ function AddMonthlyFeeDialog({
                   className={cn("w-full justify-start text-left font-normal", !selectedDate && "text-muted-foreground")}
                 >
                   <CalendarIcon className="mr-2 h-4 w-4" />
-                  {format(selectedDate, 'MMMM yyyy')}
+                  {format(selectedDate, 'MMMM yyyy', { locale: es })}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
@@ -426,33 +427,33 @@ function AddMonthlyFeeDialog({
               </PopoverContent>
             </Popover>
             {alreadyExists && (
-              <p className="text-sm text-destructive">Fees for this month already exist. Edit them instead.</p>
+              <p className="text-sm text-destructive">Ya existen cuotas para este mes. Editalas en su lugar.</p>
             )}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="standard_amount">Standard Fee Amount</Label>
+            <Label htmlFor="standard_amount">Monto cuota Estándar</Label>
             <Input id="standard_amount" type="number" step="0.01" value={standardAmount} onChange={(e) => setStandardAmount(e.target.value)} placeholder="0.00" />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="solidarity_amount">Solidarity Fee Amount</Label>
+            <Label htmlFor="solidarity_amount">Monto cuota Solidaria</Label>
             <Input id="solidarity_amount" type="number" step="0.01" value={solidarityAmount} onChange={(e) => setSolidarityAmount(e.target.value)} placeholder="0.00" />
           </div>
           <div className="pt-2 border-t">
-            <p className="text-xs font-medium text-muted-foreground mb-3">Great Lodge Fees (optional)</p>
+            <p className="text-xs font-medium text-muted-foreground mb-3">Cuotas Gran Logia (opcional)</p>
             <div className="space-y-2">
-              <Label htmlFor="gl_standard_amount">GL Standard Fee (ARS)</Label>
+              <Label htmlFor="gl_standard_amount">Cuota GL Estándar (ARS)</Label>
               <Input id="gl_standard_amount" type="number" step="0.01" value={glStandardAmount} onChange={(e) => setGlStandardAmount(e.target.value)} placeholder="0.00" />
             </div>
             <div className="space-y-2 mt-2">
-              <Label htmlFor="gl_solidarity_amount">GL Solidarity Fee (ARS)</Label>
+              <Label htmlFor="gl_solidarity_amount">Cuota GL Solidaria (ARS)</Label>
               <Input id="gl_solidarity_amount" type="number" step="0.01" value={glSolidarityAmount} onChange={(e) => setGlSolidarityAmount(e.target.value)} placeholder="0.00" />
             </div>
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
           <Button onClick={handleSubmit} disabled={isSubmitting || alreadyExists}>
-            {isSubmitting ? 'Saving...' : 'Save Fees'}
+            {isSubmitting ? 'Guardando...' : 'Guardar cuotas'}
           </Button>
         </DialogFooter>
       </DialogContent>

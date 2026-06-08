@@ -65,10 +65,10 @@ export function useMembers() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['members'] });
       queryClient.invalidateQueries({ queryKey: ['member_balances'] });
-      toast.success('Member added successfully');
+      toast.success('Miembro agregado correctamente');
     },
     onError: (error: Error) => {
-      toast.error(`Failed to add member: ${error.message}`);
+      toast.error(`Error al agregar miembro: ${error.message}`);
     },
   });
 
@@ -87,10 +87,10 @@ export function useMembers() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['members'] });
       queryClient.invalidateQueries({ queryKey: ['member_balances'] });
-      toast.success('Member updated successfully');
+      toast.success('Miembro actualizado correctamente');
     },
     onError: (error: Error) => {
-      toast.error(`Failed to update member: ${error.message}`);
+      toast.error(`Error al actualizar miembro: ${error.message}`);
     },
   });
 
@@ -103,10 +103,10 @@ export function useMembers() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['members'] });
       queryClient.invalidateQueries({ queryKey: ['member_balances'] });
-      toast.success('Member deleted successfully');
+      toast.success('Miembro eliminado correctamente');
     },
     onError: (error: Error) => {
-      toast.error(`Failed to delete member: ${error.message}`);
+      toast.error(`Error al eliminar miembro: ${error.message}`);
     },
   });
 

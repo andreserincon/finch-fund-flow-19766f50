@@ -50,10 +50,10 @@ export function useAccountTransfers() {
       queryClient.invalidateQueries({ queryKey: ['account_transfers'] });
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard_stats'] });
-      toast.success('Transfer recorded successfully');
+      toast.success('Transferencia registrada correctamente');
     },
     onError: (error: Error) => {
-      toast.error(`Failed to record transfer: ${error.message}`);
+      toast.error(`Error al registrar la transferencia: ${error.message}`);
     },
   });
 
@@ -81,10 +81,10 @@ export function useAccountTransfers() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['account_transfers'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard_stats'] });
-      toast.success('Transfer updated successfully');
+      toast.success('Transferencia actualizada correctamente');
     },
     onError: (error: Error) => {
-      toast.error(`Failed to update transfer: ${error.message}`);
+      toast.error(`Error al actualizar la transferencia: ${error.message}`);
     },
   });
 
@@ -97,10 +97,10 @@ export function useAccountTransfers() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['account_transfers'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard_stats'] });
-      toast.success('Transfer deleted successfully');
+      toast.success('Transferencia eliminada correctamente');
     },
     onError: (error: Error) => {
-      toast.error(`Failed to delete transfer: ${error.message}`);
+      toast.error(`Error al eliminar la transferencia: ${error.message}`);
     },
   });
 

@@ -158,7 +158,7 @@ export default function Transactions() {
           </div>
           <div className="min-w-0">
             <p className="text-xs md:text-sm text-muted-foreground">Ingresos (ARS)</p>
-            <p className="text-lg md:text-2xl font-bold amount-positive truncate">
+            <p className="text-base md:text-xl font-bold amount-positive tabular-nums leading-tight break-words">
               {formatCurrency(totalIncomeARS, 'ARS')}
             </p>
           </div>
@@ -169,7 +169,7 @@ export default function Transactions() {
           </div>
           <div className="min-w-0">
             <p className="text-xs md:text-sm text-muted-foreground">Gastos (ARS)</p>
-            <p className="text-lg md:text-2xl font-bold amount-negative truncate">
+            <p className="text-base md:text-xl font-bold amount-negative tabular-nums leading-tight break-words">
               {formatCurrency(totalExpensesARS, 'ARS')}
             </p>
           </div>
@@ -182,7 +182,7 @@ export default function Transactions() {
               </div>
               <div className="min-w-0">
                 <p className="text-xs md:text-sm text-muted-foreground">Ingresos (USD)</p>
-                <p className="text-lg md:text-2xl font-bold amount-positive truncate">
+                <p className="text-base md:text-xl font-bold amount-positive tabular-nums leading-tight break-words">
                   {formatCurrency(totalIncomeUSD, 'USD')}
                 </p>
               </div>
@@ -193,7 +193,7 @@ export default function Transactions() {
               </div>
               <div className="min-w-0">
                 <p className="text-xs md:text-sm text-muted-foreground">Gastos (USD)</p>
-                <p className="text-lg md:text-2xl font-bold amount-negative truncate">
+                <p className="text-base md:text-xl font-bold amount-negative tabular-nums leading-tight break-words">
                   {formatCurrency(totalExpensesUSD, 'USD')}
                 </p>
               </div>
@@ -213,9 +213,9 @@ export default function Transactions() {
             className="pl-9"
           />
         </div>
-        <div className="flex gap-2">
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
           <Select value={typeFilter} onValueChange={setTypeFilter}>
-            <SelectTrigger className="flex-1 sm:w-[140px] sm:flex-none">
+            <SelectTrigger className="w-full sm:w-[150px]">
               <SelectValue placeholder="Tipo" />
             </SelectTrigger>
             <SelectContent>
@@ -225,7 +225,7 @@ export default function Transactions() {
             </SelectContent>
           </Select>
           <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-            <SelectTrigger className="flex-1 sm:w-[180px] sm:flex-none">
+            <SelectTrigger className="w-full sm:w-[170px]">
               <SelectValue placeholder="Categoría" />
             </SelectTrigger>
             <SelectContent>
@@ -238,7 +238,7 @@ export default function Transactions() {
             </SelectContent>
           </Select>
           <Select value={accountFilter} onValueChange={setAccountFilter}>
-            <SelectTrigger className="flex-1 sm:w-[180px] sm:flex-none">
+            <SelectTrigger className="w-full sm:w-[170px]">
               <SelectValue placeholder="Cuenta" />
             </SelectTrigger>
             <SelectContent>
@@ -251,7 +251,7 @@ export default function Transactions() {
             </SelectContent>
           </Select>
           <Select value={monthFilter} onValueChange={setMonthFilter}>
-            <SelectTrigger className="flex-1 sm:w-[180px] sm:flex-none">
+            <SelectTrigger className="w-full sm:w-[170px]">
               <SelectValue placeholder="Mes" />
             </SelectTrigger>
             <SelectContent>
