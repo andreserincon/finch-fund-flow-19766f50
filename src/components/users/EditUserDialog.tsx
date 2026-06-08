@@ -21,7 +21,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Loader2 } from 'lucide-react';
-import { useUserRoles, type AppRole, type MasonicGrade } from '@/hooks/useUserRoles';
+import type { AppRole, MasonicGrade } from '@/hooks/useUserRoles';
 import { useMembers } from '@/hooks/useMembers';
 
 interface EditUserDialogProps {
@@ -45,7 +45,6 @@ export function EditUserDialog({
 }: EditUserDialogProps) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
-  const { assignRole, removeRole } = useUserRoles();
   const { members } = useMembers();
   const [isLoading, setIsLoading] = useState(false);
   const [role, setRole] = useState<string>('none');
@@ -80,56 +79,24 @@ export function EditUserDialog({
     setIsLoading(true);
 
     try {
-      // Update role
-      const newRole = role === 'none' ? null : role;
-      const oldRole = currentRole;
-
-      if (newRole !== oldRole) {
-        if (newRole === null) {
-          await new Promise<void>((resolve, reject) => {
-            removeRole.mutate(userId, {
-              onSuccess: () => resolve(),
-              onError: (err) => reject(err),
-            });
-          });
-        } else {
-          await new Promise<void>((resolve, reject) => {
-            assignRole.mutate(
-              { userId, role: newRole as AppRole },
-              { onSuccess: () => resolve(), onError: (err) => reject(err) }
-            );
-          });
-        }
-      }
-
-      // Update member association
-      const newMemberId = memberId === 'none' ? null : memberId;
-      if (newMemberId !== currentMemberId) {
-        const { error } = await supabase
-          .from('profiles')
-          .update({ member_id: newMemberId })
-          .eq('id', userId);
-
-        if (error) throw error;
-      }
-
-      // Update masonic grade on the associated member
-      const effectiveMemberId = newMemberId || currentMemberId;
-      if (effectiveMemberId && grade !== (currentGrade || 'aprendiz')) {
-        const { error } = await supabase
-          .from('members')
-          .update({ masonic_grade: grade as MasonicGrade })
-          .eq('id', effectiveMemberId);
-
-        if (error) throw error;
-      }
+      const { data, error } = await supabase.functions.invoke('admin-update-user', {
+        body: {
+          userId,
+          role: role === 'none' ? null : role,
+          memberId: memberId === 'none' ? null : memberId,
+          masonicGrade: memberId === 'none' ? null : grade,
+        },
+      });
+      if (error) throw new Error(error.message);
+      if (data?.error) throw new Error(data.error);
 
       queryClient.invalidateQueries({ queryKey: ['users-with-roles'] });
+      queryClient.invalidateQueries({ queryKey: ['members'] });
       toast.success(t('userManagement.userUpdated', 'Usuario actualizado'));
       handleClose();
     } catch (err: any) {
       console.error('Error updating user:', err);
-      toast.error(t('userManagement.updateError', 'Error al actualizar usuario'));
+      toast.error(err.message || t('userManagement.updateError', 'Error al actualizar usuario'));
     } finally {
       setIsLoading(false);
     }
