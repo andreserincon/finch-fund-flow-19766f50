@@ -26,7 +26,41 @@ serve(async (req: Request) => {
       throw new Error("Server configuration error");
     }
 
+    // Authorization: this endpoint is privileged (service role), so only an
+    // authenticated admin or Venerable may call it. It is not used by the public
+    // forgot-password flow (that calls supabase.auth.resetPasswordForEmail directly).
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: "No autorizado." }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const userClient = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: { user: caller } } = await userClient.auth.getUser();
+    if (!caller) {
+      return new Response(
+        JSON.stringify({ error: "No autorizado." }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    const { data: callerRoles } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", caller.id);
+    const roles = (callerRoles ?? []).map((r: { role: string }) => r.role);
+    if (!roles.includes("admin") && !roles.includes("vm")) {
+      return new Response(
+        JSON.stringify({ error: "No autorizado." }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     const { email, redirectUrl }: ResetPasswordRequest = await req.json();
 
