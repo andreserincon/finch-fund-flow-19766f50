@@ -96,22 +96,26 @@ export default function Home() {
   // the current month. Fee type uses the member's current type as an estimate.
   const lastCalendarDay = new Date(y, m, 0).getDate();
   const isLastCalendarDay = now.getDate() === lastCalendarDay;
-  const beforeDay5 = now.getDate() <= 4;
-  const basisDate = new Date(y, now.getMonth() + (beforeDay5 ? -1 : 0), 1);
-  const basisYM = format(basisDate, 'yyyy-MM-dd');
-  const basisLabel = format(basisDate, 'MMMM', { locale: es });
+  // The money must be deposited in the Gran Logia account by day 1; the GL
+  // validates it on day 5 and charges on day 10. From day 6 on, the current
+  // month is settled, so the next deposit (due day 1 of next month) is live.
+  const day = now.getDate();
+  const useNextMonth = day > 5;
+  const chargeDate = new Date(y, now.getMonth() + (useNextMonth ? 1 : 0), 1);
+  const chargeYM = format(chargeDate, 'yyyy-MM-dd');
+  const chargeLabel = format(chargeDate, 'MMMM', { locale: es });
   // The GL charge is per member by fee type, using the "cuota GL" set in the
   // Monthly Fees module (gl_standard_amount / gl_solidarity_amount), times 1.10.
-  const basisRow = monthlyFees.find((f) => f.year_month === basisYM && (f.gl_standard_amount != null || f.gl_solidarity_amount != null))
-    ?? monthlyFees.find((f) => f.year_month === basisYM);
-  const glStdFee = basisRow?.gl_standard_amount ?? 0;
-  const glSolFee = basisRow?.gl_solidarity_amount ?? 0;
+  const glRow = monthlyFees.find((f) => f.year_month === chargeYM && (f.gl_standard_amount != null || f.gl_solidarity_amount != null))
+    ?? monthlyFees.find((f) => f.year_month === chargeYM);
+  const glStdFee = glRow?.gl_standard_amount ?? 0;
+  const glSolFee = glRow?.gl_solidarity_amount ?? 0;
   const activeStd = memberBalances.filter((mm) => mm.is_active && mm.fee_type === 'standard').length;
   const activeSol = memberBalances.filter((mm) => mm.is_active && mm.fee_type === 'solidarity').length;
   const glRequired = (activeStd * glStdFee + activeSol * glSolFee) * 1.1;
   const glCovered = greatLodgeBalance >= glRequired;
   const glShortfall = Math.max(0, glRequired - greatLodgeBalance);
-  const glUrgent = isLastCalendarDay || (beforeDay5 && !glCovered);
+  const glUrgent = isLastCalendarDay || (day <= 5 && !glCovered);
 
   const isLoading = membersLoading || feesLoading || loansLoading || eventTotalsLoading;
 
@@ -211,7 +215,7 @@ export default function Home() {
                     <div>
                       <p className="font-medium text-sm">Transferencia a la Gran Logia</p>
                       <p className="text-xs text-muted-foreground">
-                        Saldo necesario antes del día 5: {formatCurrencyCompact(glRequired)} (cuota GL de {basisLabel} + 10%). Disponible: {formatCurrencyCompact(greatLodgeBalance)}.
+                        Depositar antes del día 1 (la GL valida el 5 y cobra el 10): {formatCurrencyCompact(glRequired)} (cuota GL de {chargeLabel} + 10%). Disponible: {formatCurrencyCompact(greatLodgeBalance)}.
                       </p>
                     </div>
                   </div>
