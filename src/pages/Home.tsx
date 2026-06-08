@@ -33,7 +33,7 @@ import {
   Wallet, Landmark, AlertTriangle, HandCoins, MessageSquare, ArrowRight, Users,
   BookOpen, UserCog, FileText, Receipt, HandCoins as LoanIcon, LayoutDashboard,
 } from 'lucide-react';
-import type { AccountType, FeeType } from '@/lib/types';
+import type { AccountType } from '@/lib/types';
 
 export default function Home() {
   const navigate = useNavigate();
@@ -100,12 +100,15 @@ export default function Home() {
   const basisDate = new Date(y, now.getMonth() + (beforeDay5 ? -1 : 0), 1);
   const basisYM = format(basisDate, 'yyyy-MM-dd');
   const basisLabel = format(basisDate, 'MMMM', { locale: es });
-  const feeFor = (ym: string, ft: FeeType) =>
-    monthlyFees.find((f) => f.year_month === ym && f.fee_type === ft)?.amount ?? 0;
-  const basisCapitas = memberBalances
-    .filter((mm) => mm.is_active)
-    .reduce((s, mm) => s + feeFor(basisYM, mm.fee_type), 0);
-  const glRequired = basisCapitas * 1.1;
+  // The GL charge is per member by fee type, using the "cuota GL" set in the
+  // Monthly Fees module (gl_standard_amount / gl_solidarity_amount), times 1.10.
+  const basisRow = monthlyFees.find((f) => f.year_month === basisYM && (f.gl_standard_amount != null || f.gl_solidarity_amount != null))
+    ?? monthlyFees.find((f) => f.year_month === basisYM);
+  const glStdFee = basisRow?.gl_standard_amount ?? 0;
+  const glSolFee = basisRow?.gl_solidarity_amount ?? 0;
+  const activeStd = memberBalances.filter((mm) => mm.is_active && mm.fee_type === 'standard').length;
+  const activeSol = memberBalances.filter((mm) => mm.is_active && mm.fee_type === 'solidarity').length;
+  const glRequired = (activeStd * glStdFee + activeSol * glSolFee) * 1.1;
   const glCovered = greatLodgeBalance >= glRequired;
   const glShortfall = Math.max(0, glRequired - greatLodgeBalance);
   const glUrgent = isLastCalendarDay || (beforeDay5 && !glCovered);
@@ -208,7 +211,7 @@ export default function Home() {
                     <div>
                       <p className="font-medium text-sm">Transferencia a la Gran Logia</p>
                       <p className="text-xs text-muted-foreground">
-                        Saldo necesario antes del día 5: {formatCurrencyCompact(glRequired)} (capitas de {basisLabel} + 10%). Disponible: {formatCurrencyCompact(greatLodgeBalance)}.
+                        Saldo necesario antes del día 5: {formatCurrencyCompact(glRequired)} (cuota GL de {basisLabel} + 10%). Disponible: {formatCurrencyCompact(greatLodgeBalance)}.
                       </p>
                     </div>
                   </div>
