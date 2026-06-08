@@ -95,10 +95,20 @@ serve(async (req: Request) => {
       );
     }
 
-    // Validate password length
-    if (password.length < 6) {
+    // Validate password strength: length + complexity
+    const passwordError =
+      password.length < 8
+        ? "La contraseña debe tener al menos 8 caracteres"
+        : !/[a-z]/.test(password)
+        ? "La contraseña debe incluir al menos una letra minúscula"
+        : !/[A-Z]/.test(password)
+        ? "La contraseña debe incluir al menos una letra mayúscula"
+        : !/[0-9]/.test(password)
+        ? "La contraseña debe incluir al menos un número"
+        : null;
+    if (passwordError) {
       return new Response(
-        JSON.stringify({ error: "Password must be at least 6 characters" }),
+        JSON.stringify({ error: passwordError }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
