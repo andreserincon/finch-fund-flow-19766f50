@@ -25,10 +25,10 @@ import { AccountType } from '@/lib/types';
 import { getCurrencyForAccount } from '@/lib/utils';
 
 const loanSchema = z.object({
-  member_id: z.string().min(1, 'Member is required'),
-  amount: z.number().positive('Amount must be positive'),
+  member_id: z.string().min(1, 'El miembro es obligatorio'),
+  amount: z.number().positive('El monto debe ser positivo'),
   account: z.enum(['bank', 'savings']),
-  loan_date: z.string().min(1, 'Date is required'),
+  loan_date: z.string().min(1, 'La fecha es obligatoria'),
   notes: z.string().max(500).optional(),
 });
 
@@ -84,17 +84,17 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Create New Loan</DialogTitle>
+          <DialogTitle>Nuevo Préstamo</DialogTitle>
           <DialogDescription>
-            Create a loan for a member. The amount will be deducted from the selected account.
+            Creá un préstamo para un socio. El monto se descuenta de la cuenta seleccionada.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-2">
-            <Label>Member</Label>
+            <Label>Miembro</Label>
             <Select onValueChange={(value) => setValue('member_id', value)}>
               <SelectTrigger>
-                <SelectValue placeholder="Select a member" />
+                <SelectValue placeholder="Seleccionar miembro" />
               </SelectTrigger>
               <SelectContent>
                 {activeMembers.map((member) => (
@@ -111,7 +111,7 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Account</Label>
+              <Label>Cuenta</Label>
               <Select
                 value={selectedAccount}
                 onValueChange={(value: 'bank' | 'savings') => setValue('account', value)}
@@ -120,14 +120,14 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="bank">Bank Main Account (ARS)</SelectItem>
-                  <SelectItem value="savings">Savings Account (USD)</SelectItem>
+                  <SelectItem value="bank">Cuenta Bancaria Principal (ARS)</SelectItem>
+                  <SelectItem value="savings">Caja de Ahorro (USD)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="loan_date">Date</Label>
+              <Label htmlFor="loan_date">Fecha</Label>
               <Input
                 id="loan_date"
                 type="date"
@@ -140,7 +140,7 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="amount">Amount ({currency})</Label>
+            <Label htmlFor="amount">Monto ({currency})</Label>
             <Input
               id="amount"
               type="number"
@@ -154,11 +154,11 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="notes">Notes (Optional)</Label>
+            <Label htmlFor="notes">Notas (opcional)</Label>
             <Textarea
               id="notes"
               {...register('notes')}
-              placeholder="Reason for loan..."
+              placeholder="Motivo del préstamo..."
               rows={3}
             />
             {errors.notes && (
@@ -168,10 +168,10 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
 
           <div className="flex gap-3 pt-4">
             <Button type="button" variant="outline" onClick={handleClose}>
-              Cancel
+              Cancelar
             </Button>
             <Button type="submit" disabled={isSubmitting} className="flex-1">
-              {isSubmitting ? 'Creating...' : 'Create Loan'}
+              {isSubmitting ? 'Creando...' : 'Crear préstamo'}
             </Button>
           </div>
         </form>

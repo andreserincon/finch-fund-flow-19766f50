@@ -13,6 +13,7 @@ import { useLoans } from '@/hooks/useLoans';
 import { Loan, ACCOUNT_LABELS } from '@/lib/types';
 import { formatCurrency, getCurrencyForAccount, parseLocalDate } from '@/lib/utils';
 import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 import { Progress } from '@/components/ui/progress';
 
 interface AddPaymentDialogProps {
@@ -35,13 +36,13 @@ export function AddPaymentDialog({ loan, open, onOpenChange }: AddPaymentDialogP
     e.preventDefault();
     const amount = parseFloat(paymentAmount);
     if (isNaN(amount) || amount <= 0) return;
-    
+
     setIsSubmitting(true);
     try {
-      await addLoanPayment.mutateAsync({ 
-        loanId: loan.id, 
+      await addLoanPayment.mutateAsync({
+        loanId: loan.id,
         paymentAmount: amount,
-        paymentDate 
+        paymentDate
       });
       onOpenChange(false);
     } finally {
@@ -57,9 +58,9 @@ export function AddPaymentDialog({ loan, open, onOpenChange }: AddPaymentDialogP
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[420px]">
         <DialogHeader>
-          <DialogTitle>Record Loan Payment</DialogTitle>
+          <DialogTitle>Registrar pago de préstamo</DialogTitle>
           <DialogDescription>
-            Add a partial or full payment to this loan.
+            Registrá un pago parcial o total de este préstamo.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -68,14 +69,14 @@ export function AddPaymentDialog({ loan, open, onOpenChange }: AddPaymentDialogP
               <div>
                 <p className="font-medium">{loan.member?.full_name}</p>
                 <p className="text-sm text-muted-foreground">
-                  {ACCOUNT_LABELS[loan.account]} • {format(parseLocalDate(loan.loan_date), 'MMM d, yyyy')}
+                  {ACCOUNT_LABELS[loan.account]} • {format(parseLocalDate(loan.loan_date), "d 'de' MMM yyyy", { locale: es })}
                 </p>
               </div>
             </div>
-            
+
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Progress</span>
+                <span className="text-muted-foreground">Progreso</span>
                 <span className="font-medium">{paidPercentage.toFixed(0)}%</span>
               </div>
               <Progress value={paidPercentage} className="h-2" />
@@ -83,21 +84,21 @@ export function AddPaymentDialog({ loan, open, onOpenChange }: AddPaymentDialogP
 
             <div className="grid grid-cols-2 gap-3 pt-2">
               <div>
-                <p className="text-xs text-muted-foreground">Total Loan</p>
+                <p className="text-xs text-muted-foreground">Préstamo total</p>
                 <p className="font-mono font-semibold">
                   {formatCurrency(loan.amount, currency)}
                 </p>
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Paid</p>
+                <p className="text-xs text-muted-foreground">Pagado</p>
                 <p className="font-mono font-semibold text-success">
                   {formatCurrency(loan.amount_paid, currency)}
                 </p>
               </div>
             </div>
-            
+
             <div className="pt-2 border-t">
-              <p className="text-xs text-muted-foreground">Remaining Due</p>
+              <p className="text-xs text-muted-foreground">Saldo pendiente</p>
               <p className="text-lg font-mono font-bold text-warning">
                 {formatCurrency(remainingDue, currency)}
               </p>
@@ -105,7 +106,7 @@ export function AddPaymentDialog({ loan, open, onOpenChange }: AddPaymentDialogP
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="payment_date">Payment Date</Label>
+            <Label htmlFor="payment_date">Fecha del pago</Label>
             <Input
               id="payment_date"
               type="date"
@@ -117,15 +118,15 @@ export function AddPaymentDialog({ loan, open, onOpenChange }: AddPaymentDialogP
 
           <div className="space-y-2">
             <div className="flex justify-between items-center">
-              <Label htmlFor="payment_amount">Payment Amount</Label>
-              <Button 
-                type="button" 
-                variant="link" 
-                size="sm" 
+              <Label htmlFor="payment_amount">Monto del pago</Label>
+              <Button
+                type="button"
+                variant="link"
+                size="sm"
                 className="h-auto p-0 text-xs"
                 onClick={handlePayFullAmount}
               >
-                Pay full amount
+                Pagar saldo completo
               </Button>
             </div>
             <Input
@@ -136,21 +137,21 @@ export function AddPaymentDialog({ loan, open, onOpenChange }: AddPaymentDialogP
               max={remainingDue}
               value={paymentAmount}
               onChange={(e) => setPaymentAmount(e.target.value)}
-              placeholder={`Max: ${formatCurrency(remainingDue, currency)}`}
+              placeholder={`Máx: ${formatCurrency(remainingDue, currency)}`}
               required
             />
           </div>
 
           <div className="flex gap-3 pt-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
+              Cancelar
             </Button>
-            <Button 
-              type="submit" 
-              disabled={isSubmitting || !paymentAmount || parseFloat(paymentAmount) <= 0} 
+            <Button
+              type="submit"
+              disabled={isSubmitting || !paymentAmount || parseFloat(paymentAmount) <= 0}
               className="flex-1"
             >
-              {isSubmitting ? 'Processing...' : 'Record Payment'}
+              {isSubmitting ? 'Procesando...' : 'Registrar pago'}
             </Button>
           </div>
         </form>

@@ -26,13 +26,13 @@ import { formatCurrency, getCurrencyForAccount } from '@/lib/utils';
 import { ArrowRight } from 'lucide-react';
 
 const transferSchema = z.object({
-  transfer_date: z.string().min(1, 'Date is required'),
-  amount: z.number().positive('Amount must be positive'),
+  transfer_date: z.string().min(1, 'La fecha es obligatoria'),
+  amount: z.number().positive('El monto debe ser positivo'),
   from_account: z.enum(['bank', 'great_lodge', 'savings']),
   to_account: z.enum(['bank', 'great_lodge', 'savings']),
   notes: z.string().max(500).optional(),
 }).refine(data => data.from_account !== data.to_account, {
-  message: 'Source and destination accounts must be different',
+  message: 'Las cuentas de origen y destino deben ser distintas',
   path: ['to_account'],
 });
 
@@ -103,15 +103,15 @@ export function EditTransferDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Edit Transfer</DialogTitle>
+          <DialogTitle>Editar transferencia</DialogTitle>
           <DialogDescription>
-            Update the transfer details.
+            Actualizá los datos de la transferencia.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>From Account</Label>
+              <Label>Cuenta origen</Label>
               <Select
                 value={fromAccount}
                 onValueChange={(value: AccountType) => setValue('from_account', value)}
@@ -130,7 +130,7 @@ export function EditTransferDialog({
             </div>
 
             <div className="space-y-2">
-              <Label>To Account</Label>
+              <Label>Cuenta destino</Label>
               <Select
                 value={toAccount}
                 onValueChange={(value: AccountType) => setValue('to_account', value)}
@@ -153,7 +153,7 @@ export function EditTransferDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="transfer_date">Date</Label>
+            <Label htmlFor="transfer_date">Fecha</Label>
             <Input
               id="transfer_date"
               type="date"
@@ -166,7 +166,7 @@ export function EditTransferDialog({
 
           <div className="space-y-2">
             <Label htmlFor="amount">
-              Amount {isCrossCurrency ? `(${toCurrency})` : `(${fromCurrency})`}
+              Monto {isCrossCurrency ? `(${toCurrency})` : `(${fromCurrency})`}
             </Label>
             <Input
               id="amount"
@@ -180,17 +180,17 @@ export function EditTransferDialog({
             )}
             {isCrossCurrency && (
               <p className="text-xs text-muted-foreground">
-                For cross-currency transfers, enter the destination amount ({toCurrency})
+                Para transferencias entre monedas, ingresá el monto de destino ({toCurrency})
               </p>
             )}
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="notes">Notes (Optional)</Label>
+            <Label htmlFor="notes">Notas (opcional)</Label>
             <Textarea
               id="notes"
               {...register('notes')}
-              placeholder="Reason for transfer..."
+              placeholder="Motivo de la transferencia..."
               rows={3}
             />
             {errors.notes && (
@@ -200,10 +200,10 @@ export function EditTransferDialog({
 
           <div className="flex gap-3 pt-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
+              Cancelar
             </Button>
             <Button type="submit" disabled={isSubmitting} className="flex-1">
-              {isSubmitting ? 'Saving...' : 'Save Changes'}
+              {isSubmitting ? 'Guardando...' : 'Guardar cambios'}
             </Button>
           </div>
         </form>

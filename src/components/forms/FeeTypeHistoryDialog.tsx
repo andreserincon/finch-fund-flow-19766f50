@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { format, parseISO } from 'date-fns';
+import { es } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -39,6 +40,7 @@ import {
 import { useMemberFeeTypeHistory, MemberFeeTypeHistory } from '@/hooks/useMemberFeeTypeHistory';
 import { FeeType, FEE_TYPE_LABELS } from '@/lib/types';
 import { History, Plus, Pencil, Trash2 } from 'lucide-react';
+import { LodgeLoader } from '@/components/lodge/LodgeLoader';
 
 interface FeeTypeHistoryDialogProps {
   memberId: string;
@@ -113,15 +115,15 @@ export function FeeTypeHistoryDialog({ memberId, memberName }: FeeTypeHistoryDia
     <>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
-          <Button variant="ghost" size="icon" title="Fee Type History">
+          <Button variant="ghost" size="icon" title="Historial de tipo de cuota">
             <History className="h-4 w-4" />
           </Button>
         </DialogTrigger>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
-            <DialogTitle>Fee Type History</DialogTitle>
+            <DialogTitle>Historial de tipo de cuota</DialogTitle>
             <DialogDescription>
-              Manage fee type changes for {memberName}. Changes are effective from the specified month.
+              Gestioná los cambios de tipo de cuota de {memberName}. Los cambios rigen desde el mes indicado.
             </DialogDescription>
           </DialogHeader>
 
@@ -129,11 +131,11 @@ export function FeeTypeHistoryDialog({ memberId, memberName }: FeeTypeHistoryDia
             {isEditing && (
               <div className="border rounded-lg p-4 space-y-4 bg-muted/50">
                 <h4 className="font-medium">
-                  {isAdding ? 'Add New Entry' : 'Edit Entry'}
+                  {isAdding ? 'Agregar entrada' : 'Editar entrada'}
                 </h4>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Fee Type</Label>
+                    <Label>Tipo de cuota</Label>
                     <Select
                       value={formData.fee_type}
                       onValueChange={(value: FeeType) =>
@@ -153,7 +155,7 @@ export function FeeTypeHistoryDialog({ memberId, memberName }: FeeTypeHistoryDia
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label>Effective From (Month)</Label>
+                    <Label>Vigente desde (mes)</Label>
                     <Input
                       type="month"
                       value={formData.effective_from.slice(0, 7)}
@@ -168,15 +170,15 @@ export function FeeTypeHistoryDialog({ memberId, memberName }: FeeTypeHistoryDia
                 </div>
                 <div className="flex gap-2 justify-end">
                   <Button variant="outline" onClick={handleCancel}>
-                    Cancel
+                    Cancelar
                   </Button>
                   <Button
                     onClick={handleSave}
                     disabled={addHistory.isPending || updateHistory.isPending}
                   >
                     {addHistory.isPending || updateHistory.isPending
-                      ? 'Saving...'
-                      : 'Save'}
+                      ? 'Guardando...'
+                      : 'Guardar'}
                   </Button>
                 </div>
               </div>
@@ -184,12 +186,12 @@ export function FeeTypeHistoryDialog({ memberId, memberName }: FeeTypeHistoryDia
 
             <div className="flex justify-between items-center">
               <span className="text-sm text-muted-foreground">
-                {history.length} {history.length === 1 ? 'entry' : 'entries'}
+                {history.length} {history.length === 1 ? 'entrada' : 'entradas'}
               </span>
               {!isEditing && (
                 <Button size="sm" onClick={handleAdd}>
                   <Plus className="h-4 w-4 mr-2" />
-                  Add Entry
+                  Agregar entrada
                 </Button>
               )}
             </div>
@@ -198,16 +200,16 @@ export function FeeTypeHistoryDialog({ memberId, memberName }: FeeTypeHistoryDia
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Fee Type</TableHead>
-                    <TableHead>Effective From</TableHead>
-                    <TableHead className="w-[100px]">Actions</TableHead>
+                    <TableHead>Tipo de cuota</TableHead>
+                    <TableHead>Vigente desde</TableHead>
+                    <TableHead className="w-[100px]">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {isLoading ? (
                     <TableRow>
-                      <TableCell colSpan={3} className="text-center py-8">
-                        Loading...
+                      <TableCell colSpan={3} className="text-center py-4">
+                        <LodgeLoader size={28} />
                       </TableCell>
                     </TableRow>
                   ) : history.length === 0 ? (
@@ -216,7 +218,7 @@ export function FeeTypeHistoryDialog({ memberId, memberName }: FeeTypeHistoryDia
                         colSpan={3}
                         className="text-center py-8 text-muted-foreground"
                       >
-                        No history entries
+                        Sin entradas en el historial
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -234,7 +236,7 @@ export function FeeTypeHistoryDialog({ memberId, memberName }: FeeTypeHistoryDia
                           </span>
                         </TableCell>
                         <TableCell>
-                          {format(parseISO(entry.effective_from), 'MMMM yyyy')}
+                          {format(parseISO(entry.effective_from), 'MMMM yyyy', { locale: es })}
                         </TableCell>
                         <TableCell>
                           <div className="flex gap-1">
@@ -253,8 +255,8 @@ export function FeeTypeHistoryDialog({ memberId, memberName }: FeeTypeHistoryDia
                               disabled={isEditing || history.length <= 1}
                               title={
                                 history.length <= 1
-                                  ? 'Cannot delete the only entry'
-                                  : 'Delete'
+                                  ? 'No se puede eliminar la única entrada'
+                                  : 'Eliminar'
                               }
                             >
                               <Trash2 className="h-4 w-4" />
@@ -277,19 +279,19 @@ export function FeeTypeHistoryDialog({ memberId, memberName }: FeeTypeHistoryDia
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Fee Type Entry?</AlertDialogTitle>
+            <AlertDialogTitle>¿Eliminar la entrada?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will remove this fee type history entry. This may affect how
-              fees are calculated for past months.
+              Se eliminará esta entrada del historial de tipo de cuota. Esto puede
+              afectar cómo se calculan las cuotas de meses anteriores.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => deleteConfirmId && handleDelete(deleteConfirmId)}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Delete
+              Eliminar
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

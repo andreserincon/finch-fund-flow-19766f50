@@ -31,8 +31,8 @@ const EVENT_CATEGORIES: TransactionCategory[] = ['event_expense', 'event_payment
 
 const transactionSchema = z
   .object({
-    transaction_date: z.string().min(1, 'Date is required'),
-    amount: z.number().positive('Amount must be positive'),
+    transaction_date: z.string().min(1, 'La fecha es obligatoria'),
+    amount: z.number().positive('El monto debe ser positivo'),
     transaction_type: z.enum(['income', 'expense']),
     category: z.enum([
       'monthly_fee',
@@ -206,15 +206,15 @@ export function EditTransactionDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Edit Transaction</DialogTitle>
+          <DialogTitle>Editar transacción</DialogTitle>
           <DialogDescription>
-            Update the transaction details.
+            Actualizá los datos de la transacción.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Type</Label>
+              <Label>Tipo</Label>
               <Select
                 value={transactionType}
                 onValueChange={(value: TransactionType) => {
@@ -226,14 +226,14 @@ export function EditTransactionDialog({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="income">Income</SelectItem>
-                  <SelectItem value="expense">Expense</SelectItem>
+                  <SelectItem value="income">Ingreso</SelectItem>
+                  <SelectItem value="expense">Gasto</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="transaction_date">Date</Label>
+              <Label htmlFor="transaction_date">Fecha</Label>
               <Input
                 id="transaction_date"
                 type="date"
@@ -393,12 +393,12 @@ export function EditTransactionDialog({
 
           <div className="space-y-2">
             <Label htmlFor="notes">
-              {supportsSummary ? 'Descripción detallada del gasto (opcional)' : 'Notes (Optional)'}
+              {supportsSummary ? 'Descripción detallada del gasto (opcional)' : 'Notas (opcional)'}
             </Label>
             <Textarea
               id="notes"
               {...register('notes')}
-              placeholder={supportsSummary ? 'Detalle completo del gasto, proveedor, condiciones...' : 'Additional details...'}
+              placeholder={supportsSummary ? 'Detalle completo del gasto, proveedor, condiciones...' : 'Detalles adicionales...'}
               rows={3}
             />
             {errors.notes && (
@@ -408,10 +408,10 @@ export function EditTransactionDialog({
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
+              Cancelar
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? 'Saving...' : 'Save Changes'}
+              {isSubmitting ? 'Guardando...' : 'Guardar cambios'}
             </Button>
           </DialogFooter>
         </form>

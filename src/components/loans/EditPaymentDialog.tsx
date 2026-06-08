@@ -24,8 +24,8 @@ import { LoanPayment, useLoanPayments } from '@/hooks/useLoanPayments';
 import { formatCurrency, getCurrencyForAccount } from '@/lib/utils';
 
 const formSchema = z.object({
-  amount: z.coerce.number().positive('Amount must be positive'),
-  payment_date: z.string().min(1, 'Date is required'),
+  amount: z.coerce.number().positive('El monto debe ser positivo'),
+  payment_date: z.string().min(1, 'La fecha es obligatoria'),
   notes: z.string().optional(),
 });
 
@@ -63,7 +63,7 @@ export function EditPaymentDialog({
   const onSubmit = async (values: FormValues) => {
     if (values.amount > maxAmount) {
       form.setError('amount', {
-        message: `Amount cannot exceed ${formatCurrency(maxAmount, currency)}`,
+        message: `El monto no puede superar ${formatCurrency(maxAmount, currency)}`,
       });
       return;
     }
@@ -85,7 +85,7 @@ export function EditPaymentDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Edit Payment</DialogTitle>
+          <DialogTitle>Editar pago</DialogTitle>
         </DialogHeader>
 
         <Form {...form}>
@@ -95,7 +95,7 @@ export function EditPaymentDialog({
               name="amount"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Amount ({currency})</FormLabel>
+                  <FormLabel>Monto ({currency})</FormLabel>
                   <FormControl>
                     <Input
                       type="number"
@@ -107,7 +107,7 @@ export function EditPaymentDialog({
                   </FormControl>
                   <FormMessage />
                   <p className="text-xs text-muted-foreground">
-                    Max: {formatCurrency(maxAmount, currency)}
+                    Máx: {formatCurrency(maxAmount, currency)}
                   </p>
                 </FormItem>
               )}
@@ -118,7 +118,7 @@ export function EditPaymentDialog({
               name="payment_date"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Payment Date</FormLabel>
+                  <FormLabel>Fecha del pago</FormLabel>
                   <FormControl>
                     <Input type="date" {...field} />
                   </FormControl>
@@ -132,10 +132,10 @@ export function EditPaymentDialog({
               name="notes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Notes (Optional)</FormLabel>
+                  <FormLabel>Notas (opcional)</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="Add any notes about this payment..."
+                      placeholder="Agregá notas sobre este pago..."
                       className="resize-none"
                       {...field}
                     />
@@ -151,10 +151,10 @@ export function EditPaymentDialog({
                 variant="outline"
                 onClick={() => onOpenChange(false)}
               >
-                Cancel
+                Cancelar
               </Button>
               <Button type="submit" disabled={updatePayment.isPending}>
-                {updatePayment.isPending ? 'Saving...' : 'Save Changes'}
+                {updatePayment.isPending ? 'Guardando...' : 'Guardar cambios'}
               </Button>
             </DialogFooter>
           </form>

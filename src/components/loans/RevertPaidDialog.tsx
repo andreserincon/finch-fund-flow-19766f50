@@ -11,6 +11,7 @@ import { useLoans } from '@/hooks/useLoans';
 import { Loan, ACCOUNT_LABELS } from '@/lib/types';
 import { formatCurrency, getCurrencyForAccount, parseLocalDate } from '@/lib/utils';
 import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 import { AlertTriangle } from 'lucide-react';
 
 interface RevertPaidDialogProps {
@@ -41,20 +42,20 @@ export function RevertPaidDialog({ loan, open, onOpenChange }: RevertPaidDialogP
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-warning" />
-            Revert to Active
+            Revertir a activo
           </DialogTitle>
           <DialogDescription>
-            This will undo the "Mark as Fully Paid" action and restore the loan to active status.
+            Esto deshace la acción "Marcar como pagado" y devuelve el préstamo al estado activo.
           </DialogDescription>
         </DialogHeader>
-        
+
         <div className="p-4 rounded-lg bg-muted">
           <p className="font-medium">{loan.member?.full_name}</p>
           <p className="text-sm text-muted-foreground">
-            {ACCOUNT_LABELS[loan.account]} • {format(parseLocalDate(loan.loan_date), 'MMM d, yyyy')}
+            {ACCOUNT_LABELS[loan.account]} • {format(parseLocalDate(loan.loan_date), "d 'de' MMM yyyy", { locale: es })}
           </p>
           <div className="mt-3 pt-3 border-t">
-            <p className="text-xs text-muted-foreground">Loan Amount</p>
+            <p className="text-xs text-muted-foreground">Monto del préstamo</p>
             <p className="text-lg font-mono font-bold">
               {formatCurrency(loan.amount, currency)}
             </p>
@@ -62,25 +63,25 @@ export function RevertPaidDialog({ loan, open, onOpenChange }: RevertPaidDialogP
         </div>
 
         <div className="text-sm text-muted-foreground bg-warning/10 p-3 rounded-lg">
-          <p>This action will:</p>
+          <p>Esta acción va a:</p>
           <ul className="list-disc list-inside mt-1 space-y-1">
-            <li>Delete the final payment record</li>
-            <li>Remove the associated transaction</li>
-            <li>Set the loan status back to "Active"</li>
+            <li>Eliminar el registro del pago final</li>
+            <li>Quitar la transacción asociada</li>
+            <li>Volver el estado del préstamo a "Activo"</li>
           </ul>
         </div>
 
         <div className="flex gap-3 pt-4">
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+            Cancelar
           </Button>
-          <Button 
-            onClick={handleSubmit} 
-            disabled={isSubmitting} 
+          <Button
+            onClick={handleSubmit}
+            disabled={isSubmitting}
             variant="destructive"
             className="flex-1"
           >
-            {isSubmitting ? 'Reverting...' : 'Revert to Active'}
+            {isSubmitting ? 'Revirtiendo...' : 'Revertir a activo'}
           </Button>
         </div>
       </DialogContent>
