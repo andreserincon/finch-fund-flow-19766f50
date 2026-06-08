@@ -322,9 +322,8 @@ export default function Auth() {
       <Card className="border-border/60 bg-card shadow-lg">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <CardHeader className="pb-4">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-1">
               <TabsTrigger value="login">Ingresar</TabsTrigger>
-              <TabsTrigger value="signup">Crear cuenta</TabsTrigger>
             </TabsList>
           </CardHeader>
 
@@ -421,39 +420,9 @@ export default function Auth() {
               </form>
             </TabsContent>
 
-            <TabsContent value="signup" className="mt-0">
-              <form onSubmit={handleSubmit((data) => handleAuth(data, true))} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="signup-email">Correo electrónico</Label>
-                  <Input
-                    id="signup-email"
-                    type="email"
-                    placeholder="correo@ejemplo.com"
-                    {...register('email')}
-                  />
-                  {errors.email && (
-                    <p className="text-sm text-destructive">{errors.email.message}</p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="signup-password">Contraseña</Label>
-                  <Input
-                    id="signup-password"
-                    type="password"
-                    placeholder="••••••••"
-                    {...register('password')}
-                  />
-                  {errors.password && (
-                    <p className="text-sm text-destructive">{errors.password.message}</p>
-                  )}
-                </div>
-
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? 'Creando cuenta...' : 'Crear cuenta'}
-                </Button>
-              </form>
-            </TabsContent>
+            <p className="mt-4 text-center text-xs text-muted-foreground">
+              Los accesos los gestiona la Secretaría o el Venerable. Si necesitás acceso a la aplicación, comunicate con ellos.
+            </p>
           </CardContent>
         </Tabs>
       </Card>
