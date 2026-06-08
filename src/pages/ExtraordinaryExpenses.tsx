@@ -7,10 +7,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
 } from '@/components/ui/dialog';
@@ -21,8 +23,8 @@ import { useExtraordinaryExpenses, ExtraordinaryExpense } from '@/hooks/useExtra
 import { useEventMemberPayments } from '@/hooks/useEventMemberPayments';
 import { useMembers } from '@/hooks/useMembers';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
+import { formatCurrency, parseLocalDate } from '@/lib/utils';
 import { PlusCircle, Pencil, Trash2, Tag, ExternalLink } from 'lucide-react';
-import { LodgeLoader } from '@/components/lodge/LodgeLoader';
 
 const expenseSchema = z.object({
   name: z.string().min(1, 'El nombre es obligatorio').max(40, 'Máximo 40 caracteres'),
@@ -35,6 +37,11 @@ const expenseSchema = z.object({
 });
 
 type ExpenseFormData = z.infer<typeof expenseSchema>;
+
+function formatDeadline(value: string | null): string {
+  if (!value) return 'Sin vencimiento';
+  return parseLocalDate(value).toLocaleDateString('es-AR');
+}
 
 function AddExpenseDialog() {
   const [open, setOpen] = useState(false);
@@ -74,26 +81,26 @@ function AddExpenseDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button><PlusCircle className="mr-2 h-4 w-4" />Agregar Evento</Button>
+        <Button className="press"><PlusCircle className="mr-2 h-4 w-4" />Nuevo evento</Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="max-h-[90dvh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Agregar Evento / Categoría de Gasto</DialogTitle>
-          <DialogDescription>Crear un nuevo evento con capita para todos los miembros.</DialogDescription>
+          <DialogTitle>Nuevo evento</DialogTitle>
+          <DialogDescription>Creá un evento y asigná la cuota a los miembros.</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="name">Nombre del Evento</Label>
-            <Input id="name" {...register('name')} placeholder="ej., Fiesta de Fin de Año" />
+            <Label htmlFor="name">Nombre del evento</Label>
+            <Input id="name" {...register('name')} placeholder="ej., Cena de Fin de Año" />
             {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="description">Descripción (Opcional)</Label>
+            <Label htmlFor="description">Descripción (opcional)</Label>
             <Textarea id="description" {...register('description')} placeholder="Breve descripción..." rows={2} />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="default_amount">Cuota por Miembro (ARS)</Label>
-            <Input id="default_amount" type="number" step="0.01" {...register('default_amount', { valueAsNumber: true })} />
+            <Label htmlFor="default_amount">Cuota por miembro (ARS)</Label>
+            <Input id="default_amount" type="number" inputMode="decimal" step="0.01" {...register('default_amount', { valueAsNumber: true })} />
             {errors.default_amount && <p className="text-sm text-destructive">{errors.default_amount.message}</p>}
           </div>
           <div className="space-y-2">
@@ -102,7 +109,7 @@ function AddExpenseDialog() {
             <p className="text-xs text-muted-foreground">
               Una cuota por mes desde la fecha de cobro.{' '}
               {installments > 1
-                ? `${installments} cuotas de ARS ${((defaultAmount || 0) / installments).toFixed(2)}.`
+                ? `${installments} cuotas de ${formatCurrency((defaultAmount || 0) / installments)}.`
                 : 'Pago en una sola cuota.'}
             </p>
             {errors.installments && <p className="text-sm text-destructive">{errors.installments.message}</p>}
@@ -126,13 +133,13 @@ function AddExpenseDialog() {
             <div className="flex-1">
               <Label htmlFor="assign_to_members" className="cursor-pointer">Asignar cuota a todos los miembros activos</Label>
               <p className="text-xs text-muted-foreground">
-                {activeMembersCount} miembros activos × ARS {defaultAmount?.toFixed(2) || '0.00'} = ARS {(activeMembersCount * (defaultAmount || 0)).toFixed(2)}
+                {activeMembersCount} miembros activos x {formatCurrency(defaultAmount || 0)} = {formatCurrency(activeMembersCount * (defaultAmount || 0))}
               </p>
             </div>
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
-            <Button type="submit" disabled={isSubmitting}>{isSubmitting ? 'Creando...' : 'Crear Evento'}</Button>
+            <Button type="submit" disabled={isSubmitting}>{isSubmitting ? 'Creando...' : 'Crear evento'}</Button>
           </DialogFooter>
         </form>
       </DialogContent>
@@ -175,12 +182,12 @@ function EditExpenseDialog({ expense }: { expense: ExtraordinaryExpense }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="icon"><Pencil className="h-4 w-4" /></Button>
+        <Button variant="ghost" size="icon" className="press" aria-label="Editar evento"><Pencil className="h-4 w-4" /></Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="max-h-[90dvh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Editar Evento</DialogTitle>
-          <DialogDescription>Actualizar los detalles del evento.</DialogDescription>
+          <DialogTitle>Editar evento</DialogTitle>
+          <DialogDescription>Actualizá los detalles del evento.</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-2">
@@ -189,12 +196,12 @@ function EditExpenseDialog({ expense }: { expense: ExtraordinaryExpense }) {
             {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="edit-description">Descripción (Opcional)</Label>
+            <Label htmlFor="edit-description">Descripción (opcional)</Label>
             <Textarea id="edit-description" {...register('description')} rows={2} />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="edit-default_amount">Cuota por Miembro (ARS)</Label>
-            <Input id="edit-default_amount" type="number" step="0.01" {...register('default_amount', { valueAsNumber: true })} />
+            <Label htmlFor="edit-default_amount">Cuota por miembro (ARS)</Label>
+            <Input id="edit-default_amount" type="number" inputMode="decimal" step="0.01" {...register('default_amount', { valueAsNumber: true })} />
             {errors.default_amount && <p className="text-sm text-destructive">{errors.default_amount.message}</p>}
           </div>
           <div className="space-y-2">
@@ -203,7 +210,7 @@ function EditExpenseDialog({ expense }: { expense: ExtraordinaryExpense }) {
             <p className="text-xs text-muted-foreground">
               Una cuota por mes desde la fecha de cobro.{' '}
               {installments > 1
-                ? `${installments} cuotas de ARS ${(defaultAmount / installments).toFixed(2)}.`
+                ? `${installments} cuotas de ${formatCurrency(defaultAmount / installments)}.`
                 : 'Pago en una sola cuota.'}
             </p>
             {errors.installments && <p className="text-sm text-destructive">{errors.installments.message}</p>}
@@ -218,7 +225,7 @@ function EditExpenseDialog({ expense }: { expense: ExtraordinaryExpense }) {
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
-            <Button type="submit" disabled={isSubmitting}>{isSubmitting ? 'Guardando...' : 'Guardar Cambios'}</Button>
+            <Button type="submit" disabled={isSubmitting}>{isSubmitting ? 'Guardando...' : 'Guardar cambios'}</Button>
           </DialogFooter>
         </form>
       </DialogContent>
@@ -232,8 +239,9 @@ function OpenOverviewButton({ expense }: { expense: ExtraordinaryExpense }) {
     <Button
       variant="ghost"
       size="icon"
+      className="press"
       onClick={() => navigate(`/events/${expense.id}`)}
-      title="Abrir resumen del evento"
+      aria-label="Abrir resumen del evento"
     >
       <ExternalLink className="h-4 w-4" />
     </Button>
@@ -245,7 +253,7 @@ function DeleteExpenseDialog({ expense }: { expense: ExtraordinaryExpense }) {
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>
-        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>
+        <Button variant="ghost" size="icon" className="press text-destructive hover:text-destructive" aria-label="Eliminar evento"><Trash2 className="h-4 w-4" /></Button>
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
@@ -276,10 +284,10 @@ export default function ExtraordinaryExpenses() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Eventos y Gastos</h1>
-          <p className="text-muted-foreground">Gestionar eventos con capita por miembro</p>
+          <h1 className="text-2xl font-bold text-foreground">Eventos</h1>
+          <p className="text-muted-foreground">Gestioná las cuotas y pagos de cada evento</p>
         </div>
         {isAdmin && <AddExpenseDialog />}
       </div>
@@ -290,56 +298,111 @@ export default function ExtraordinaryExpenses() {
             <Tag className="h-5 w-5 text-primary" />
             Eventos
           </CardTitle>
-          <CardDescription>Hacé clic en un evento para ver el resumen completo</CardDescription>
+          <CardDescription>Tocá un evento para ver el resumen completo</CardDescription>
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <LodgeLoader />
+            <div className="space-y-3">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} className="h-20 w-full rounded-lg" />
+              ))}
+            </div>
           ) : expenses.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              Aún no hay eventos. ¡Creá el primero!
+              Todavía no hay eventos. Creá el primero.
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nombre del Evento</TableHead>
-                  <TableHead>Descripción</TableHead>
-                  <TableHead className="text-right">Cuota/Miembro</TableHead>
-                  <TableHead>Vencimiento</TableHead>
-                  <TableHead className="text-center">Activo</TableHead>
-                  <TableHead className="text-right">Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <>
+              {/* Mobile card view */}
+              <div className="md:hidden space-y-3">
                 {expenses.map((expense) => (
-                  <TableRow
+                  <div
                     key={expense.id}
-                    className="cursor-pointer hover:bg-muted/40"
+                    className="press cursor-pointer rounded-lg border bg-card p-4 space-y-3"
                     onClick={() => navigate(`/events/${expense.id}`)}
                   >
-                    <TableCell className="font-medium">{expense.name}</TableCell>
-                    <TableCell className="text-muted-foreground max-w-xs truncate">{expense.description || '—'}</TableCell>
-                    <TableCell className="text-right">ARS {expense.default_amount.toFixed(2)}</TableCell>
-                    <TableCell className="text-muted-foreground">{expense.payment_deadline || '—'}</TableCell>
-                    <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
-                      <Switch checked={expense.is_active} onCheckedChange={() => handleToggleActive(expense)} disabled={!isAdmin} />
-                    </TableCell>
-                    <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex justify-end gap-1">
-                        <OpenOverviewButton expense={expense} />
-                        {isAdmin && (
-                          <>
-                            <EditExpenseDialog expense={expense} />
-                            <DeleteExpenseDialog expense={expense} />
-                          </>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="font-semibold">{expense.name}</p>
+                          {!expense.is_active && <Badge variant="outline">Inactivo</Badge>}
+                        </div>
+                        {expense.description && (
+                          <p className="text-sm text-muted-foreground line-clamp-2 mt-0.5">{expense.description}</p>
                         )}
                       </div>
-                    </TableCell>
-                  </TableRow>
+                      <ExternalLink className="h-4 w-4 text-muted-foreground shrink-0 mt-1" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 text-sm border-t border-border/50 pt-3">
+                      <div className="space-y-0.5">
+                        <p className="text-muted-foreground text-xs">Cuota por miembro</p>
+                        <p className="font-mono tabular-nums font-semibold">{formatCurrency(expense.default_amount)}</p>
+                      </div>
+                      <div className="space-y-0.5">
+                        <p className="text-muted-foreground text-xs">Vencimiento</p>
+                        <p className="text-sm">{formatDeadline(expense.payment_deadline)}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between border-t border-border/50 pt-3" onClick={(e) => e.stopPropagation()}>
+                      <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Switch checked={expense.is_active} onCheckedChange={() => handleToggleActive(expense)} disabled={!isAdmin} />
+                        Activo
+                      </label>
+                      {isAdmin && (
+                        <div className="flex gap-1">
+                          <EditExpenseDialog expense={expense} />
+                          <DeleteExpenseDialog expense={expense} />
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 ))}
-              </TableBody>
-            </Table>
+              </div>
+
+              {/* Desktop table view */}
+              <div className="hidden md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nombre del evento</TableHead>
+                      <TableHead>Descripción</TableHead>
+                      <TableHead className="text-right">Cuota/Miembro</TableHead>
+                      <TableHead>Vencimiento</TableHead>
+                      <TableHead className="text-center w-16">Activo</TableHead>
+                      <TableHead className="text-right">Acciones</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {expenses.map((expense) => (
+                      <TableRow
+                        key={expense.id}
+                        className="cursor-pointer hover:bg-muted/40"
+                        onClick={() => navigate(`/events/${expense.id}`)}
+                      >
+                        <TableCell className="font-medium">{expense.name}</TableCell>
+                        <TableCell className="text-muted-foreground max-w-xs truncate">{expense.description || ''}</TableCell>
+                        <TableCell className="text-right font-mono">{formatCurrency(expense.default_amount)}</TableCell>
+                        <TableCell className="text-muted-foreground">{formatDeadline(expense.payment_deadline)}</TableCell>
+                        <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
+                          <Switch checked={expense.is_active} onCheckedChange={() => handleToggleActive(expense)} disabled={!isAdmin} />
+                        </TableCell>
+                        <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex justify-end gap-1">
+                            <OpenOverviewButton expense={expense} />
+                            {isAdmin && (
+                              <>
+                                <EditExpenseDialog expense={expense} />
+                                <DeleteExpenseDialog expense={expense} />
+                              </>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>

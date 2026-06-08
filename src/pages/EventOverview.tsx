@@ -43,7 +43,7 @@ import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { useTransactions } from '@/hooks/useTransactions';
 import { formatCurrency, parseLocalDate } from '@/lib/utils';
 import { ACCOUNT_LABELS, AccountType, CATEGORY_LABELS, EventMemberPayment } from '@/lib/types';
-import { LodgeLoader } from '@/components/lodge/LodgeLoader';
+import { Skeleton } from '@/components/ui/skeleton';
 
 /* ----------------------------- status helper ----------------------------- */
 
@@ -806,7 +806,21 @@ export default function EventOverview() {
   const eventBalance = actualIncome - actualExpenses;
 
   if (isLoading) {
-    return <LodgeLoader />;
+    return (
+      <div className="space-y-6 animate-fade-in">
+        <div className="space-y-2">
+          <Skeleton className="h-8 w-8 rounded-md" />
+          <Skeleton className="h-7 w-48" />
+          <Skeleton className="h-4 w-32" />
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-24 w-full rounded-xl" />
+          ))}
+        </div>
+        <Skeleton className="h-64 w-full rounded-xl" />
+      </div>
+    );
   }
   if (error) {
     return <div className="text-center py-8 text-destructive">Error al cargar el evento.</div>;
@@ -1061,34 +1075,59 @@ export default function EventOverview() {
               No hay transacciones registradas para este evento todavía.
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Fecha</TableHead>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead>Categoría</TableHead>
-                  <TableHead>Miembro</TableHead>
-                  <TableHead className="text-right">Monto</TableHead>
-                  <TableHead>Notas</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <>
+              {/* Mobile card view */}
+              <div className="md:hidden space-y-3">
                 {transactions.map((tx) => (
-                  <TableRow key={tx.id}>
-                    <TableCell>{parseLocalDate(tx.transaction_date).toLocaleDateString('es-AR')}</TableCell>
-                    <TableCell>
-                      <Badge variant={tx.transaction_type === 'income' ? 'default' : 'secondary'}>
-                        {tx.transaction_type === 'income' ? 'Ingreso' : 'Egreso'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{CATEGORY_LABELS[tx.category]}</TableCell>
-                    <TableCell>{tx.member?.full_name || 'Sin miembro'}</TableCell>
-                    <TableCell className="text-right font-mono">{formatCurrency(Number(tx.amount))}</TableCell>
-                    <TableCell className="text-muted-foreground max-w-xs truncate">{tx.notes || ''}</TableCell>
-                  </TableRow>
+                  <div key={tx.id} className="rounded-lg border bg-card p-4 space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="font-medium truncate">{tx.member?.full_name || CATEGORY_LABELS[tx.category]}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {parseLocalDate(tx.transaction_date).toLocaleDateString('es-AR')} . {CATEGORY_LABELS[tx.category]}
+                        </p>
+                      </div>
+                      <p className={`font-mono tabular-nums font-semibold shrink-0 ${tx.transaction_type === 'income' ? 'text-success' : 'text-destructive'}`}>
+                        {tx.transaction_type === 'income' ? '+' : '-'}{formatCurrency(Number(tx.amount))}
+                      </p>
+                    </div>
+                    {tx.notes && <p className="text-sm text-muted-foreground">{tx.notes}</p>}
+                  </div>
                 ))}
-              </TableBody>
-            </Table>
+              </div>
+
+              {/* Desktop table view */}
+              <div className="hidden md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Fecha</TableHead>
+                      <TableHead>Tipo</TableHead>
+                      <TableHead>Categoría</TableHead>
+                      <TableHead>Miembro</TableHead>
+                      <TableHead className="text-right">Monto</TableHead>
+                      <TableHead>Notas</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {transactions.map((tx) => (
+                      <TableRow key={tx.id}>
+                        <TableCell>{parseLocalDate(tx.transaction_date).toLocaleDateString('es-AR')}</TableCell>
+                        <TableCell>
+                          <Badge variant={tx.transaction_type === 'income' ? 'default' : 'secondary'}>
+                            {tx.transaction_type === 'income' ? 'Ingreso' : 'Egreso'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{CATEGORY_LABELS[tx.category]}</TableCell>
+                        <TableCell>{tx.member?.full_name || 'Sin miembro'}</TableCell>
+                        <TableCell className="text-right font-mono">{formatCurrency(Number(tx.amount))}</TableCell>
+                        <TableCell className="text-muted-foreground max-w-xs truncate">{tx.notes || ''}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
