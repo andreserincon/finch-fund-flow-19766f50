@@ -23,7 +23,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { useMembers } from '@/hooks/useMembers';
-import { FeeType, FEE_TYPE_LABELS } from '@/lib/types';
+import { FeeType, FEE_TYPE_LABELS, LODGE_OFFICES, LODGE_OFFICE_LABELS, LodgeOffice } from '@/lib/types';
 import { PlusCircle } from 'lucide-react';
 
 const E164_REGEX = /^\+[0-9]{8,15}$/;
@@ -41,6 +41,7 @@ const memberSchema = z.object({
     }),
   whatsapp_opt_out: z.boolean().optional().default(false),
   fee_type: z.enum(['standard', 'solidarity']),
+  lodge_office: z.string().nullable().optional(),
   join_date: z.string().min(1, 'La fecha de ingreso es obligatoria'),
 });
 
@@ -68,6 +69,7 @@ export function AddMemberForm() {
 
   const feeType = watch('fee_type');
   const whatsappOptOut = watch('whatsapp_opt_out');
+  const lodgeOffice = watch('lodge_office');
 
   const onSubmit = async (data: MemberFormData) => {
     await addMember.mutateAsync({
@@ -77,6 +79,7 @@ export function AddMemberForm() {
       whatsapp_opt_out: !!data.whatsapp_opt_out,
       monthly_fee_amount: 0,
       fee_type: data.fee_type,
+      lodge_office: (data.lodge_office && data.lodge_office !== 'none' ? data.lodge_office : null) as LodgeOffice | null,
       join_date: data.join_date,
     });
     reset();
@@ -168,6 +171,24 @@ export function AddMemberForm() {
                   <SelectItem key={value} value={value}>
                     {label}
                   </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Cargo (opcional)</Label>
+            <Select
+              value={lodgeOffice ?? 'none'}
+              onValueChange={(value) => setValue('lodge_office', value === 'none' ? null : value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Sin cargo" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Sin cargo</SelectItem>
+                {LODGE_OFFICES.map((o) => (
+                  <SelectItem key={o} value={o}>{LODGE_OFFICE_LABELS[o]}</SelectItem>
                 ))}
               </SelectContent>
             </Select>

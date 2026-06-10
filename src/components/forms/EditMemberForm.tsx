@@ -31,7 +31,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useMembers } from '@/hooks/useMembers';
-import { FeeType, FEE_TYPE_LABELS, MemberBalance } from '@/lib/types';
+import { FeeType, FEE_TYPE_LABELS, MemberBalance, LODGE_OFFICES, LODGE_OFFICE_LABELS, LodgeOffice } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 const E164_REGEX = /^\+[0-9]{8,15}$/;
@@ -50,7 +50,9 @@ const memberSchema = z.object({
   whatsapp_opt_out: z.boolean().optional().default(false),
   monthly_fee_amount: z.number().min(0, 'La cuota debe ser positiva'),
   fee_type: z.enum(['standard', 'solidarity']),
+  lodge_office: z.string().nullable().optional(),
   is_active: z.boolean(),
+  inactive_since: z.string().nullable().optional(),
   join_date: z.string().min(1, 'La fecha de ingreso es obligatoria'),
 });
 
@@ -80,6 +82,8 @@ export function EditMemberForm({ member, open, onOpenChange }: EditMemberFormPro
   const feeType = watch('fee_type');
   const isActive = watch('is_active');
   const whatsappOptOut = watch('whatsapp_opt_out');
+  const lodgeOffice = watch('lodge_office');
+  const inactiveSince = watch('inactive_since');
 
   useEffect(() => {
     if (member) {
@@ -92,7 +96,9 @@ export function EditMemberForm({ member, open, onOpenChange }: EditMemberFormPro
         whatsapp_opt_out: member.whatsapp_opt_out ?? false,
         monthly_fee_amount: member.monthly_fee_amount,
         fee_type: member.fee_type,
+        lodge_office: member.lodge_office ?? null,
         is_active: member.is_active,
+        inactive_since: member.inactive_since ?? null,
         join_date: member.join_date,
       });
     }
@@ -109,7 +115,9 @@ export function EditMemberForm({ member, open, onOpenChange }: EditMemberFormPro
       whatsapp_opt_out: !!data.whatsapp_opt_out,
       monthly_fee_amount: data.monthly_fee_amount,
       fee_type: data.fee_type,
+      lodge_office: (data.lodge_office && data.lodge_office !== 'none' ? data.lodge_office : null) as LodgeOffice | null,
       is_active: data.is_active,
+      inactive_since: data.is_active ? null : (data.inactive_since || null),
       join_date: data.join_date,
     });
     onOpenChange(false);
@@ -223,6 +231,24 @@ export function EditMemberForm({ member, open, onOpenChange }: EditMemberFormPro
           </div>
 
           <div className="space-y-2">
+            <Label>Cargo (opcional)</Label>
+            <Select
+              value={lodgeOffice ?? 'none'}
+              onValueChange={(value) => setValue('lodge_office', value === 'none' ? null : value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Sin cargo" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Sin cargo</SelectItem>
+                {LODGE_OFFICES.map((o) => (
+                  <SelectItem key={o} value={o}>{LODGE_OFFICE_LABELS[o]}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
             <Label>Fecha de Ingreso</Label>
             <Popover>
               <PopoverTrigger asChild>
@@ -252,13 +278,36 @@ export function EditMemberForm({ member, open, onOpenChange }: EditMemberFormPro
             )}
           </div>
 
-          <div className="flex items-center justify-between">
-            <Label htmlFor="is_active">Miembro Activo</Label>
-            <Switch
-              id="is_active"
-              checked={isActive}
-              onCheckedChange={(checked) => setValue('is_active', checked)}
-            />
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="is_active">Miembro Activo</Label>
+              <Switch
+                id="is_active"
+                checked={isActive}
+                onCheckedChange={(checked) => {
+                  setValue('is_active', checked);
+                  if (checked) {
+                    setValue('inactive_since', null);
+                  } else if (!watch('inactive_since')) {
+                    setValue('inactive_since', `${new Date().toISOString().slice(0, 7)}-01`);
+                  }
+                }}
+              />
+            </div>
+            {!isActive && (
+              <div className="space-y-2">
+                <Label htmlFor="inactive_since">Inactivo desde</Label>
+                <Input
+                  id="inactive_since"
+                  type="month"
+                  value={inactiveSince ? inactiveSince.slice(0, 7) : ''}
+                  onChange={(e) => setValue('inactive_since', e.target.value ? `${e.target.value}-01` : null)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Desde este mes el miembro no acumula capita. Las cuotas impagas anteriores siguen vigentes.
+                </p>
+              </div>
+            )}
           </div>
 
           <DialogFooter>

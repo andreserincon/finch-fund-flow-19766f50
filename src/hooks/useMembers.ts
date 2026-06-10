@@ -52,6 +52,7 @@ export function useMembers() {
       whatsapp_opt_out?: boolean;
       monthly_fee_amount: number;
       fee_type: FeeType;
+      lodge_office?: string | null;
       join_date: string;
     }) => {
       const { data, error } = await supabase

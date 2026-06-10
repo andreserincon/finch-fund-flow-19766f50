@@ -41,6 +41,45 @@ export type PaymentStatus = 'up_to_date' | 'ahead' | 'overdue';
 /** Masonic degree level */
 export type MasonicGrade = 'profano' | 'aprendiz' | 'companero' | 'maestro';
 
+/** Lodge office / cargo (optional; the grade is stored separately in masonic_grade) */
+export type LodgeOffice =
+  | 'venerable_maestro'
+  | 'primer_vigilante'
+  | 'segundo_vigilante'
+  | 'orador'
+  | 'secretario'
+  | 'tesorero'
+  | 'hospitalario'
+  | 'experto'
+  | 'maestro_ceremonias'
+  | 'guarda_templo_interno'
+  | 'guarda_templo_externo'
+  | 'ex_venerable_maestro';
+
+export const LODGE_OFFICE_LABELS: Record<LodgeOffice, string> = {
+  venerable_maestro: 'Venerable Maestro',
+  primer_vigilante: '1er Vigilante',
+  segundo_vigilante: '2do Vigilante',
+  orador: 'Orador',
+  secretario: 'Secretario',
+  tesorero: 'Tesorero',
+  hospitalario: 'Hospitalario',
+  experto: 'Experto',
+  maestro_ceremonias: 'Maestro de Ceremonias',
+  guarda_templo_interno: 'Guarda Templo Interno',
+  guarda_templo_externo: 'Guarda Templo Externo',
+  ex_venerable_maestro: 'Ex Venerable Maestro',
+};
+
+/** Office keys in ceremonial order, for dropdowns */
+export const LODGE_OFFICES = Object.keys(LODGE_OFFICE_LABELS) as LodgeOffice[];
+
+/** Safe lookup that tolerates an unknown/null value */
+export function lodgeOfficeLabel(office: string | null | undefined): string | null {
+  if (!office) return null;
+  return LODGE_OFFICE_LABELS[office as LodgeOffice] ?? null;
+}
+
 /** Status of an outgoing payment reminder */
 export type ReminderStatus =
   | 'pending_review'
@@ -68,7 +107,11 @@ export interface Member {
   monthly_fee_amount: number;
   fee_type: FeeType;
   masonic_grade: MasonicGrade;
+  /** Lodge office / cargo (offices only, optional). Null when the member holds no office. */
+  lodge_office: LodgeOffice | null;
   is_active: boolean;
+  /** First day of the month from which an inactive member stops owing capita. Null while active. */
+  inactive_since: string | null;
   join_date: string;
   created_at: string;
   updated_at: string;
@@ -154,6 +197,10 @@ export interface MemberBalance {
   months_since_join: number;
   total_fees_owed: number;
   total_paid: number;
+  /** Lodge office / cargo (offices only, optional). */
+  lodge_office: LodgeOffice | null;
+  /** First day of the month from which an inactive member stops owing capita. */
+  inactive_since: string | null;
 }
 
 /**
