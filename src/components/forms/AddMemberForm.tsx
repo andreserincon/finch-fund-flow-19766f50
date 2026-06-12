@@ -23,8 +23,9 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { useMembers } from '@/hooks/useMembers';
-import { FeeType, FEE_TYPE_LABELS, LODGE_OFFICES, LODGE_OFFICE_LABELS, LodgeOffice } from '@/lib/types';
+import { FeeType, FEE_TYPE_LABELS, LodgeOffice } from '@/lib/types';
 import { PlusCircle } from 'lucide-react';
+import { CargoSelect } from '@/components/forms/CargoSelect';
 
 const E164_REGEX = /^\+[0-9]{8,15}$/;
 
@@ -49,7 +50,8 @@ type MemberFormData = z.infer<typeof memberSchema>;
 
 export function AddMemberForm() {
   const [open, setOpen] = useState(false);
-  const { addMember } = useMembers();
+  const { addMember, updateMember, members } = useMembers();
+  const [displacedMemberId, setDisplacedMemberId] = useState<string | null>(null);
 
   const {
     register,
@@ -72,6 +74,11 @@ export function AddMemberForm() {
   const lodgeOffice = watch('lodge_office');
 
   const onSubmit = async (data: MemberFormData) => {
+    // Reassignment: free the office from its previous holder first.
+    if (displacedMemberId) {
+      await updateMember.mutateAsync({ id: displacedMemberId, lodge_office: null });
+    }
+
     await addMember.mutateAsync({
       full_name: data.full_name,
       phone_number: data.phone_number,
@@ -83,6 +90,7 @@ export function AddMemberForm() {
       join_date: data.join_date,
     });
     reset();
+    setDisplacedMemberId(null);
     setOpen(false);
   };
 
@@ -178,20 +186,14 @@ export function AddMemberForm() {
 
           <div className="space-y-2">
             <Label>Cargo (opcional)</Label>
-            <Select
-              value={lodgeOffice ?? 'none'}
-              onValueChange={(value) => setValue('lodge_office', value === 'none' ? null : value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Sin cargo" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Sin cargo</SelectItem>
-                {LODGE_OFFICES.map((o) => (
-                  <SelectItem key={o} value={o}>{LODGE_OFFICE_LABELS[o]}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <CargoSelect
+              value={lodgeOffice ?? null}
+              members={members}
+              onChange={(office, displaced) => {
+                setValue('lodge_office', office);
+                setDisplacedMemberId(displaced);
+              }}
+            />
           </div>
 
           <div className="space-y-2">

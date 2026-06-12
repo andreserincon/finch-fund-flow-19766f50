@@ -31,8 +31,9 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useMembers } from '@/hooks/useMembers';
-import { FeeType, FEE_TYPE_LABELS, MemberBalance, LODGE_OFFICES, LODGE_OFFICE_LABELS, LodgeOffice } from '@/lib/types';
+import { FeeType, FEE_TYPE_LABELS, MemberBalance, LodgeOffice } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { CargoSelect } from '@/components/forms/CargoSelect';
 
 const E164_REGEX = /^\+[0-9]{8,15}$/;
 
@@ -65,8 +66,9 @@ interface EditMemberFormProps {
 }
 
 export function EditMemberForm({ member, open, onOpenChange }: EditMemberFormProps) {
-  const { updateMember } = useMembers();
+  const { updateMember, members } = useMembers();
   const [joinDate, setJoinDate] = useState<Date | undefined>();
+  const [displacedMemberId, setDisplacedMemberId] = useState<string | null>(null);
 
   const {
     register,
@@ -89,6 +91,7 @@ export function EditMemberForm({ member, open, onOpenChange }: EditMemberFormPro
     if (member) {
       const parsedDate = parseISO(member.join_date);
       setJoinDate(parsedDate);
+      setDisplacedMemberId(null);
       reset({
         full_name: member.full_name,
         phone_number: member.phone_number,
@@ -106,6 +109,11 @@ export function EditMemberForm({ member, open, onOpenChange }: EditMemberFormPro
 
   const onSubmit = async (data: MemberFormData) => {
     if (!member) return;
+
+    // Reassignment: free the office from its previous holder first.
+    if (displacedMemberId) {
+      await updateMember.mutateAsync({ id: displacedMemberId, lodge_office: null });
+    }
 
     await updateMember.mutateAsync({
       id: member.member_id,
@@ -232,20 +240,15 @@ export function EditMemberForm({ member, open, onOpenChange }: EditMemberFormPro
 
           <div className="space-y-2">
             <Label>Cargo (opcional)</Label>
-            <Select
-              value={lodgeOffice ?? 'none'}
-              onValueChange={(value) => setValue('lodge_office', value === 'none' ? null : value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Sin cargo" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Sin cargo</SelectItem>
-                {LODGE_OFFICES.map((o) => (
-                  <SelectItem key={o} value={o}>{LODGE_OFFICE_LABELS[o]}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <CargoSelect
+              value={lodgeOffice ?? null}
+              members={members}
+              currentMemberId={member?.member_id}
+              onChange={(office, displaced) => {
+                setValue('lodge_office', office);
+                setDisplacedMemberId(displaced);
+              }}
+            />
           </div>
 
           <div className="space-y-2">
