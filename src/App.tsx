@@ -358,7 +358,7 @@ const App = () => (
 
         {/* Treasury – staff routes (no member-only) */}
         <Route path="/transactions" element={<TreasuryStaffRoute><Transactions /></TreasuryStaffRoute>} />
-        <Route path="/loans" element={<TreasuryStaffRoute><Loans /></TreasuryStaffRoute>} />
+        <Route path="/loans" element={<TreasuryRoute><Loans /></TreasuryRoute>} />
         <Route path="/monthly-fees" element={<TreasuryStaffRoute><MonthlyFees /></TreasuryStaffRoute>} />
         <Route path="/expense-categories" element={<TreasuryStaffRoute><ExtraordinaryExpenses /></TreasuryStaffRoute>} />
         <Route path="/events/:id" element={<TreasuryStaffRoute><EventOverview /></TreasuryStaffRoute>} />
