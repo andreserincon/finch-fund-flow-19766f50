@@ -247,24 +247,61 @@ export default function Dashboard() {
   const totalLoansDueARS = loansARS.reduce((sum, l) => sum + (l.amount - l.amount_paid), 0);
   const totalLoansDueUSD = loansUSD.reduce((sum, l) => sum + (l.amount - l.amount_paid), 0);
 
-  // Calculate account balances from filtered data
-  const bankBalance = filteredTransactions
-    .filter(t => t.account === 'bank' || !t.account)
-    .reduce((sum, t) => sum + (t.transaction_type === 'income' ? t.amount : -t.amount), 0)
-    - filteredTransfers.filter(t => t.from_account === 'bank').reduce((sum, t) => sum + t.amount, 0)
-    + filteredTransfers.filter(t => t.to_account === 'bank').reduce((sum, t) => sum + t.amount, 0);
+  // One pass over the filtered transactions (and transfers) for every money
+  // total on the Panel: the three account balances, the monthly/annual yields,
+  // and the monthly income/expense. Memoized so they are not each re-filtered
+  // and re-reduced on every render. Same formulas, same sign rules as before.
+  const accountTotals = useMemo(() => {
+    let bankTx = 0, glTx = 0, savTx = 0;
+    let monthlyYieldARS = 0, monthlyYieldUSD = 0, annualYieldARS = 0, annualYieldUSD = 0;
+    let monthlyIncomeARS = 0, monthlyIncomeUSD = 0, monthlyExpensesARS = 0, monthlyExpensesUSD = 0;
 
-  const greatLodgeBalance = filteredTransactions
-    .filter(t => t.account === 'great_lodge')
-    .reduce((sum, t) => sum + (t.transaction_type === 'income' ? t.amount : -t.amount), 0)
-    - filteredTransfers.filter(t => t.from_account === 'great_lodge').reduce((sum, t) => sum + t.amount, 0)
-    + filteredTransfers.filter(t => t.to_account === 'great_lodge').reduce((sum, t) => sum + t.amount, 0);
+    for (const t of filteredTransactions) {
+      const signed = t.transaction_type === 'income' ? t.amount : -t.amount;
+      const isSavings = t.account === 'savings';
 
-  const savingsBalance = filteredTransactions
-    .filter(t => t.account === 'savings')
-    .reduce((sum, t) => sum + (t.transaction_type === 'income' ? t.amount : -t.amount), 0)
-    - filteredTransfers.filter(t => t.from_account === 'savings').reduce((sum, t) => sum + t.amount, 0)
-    + filteredTransfers.filter(t => t.to_account === 'savings').reduce((sum, t) => sum + t.amount, 0);
+      if (t.account === 'bank' || !t.account) bankTx += signed;
+      else if (t.account === 'great_lodge') glTx += signed;
+      else if (isSavings) savTx += signed;
+
+      const d = parseLocalDate(t.transaction_date);
+      const inMonth = d >= selectedMonthStart;
+      const inYear = d >= selectedYearStart;
+
+      if (t.category === 'account_yield') {
+        if (inMonth) { if (isSavings) monthlyYieldUSD += signed; else monthlyYieldARS += signed; }
+        if (inYear) { if (isSavings) annualYieldUSD += signed; else annualYieldARS += signed; }
+      }
+
+      if (inMonth) {
+        if (t.transaction_type === 'income') {
+          if (isSavings) monthlyIncomeUSD += t.amount; else monthlyIncomeARS += t.amount;
+        } else if (t.transaction_type === 'expense') {
+          if (isSavings) monthlyExpensesUSD += t.amount; else monthlyExpensesARS += t.amount;
+        }
+      }
+    }
+
+    let bankTr = 0, glTr = 0, savTr = 0;
+    for (const tr of filteredTransfers) {
+      if (tr.from_account === 'bank') bankTr -= tr.amount;
+      if (tr.to_account === 'bank') bankTr += tr.amount;
+      if (tr.from_account === 'great_lodge') glTr -= tr.amount;
+      if (tr.to_account === 'great_lodge') glTr += tr.amount;
+      if (tr.from_account === 'savings') savTr -= tr.amount;
+      if (tr.to_account === 'savings') savTr += tr.amount;
+    }
+
+    return {
+      bankBalance: bankTx + bankTr,
+      greatLodgeBalance: glTx + glTr,
+      savingsBalance: savTx + savTr,
+      monthlyYieldARS, monthlyYieldUSD, annualYieldARS, annualYieldUSD,
+      monthlyIncomeARS, monthlyIncomeUSD, monthlyExpensesARS, monthlyExpensesUSD,
+    };
+  }, [filteredTransactions, filteredTransfers, selectedMonthStart, selectedYearStart]);
+
+  const { bankBalance, greatLodgeBalance, savingsBalance } = accountTotals;
 
   const savingsInARS = savingsBalance * exchangeRate;
   const totalARSBalance = bankBalance + greatLodgeBalance + savingsInARS;
@@ -280,20 +317,8 @@ export default function Dashboard() {
     ? showBank + showGreatLodge + showSavings * exchangeRate
     : totalARSBalance;
 
-  // Calculate account yield (monthly and annual) based on selected month
-  const monthlyYieldARS = filteredTransactions
-    .filter(t => parseLocalDate(t.transaction_date) >= selectedMonthStart && t.category === 'account_yield' && t.account !== 'savings')
-    .reduce((sum, t) => sum + (t.transaction_type === 'income' ? t.amount : -t.amount), 0);
-  const monthlyYieldUSD = filteredTransactions
-    .filter(t => parseLocalDate(t.transaction_date) >= selectedMonthStart && t.category === 'account_yield' && t.account === 'savings')
-    .reduce((sum, t) => sum + (t.transaction_type === 'income' ? t.amount : -t.amount), 0);
-  const annualYieldARS = filteredTransactions
-    .filter(t => parseLocalDate(t.transaction_date) >= selectedYearStart && t.category === 'account_yield' && t.account !== 'savings')
-    .reduce((sum, t) => sum + (t.transaction_type === 'income' ? t.amount : -t.amount), 0);
-  const annualYieldUSD = filteredTransactions
-    .filter(t => parseLocalDate(t.transaction_date) >= selectedYearStart && t.category === 'account_yield' && t.account === 'savings')
-    .reduce((sum, t) => sum + (t.transaction_type === 'income' ? t.amount : -t.amount), 0);
-
+  // Account yield (monthly and annual) for the selected month/year
+  const { monthlyYieldARS, monthlyYieldUSD, annualYieldARS, annualYieldUSD } = accountTotals;
   const totalMonthlyYield = monthlyYieldARS + (monthlyYieldUSD * exchangeRate);
   const totalAnnualYield = annualYieldARS + (annualYieldUSD * exchangeRate);
 
@@ -322,21 +347,9 @@ export default function Dashboard() {
   const eventMorosoCount = Object.entries(memberEventStatuses)
     .filter(([id, s]) => activeMemberIds.has(id) && s.moroso).length;
   
-  // Calculate monthly income/expenses for selected month
-  const monthlyIncomeARS = filteredTransactions
-    .filter(t => parseLocalDate(t.transaction_date) >= selectedMonthStart && t.transaction_type === 'income' && t.account !== 'savings')
-    .reduce((sum, t) => sum + t.amount, 0);
-  const monthlyIncomeUSD = filteredTransactions
-    .filter(t => parseLocalDate(t.transaction_date) >= selectedMonthStart && t.transaction_type === 'income' && t.account === 'savings')
-    .reduce((sum, t) => sum + t.amount, 0);
+  // Monthly income/expenses for the selected month
+  const { monthlyIncomeARS, monthlyIncomeUSD, monthlyExpensesARS, monthlyExpensesUSD } = accountTotals;
   const monthlyIncome = monthlyIncomeARS + (monthlyIncomeUSD * exchangeRate);
-
-  const monthlyExpensesARS = filteredTransactions
-    .filter(t => parseLocalDate(t.transaction_date) >= selectedMonthStart && t.transaction_type === 'expense' && t.account !== 'savings')
-    .reduce((sum, t) => sum + t.amount, 0);
-  const monthlyExpensesUSD = filteredTransactions
-    .filter(t => parseLocalDate(t.transaction_date) >= selectedMonthStart && t.transaction_type === 'expense' && t.account === 'savings')
-    .reduce((sum, t) => sum + t.amount, 0);
   const monthlyExpenses = monthlyExpensesARS + (monthlyExpensesUSD * exchangeRate);
 
   // Compute adjusted total_paid map for MemberFeeMatrix
