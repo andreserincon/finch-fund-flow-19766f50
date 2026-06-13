@@ -23,9 +23,8 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { useMembers } from '@/hooks/useMembers';
-import { FeeType, FEE_TYPE_LABELS, LodgeOffice } from '@/lib/types';
+import { FeeType, FEE_TYPE_LABELS } from '@/lib/types';
 import { PlusCircle } from 'lucide-react';
-import { CargoSelect } from '@/components/forms/CargoSelect';
 
 const E164_REGEX = /^\+[0-9]{8,15}$/;
 
@@ -42,7 +41,6 @@ const memberSchema = z.object({
     }),
   whatsapp_opt_out: z.boolean().optional().default(false),
   fee_type: z.enum(['standard', 'solidarity']),
-  lodge_office: z.string().nullable().optional(),
   join_date: z.string().min(1, 'La fecha de ingreso es obligatoria'),
 });
 
@@ -50,8 +48,7 @@ type MemberFormData = z.infer<typeof memberSchema>;
 
 export function AddMemberForm() {
   const [open, setOpen] = useState(false);
-  const { addMember, updateMember, members } = useMembers();
-  const [displacedMemberId, setDisplacedMemberId] = useState<string | null>(null);
+  const { addMember } = useMembers();
 
   const {
     register,
@@ -71,14 +68,8 @@ export function AddMemberForm() {
 
   const feeType = watch('fee_type');
   const whatsappOptOut = watch('whatsapp_opt_out');
-  const lodgeOffice = watch('lodge_office');
 
   const onSubmit = async (data: MemberFormData) => {
-    // Reassignment: free the office from its previous holder first.
-    if (displacedMemberId) {
-      await updateMember.mutateAsync({ id: displacedMemberId, lodge_office: null });
-    }
-
     await addMember.mutateAsync({
       full_name: data.full_name,
       phone_number: data.phone_number,
@@ -86,11 +77,9 @@ export function AddMemberForm() {
       whatsapp_opt_out: !!data.whatsapp_opt_out,
       monthly_fee_amount: 0,
       fee_type: data.fee_type,
-      lodge_office: (data.lodge_office && data.lodge_office !== 'none' ? data.lodge_office : null) as LodgeOffice | null,
       join_date: data.join_date,
     });
     reset();
-    setDisplacedMemberId(null);
     setOpen(false);
   };
 
@@ -182,18 +171,6 @@ export function AddMemberForm() {
                 ))}
               </SelectContent>
             </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Cargo (opcional)</Label>
-            <CargoSelect
-              value={lodgeOffice ?? null}
-              members={members}
-              onChange={(office, displaced) => {
-                setValue('lodge_office', office);
-                setDisplacedMemberId(displaced);
-              }}
-            />
           </div>
 
           <div className="space-y-2">
