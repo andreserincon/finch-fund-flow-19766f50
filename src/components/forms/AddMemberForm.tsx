@@ -23,10 +23,17 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { useMembers } from '@/hooks/useMembers';
-import { FeeType, FEE_TYPE_LABELS } from '@/lib/types';
+import { FeeType, FEE_TYPE_LABELS, MasonicGrade } from '@/lib/types';
 import { PlusCircle } from 'lucide-react';
 
 const E164_REGEX = /^\+[0-9]{8,15}$/;
+
+const GRADE_OPTIONS: { value: MasonicGrade; label: string }[] = [
+  { value: 'aprendiz', label: 'Aprendiz' },
+  { value: 'companero', label: 'Compañero' },
+  { value: 'maestro', label: 'Maestro' },
+  { value: 'profano', label: 'Profano' },
+];
 
 const memberSchema = z.object({
   full_name: z.string().min(1, 'El nombre es obligatorio').max(100),
@@ -41,6 +48,7 @@ const memberSchema = z.object({
     }),
   whatsapp_opt_out: z.boolean().optional().default(false),
   fee_type: z.enum(['standard', 'solidarity']),
+  masonic_grade: z.enum(['profano', 'aprendiz', 'companero', 'maestro']),
   join_date: z.string().min(1, 'La fecha de ingreso es obligatoria'),
 });
 
@@ -61,12 +69,14 @@ export function AddMemberForm() {
     resolver: zodResolver(memberSchema),
     defaultValues: {
       fee_type: 'standard',
+      masonic_grade: 'aprendiz',
       join_date: new Date().toISOString().split('T')[0],
       whatsapp_opt_out: false,
     },
   });
 
   const feeType = watch('fee_type');
+  const masonicGrade = watch('masonic_grade');
   const whatsappOptOut = watch('whatsapp_opt_out');
 
   const onSubmit = async (data: MemberFormData) => {
@@ -77,6 +87,7 @@ export function AddMemberForm() {
       whatsapp_opt_out: !!data.whatsapp_opt_out,
       monthly_fee_amount: 0,
       fee_type: data.fee_type,
+      masonic_grade: data.masonic_grade,
       join_date: data.join_date,
     });
     reset();
@@ -168,6 +179,23 @@ export function AddMemberForm() {
                   <SelectItem key={value} value={value}>
                     {label}
                   </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Grado masónico</Label>
+            <Select
+              value={masonicGrade}
+              onValueChange={(value: MasonicGrade) => setValue('masonic_grade', value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Seleccionar grado" />
+              </SelectTrigger>
+              <SelectContent>
+                {GRADE_OPTIONS.map((g) => (
+                  <SelectItem key={g.value} value={g.value}>{g.label}</SelectItem>
                 ))}
               </SelectContent>
             </Select>

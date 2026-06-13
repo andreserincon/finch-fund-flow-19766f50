@@ -52,6 +52,7 @@ export function useMembers() {
       whatsapp_opt_out?: boolean;
       monthly_fee_amount: number;
       fee_type: FeeType;
+      masonic_grade?: string;
       lodge_office?: string | null;
       join_date: string;
     }) => {
