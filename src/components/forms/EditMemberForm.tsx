@@ -31,8 +31,15 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useMembers } from '@/hooks/useMembers';
-import { FeeType, FEE_TYPE_LABELS, MemberBalance } from '@/lib/types';
+import { FeeType, FEE_TYPE_LABELS, MemberBalance, MasonicGrade } from '@/lib/types';
 import { cn } from '@/lib/utils';
+
+const GRADE_OPTIONS: { value: MasonicGrade; label: string }[] = [
+  { value: 'aprendiz', label: 'Aprendiz' },
+  { value: 'companero', label: 'Compañero' },
+  { value: 'maestro', label: 'Maestro' },
+  { value: 'profano', label: 'Profano' },
+];
 
 const E164_REGEX = /^\+[0-9]{8,15}$/;
 
@@ -50,6 +57,7 @@ const memberSchema = z.object({
   whatsapp_opt_out: z.boolean().optional().default(false),
   monthly_fee_amount: z.number().min(0, 'La cuota debe ser positiva'),
   fee_type: z.enum(['standard', 'solidarity']),
+  masonic_grade: z.enum(['profano', 'aprendiz', 'companero', 'maestro']),
   is_active: z.boolean(),
   inactive_since: z.string().nullable().optional(),
   join_date: z.string().min(1, 'La fecha de ingreso es obligatoria'),
@@ -64,7 +72,7 @@ interface EditMemberFormProps {
 }
 
 export function EditMemberForm({ member, open, onOpenChange }: EditMemberFormProps) {
-  const { updateMember } = useMembers();
+  const { updateMember, members } = useMembers();
   const [joinDate, setJoinDate] = useState<Date | undefined>();
 
   const {
@@ -79,6 +87,7 @@ export function EditMemberForm({ member, open, onOpenChange }: EditMemberFormPro
   });
 
   const feeType = watch('fee_type');
+  const masonicGrade = watch('masonic_grade');
   const isActive = watch('is_active');
   const whatsappOptOut = watch('whatsapp_opt_out');
   const inactiveSince = watch('inactive_since');
@@ -87,6 +96,9 @@ export function EditMemberForm({ member, open, onOpenChange }: EditMemberFormPro
     if (member) {
       const parsedDate = parseISO(member.join_date);
       setJoinDate(parsedDate);
+      // member_balances (the view this form receives) does not expose the
+      // masonic grade, so read it from the full member row.
+      const fullMember = members.find((m) => m.id === member.member_id);
       reset({
         full_name: member.full_name,
         phone_number: member.phone_number,
@@ -94,12 +106,13 @@ export function EditMemberForm({ member, open, onOpenChange }: EditMemberFormPro
         whatsapp_opt_out: member.whatsapp_opt_out ?? false,
         monthly_fee_amount: member.monthly_fee_amount,
         fee_type: member.fee_type,
+        masonic_grade: fullMember?.masonic_grade ?? 'aprendiz',
         is_active: member.is_active,
         inactive_since: member.inactive_since ?? null,
         join_date: member.join_date,
       });
     }
-  }, [member, reset]);
+  }, [member, members, reset]);
 
   const onSubmit = async (data: MemberFormData) => {
     if (!member) return;
@@ -112,6 +125,7 @@ export function EditMemberForm({ member, open, onOpenChange }: EditMemberFormPro
       whatsapp_opt_out: !!data.whatsapp_opt_out,
       monthly_fee_amount: data.monthly_fee_amount,
       fee_type: data.fee_type,
+      masonic_grade: data.masonic_grade,
       is_active: data.is_active,
       inactive_since: data.is_active ? null : (data.inactive_since || null),
       join_date: data.join_date,
@@ -224,6 +238,23 @@ export function EditMemberForm({ member, open, onOpenChange }: EditMemberFormPro
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Grado masónico</Label>
+            <Select
+              value={masonicGrade}
+              onValueChange={(value: MasonicGrade) => setValue('masonic_grade', value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Seleccionar grado" />
+              </SelectTrigger>
+              <SelectContent>
+                {GRADE_OPTIONS.map((g) => (
+                  <SelectItem key={g.value} value={g.value}>{g.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">
