@@ -3,33 +3,12 @@
  * @description Hook that checks if the current user has the
  *   'bibliotecario' (librarian) or 'admin' role, granting them
  *   permission to manage the physical and digital book catalogue.
+ *   Derives from the shared useMyRoles() cached roles query.
  */
-
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
+import { useMyRoles } from '@/hooks/useMyRoles';
 
 export function useIsBibliotecario() {
-  const { user } = useAuth();
-
-  const { data: isBibliotecario, isLoading } = useQuery({
-    queryKey: ['is-bibliotecario', user?.id],
-    queryFn: async () => {
-      if (!user?.id) return false;
-      const { data, error } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id)
-        .in('role', ['bibliotecario', 'admin'] as any[])
-        .maybeSingle();
-      if (error) {
-        console.error('Error checking bibliotecario status:', error);
-        return false;
-      }
-      return !!data;
-    },
-    enabled: !!user?.id,
-  });
-
-  return { isBibliotecario: isBibliotecario ?? false, isLoading };
+  const { roles, isLoading } = useMyRoles();
+  const isBibliotecario = roles.some((r) => r === 'bibliotecario' || r === 'admin');
+  return { isBibliotecario, isLoading };
 }
