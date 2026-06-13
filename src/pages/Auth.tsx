@@ -105,7 +105,7 @@ function LodgeHead({ subtitle }: { subtitle: string }) {
 
 export default function Auth() {
   const navigate = useNavigate();
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, isPasswordRecovery } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('login');
@@ -249,8 +249,10 @@ export default function Auth() {
     }
   };
 
-  // Show password reset form if in recovery mode
-  if (isRecoveryMode) {
+  // Show password reset form if in recovery mode. The context flag is the
+  // reliable source (the local listener below can subscribe after the
+  // PASSWORD_RECOVERY event has already fired).
+  if (isRecoveryMode || isPasswordRecovery) {
     return (
       <Threshold>
         <LodgeHead subtitle="Establezca su nueva contraseña" />

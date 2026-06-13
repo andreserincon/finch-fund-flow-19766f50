@@ -272,7 +272,7 @@ function UserAdminRoute({ children }: { children: React.ReactNode }) {
  * AuthRoute – public route that redirects to /home if already logged in.
  */
 function AuthRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
+  const { user, loading, isPasswordRecovery } = useAuth();
 
   if (loading) {
     return (
@@ -282,7 +282,9 @@ function AuthRoute({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (user) {
+  // A recovery link signs the user in, but they must stay on /auth to set a new
+  // password. Only redirect a normally authenticated user away from the page.
+  if (user && !isPasswordRecovery) {
     return <Navigate to="/" replace />;
   }
 
