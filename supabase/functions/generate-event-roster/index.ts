@@ -81,10 +81,11 @@ interface RosterRow {
   status: { label: string; cls: string };
 }
 
-function buildHtml(eventName: string, dateStr: string, rows: RosterRow[], logoBase64?: string): string {
+function buildHtml(eventName: string, dateStr: string, rows: RosterRow[], includePayments: boolean, logoBase64?: string): string {
   const logoHtml = logoBase64
     ? `<img class="header-logo" src="data:image/png;base64,${logoBase64}" />`
     : '';
+  const colCount = includePayments ? 6 : 4;
 
   const tableRows = rows
     .map(
@@ -93,8 +94,8 @@ function buildHtml(eventName: string, dateStr: string, rows: RosterRow[], logoBa
         <td>${escapeHtml(r.name)}</td>
         <td>${escapeHtml(r.grade)}</td>
         <td>${escapeHtml(r.lodge)}</td>
-        <td style="text-align:right;font-family:monospace;">${r.pending > 0 ? fmtARS(r.pending) : '-'}</td>
-        <td><span class="status-badge ${r.status.cls}">${r.status.label}</span></td>
+        ${includePayments ? `<td style="text-align:right;font-family:monospace;">${r.pending > 0 ? fmtARS(r.pending) : '-'}</td>
+        <td><span class="status-badge ${r.status.cls}">${r.status.label}</span></td>` : ''}
         <td style="text-align:center;"><span class="check-box"></span></td>
       </tr>`,
     )
@@ -161,13 +162,13 @@ function buildHtml(eventName: string, dateStr: string, rows: RosterRow[], logoBa
         <th>Nombre</th>
         <th>Grado</th>
         <th>Logia</th>
-        <th style="text-align:right;">Pago pendiente</th>
-        <th>Estado de pago</th>
+        ${includePayments ? `<th style="text-align:right;">Pago pendiente</th>
+        <th>Estado de pago</th>` : ''}
         <th style="text-align:center;width:60px;">Asistencia</th>
       </tr>
     </thead>
     <tbody>
-      ${tableRows || '<tr><td colspan="6" style="text-align:center;padding:12px;">Sin participantes</td></tr>'}
+      ${tableRows || `<tr><td colspan="${colCount}" style="text-align:center;padding:12px;">Sin participantes</td></tr>`}
     </tbody>
   </table>
 </body>
@@ -220,7 +221,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { eventId } = await req.json();
+    const { eventId, includePayments = true } = await req.json();
     if (!eventId) {
       return new Response(JSON.stringify({ error: 'Falta eventId.' }), {
         status: 400,
@@ -277,11 +278,11 @@ Deno.serve(async (req) => {
 
     const dateStr = new Date().toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' });
     const eventName = String((event as { name?: string }).name ?? 'Evento');
-    const html = buildHtml(eventName, dateStr, rows, logoBase64);
+    const html = buildHtml(eventName, dateStr, rows, includePayments, logoBase64);
     const pdf = await convertHtmlToPdf(html);
 
     const safeName = eventName.replace(/[^a-z0-9]+/gi, '_').slice(0, 40);
-    const filename = `RLSB646_Asistencia_${safeName}.pdf`;
+    const filename = `RLSB646_Asistencia_${safeName}${includePayments ? '' : '_Simple'}.pdf`;
 
     return new Response(
       JSON.stringify({ filename, pdfBase64: bytesToBase64(pdf) }),
