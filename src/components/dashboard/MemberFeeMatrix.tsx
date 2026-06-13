@@ -208,7 +208,9 @@ export function MemberFeeMatrix({ filterMemberId, referenceMonth, adjustedTotalP
     });
   }, [memberBalances, showAllMembers, months, filterMemberId, adjustedTotalPaid]);
 
-  const paidMembersCount = memberBalances.filter(m => m.is_active && !memberHasUnpaidOrOverdue(m)).length;
+  const paidMembersCount = filterMemberId === undefined
+    ? memberBalances.filter(m => m.is_active && !memberHasUnpaidOrOverdue(m)).length
+    : 0;
 
   if (isLoading) {
     return (
@@ -225,21 +227,25 @@ export function MemberFeeMatrix({ filterMemberId, referenceMonth, adjustedTotalP
       <CardHeader className="pb-3">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
-            <CardTitle className="text-lg md:text-xl font-display">{t('dashboard.feeMatrixTitle')}</CardTitle>
+            <CardTitle className="text-lg md:text-xl font-display">
+              {filterMemberId !== undefined ? 'Tu cuota por mes' : t('dashboard.feeMatrixTitle')}
+            </CardTitle>
             <CardDescription className="text-xs md:text-sm">
-              {t('dashboard.feeMatrixDesc')}
+              {filterMemberId !== undefined ? 'Tu estado de capitas por mes' : t('dashboard.feeMatrixDesc')}
             </CardDescription>
           </div>
-          <div className="flex items-center space-x-2">
-            <Switch
-              id="show-all-members"
-              checked={showAllMembers}
-              onCheckedChange={setShowAllMembers}
-            />
-            <Label htmlFor="show-all-members" className="text-xs md:text-sm cursor-pointer">
-              {t('dashboard.feeMatrixShowAll', { count: paidMembersCount })}
-            </Label>
-          </div>
+          {filterMemberId === undefined && (
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="show-all-members"
+                checked={showAllMembers}
+                onCheckedChange={setShowAllMembers}
+              />
+              <Label htmlFor="show-all-members" className="text-xs md:text-sm cursor-pointer">
+                {t('dashboard.feeMatrixShowAll', { count: paidMembersCount })}
+              </Label>
+            </div>
+          )}
         </div>
       </CardHeader>
       <CardContent className="p-3 md:p-6">

@@ -525,7 +525,8 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Secondary metrics, collapsed by default so the focus stays up top */}
+      {/* Secondary metrics (treasurer aggregates about other members), hidden from member-only users */}
+      {!isMemberOnly && (
       <Collapsible className="rounded-xl border bg-card">
         <CollapsibleTrigger className="flex w-full items-center justify-between px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted/50 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&[data-state=open]>svg]:rotate-180">
           <span>{t('dashboard.financialDetail')}</span>
@@ -598,6 +599,7 @@ export default function Dashboard() {
           </div>
         </CollapsibleContent>
       </Collapsible>
+      )}
 
       {/* Member Fee Matrix */}
       <MemberFeeMatrix

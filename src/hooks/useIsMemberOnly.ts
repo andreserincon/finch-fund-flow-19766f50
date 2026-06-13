@@ -17,15 +17,18 @@ export function useIsMemberOnly() {
     queryFn: async () => {
       if (!user?.id) return false;
 
+      // Fail closed: read ALL role rows. With .single() a user with two roles
+      // errored and silently un-scoped to staff. Member-only means they have at
+      // least one role and every role is 'member'. The real privacy boundary is
+      // Postgres RLS; this hook only drives UI gating.
       const { data, error } = await supabase
         .from('user_roles')
         .select('role')
-        .eq('user_id', user.id)
-        .single();
+        .eq('user_id', user.id);
 
-      if (error) return false;
+      if (error || !data || data.length === 0) return false;
 
-      return data?.role === 'member';
+      return data.every((r) => r.role === 'member');
     },
     enabled: !!user?.id,
   });
