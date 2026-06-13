@@ -19,6 +19,8 @@ export interface AuthContextValue {
   session: Session | null;
   profile: Profile | null;
   loading: boolean;
+  /** True while a password-recovery link is being completed (set-new-password). */
+  isPasswordRecovery: boolean;
   signIn: (email: string, password: string) => Promise<{ error: unknown }>;
   signUp: (email: string, password: string) => Promise<{ error: unknown }>;
   signOut: () => Promise<{ error: unknown }>;
@@ -36,6 +38,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   /** True while the initial session check is in progress */
   const [loading, setLoading] = useState(true);
+  /** True between clicking a recovery link and saving the new password. */
+  const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
 
   useEffect(() => {
     // 1) Subscribe to auth state changes (login, logout, token refresh)
@@ -43,6 +47,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
+
+        // A recovery link signs the user in with a temporary session; flag it
+        // so the route guard keeps them on the set-new-password screen instead
+        // of bouncing them into the app. Cleared once the password is saved
+        // (USER_UPDATED) or they sign out.
+        if (event === 'PASSWORD_RECOVERY') setIsPasswordRecovery(true);
+        else if (event === 'USER_UPDATED' || event === 'SIGNED_OUT') setIsPasswordRecovery(false);
 
         // Defer the profile fetch to avoid potential Supabase client deadlocks
         if (session?.user) {
@@ -126,7 +137,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, session, profile, loading, signIn, signUp, signOut, isTreasurer }}
+      value={{ user, session, profile, loading, isPasswordRecovery, signIn, signUp, signOut, isTreasurer }}
     >
       {children}
     </AuthContext.Provider>
