@@ -31,9 +31,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useMembers } from '@/hooks/useMembers';
-import { FeeType, FEE_TYPE_LABELS, MemberBalance, LodgeOffice } from '@/lib/types';
+import { FeeType, FEE_TYPE_LABELS, MemberBalance } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { CargoSelect } from '@/components/forms/CargoSelect';
 
 const E164_REGEX = /^\+[0-9]{8,15}$/;
 
@@ -51,7 +50,6 @@ const memberSchema = z.object({
   whatsapp_opt_out: z.boolean().optional().default(false),
   monthly_fee_amount: z.number().min(0, 'La cuota debe ser positiva'),
   fee_type: z.enum(['standard', 'solidarity']),
-  lodge_office: z.string().nullable().optional(),
   is_active: z.boolean(),
   inactive_since: z.string().nullable().optional(),
   join_date: z.string().min(1, 'La fecha de ingreso es obligatoria'),
@@ -66,9 +64,8 @@ interface EditMemberFormProps {
 }
 
 export function EditMemberForm({ member, open, onOpenChange }: EditMemberFormProps) {
-  const { updateMember, members } = useMembers();
+  const { updateMember } = useMembers();
   const [joinDate, setJoinDate] = useState<Date | undefined>();
-  const [displacedMemberId, setDisplacedMemberId] = useState<string | null>(null);
 
   const {
     register,
@@ -84,14 +81,12 @@ export function EditMemberForm({ member, open, onOpenChange }: EditMemberFormPro
   const feeType = watch('fee_type');
   const isActive = watch('is_active');
   const whatsappOptOut = watch('whatsapp_opt_out');
-  const lodgeOffice = watch('lodge_office');
   const inactiveSince = watch('inactive_since');
 
   useEffect(() => {
     if (member) {
       const parsedDate = parseISO(member.join_date);
       setJoinDate(parsedDate);
-      setDisplacedMemberId(null);
       reset({
         full_name: member.full_name,
         phone_number: member.phone_number,
@@ -99,7 +94,6 @@ export function EditMemberForm({ member, open, onOpenChange }: EditMemberFormPro
         whatsapp_opt_out: member.whatsapp_opt_out ?? false,
         monthly_fee_amount: member.monthly_fee_amount,
         fee_type: member.fee_type,
-        lodge_office: member.lodge_office ?? null,
         is_active: member.is_active,
         inactive_since: member.inactive_since ?? null,
         join_date: member.join_date,
@@ -110,11 +104,6 @@ export function EditMemberForm({ member, open, onOpenChange }: EditMemberFormPro
   const onSubmit = async (data: MemberFormData) => {
     if (!member) return;
 
-    // Reassignment: free the office from its previous holder first.
-    if (displacedMemberId) {
-      await updateMember.mutateAsync({ id: displacedMemberId, lodge_office: null });
-    }
-
     await updateMember.mutateAsync({
       id: member.member_id,
       full_name: data.full_name,
@@ -123,7 +112,6 @@ export function EditMemberForm({ member, open, onOpenChange }: EditMemberFormPro
       whatsapp_opt_out: !!data.whatsapp_opt_out,
       monthly_fee_amount: data.monthly_fee_amount,
       fee_type: data.fee_type,
-      lodge_office: (data.lodge_office && data.lodge_office !== 'none' ? data.lodge_office : null) as LodgeOffice | null,
       is_active: data.is_active,
       inactive_since: data.is_active ? null : (data.inactive_since || null),
       join_date: data.join_date,
@@ -236,19 +224,6 @@ export function EditMemberForm({ member, open, onOpenChange }: EditMemberFormPro
                 </SelectContent>
               </Select>
             </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Cargo (opcional)</Label>
-            <CargoSelect
-              value={lodgeOffice ?? null}
-              members={members}
-              currentMemberId={member?.member_id}
-              onChange={(office, displaced) => {
-                setValue('lodge_office', office);
-                setDisplacedMemberId(displaced);
-              }}
-            />
           </div>
 
           <div className="space-y-2">

@@ -37,7 +37,7 @@ import {
 import { Search, MoreHorizontal, Pencil, Trash2, Filter, X, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { FEE_TYPE_LABELS, MemberBalance, lodgeOfficeLabel } from '@/lib/types';
+import { FEE_TYPE_LABELS, MemberBalance } from '@/lib/types';
 import { parseLocalDate, formatCurrency } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TableSkeleton } from '@/components/ui/loading';
@@ -276,9 +276,6 @@ export default function Members() {
                     <p className="font-semibold">{displayName(member.full_name, member.phone_number)}</p>
                     <Badge variant="secondary">{FEE_TYPE_LABELS[member.fee_type]}</Badge>
                   </div>
-                  {lodgeOfficeLabel(member.lodge_office) && (
-                    <p className="text-xs text-primary mt-0.5">{lodgeOfficeLabel(member.lodge_office)}</p>
-                  )}
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   {!member.is_active && <Badge variant="outline">Inactivo</Badge>}
@@ -365,9 +362,6 @@ export default function Members() {
                     <div>
                       {member.phone_number && <p className="text-xs text-muted-foreground font-mono">Mat. {member.phone_number}</p>}
                       <p className="font-medium">{displayName(member.full_name, member.phone_number)}</p>
-                      {lodgeOfficeLabel(member.lodge_office) && (
-                        <p className="text-xs text-primary">{lodgeOfficeLabel(member.lodge_office)}</p>
-                      )}
                     </div>
                   </TableCell>
                   <TableCell>
