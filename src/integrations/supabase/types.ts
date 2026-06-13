@@ -377,6 +377,8 @@ export type Database = {
           amount_paid: number
           created_at: string
           event_id: string
+          guest_grade: string | null
+          guest_lodge: string | null
           guest_name: string | null
           guest_phone: string | null
           id: string
@@ -389,6 +391,8 @@ export type Database = {
           amount_paid?: number
           created_at?: string
           event_id: string
+          guest_grade?: string | null
+          guest_lodge?: string | null
           guest_name?: string | null
           guest_phone?: string | null
           id?: string
@@ -401,6 +405,8 @@ export type Database = {
           amount_paid?: number
           created_at?: string
           event_id?: string
+          guest_grade?: string | null
+          guest_lodge?: string | null
           guest_name?: string | null
           guest_phone?: string | null
           id?: string
