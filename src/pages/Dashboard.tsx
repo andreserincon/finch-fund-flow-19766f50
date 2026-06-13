@@ -20,6 +20,7 @@ import { AddTransactionForm } from '@/components/forms/AddTransactionForm';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { useIsMemberOnly } from '@/hooks/useIsMemberOnly';
 import { useLodgeFinancials } from '@/hooks/useLodgeFinancials';
+import { useMyEventDebt } from '@/hooks/useMyEventDebt';
 import { useAuth } from '@/hooks/useAuth';
 import {
   Select,
@@ -62,6 +63,7 @@ export default function Dashboard() {
   const { isAdmin } = useIsAdmin();
   const { isMemberOnly } = useIsMemberOnly();
   const { data: lodgeFin } = useLodgeFinancials(isMemberOnly);
+  const { data: myEventDebt = 0 } = useMyEventDebt(isMemberOnly);
   const { profile } = useAuth();
   const userMemberId = profile?.member_id;
   const { exchangeRate } = useExchangeRate();
@@ -408,27 +410,73 @@ export default function Dashboard() {
             </div>
           );
         }
-        const ownOwed = Math.max(0, capitaOwed(ownBalance, eventTotals));
+        // Three obligations a member can carry: monthly capitas, event shares,
+        // and outstanding loans. Each is shown only when it owes something.
+        const ownCapita = Math.max(0, capitaOwed(ownBalance, eventTotals));
+        const ownEvents = Math.max(0, myEventDebt);
+        const ownLoansARS = userMemberId
+          ? filteredLoans
+              .filter((l) => l.member_id === userMemberId && (l.account === 'bank' || !l.account))
+              .reduce((s, l) => s + Math.max(0, l.amount - l.amount_paid), 0)
+          : 0;
+        const ownLoansUSD = userMemberId
+          ? filteredLoans
+              .filter((l) => l.member_id === userMemberId && l.account === 'savings')
+              .reduce((s, l) => s + Math.max(0, l.amount - l.amount_paid), 0)
+          : 0;
         const monthlyRate = effectiveFees[ownBalance.fee_type] || 0;
-        const ownStatus = ownOwed <= 0
+
+        const totalARSDue = ownCapita + ownEvents + ownLoansARS;
+        const hasAnyDue = totalARSDue > 0 || ownLoansUSD > 0;
+        // "Demorado" reserves the red badge for being more than a month behind
+        // on capitas; anything else outstanding is the calmer "Pendiente".
+        const ownStatus = !hasAnyDue
           ? { label: 'Al día', cls: 'status-up-to-date' }
-          : ownOwed <= monthlyRate
-            ? { label: 'Una cuota pendiente', cls: 'status-unpaid' }
-            : { label: 'Demorado', cls: 'status-overdue' };
+          : ownCapita > monthlyRate
+            ? { label: 'Demorado', cls: 'status-overdue' }
+            : { label: 'Pendiente', cls: 'status-unpaid' };
+
+        const breakdown = [
+          { label: 'Capitas', amount: ownCapita, currency: 'ARS' as const },
+          { label: 'Eventos', amount: ownEvents, currency: 'ARS' as const },
+          { label: 'Préstamos', amount: ownLoansARS, currency: 'ARS' as const },
+          { label: 'Préstamos (USD)', amount: ownLoansUSD, currency: 'USD' as const },
+        ].filter((r) => r.amount > 0);
+
+        // Headline: the ARS total normally; if the only debt is a USD loan,
+        // show that figure instead of a misleading $0.
+        const headline = !hasAnyDue
+          ? 'Al día'
+          : totalARSDue > 0
+            ? formatCurrency(totalARSDue)
+            : formatCurrency(ownLoansUSD, 'USD');
+
         return (
           <div className="stat-card animate-fade-in">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-sm text-muted-foreground font-medium">Tu estado de cuenta</p>
-                <p className={`mt-1 text-2xl font-mono tabular-nums font-semibold ${ownOwed > 0 ? 'text-destructive' : 'text-success'}`}>
-                  {ownOwed > 0 ? formatCurrency(ownOwed) : 'Al día'}
+                <p className={`mt-1 text-2xl font-mono tabular-nums font-semibold ${hasAnyDue ? 'text-destructive' : 'text-success'}`}>
+                  {headline}
                 </p>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  {ownOwed > 0 ? 'capita adeudada' : 'Sin capita pendiente'}
+                  {hasAnyDue ? 'total adeudado' : 'Sin saldos pendientes'}
                 </p>
               </div>
               <span className={`status-badge ${ownStatus.cls}`}>{ownStatus.label}</span>
             </div>
+            {breakdown.length > 0 && (
+              <div className="mt-4 space-y-2 border-t border-border/60 pt-3">
+                {breakdown.map((r) => (
+                  <div key={r.label} className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">{r.label}</span>
+                    <span className="font-mono tabular-nums text-foreground">
+                      {formatCurrency(r.amount, r.currency)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         );
       })()}
