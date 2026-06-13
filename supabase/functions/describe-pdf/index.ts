@@ -43,7 +43,23 @@ serve(async (req) => {
       });
     }
 
-    // Download the PDF from storage using service role
+    // Authorization: ensure this user is allowed to read the requested file.
+    // Use the user-scoped client so RLS on digital_books (grade-level + approval) applies.
+    const { data: bookRecord, error: bookErr } = await supabaseUser
+      .from("digital_books")
+      .select("id")
+      .eq("file_path", file_path)
+      .eq("is_approved", true)
+      .maybeSingle();
+
+    if (bookErr || !bookRecord) {
+      return new Response(JSON.stringify({ error: "Forbidden" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Download the PDF from storage using service role (auth already enforced above)
     const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     const { data: fileData, error: downloadError } = await supabaseAdmin.storage
       .from("digital-books")
