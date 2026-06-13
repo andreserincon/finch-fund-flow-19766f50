@@ -11,6 +11,7 @@ import { useExchangeRate } from '@/hooks/useExchangeRate';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { MemberFeeMatrix } from '@/components/dashboard/MemberFeeMatrix';
 import { DashboardSkeleton } from '@/components/ui/loading';
+import { LodgeLoader } from '@/components/lodge/LodgeLoader';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { usePaymentReminders } from '@/hooks/usePaymentReminders';
 
@@ -234,7 +235,7 @@ export default function Dashboard() {
   const memberEventDebts = memberEventInfo.totals;
   const memberEventStatuses = memberEventInfo.statuses;
 
-  const isLoading = authLoading || membersLoading || transactionsLoading || feesLoading || transfersLoading || loansLoading || historyLoading || eventTotalsLoading;
+  const isLoading = membersLoading || transactionsLoading || feesLoading || transfersLoading || loansLoading || historyLoading || eventTotalsLoading;
 
   // Calculate total loans due (ARS and USD separately)
   const activeLoans = filteredLoans;
@@ -400,8 +401,18 @@ export default function Dashboard() {
 
       {/* Member personal hero: own standing first (view-only member) */}
       {isMemberOnly && (() => {
-        // By here the skeleton has waited for the profile to load, so a missing
-        // member_id means the account is genuinely not linked, not still loading.
+        // The profile loads on its own track, after the cached data queries.
+        // Show a brief loader in just this card until it arrives, so we never
+        // flash "no vinculado" and never block the rest of the dashboard on it.
+        if (authLoading || !profile) {
+          return (
+            <div className="stat-card animate-fade-in">
+              <LodgeLoader size={28} className="py-6" />
+            </div>
+          );
+        }
+        // Profile is resolved now, so a missing member_id means the account is
+        // genuinely not linked, not still loading.
         if (!userMemberId) {
           return (
             <div className="stat-card animate-fade-in">
