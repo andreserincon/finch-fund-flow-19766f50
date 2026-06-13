@@ -641,8 +641,10 @@ export type Database = {
           fee_type: Database["public"]["Enums"]["fee_type"]
           full_name: string
           id: string
+          inactive_since: string | null
           is_active: boolean
           join_date: string
+          lodge_office: string | null
           masonic_grade: Database["public"]["Enums"]["masonic_grade"]
           monthly_fee_amount: number
           phone_number: string
@@ -655,8 +657,10 @@ export type Database = {
           fee_type?: Database["public"]["Enums"]["fee_type"]
           full_name: string
           id?: string
+          inactive_since?: string | null
           is_active?: boolean
           join_date?: string
+          lodge_office?: string | null
           masonic_grade?: Database["public"]["Enums"]["masonic_grade"]
           monthly_fee_amount?: number
           phone_number: string
@@ -669,8 +673,10 @@ export type Database = {
           fee_type?: Database["public"]["Enums"]["fee_type"]
           full_name?: string
           id?: string
+          inactive_since?: string | null
           is_active?: boolean
           join_date?: string
+          lodge_office?: string | null
           masonic_grade?: Database["public"]["Enums"]["masonic_grade"]
           monthly_fee_amount?: number
           phone_number?: string
@@ -1199,14 +1205,18 @@ export type Database = {
           current_balance: number | null
           fee_type: Database["public"]["Enums"]["fee_type"] | null
           full_name: string | null
+          inactive_since: string | null
           is_active: boolean | null
           join_date: string | null
+          lodge_office: string | null
           member_id: string | null
           monthly_fee_amount: number | null
           months_since_join: number | null
           phone_number: string | null
           total_fees_owed: number | null
           total_paid: number | null
+          whatsapp_number: string | null
+          whatsapp_opt_out: boolean | null
         }
         Relationships: []
       }
@@ -1214,10 +1224,19 @@ export type Database = {
     Functions: {
       auto_release_overdue_books: { Args: never; Returns: undefined }
       can_view: { Args: { _user_id: string }; Returns: boolean }
+      get_lodge_financials: {
+        Args: never
+        Returns: {
+          bank_balance: number
+          great_lodge_balance: number
+          savings_balance: number
+        }[]
+      }
       get_member_fee_type_for_month: {
         Args: { p_member_id: string; p_month: string }
         Returns: Database["public"]["Enums"]["fee_type"]
       }
+      get_my_event_debt: { Args: never; Returns: number }
       get_user_masonic_grade: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["masonic_grade"]
