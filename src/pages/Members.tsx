@@ -201,7 +201,7 @@ export default function Members() {
         <div>
           <h1 className="text-xl md:text-2xl font-bold text-foreground font-display">Miembros</h1>
           <p className="text-sm text-muted-foreground">
-            {memberBalances.filter((m) => m.is_active).length} miembros activos
+            {isMemberOnly ? 'Tu estado de cuenta' : `${memberBalances.filter((m) => m.is_active).length} miembros activos`}
           </p>
         </div>
         {isAdmin && !isMemberOnly && <AddMemberForm />}
@@ -214,6 +214,7 @@ export default function Members() {
         </div>
       )}
 
+      {!isMemberOnly && (
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -257,12 +258,13 @@ export default function Members() {
           </PopoverContent>
         </Popover>
       </div>
+      )}
 
       {/* Mobile Card View */}
       <div className="md:hidden space-y-3">
         {filteredMembers.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground bg-card rounded-lg border">
-            No se encontraron miembros
+            {isMemberOnly ? 'Tu usuario aún no está vinculado a una ficha de miembro. Escribile al Tesorero para vincularlo.' : 'No se encontraron miembros'}
           </div>
         ) : (
           sortedMembers.map((member) => (
@@ -353,7 +355,7 @@ export default function Members() {
             {filteredMembers.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
-                  No se encontraron miembros
+                  {isMemberOnly ? 'Tu usuario aún no está vinculado a una ficha de miembro. Escribile al Tesorero para vincularlo.' : 'No se encontraron miembros'}
                 </TableCell>
               </TableRow>
             ) : (
