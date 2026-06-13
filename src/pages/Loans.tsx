@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useLoans } from '@/hooks/useLoans';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
+import { useIsMemberOnly } from '@/hooks/useIsMemberOnly';
 import { AddLoanDialog } from '@/components/loans/AddLoanDialog';
 import { MarkPaidDialog } from '@/components/loans/MarkPaidDialog';
 import { DeleteLoanDialog } from '@/components/loans/DeleteLoanDialog';
@@ -30,6 +31,7 @@ import { TableSkeleton } from '@/components/ui/loading';
 export default function Loans() {
   const { loans, isLoading, cancelLoan } = useLoans();
   const { isAdmin } = useIsAdmin();
+  const { isMemberOnly } = useIsMemberOnly();
   const [showPaid, setShowPaid] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [markingPaidLoan, setMarkingPaidLoan] = useState<Loan | null>(null);
@@ -110,9 +112,13 @@ export default function Loans() {
     <div className="space-y-4 md:space-y-6 animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-xl md:text-2xl font-bold text-foreground font-display">Préstamos</h1>
+          <h1 className="text-xl md:text-2xl font-bold text-foreground font-display">
+            {isMemberOnly ? 'Mis préstamos' : 'Préstamos'}
+          </h1>
           <p className="text-sm text-muted-foreground">
-            Gestionar préstamos de miembros y seguimiento de pagos
+            {isMemberOnly
+              ? 'Consultá el estado de tus préstamos.'
+              : 'Gestionar préstamos de miembros y seguimiento de pagos'}
           </p>
         </div>
         {isAdmin && (
@@ -127,7 +133,7 @@ export default function Loans() {
       <div className="grid gap-3 grid-cols-1 md:grid-cols-2">
         <div className="stat-card space-y-3">
           <div className="flex justify-between items-start">
-            <p className="text-sm text-muted-foreground">Préstamos Activos (ARS)</p>
+            <p className="text-sm text-muted-foreground">{isMemberOnly ? 'Tus préstamos activos (ARS)' : 'Préstamos Activos (ARS)'}</p>
             <Badge variant="outline" className="text-xs">{activeLoansARS.length} préstamos</Badge>
           </div>
           <div className="grid grid-cols-2 gap-4">
@@ -147,7 +153,7 @@ export default function Loans() {
         </div>
         <div className="stat-card space-y-3">
           <div className="flex justify-between items-start">
-            <p className="text-sm text-muted-foreground">Préstamos Activos (USD)</p>
+            <p className="text-sm text-muted-foreground">{isMemberOnly ? 'Tus préstamos activos (USD)' : 'Préstamos Activos (USD)'}</p>
             <Badge variant="outline" className="text-xs">{activeLoansUSD.length} préstamos</Badge>
           </div>
           <div className="grid grid-cols-2 gap-4">
@@ -235,11 +241,11 @@ export default function Loans() {
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
-                    ) : (
+                    ) : !isMemberOnly ? (
                       <Button variant="ghost" size="icon" className="h-10 w-10 press" onClick={() => setViewingHistoryLoan(loan)}>
                         <History className="h-4 w-4" />
                       </Button>
-                    )}
+                    ) : null}
                   </div>
                 </div>
                 {loan.status === 'active' && (
@@ -381,12 +387,14 @@ export default function Loans() {
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
-                    ) : (
+                    ) : !isMemberOnly ? (
                       <TableCell>
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setViewingHistoryLoan(loan)}>
                           <History className="h-4 w-4" />
                         </Button>
                       </TableCell>
+                    ) : (
+                      <TableCell />
                     )}
                   </TableRow>
                 );

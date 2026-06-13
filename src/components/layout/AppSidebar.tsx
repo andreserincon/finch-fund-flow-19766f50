@@ -109,8 +109,13 @@ export function AppSidebar() {
   const mainNavItems = [
     { title: t('nav.dashboard'), url: '/panel', icon: LayoutDashboard },
     { title: t('nav.members'), url: '/members', icon: Users },
-    // Member-only: their own read-only payment ledger
-    ...(isMemberOnly ? [{ title: 'Mis pagos', url: '/mis-pagos', icon: Receipt }] : []),
+    // Member-only: their own read-only payment ledger + loans
+    ...(isMemberOnly
+      ? [
+          { title: 'Mis pagos', url: '/mis-pagos', icon: Receipt },
+          { title: 'Mis préstamos', url: '/loans', icon: HandCoins },
+        ]
+      : []),
     // Staff-only items (hidden from member-only users)
     ...(!isMemberOnly ? [
       { title: t('nav.transactions'), url: '/transactions', icon: Receipt },
