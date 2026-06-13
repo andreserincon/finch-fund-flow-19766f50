@@ -166,12 +166,13 @@ export default function Auth() {
         : await signIn(data.email, data.password);
 
       if (error) {
-        if (error.message.includes('User already registered')) {
+        const message = error instanceof Error ? error.message : String((error as { message?: unknown })?.message ?? error);
+        if (message.includes('User already registered')) {
           setError('Este correo ya está registrado. Ingrese, por favor.');
-        } else if (error.message.includes('Invalid login credentials')) {
+        } else if (message.includes('Invalid login credentials')) {
           setError('Correo o contraseña incorrectos. Intente de nuevo.');
         } else {
-          setError(error.message);
+          setError(message);
         }
         return;
       }
