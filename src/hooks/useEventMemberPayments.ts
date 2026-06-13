@@ -158,26 +158,34 @@ export function useEventMemberPayments(eventId?: string) {
       eventId,
       guestName,
       guestPhone,
+      guestGrade,
+      guestLodge,
       amountOwed,
       installments,
     }: {
       eventId: string;
       guestName: string;
       guestPhone?: string | null;
+      guestGrade?: string | null;
+      guestLodge?: string | null;
       amountOwed: number;
       installments?: number;
     }) => {
-      const { error } = await db
-        .from('event_member_payments')
-        .insert({
-          event_id: eventId,
-          member_id: null,
-          guest_name: guestName,
-          guest_phone: guestPhone || null,
-          amount_owed: amountOwed,
-          amount_paid: 0,
-          installments: installments ?? 1,
-        });
+      const insertData: Record<string, unknown> = {
+        event_id: eventId,
+        member_id: null,
+        guest_name: guestName,
+        guest_phone: guestPhone || null,
+        amount_owed: amountOwed,
+        amount_paid: 0,
+        installments: installments ?? 1,
+      };
+      // Only send the grade/lodge columns when they carry a value, so a guest
+      // can still be added in the brief window before the columns are created.
+      if (guestGrade) insertData.guest_grade = guestGrade;
+      if (guestLodge) insertData.guest_lodge = guestLodge;
+
+      const { error } = await db.from('event_member_payments').insert(insertData);
 
       if (error) throw error;
     },
