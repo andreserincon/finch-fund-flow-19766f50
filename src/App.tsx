@@ -40,6 +40,7 @@ import { useIsMemberOnly } from "@/hooks/useIsMemberOnly";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { InstallPrompt } from "@/components/pwa/InstallPrompt";
 import { HiddenModeProvider } from "@/contexts/HiddenModeContext";
+import { AuthProvider } from "@/contexts/AuthContext";
 import Dashboard from "./pages/Dashboard";
 import Members from "./pages/Members";
 import AdminMembers from "./pages/AdminMembers";
@@ -327,6 +328,7 @@ function RootGate() {
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
+    <AuthProvider>
     <HiddenModeProvider>
     {/* Toast notification providers */}
     <Toaster />
@@ -382,6 +384,7 @@ const App = () => (
       </Routes>
     </BrowserRouter>
     </HiddenModeProvider>
+    </AuthProvider>
   </QueryClientProvider>
 );
 
