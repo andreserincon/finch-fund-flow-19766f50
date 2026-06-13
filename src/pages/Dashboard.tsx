@@ -60,7 +60,7 @@ export default function Dashboard() {
   const { monthlyFees, currentMonthFees, isLoading: feesLoading } = useMonthlyFees();
   const { transfers, isLoading: transfersLoading } = useAccountTransfers();
   const { loans, isLoading: loansLoading } = useLoans();
-  const { getFeeTypeForMonth: getHistoricalFeeType, isLoading: historyLoading } = useMemberFeeTypeHistory();
+  const { getFeeTypeForMonth: getHistoricalFeeType, history, isLoading: historyLoading } = useMemberFeeTypeHistory();
   const { isAdmin } = useIsAdmin();
   const { isMemberOnly } = useIsMemberOnly();
   const { data: lodgeFin } = useLodgeFinancials(isMemberOnly);
@@ -149,17 +149,24 @@ export default function Dashboard() {
 
   // Compute adjusted member balances as of the selected month
   const adjustedMemberBalances = useMemo(() => {
-    return memberBalances.map(m => {
-      // total_paid: sum income transactions (monthly_fee + event_payment) up to cutoff
-      const adjustedTotalPaid = filteredTransactions
-        .filter(t => 
-          t.member_id === m.member_id && 
-          t.transaction_type === 'income' && 
-          (t.category === 'monthly_fee' || t.category === 'event_payment')
-        )
-        .reduce((sum, t) => sum + t.amount, 0);
+    // One pass over the filtered transactions to sum each member's paid amount
+    // (income, monthly_fee or event_payment), instead of re-filtering the whole
+    // transaction list once per member.
+    const paidByMember = new Map<string, number>();
+    for (const tx of filteredTransactions) {
+      if (
+        tx.member_id &&
+        tx.transaction_type === 'income' &&
+        (tx.category === 'monthly_fee' || tx.category === 'event_payment')
+      ) {
+        paidByMember.set(tx.member_id, (paidByMember.get(tx.member_id) ?? 0) + tx.amount);
+      }
+    }
 
-      // total_fees_owed: sum monthly fees from join date to selected month + event fees
+    return memberBalances.map(m => {
+      const adjustedTotalPaid = paidByMember.get(m.member_id) ?? 0;
+
+      // total_fees_owed: sum monthly fees from join date to selected month
       const joinDate = parseLocalDate(m.join_date);
       const monthsRange = generateMonthRange(joinDate, selectedDate);
       let monthlyFeesOwed = 0;
@@ -168,12 +175,6 @@ export default function Dashboard() {
         monthlyFeesOwed += getFeeForMonth(mKey, feeType);
       }
 
-      // Event fees: keep as-is (no date filtering available)
-      const eventFeesOwed = (m.total_fees_owed - (memberBalances.find(mb => mb.member_id === m.member_id)?.total_fees_owed ?? 0)) || 0;
-      // Actually, we can compute event fees from the original balance:
-      // original total_fees_owed = original_monthly_owed + event_owed
-      // We don't have event_owed separately, so let's use the event debts query
-      
       const adjustedTotalFeesOwed = monthlyFeesOwed; // event fees added separately via memberEventDebts
 
       return {
@@ -183,7 +184,9 @@ export default function Dashboard() {
         current_balance: adjustedTotalPaid - adjustedTotalFeesOwed,
       };
     });
-  }, [memberBalances, filteredTransactions, selectedDate, monthlyFees]);
+    // getMemberFeeType/getFeeForMonth read history + monthlyFees, both in deps.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [memberBalances, filteredTransactions, selectedDate, monthlyFees, history]);
 
   // Query unpaid event amounts per member, classified by deadline status.
   // - 'moroso': today > deadline
