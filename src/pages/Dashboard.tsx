@@ -40,6 +40,7 @@ import {
   HandCoins,
   CalendarDays,
   ChevronDown,
+  ChevronRight,
   MessageSquare
 } from 'lucide-react';
 import { format, lastDayOfMonth, startOfMonth, startOfYear, addMonths, isAfter } from 'date-fns';
@@ -465,11 +466,11 @@ export default function Dashboard() {
             ? { label: 'Demorado', cls: 'status-overdue' }
             : { label: 'Pendiente', cls: 'status-unpaid' };
 
-        const breakdown = [
-          { label: 'Capitas', amount: ownCapita, currency: 'ARS' as const },
-          { label: 'Eventos', amount: ownEvents, currency: 'ARS' as const },
-          { label: 'Préstamos', amount: ownLoansARS, currency: 'ARS' as const },
-          { label: 'Préstamos (USD)', amount: ownLoansUSD, currency: 'USD' as const },
+        const breakdown: { label: string; amount: number; currency: 'ARS' | 'USD'; to?: string }[] = [
+          { label: 'Capitas', amount: ownCapita, currency: 'ARS' },
+          { label: 'Eventos', amount: ownEvents, currency: 'ARS' },
+          { label: 'Préstamos', amount: ownLoansARS, currency: 'ARS', to: '/loans' },
+          { label: 'Préstamos (USD)', amount: ownLoansUSD, currency: 'USD', to: '/loans' },
         ].filter((r) => r.amount > 0);
 
         // Headline: the ARS total normally; if the only debt is a USD loan,
@@ -495,15 +496,31 @@ export default function Dashboard() {
               <span className={`status-badge ${ownStatus.cls}`}>{ownStatus.label}</span>
             </div>
             {breakdown.length > 0 && (
-              <div className="mt-4 space-y-2 border-t border-border/60 pt-3">
-                {breakdown.map((r) => (
-                  <div key={r.label} className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">{r.label}</span>
-                    <span className="font-mono tabular-nums text-foreground">
-                      {formatCurrency(r.amount, r.currency)}
-                    </span>
-                  </div>
-                ))}
+              <div className="mt-4 space-y-1 border-t border-border/60 pt-3">
+                {breakdown.map((r) =>
+                  r.to ? (
+                    <Link
+                      key={r.label}
+                      to={r.to}
+                      className="press -mx-1.5 flex items-center justify-between rounded-md px-1.5 py-1.5 text-sm transition-colors hover:bg-muted/50 active:bg-muted/60"
+                    >
+                      <span className="flex items-center gap-1 text-muted-foreground">
+                        {r.label}
+                        <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/60" />
+                      </span>
+                      <span className="font-mono tabular-nums text-foreground">
+                        {formatCurrency(r.amount, r.currency)}
+                      </span>
+                    </Link>
+                  ) : (
+                    <div key={r.label} className="flex items-center justify-between px-1.5 py-1.5 text-sm">
+                      <span className="text-muted-foreground">{r.label}</span>
+                      <span className="font-mono tabular-nums text-foreground">
+                        {formatCurrency(r.amount, r.currency)}
+                      </span>
+                    </div>
+                  )
+                )}
               </div>
             )}
           </div>
