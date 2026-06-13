@@ -140,7 +140,7 @@ export default function Home() {
         {isAdmin && canViewTreasury && <AddTransactionForm triggerLabel="Registrar movimiento" />}
       </div>
 
-      {canViewTreasury ? (
+      {canViewTreasury && !isMemberOnly ? (
         <>
           {/* KPIs */}
           {isLoading ? (
@@ -299,14 +299,23 @@ export default function Home() {
           </div>
         </>
       ) : (
-        /* Non-treasury users land here: lead with their module */
+        /* Members (and non-treasury users) land here: their own modules. No
+           lodge financial KPIs, since those are computed from staff-scoped
+           data and would be meaningless for a member. */
         <div className="grid gap-4 sm:grid-cols-2">
+          {isMemberOnly && (
+            <>
+              <ModuleTile title="Panel" subtitle="Tu estado de cuenta y la tesorería de la logia" icon={<LayoutDashboard className="h-6 w-6 text-primary-foreground" />} onClick={() => navigate('/panel')} />
+              <ModuleTile title="Mis pagos" subtitle="Tu historial de pagos" icon={<Receipt className="h-6 w-6 text-primary-foreground" />} onClick={() => navigate('/mis-pagos')} />
+              <ModuleTile title="Mis préstamos" subtitle="El estado de tus préstamos" icon={<HandCoins className="h-6 w-6 text-primary-foreground" />} onClick={() => navigate('/loans')} />
+            </>
+          )}
           <ModuleTile title="Biblioteca" subtitle="Catálogo de libros de la Logia" icon={<BookOpen className="h-6 w-6 text-primary-foreground" />} onClick={() => navigate('/library')} />
         </div>
       )}
 
       {/* Otros módulos (always available ones) */}
-      {(canViewTreasury) && (
+      {(canViewTreasury && !isMemberOnly) && (
         <div>
           <p className="text-[11px] uppercase tracking-widest text-muted-foreground/70 font-semibold mb-3">Otros módulos</p>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
