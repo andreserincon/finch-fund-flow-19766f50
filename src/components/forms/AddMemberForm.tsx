@@ -32,7 +32,6 @@ const GRADE_OPTIONS: { value: MasonicGrade; label: string }[] = [
   { value: 'aprendiz', label: 'Aprendiz' },
   { value: 'companero', label: 'Compañero' },
   { value: 'maestro', label: 'Maestro' },
-  { value: 'profano', label: 'Profano' },
 ];
 
 const memberSchema = z.object({
