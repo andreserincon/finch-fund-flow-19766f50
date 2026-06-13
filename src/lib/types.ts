@@ -214,6 +214,10 @@ export interface EventMemberPayment {
   member_id: string | null;
   guest_name: string | null;
   guest_phone: string | null;
+  /** Guest masonic grade (aprendiz/companero/maestro). Null for members. */
+  guest_grade: string | null;
+  /** Guest's home lodge name (free text). Null for members. */
+  guest_lodge: string | null;
   amount_owed: number;
   amount_paid: number;
   /** Number of monthly installments this participant pays (>= 1). Defaults to 1. */

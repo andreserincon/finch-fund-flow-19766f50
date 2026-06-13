@@ -17,7 +17,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { ArrowLeft, PlusCircle, UserPlus, Trash2, Check, X, Receipt, AlertTriangle, Pencil, Minus, Plus } from 'lucide-react';
+import { ArrowLeft, PlusCircle, UserPlus, Trash2, Check, X, Receipt, AlertTriangle, Pencil, Minus, Plus, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -44,6 +44,8 @@ import { useTransactions } from '@/hooks/useTransactions';
 import { formatCurrency, parseLocalDate } from '@/lib/utils';
 import { ACCOUNT_LABELS, AccountType, CATEGORY_LABELS, EventMemberPayment } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 /* ----------------------------- status helper ----------------------------- */
 
@@ -78,6 +80,8 @@ function StatusChip({ owed, paid, deadline }: { owed: number; paid: number; dead
 const guestSchema = z.object({
   guest_name: z.string().min(1, 'El nombre es obligatorio').max(100),
   guest_phone: z.string().max(40).optional(),
+  guest_grade: z.string().optional(),
+  guest_lodge: z.string().max(120).optional(),
   amount_owed: z.number().min(0, 'El monto debe ser positivo'),
 });
 type GuestFormData = z.infer<typeof guestSchema>;
@@ -90,6 +94,8 @@ function AddGuestDialog({ eventId, defaultAmount, defaultInstallments, className
     register,
     handleSubmit,
     reset,
+    setValue,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<GuestFormData>({
     resolver: zodResolver(guestSchema),
@@ -101,6 +107,8 @@ function AddGuestDialog({ eventId, defaultAmount, defaultInstallments, className
       eventId,
       guestName: data.guest_name,
       guestPhone: data.guest_phone || null,
+      guestGrade: data.guest_grade || null,
+      guestLodge: data.guest_lodge || null,
       amountOwed: data.amount_owed,
       installments: defaultInstallments,
     });
@@ -138,6 +146,23 @@ function AddGuestDialog({ eventId, defaultAmount, defaultInstallments, className
           <div className="space-y-2">
             <Label htmlFor="guest_phone">Teléfono (opcional)</Label>
             <Input id="guest_phone" {...register('guest_phone')} placeholder="+5491155551234" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label>Grado</Label>
+              <Select value={watch('guest_grade') || ''} onValueChange={(v) => setValue('guest_grade', v)}>
+                <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="aprendiz">Aprendiz</SelectItem>
+                  <SelectItem value="companero">Compañero</SelectItem>
+                  <SelectItem value="maestro">Maestro</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="guest_lodge">Logia</Label>
+              <Input id="guest_lodge" {...register('guest_lodge')} placeholder="Nombre de la logia" />
+            </div>
           </div>
           <div className="space-y-2">
             <Label htmlFor="amount_owed">Cuota a pagar</Label>
@@ -771,6 +796,34 @@ export default function EventOverview() {
   const { addMemberToEvent } = useEventMemberPayments(id);
   const [memberToAdd, setMemberToAdd] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('pendientes');
+  const [generatingRoster, setGeneratingRoster] = useState(false);
+
+  // Generate the branded attendance roster PDF (members + guests) via the
+  // generate-event-roster edge function, then download it in the browser.
+  const handleGenerateRoster = async () => {
+    if (!id) return;
+    setGeneratingRoster(true);
+    try {
+      const { data: res, error: fnError } = await supabase.functions.invoke('generate-event-roster', {
+        body: { eventId: id },
+      });
+      if (fnError) throw new Error(fnError.message);
+      if (res?.error) throw new Error(res.error);
+      const bytes = Uint8Array.from(atob(res.pdfBase64), (c) => c.charCodeAt(0));
+      const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = res.filename || 'asistencia.pdf';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'No se pudo generar el reporte.');
+    } finally {
+      setGeneratingRoster(false);
+    }
+  };
 
   const event = data?.event ?? null;
   const payments = data?.payments ?? [];
@@ -874,18 +927,29 @@ export default function EventOverview() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div>
-        <Button variant="ghost" size="sm" onClick={() => navigate('/expense-categories')} className="mb-2 press">
-          <ArrowLeft className="mr-2 h-4 w-4" /> Eventos
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <Button variant="ghost" size="sm" onClick={() => navigate('/expense-categories')} className="mb-2 press">
+            <ArrowLeft className="mr-2 h-4 w-4" /> Eventos
+          </Button>
+          <h1 className="text-2xl font-bold text-foreground">{event.name}</h1>
+          {event.description && (
+            <p className="text-muted-foreground max-w-prose">{event.description}</p>
+          )}
+          <p className="text-sm text-muted-foreground mt-1">
+            Cuota por defecto: {formatCurrency(event.default_amount)}
+            {event.is_active ? '' : ' (inactivo)'}
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          className="press shrink-0 sm:mt-9"
+          onClick={handleGenerateRoster}
+          disabled={generatingRoster}
+        >
+          <FileText className="mr-2 h-4 w-4" />
+          {generatingRoster ? 'Generando...' : 'Lista de asistencia'}
         </Button>
-        <h1 className="text-2xl font-bold text-foreground">{event.name}</h1>
-        {event.description && (
-          <p className="text-muted-foreground max-w-prose">{event.description}</p>
-        )}
-        <p className="text-sm text-muted-foreground mt-1">
-          Cuota por defecto: {formatCurrency(event.default_amount)}
-          {event.is_active ? '' : ' (inactivo)'}
-        </p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
