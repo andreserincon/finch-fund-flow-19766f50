@@ -60,7 +60,10 @@ export function BottomNav() {
         { to: '/recordatorios', icon: MessageSquare, label: t('nav.reminders'), dot: pending > 0 },
         { to: '/transactions', icon: Receipt, label: t('nav.transactions') },
       ]
-    : [{ to: '/library', icon: BookOpen, label: t('nav.library') }];
+    : [
+        { to: '/mis-pagos', icon: Receipt, label: 'Mis pagos' },
+        { to: '/library', icon: BookOpen, label: t('nav.library') },
+      ];
 
   return (
     <nav

@@ -54,6 +54,7 @@ import FeeCalculator from "./pages/FeeCalculator";
 import PaymentReminders from "./pages/PaymentReminders";
 import AccountTransfer from "./pages/AccountTransfer";
 import UserManagement from "./pages/UserManagement";
+import MyPayments from "./pages/MyPayments";
 import Reports from "./pages/Reports";
 import Budget from "./pages/Budget";
 import Library from "./pages/Library";
@@ -315,6 +316,7 @@ const App = () => (
         {/* Treasury – view-only routes */}
         <Route path="/index" element={<Navigate to="/" replace />} />
         <Route path="/members" element={<TreasuryRoute><Members /></TreasuryRoute>} />
+        <Route path="/mis-pagos" element={<TreasuryRoute><MyPayments /></TreasuryRoute>} />
 
         {/* Treasury – staff routes (no member-only) */}
         <Route path="/transactions" element={<TreasuryStaffRoute><Transactions /></TreasuryStaffRoute>} />
