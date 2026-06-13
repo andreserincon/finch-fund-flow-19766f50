@@ -41,7 +41,7 @@ import { useEventMemberPayments } from '@/hooks/useEventMemberPayments';
 import { useMembers } from '@/hooks/useMembers';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { useTransactions } from '@/hooks/useTransactions';
-import { formatCurrency, parseLocalDate } from '@/lib/utils';
+import { formatCurrency, formatCurrencyCompact, parseLocalDate } from '@/lib/utils';
 import { ACCOUNT_LABELS, AccountType, CATEGORY_LABELS, EventMemberPayment } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
@@ -860,6 +860,10 @@ export default function EventOverview() {
     .reduce((s, t) => s + Number(t.amount), 0);
   const eventBalance = actualIncome - actualExpenses;
 
+  const totalParticipants = payments.length;
+  const memberParticipants = payments.filter((p) => p.member_id).length;
+  const guestParticipants = totalParticipants - memberParticipants;
+
   if (isLoading) {
     return (
       <div className="space-y-6 animate-fade-in">
@@ -954,35 +958,40 @@ export default function EventOverview() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="stat-card">
           <p className="stat-label">Ingresos proyectados</p>
-          <p className="mt-1 text-2xl font-mono tabular-nums font-semibold">{formatCurrency(projectedIncome)}</p>
+          <p className="mt-1 text-lg sm:text-xl font-mono tabular-nums font-semibold">{formatCurrencyCompact(projectedIncome)}</p>
         </div>
         <div className="stat-card">
           <p className="stat-label">Ingresos pagados</p>
-          <p className="mt-1 text-2xl font-mono tabular-nums font-semibold">{formatCurrency(paidIncome)}</p>
+          <p className="mt-1 text-lg sm:text-xl font-mono tabular-nums font-semibold">{formatCurrencyCompact(paidIncome)}</p>
         </div>
         <div className="stat-card">
           <p className="stat-label">Pagos pendientes</p>
-          <p className="mt-1 text-2xl font-mono tabular-nums font-semibold text-destructive">{formatCurrency(pendingTotal)}</p>
+          <p className="mt-1 text-lg sm:text-xl font-mono tabular-nums font-semibold text-destructive">{formatCurrencyCompact(pendingTotal)}</p>
         </div>
         <div className="stat-card">
           <p className="stat-label">Saldo del evento</p>
-          <p className={`mt-1 text-2xl font-mono tabular-nums font-semibold ${eventBalance >= 0 ? 'text-success' : 'text-destructive'}`}>
-            {formatCurrency(eventBalance)}
+          <p className={`mt-1 text-lg sm:text-xl font-mono tabular-nums font-semibold ${eventBalance >= 0 ? 'text-success' : 'text-destructive'}`}>
+            {formatCurrencyCompact(eventBalance)}
           </p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
         <div className="stat-card">
           <p className="stat-label">Ingresos reales (transacciones)</p>
-          <p className="mt-1 text-xl font-mono tabular-nums font-semibold">{formatCurrency(actualIncome)}</p>
+          <p className="mt-1 text-lg sm:text-xl font-mono tabular-nums font-semibold">{formatCurrencyCompact(actualIncome)}</p>
         </div>
         <div className="stat-card">
           <p className="stat-label">Egresos reales (transacciones)</p>
-          <p className="mt-1 text-xl font-mono tabular-nums font-semibold">{formatCurrency(actualExpenses)}</p>
+          <p className="mt-1 text-lg sm:text-xl font-mono tabular-nums font-semibold">{formatCurrencyCompact(actualExpenses)}</p>
+        </div>
+        <div className="stat-card">
+          <p className="stat-label">Participantes</p>
+          <p className="mt-1 text-lg sm:text-xl font-mono tabular-nums font-semibold">{totalParticipants}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">{memberParticipants} miembros · {guestParticipants} invitados</p>
         </div>
       </div>
 
