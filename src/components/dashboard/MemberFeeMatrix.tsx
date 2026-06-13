@@ -310,7 +310,7 @@ export function MemberFeeMatrix({ filterMemberId, referenceMonth, adjustedTotalP
                               {formatCurrencyCompact(amount)}
                             </div>
                           ) : (
-                            <span className="text-muted-foreground/30">—</span>
+                            <span className="text-muted-foreground/30 text-[10px]">n/c</span>
                           )}
                         </TableCell>
                       );
