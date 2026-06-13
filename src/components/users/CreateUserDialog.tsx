@@ -132,7 +132,7 @@ export function CreateUserDialog({ open, onOpenChange, excludeMemberIds }: Creat
     return (
       <Dialog open={open} onOpenChange={handleClose}>
         <DialogContent
-          className="sm:max-w-[460px]"
+          className="sm:max-w-[460px] max-h-[90dvh] overflow-y-auto"
           onInteractOutside={(e) => e.preventDefault()}
           onEscapeKeyDown={(e) => e.preventDefault()}
         >
@@ -146,11 +146,14 @@ export function CreateUserDialog({ open, onOpenChange, excludeMemberIds }: Creat
               propia contrasena. El enlace es de un solo uso y vence en una hora.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-3 py-2">
+          <div className="space-y-2 py-2">
             <Label className="text-xs text-muted-foreground">Enlace para establecer la contrasena</Label>
-            <div className="rounded-lg border bg-muted/50 p-3">
-              <p className="font-mono text-xs break-all">{createdLink || 'No se pudo generar el enlace. Usa "Restablecer" en la tabla.'}</p>
-            </div>
+            <Input
+              readOnly
+              value={createdLink || 'No se pudo generar el enlace. Usa "Restablecer" en la tabla.'}
+              onFocus={(e) => e.currentTarget.select()}
+              className="font-mono text-xs"
+            />
           </div>
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={handleClose}>
