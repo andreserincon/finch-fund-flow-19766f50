@@ -383,6 +383,43 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Member personal hero: own standing first (view-only member) */}
+      {isMemberOnly && (() => {
+        const ownBalance = memberBalances.find((m) => m.member_id === userMemberId);
+        if (!ownBalance) {
+          return (
+            <div className="stat-card animate-fade-in">
+              <p className="text-sm text-muted-foreground">
+                Tu usuario aún no está vinculado a una ficha de miembro. Escribile al Tesorero para vincularlo.
+              </p>
+            </div>
+          );
+        }
+        const ownOwed = Math.max(0, capitaOwed(ownBalance, eventTotals));
+        const monthlyRate = effectiveFees[ownBalance.fee_type] || 0;
+        const ownStatus = ownOwed <= 0
+          ? { label: 'Al día', cls: 'status-up-to-date' }
+          : ownOwed <= monthlyRate
+            ? { label: 'Una cuota pendiente', cls: 'status-unpaid' }
+            : { label: 'Demorado', cls: 'status-overdue' };
+        return (
+          <div className="stat-card animate-fade-in">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-sm text-muted-foreground font-medium">Tu estado de cuenta</p>
+                <p className={`mt-1 text-2xl font-mono tabular-nums font-semibold ${ownOwed > 0 ? 'text-destructive' : 'text-success'}`}>
+                  {ownOwed > 0 ? formatCurrency(ownOwed) : 'Al día'}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {ownOwed > 0 ? 'capita adeudada' : 'Sin capita pendiente'}
+                </p>
+              </div>
+              <span className={`status-badge ${ownStatus.cls}`}>{ownStatus.label}</span>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Attention banner: the treasurer's first question, answered up top */}
       {!isMemberOnly && (
         overdueMembers.length > 0 ? (
@@ -417,6 +454,7 @@ export default function Dashboard() {
 
       {/* Primary balances: the three accounts, money at a glance.
           Full-width on phone so large amounts never truncate. */}
+      {isMemberOnly && <h2 className="section-header">Tesorería de la logia</h2>}
       <div className="grid gap-3 grid-cols-1 sm:grid-cols-3">
         <StatCard
           title={t('dashboard.totalARSBalance')}
