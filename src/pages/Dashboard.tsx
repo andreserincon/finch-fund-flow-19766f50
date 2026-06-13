@@ -64,7 +64,7 @@ export default function Dashboard() {
   const { isMemberOnly } = useIsMemberOnly();
   const { data: lodgeFin } = useLodgeFinancials(isMemberOnly);
   const { data: myEventDebt = 0 } = useMyEventDebt(isMemberOnly);
-  const { profile } = useAuth();
+  const { profile, loading: authLoading } = useAuth();
   const userMemberId = profile?.member_id;
   const { exchangeRate } = useExchangeRate();
   const { eventTotals, isLoading: eventTotalsLoading } = useMemberEventTotals();
@@ -234,7 +234,7 @@ export default function Dashboard() {
   const memberEventDebts = memberEventInfo.totals;
   const memberEventStatuses = memberEventInfo.statuses;
 
-  const isLoading = membersLoading || transactionsLoading || feesLoading || transfersLoading || loansLoading || historyLoading || eventTotalsLoading;
+  const isLoading = authLoading || membersLoading || transactionsLoading || feesLoading || transfersLoading || loansLoading || historyLoading || eventTotalsLoading;
 
   // Calculate total loans due (ARS and USD separately)
   const activeLoans = filteredLoans;
@@ -400,8 +400,9 @@ export default function Dashboard() {
 
       {/* Member personal hero: own standing first (view-only member) */}
       {isMemberOnly && (() => {
-        const ownBalance = memberBalances.find((m) => m.member_id === userMemberId);
-        if (!ownBalance) {
+        // By here the skeleton has waited for the profile to load, so a missing
+        // member_id means the account is genuinely not linked, not still loading.
+        if (!userMemberId) {
           return (
             <div className="stat-card animate-fade-in">
               <p className="text-sm text-muted-foreground">
@@ -410,9 +411,10 @@ export default function Dashboard() {
             </div>
           );
         }
+        const ownBalance = memberBalances.find((m) => m.member_id === userMemberId);
         // Three obligations a member can carry: monthly capitas, event shares,
         // and outstanding loans. Each is shown only when it owes something.
-        const ownCapita = Math.max(0, capitaOwed(ownBalance, eventTotals));
+        const ownCapita = ownBalance ? Math.max(0, capitaOwed(ownBalance, eventTotals)) : 0;
         const ownEvents = Math.max(0, myEventDebt);
         const ownLoansARS = userMemberId
           ? filteredLoans
@@ -424,7 +426,7 @@ export default function Dashboard() {
               .filter((l) => l.member_id === userMemberId && l.account === 'savings')
               .reduce((s, l) => s + Math.max(0, l.amount - l.amount_paid), 0)
           : 0;
-        const monthlyRate = effectiveFees[ownBalance.fee_type] || 0;
+        const monthlyRate = ownBalance ? (effectiveFees[ownBalance.fee_type] || 0) : 0;
 
         const totalARSDue = ownCapita + ownEvents + ownLoansARS;
         const hasAnyDue = totalARSDue > 0 || ownLoansUSD > 0;
