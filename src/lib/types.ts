@@ -41,6 +41,14 @@ export type PaymentStatus = 'up_to_date' | 'ahead' | 'overdue';
 /** Masonic degree level */
 export type MasonicGrade = 'profano' | 'aprendiz' | 'companero' | 'maestro';
 
+/** Display labels for the masonic grade. */
+export const MASONIC_GRADE_LABELS: Record<MasonicGrade, string> = {
+  profano: 'Profano',
+  aprendiz: 'Aprendiz',
+  companero: 'Compañero',
+  maestro: 'Maestro',
+};
+
 /** Lodge office / cargo (optional; the grade is stored separately in masonic_grade) */
 export type LodgeOffice =
   | 'venerable_maestro'

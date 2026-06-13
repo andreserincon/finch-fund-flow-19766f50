@@ -37,7 +37,7 @@ import {
 import { Search, MoreHorizontal, Pencil, Trash2, Filter, X, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { FEE_TYPE_LABELS, MemberBalance } from '@/lib/types';
+import { FEE_TYPE_LABELS, MASONIC_GRADE_LABELS, MemberBalance } from '@/lib/types';
 import { parseLocalDate, formatCurrency } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TableSkeleton } from '@/components/ui/loading';
@@ -62,7 +62,10 @@ interface SortConfig {
 }
 
 export default function Members() {
-  const { memberBalances, isLoading } = useMembers();
+  const { memberBalances, members, isLoading } = useMembers();
+  // member_balances (the view) does not carry the masonic grade, so map it
+  // from the full member rows for display.
+  const gradeByMember = new Map(members.map((m) => [m.id, m.masonic_grade] as const));
   const { currentMonthFees, isLoading: feesLoading } = useMonthlyFees();
   const { isAdmin } = useIsAdmin();
   const { isMemberOnly } = useIsMemberOnly();
@@ -275,6 +278,9 @@ export default function Members() {
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="font-semibold">{displayName(member.full_name, member.phone_number)}</p>
                     <Badge variant="secondary">{FEE_TYPE_LABELS[member.fee_type]}</Badge>
+                    {gradeByMember.get(member.member_id) && (
+                      <Badge variant="outline">{MASONIC_GRADE_LABELS[gradeByMember.get(member.member_id)!]}</Badge>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
@@ -362,6 +368,9 @@ export default function Members() {
                     <div>
                       {member.phone_number && <p className="text-xs text-muted-foreground font-mono">Mat. {member.phone_number}</p>}
                       <p className="font-medium">{displayName(member.full_name, member.phone_number)}</p>
+                      {gradeByMember.get(member.member_id) && (
+                        <p className="text-xs text-muted-foreground">{MASONIC_GRADE_LABELS[gradeByMember.get(member.member_id)!]}</p>
+                      )}
                     </div>
                   </TableCell>
                   <TableCell>
