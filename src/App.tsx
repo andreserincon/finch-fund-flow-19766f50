@@ -68,7 +68,43 @@ import { useIsStandalone } from "@/hooks/useIsStandalone";
 /* ------------------------------------------------------------------ */
 /*  React Query client (singleton)                                    */
 /* ------------------------------------------------------------------ */
-const queryClient = new QueryClient();
+/**
+ * Configured defaults. The Panel (and every screen) fires a dozen queries;
+ * with the library defaults (staleTime 0, refetchOnWindowFocus on) the whole
+ * set re-ran on every mount and every window/tab refocus, which is the main
+ * reason the Panel felt slow for both admins and members. We cache for a
+ * minute and stop the focus-refetch storm. This is safe because every write
+ * path invalidates its query keys (members, member_balances, transactions,
+ * loans, transfers, fee history), so balances still refresh immediately after
+ * the treasurer records something. Retries are capped and never fire on
+ * auth/permission/4xx errors (a member hitting a staff-only table fails fast
+ * instead of retrying three times with backoff).
+ */
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 60_000,
+      gcTime: 10 * 60_000,
+      refetchOnWindowFocus: false,
+      retry: (failureCount: number, error: unknown) => {
+        const e = error as { status?: number; statusCode?: number; code?: string; message?: string } | null;
+        const status = e?.status ?? e?.statusCode ?? 0;
+        if (status >= 400 && status < 500) return false;
+        const msg = String(e?.message ?? '').toLowerCase();
+        if (
+          msg.includes('jwt') ||
+          msg.includes('permission') ||
+          msg.includes('row-level') ||
+          msg.includes('not authorized') ||
+          msg.includes('unauthorized')
+        ) {
+          return false;
+        }
+        return failureCount < 1;
+      },
+    },
+  },
+});
 
 /* ================================================================== */
 /*  Route-guard wrapper components                                    */
