@@ -109,6 +109,8 @@ export function AppSidebar() {
   const mainNavItems = [
     { title: t('nav.dashboard'), url: '/panel', icon: LayoutDashboard },
     { title: t('nav.members'), url: '/members', icon: Users },
+    // Member-only: their own read-only payment ledger
+    ...(isMemberOnly ? [{ title: 'Mis pagos', url: '/mis-pagos', icon: Receipt }] : []),
     // Staff-only items (hidden from member-only users)
     ...(!isMemberOnly ? [
       { title: t('nav.transactions'), url: '/transactions', icon: Receipt },
@@ -375,7 +377,7 @@ export function AppSidebar() {
               {user?.email}
             </p>
             <p className="text-xs text-sidebar-foreground/60">
-              {isAdmin ? t('nav.treasurer') : t('nav.viewer')}
+              {isMemberOnly ? 'Miembro' : isAdmin ? t('nav.treasurer') : t('nav.viewer')}
             </p>
           </div>
           <Button

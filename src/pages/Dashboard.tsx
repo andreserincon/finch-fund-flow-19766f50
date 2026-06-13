@@ -19,6 +19,7 @@ import { useLoans } from '@/hooks/useLoans';
 import { AddTransactionForm } from '@/components/forms/AddTransactionForm';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { useIsMemberOnly } from '@/hooks/useIsMemberOnly';
+import { useLodgeFinancials } from '@/hooks/useLodgeFinancials';
 import { useAuth } from '@/hooks/useAuth';
 import {
   Select,
@@ -60,6 +61,7 @@ export default function Dashboard() {
   const { getFeeTypeForMonth: getHistoricalFeeType, isLoading: historyLoading } = useMemberFeeTypeHistory();
   const { isAdmin } = useIsAdmin();
   const { isMemberOnly } = useIsMemberOnly();
+  const { data: lodgeFin } = useLodgeFinancials(isMemberOnly);
   const { profile } = useAuth();
   const userMemberId = profile?.member_id;
   const { exchangeRate } = useExchangeRate();
@@ -261,6 +263,17 @@ export default function Dashboard() {
   const savingsInARS = savingsBalance * exchangeRate;
   const totalARSBalance = bankBalance + greatLodgeBalance + savingsInARS;
 
+  // Member-only users have RLS scoped to their own transaction rows, so the
+  // client-side sums above only cover their own payments, not the lodge. For
+  // them we display the aggregate balances from get_lodge_financials() instead.
+  // Everyone else keeps the live, month-filtered client computation.
+  const showBank = isMemberOnly ? Number(lodgeFin?.bank_balance ?? 0) : bankBalance;
+  const showGreatLodge = isMemberOnly ? Number(lodgeFin?.great_lodge_balance ?? 0) : greatLodgeBalance;
+  const showSavings = isMemberOnly ? Number(lodgeFin?.savings_balance ?? 0) : savingsBalance;
+  const showTotalARS = isMemberOnly
+    ? showBank + showGreatLodge + showSavings * exchangeRate
+    : totalARSBalance;
+
   // Calculate account yield (monthly and annual) based on selected month
   const monthlyYieldARS = filteredTransactions
     .filter(t => parseLocalDate(t.transaction_date) >= selectedMonthStart && t.category === 'account_yield' && t.account !== 'savings')
@@ -458,25 +471,25 @@ export default function Dashboard() {
       <div className="grid gap-3 grid-cols-1 sm:grid-cols-3">
         <StatCard
           title={t('dashboard.totalARSBalance')}
-          value={formatCurrency(totalARSBalance)}
+          value={formatCurrency(showTotalARS)}
           subtitle={t('dashboard.bankLodgeCombined')}
           icon={<Wallet className="h-8 w-8 text-primary/30" />}
-          variant={totalARSBalance >= 0 ? 'success' : 'danger'}
+          variant={showTotalARS >= 0 ? 'success' : 'danger'}
         />
         <StatCard
           title={t('dashboard.bankMainAccount')}
-          value={formatCurrency(bankBalance)}
-          subtitle={`${t('dashboard.greatLodgeAccount')}: ${formatCurrency(greatLodgeBalance)}`}
+          value={formatCurrency(showBank)}
+          subtitle={`${t('dashboard.greatLodgeAccount')}: ${formatCurrency(showGreatLodge)}`}
           icon={<Landmark className="h-8 w-8 text-primary/30" />}
-          variant={bankBalance >= 0 ? 'success' : 'danger'}
+          variant={showBank >= 0 ? 'success' : 'danger'}
           to={!isMemberOnly ? '/transactions' : undefined}
         />
         <StatCard
           title={t('dashboard.savingsAccount')}
-          value={formatCurrency(savingsBalance, 'USD')}
+          value={formatCurrency(showSavings, 'USD')}
           subtitle={t('dashboard.usdSavings')}
           icon={<Wallet className="h-8 w-8 text-success/30" />}
-          variant={savingsBalance >= 0 ? 'success' : 'danger'}
+          variant={showSavings >= 0 ? 'success' : 'danger'}
         />
       </div>
 
