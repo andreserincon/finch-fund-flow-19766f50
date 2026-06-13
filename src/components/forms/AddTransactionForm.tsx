@@ -155,6 +155,17 @@ export function AddTransactionForm({ defaultType = 'income', triggerLabel = 'Reg
 
   const availableCategories = transactionType === 'income' ? incomeCategories : expenseCategories;
 
+  // Participant picker for event payments: only those who still owe something
+  // (hide anyone already fully paid), sorted alphabetically by name. .filter
+  // returns a new array, so the following .sort never mutates the cached data.
+  const eventParticipantOptions = eventParticipants
+    .filter((p) => Number(p.amount_owed) - Number(p.amount_paid) > 0)
+    .sort((a, b) => {
+      const an = a.member?.full_name || a.guest_name || '';
+      const bn = b.member?.full_name || b.guest_name || '';
+      return an.localeCompare(bn, 'es');
+    });
+
   // Keep transaction_type in sync with the Ingreso/Gasto selector
   const switchModo = (next: Modo) => {
     setModo(next);
@@ -415,8 +426,14 @@ export function AddTransactionForm({ defaultType = 'income', triggerLabel = 'Reg
                 <Select value={selectedParticipantId || ''} onValueChange={(v) => setValue('event_member_payment_id', v || undefined, { shouldValidate: true })}>
                   <SelectTrigger><SelectValue placeholder="Seleccionar participante..." /></SelectTrigger>
                   <SelectContent>
-                    {eventParticipants.length === 0 && <div className="px-2 py-1.5 text-sm text-muted-foreground">Este evento no tiene participantes asignados todavía.</div>}
-                    {eventParticipants.map((p) => {
+                    {eventParticipantOptions.length === 0 && (
+                      <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                        {eventParticipants.length === 0
+                          ? 'Este evento no tiene participantes asignados todavía.'
+                          : 'Todos los participantes ya pagaron.'}
+                      </div>
+                    )}
+                    {eventParticipantOptions.map((p) => {
                       const name = p.member?.full_name || p.guest_name || 'Sin nombre';
                       const tag = p.member_id ? 'Miembro' : 'Invitado';
                       const balance = Number(p.amount_owed) - Number(p.amount_paid);

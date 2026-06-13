@@ -830,7 +830,9 @@ export default function EventOverview() {
   const transactions = data?.transactions ?? [];
 
   const memberIdsAlreadyIn = new Set(payments.filter((p) => p.member_id).map((p) => p.member_id as string));
-  const membersAvailable = members.filter((m) => m.is_active && !memberIdsAlreadyIn.has(m.id));
+  const membersAvailable = members
+    .filter((m) => m.is_active && !memberIdsAlreadyIn.has(m.id))
+    .sort((a, b) => a.full_name.localeCompare(b.full_name, 'es'));
 
   // Set of participant ids that already have at least one transaction
   // referencing them. Used to flag "Pagado" rows that pre-date the
