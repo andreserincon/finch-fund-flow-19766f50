@@ -36,6 +36,9 @@ import {
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { useEventOverview } from '@/hooks/useEventOverview';
 import { useEventMemberPayments } from '@/hooks/useEventMemberPayments';
 import { useMembers } from '@/hooks/useMembers';
@@ -786,6 +789,7 @@ function AssignAllMembersButton({ eventId, defaultAmount, defaultInstallments, c
 }
 
 type StatusFilter = 'pendientes' | 'todos' | 'pagados';
+type TypeFilter = 'todos' | 'miembros' | 'invitados';
 
 export default function EventOverview() {
   const { id } = useParams<{ id: string }>();
@@ -796,16 +800,18 @@ export default function EventOverview() {
   const { addMemberToEvent } = useEventMemberPayments(id);
   const [memberToAdd, setMemberToAdd] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('pendientes');
+  const [typeFilter, setTypeFilter] = useState<TypeFilter>('todos');
   const [generatingRoster, setGeneratingRoster] = useState(false);
 
   // Generate the branded attendance roster PDF (members + guests) via the
   // generate-event-roster edge function, then download it in the browser.
-  const handleGenerateRoster = async () => {
+  // includePayments=false produces a plain sign-in sheet (no balance/status).
+  const handleGenerateRoster = async (includePayments: boolean) => {
     if (!id) return;
     setGeneratingRoster(true);
     try {
       const { data: res, error: fnError } = await supabase.functions.invoke('generate-event-roster', {
-        body: { eventId: id },
+        body: { eventId: id, includePayments },
       });
       if (fnError) throw new Error(fnError.message);
       if (res?.error) throw new Error(res.error);
@@ -864,6 +870,14 @@ export default function EventOverview() {
   const memberParticipants = payments.filter((p) => p.member_id).length;
   const guestParticipants = totalParticipants - memberParticipants;
 
+  // Fully-paid participants (had a cuota and covered it), split member/guest.
+  const paidParticipantsList = payments.filter(
+    (p) => Number(p.amount_owed) > 0 && Number(p.amount_paid) >= Number(p.amount_owed),
+  );
+  const paidParticipants = paidParticipantsList.length;
+  const paidMembers = paidParticipantsList.filter((p) => p.member_id).length;
+  const paidGuests = paidParticipants - paidMembers;
+
   if (isLoading) {
     return (
       <div className="space-y-6 animate-fade-in">
@@ -919,6 +933,10 @@ export default function EventOverview() {
   );
 
   const filteredPayments = sortedPayments.filter((p) => {
+    // Type filter (miembros / invitados / todos)
+    if (typeFilter === 'miembros' && !p.member_id) return false;
+    if (typeFilter === 'invitados' && p.member_id) return false;
+    // Status filter (pendientes / pagados / todos)
     const st = getParticipantStatus(Number(p.amount_owed), Number(p.amount_paid), paymentDeadline).key;
     if (statusFilter === 'todos') return true;
     if (statusFilter === 'pagados') return st === 'pagado';
@@ -929,6 +947,12 @@ export default function EventOverview() {
     { value: 'pendientes', label: counts.pendientes > 0 ? `Pendientes (${counts.pendientes})` : 'Pendientes' },
     { value: 'todos', label: 'Todos' },
     { value: 'pagados', label: counts.pagados > 0 ? `Pagados (${counts.pagados})` : 'Pagados' },
+  ];
+
+  const typeChips: { value: TypeFilter; label: string }[] = [
+    { value: 'todos', label: 'Todos' },
+    { value: 'miembros', label: memberParticipants > 0 ? `Miembros (${memberParticipants})` : 'Miembros' },
+    { value: 'invitados', label: guestParticipants > 0 ? `Invitados (${guestParticipants})` : 'Invitados' },
   ];
 
   return (
@@ -947,15 +971,18 @@ export default function EventOverview() {
             {event.is_active ? '' : ' (inactivo)'}
           </p>
         </div>
-        <Button
-          variant="outline"
-          className="press shrink-0 sm:mt-9"
-          onClick={handleGenerateRoster}
-          disabled={generatingRoster}
-        >
-          <FileText className="mr-2 h-4 w-4" />
-          {generatingRoster ? 'Generando...' : 'Lista de asistencia'}
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" className="press shrink-0 sm:mt-9" disabled={generatingRoster}>
+              <FileText className="mr-2 h-4 w-4" />
+              {generatingRoster ? 'Generando...' : 'Lista de asistencia'}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="bg-popover">
+            <DropdownMenuItem onClick={() => handleGenerateRoster(true)}>Con estado de pago</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleGenerateRoster(false)}>Solo asistencia</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -979,7 +1006,7 @@ export default function EventOverview() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="stat-card">
           <p className="stat-label">Ingresos reales (transacciones)</p>
           <p className="mt-1 text-lg sm:text-xl font-mono tabular-nums font-semibold">{formatCurrencyCompact(actualIncome)}</p>
@@ -992,6 +1019,11 @@ export default function EventOverview() {
           <p className="stat-label">Participantes</p>
           <p className="mt-1 text-lg sm:text-xl font-mono tabular-nums font-semibold">{totalParticipants}</p>
           <p className="text-xs text-muted-foreground mt-0.5">{memberParticipants} miembros · {guestParticipants} invitados</p>
+        </div>
+        <div className="stat-card">
+          <p className="stat-label">Pagaron</p>
+          <p className="mt-1 text-lg sm:text-xl font-mono tabular-nums font-semibold text-success">{paidParticipants}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">{paidMembers} miembros · {paidGuests} invitados</p>
         </div>
       </div>
 
@@ -1064,6 +1096,22 @@ export default function EventOverview() {
             </div>
           ) : (
             <>
+              <div className="mb-2 flex flex-wrap gap-2">
+                {typeChips.map((c) => (
+                  <button
+                    key={c.value}
+                    type="button"
+                    onClick={() => setTypeFilter(c.value)}
+                    className={`press rounded-full border px-3.5 py-1.5 text-sm transition-colors ${
+                      typeFilter === c.value
+                        ? 'border-primary bg-primary/10 text-primary'
+                        : 'border-border bg-card text-muted-foreground'
+                    }`}
+                  >
+                    {c.label}
+                  </button>
+                ))}
+              </div>
               <div className="mb-4 flex flex-wrap gap-2">
                 {chips.map((c) => (
                   <button
