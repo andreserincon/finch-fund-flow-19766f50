@@ -178,7 +178,7 @@ export default function Auth() {
       }
 
       reset();
-      navigate('/home');
+      navigate('/panel');
     } catch (err) {
       setError('Ocurrió un error inesperado. Intente de nuevo.');
     } finally {
@@ -240,7 +240,7 @@ export default function Auth() {
 
       // Redirect to the members home after successful password update
       setTimeout(() => {
-        navigate('/home');
+        navigate('/panel');
       }, 2000);
     } catch (err) {
       setPasswordUpdateError('Ocurrió un error inesperado. Intente de nuevo.');
