@@ -91,19 +91,28 @@ export function useEventMemberPayments(eventId?: string) {
       id,
       amount_paid,
       amount_owed,
+      guest_name,
       guest_phone,
+      guest_grade,
+      guest_lodge,
       installments,
     }: {
       id: string;
       amount_paid?: number;
       amount_owed?: number;
+      guest_name?: string;
       guest_phone?: string | null;
+      guest_grade?: string | null;
+      guest_lodge?: string | null;
       installments?: number;
     }) => {
       const updateData: Record<string, unknown> = {};
       if (amount_paid !== undefined) updateData.amount_paid = amount_paid;
       if (amount_owed !== undefined) updateData.amount_owed = amount_owed;
+      if (guest_name !== undefined) updateData.guest_name = guest_name;
       if (guest_phone !== undefined) updateData.guest_phone = guest_phone;
+      if (guest_grade !== undefined) updateData.guest_grade = guest_grade;
+      if (guest_lodge !== undefined) updateData.guest_lodge = guest_lodge;
       if (installments !== undefined) updateData.installments = installments;
 
       const { error } = await db
