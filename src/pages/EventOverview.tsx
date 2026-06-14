@@ -443,6 +443,90 @@ function ParticipantEditSheet({ payment, eventId }: { payment: EventMemberPaymen
   );
 }
 
+/* --------------------------- edit guest data ----------------------------- */
+
+/** Edit an invitee's own data (name, phone, grade, lodge). Guests only. */
+function EditGuestDialog({ payment, eventId }: { payment: EventMemberPayment; eventId: string }) {
+  const { updatePayment } = useEventMemberPayments(eventId);
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState(payment.guest_name ?? '');
+  const [phone, setPhone] = useState(payment.guest_phone ?? '');
+  const [grade, setGrade] = useState(payment.guest_grade ?? '');
+  const [lodge, setLodge] = useState(payment.guest_lodge ?? '');
+
+  const onOpenChange = (next: boolean) => {
+    if (next) {
+      setName(payment.guest_name ?? '');
+      setPhone(payment.guest_phone ?? '');
+      setGrade(payment.guest_grade ?? '');
+      setLodge(payment.guest_lodge ?? '');
+    }
+    setOpen(next);
+  };
+
+  const save = async () => {
+    if (!name.trim()) return;
+    await updatePayment.mutateAsync({
+      id: payment.id,
+      guest_name: name.trim(),
+      guest_phone: phone.trim() || null,
+      guest_grade: grade || null,
+      guest_lodge: lodge.trim() || null,
+    });
+    setOpen(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm" className="press">
+          <Pencil className="mr-1 h-4 w-4" />
+          Datos
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>Editar invitado</DialogTitle>
+          <DialogDescription>Actualizá los datos del invitado.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-2">
+          <div className="space-y-2">
+            <Label htmlFor="eg-name">Nombre completo</Label>
+            <Input id="eg-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Nombre y Apellido" />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="eg-phone">Teléfono (opcional)</Label>
+            <Input id="eg-phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+5491155551234" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label>Grado</Label>
+              <Select value={grade || ''} onValueChange={setGrade}>
+                <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="aprendiz">Aprendiz</SelectItem>
+                  <SelectItem value="companero">Compañero</SelectItem>
+                  <SelectItem value="maestro">Maestro</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="eg-lodge">Logia</Label>
+              <Input id="eg-lodge" value={lodge} onChange={(e) => setLodge(e.target.value)} placeholder="Nombre de la logia" />
+            </div>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
+          <Button type="button" onClick={save} disabled={updatePayment.isPending || !name.trim()}>
+            {updatePayment.isPending ? 'Guardando...' : 'Guardar'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 /* ------------------------- remove participant ---------------------------- */
 
 function RemoveParticipantDialog({ payment, eventId, displayName }: { payment: EventMemberPayment; eventId: string; displayName: string }) {
@@ -558,8 +642,9 @@ function ParticipantCard({
               </Button>
             }
           />
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <ParticipantEditSheet payment={payment} eventId={eventId} />
+            {!isMember && <EditGuestDialog payment={payment} eventId={eventId} />}
             <RemoveParticipantDialog payment={payment} eventId={eventId} displayName={displayName || 'este participante'} />
           </div>
         </div>
@@ -737,6 +822,9 @@ function ParticipantRow({
                 </Button>
               }
             />
+          )}
+          {canEdit && !isMember && (
+            <EditGuestDialog payment={payment} eventId={eventId} />
           )}
           {canEdit && (
             <AlertDialog>
