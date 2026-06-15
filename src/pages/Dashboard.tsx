@@ -150,15 +150,19 @@ export default function Dashboard() {
 
   // Compute adjusted member balances as of the selected month
   const adjustedMemberBalances = useMemo(() => {
-    // One pass over the filtered transactions to sum each member's paid amount
-    // (income, monthly_fee or event_payment), instead of re-filtering the whole
-    // transaction list once per member.
+    // One pass over the filtered transactions to sum each member's capita
+    // (monthly_fee income) paid, instead of re-filtering the whole transaction
+    // list once per member. Event payments are intentionally EXCLUDED so this
+    // stays consistent with the capita-only total_fees_owed below — events are
+    // tracked separately via memberEventDebts / memberEventInfo. (Mixing event
+    // payments in here made the "Estado de Capitas Mensuales" matrix and the
+    // capita-only metrics credit event money against monthly-dues debt.)
     const paidByMember = new Map<string, number>();
     for (const tx of filteredTransactions) {
       if (
         tx.member_id &&
         tx.transaction_type === 'income' &&
-        (tx.category === 'monthly_fee' || tx.category === 'event_payment')
+        tx.category === 'monthly_fee'
       ) {
         paidByMember.set(tx.member_id, (paidByMember.get(tx.member_id) ?? 0) + tx.amount);
       }
@@ -176,7 +180,7 @@ export default function Dashboard() {
         monthlyFeesOwed += getFeeForMonth(mKey, feeType);
       }
 
-      const adjustedTotalFeesOwed = monthlyFeesOwed; // event fees added separately via memberEventDebts
+      const adjustedTotalFeesOwed = monthlyFeesOwed; // capita-only; event fees tracked separately via memberEventDebts
 
       return {
         ...m,
