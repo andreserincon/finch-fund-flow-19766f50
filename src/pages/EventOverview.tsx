@@ -12,7 +12,7 @@
  *   phone happens in a bottom sheet with a stepper, not a 32px inline cell.
  */
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -344,9 +344,39 @@ function RegisterPaymentDialog({
  * cuotas. The cuotas control is a stepper (1 to 36), so no keyboard is needed
  * and there is no 32px inline cell to mis-tap.
  */
+/**
+ * Tracks the on-screen keyboard height via the VisualViewport API while
+ * `active`. A bottom-anchored sheet (position: fixed; bottom: 0) otherwise
+ * sits *behind* the soft keyboard, hiding the field being typed into; we
+ * lift it by this many pixels so the input stays visible.
+ */
+function useKeyboardInset(active: boolean): number {
+  const [inset, setInset] = useState(0);
+  useEffect(() => {
+    const vv = typeof window !== 'undefined' ? window.visualViewport : null;
+    if (!active || !vv) {
+      setInset(0);
+      return;
+    }
+    const update = () => {
+      const keyboard = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      setInset(keyboard);
+    };
+    update();
+    vv.addEventListener('resize', update);
+    vv.addEventListener('scroll', update);
+    return () => {
+      vv.removeEventListener('resize', update);
+      vv.removeEventListener('scroll', update);
+    };
+  }, [active]);
+  return inset;
+}
+
 function ParticipantEditSheet({ payment, eventId }: { payment: EventMemberPayment; eventId: string }) {
   const { updatePayment } = useEventMemberPayments(eventId);
   const [open, setOpen] = useState(false);
+  const keyboardInset = useKeyboardInset(open);
   const [owed, setOwed] = useState<string>(String(Number(payment.amount_owed)));
   const [cuotas, setCuotas] = useState<number>(Number(payment.installments) || 1);
   const displayName = payment.member?.full_name || payment.guest_name || 'Participante';
@@ -380,7 +410,11 @@ function ParticipantEditSheet({ payment, eventId }: { payment: EventMemberPaymen
           Editar
         </Button>
       </SheetTrigger>
-      <SheetContent side="bottom" className="rounded-t-2xl max-h-[90dvh] overflow-y-auto">
+      <SheetContent
+        side="bottom"
+        className="rounded-t-2xl max-h-[90dvh] overflow-y-auto"
+        style={{ bottom: keyboardInset }}
+      >
         <SheetHeader>
           <SheetTitle>Editar cuota</SheetTitle>
           <SheetDescription>{displayName}</SheetDescription>
