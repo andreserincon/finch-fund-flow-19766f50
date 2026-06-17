@@ -17,7 +17,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { ArrowLeft, PlusCircle, UserPlus, Trash2, Check, X, Receipt, AlertTriangle, Pencil, Minus, Plus, FileText } from 'lucide-react';
+import { ArrowLeft, PlusCircle, UserPlus, Trash2, Check, X, Receipt, AlertTriangle, Pencil, Minus, Plus, FileText, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -595,6 +595,9 @@ function ParticipantCard({
               {isMember ? 'Miembro' : 'Invitado'}
             </span>
           </div>
+          {!isMember && payment.guest_lodge && (
+            <p className="text-xs text-muted-foreground mt-0.5">{payment.guest_lodge}</p>
+          )}
           {!isMember && payment.guest_phone && (
             <p className="text-xs text-muted-foreground font-mono mt-0.5">{payment.guest_phone}</p>
           )}
@@ -710,6 +713,9 @@ function ParticipantRow({
       <TableCell>
         <div className="flex flex-col">
           <span className="font-medium">{displayName}</span>
+          {!isMember && payment.guest_lodge && (
+            <span className="text-xs text-muted-foreground">{payment.guest_lodge}</span>
+          )}
           {!isMember && payment.guest_phone && (
             <span className="text-xs text-muted-foreground font-mono">{payment.guest_phone}</span>
           )}
@@ -889,6 +895,7 @@ export default function EventOverview() {
   const [memberToAdd, setMemberToAdd] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('pendientes');
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('todos');
+  const [search, setSearch] = useState('');
   const [generatingRoster, setGeneratingRoster] = useState(false);
 
   // Generate the branded attendance roster PDF (members + guests) via the
@@ -1020,10 +1027,17 @@ export default function EventOverview() {
     { pendientes: 0, pagados: 0 }
   );
 
+  const searchTerm = search.trim().toLocaleLowerCase();
   const filteredPayments = sortedPayments.filter((p) => {
     // Type filter (miembros / invitados / todos)
     if (typeFilter === 'miembros' && !p.member_id) return false;
     if (typeFilter === 'invitados' && p.member_id) return false;
+    // Search filter (by name or lodge)
+    if (searchTerm) {
+      const name = (p.member?.full_name || p.guest_name || '').toLocaleLowerCase();
+      const lodge = (p.guest_lodge || '').toLocaleLowerCase();
+      if (!name.includes(searchTerm) && !lodge.includes(searchTerm)) return false;
+    }
     // Status filter (pendientes / pagados / todos)
     const st = getParticipantStatus(Number(p.amount_owed), Number(p.amount_paid), paymentDeadline).key;
     if (statusFilter === 'todos') return true;
@@ -1184,6 +1198,15 @@ export default function EventOverview() {
             </div>
           ) : (
             <>
+              <div className="relative mb-3">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar por nombre o logia..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
               <div className="mb-2 flex flex-wrap gap-2">
                 {typeChips.map((c) => (
                   <button
