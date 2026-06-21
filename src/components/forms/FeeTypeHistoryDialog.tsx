@@ -115,15 +115,15 @@ export function FeeTypeHistoryDialog({ memberId, memberName }: FeeTypeHistoryDia
     <>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
-          <Button variant="ghost" size="icon" title="Historial de tipo de cuota">
+          <Button variant="ghost" size="icon" title="Historial de tipo de cápita">
             <History className="h-4 w-4" />
           </Button>
         </DialogTrigger>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
-            <DialogTitle>Historial de tipo de cuota</DialogTitle>
+            <DialogTitle>Historial de tipo de cápita</DialogTitle>
             <DialogDescription>
-              Gestioná los cambios de tipo de cuota de {memberName}. Los cambios rigen desde el mes indicado.
+              Gestioná los cambios de tipo de cápita de {memberName}. Los cambios rigen desde el mes indicado.
             </DialogDescription>
           </DialogHeader>
 
@@ -135,7 +135,7 @@ export function FeeTypeHistoryDialog({ memberId, memberName }: FeeTypeHistoryDia
                 </h4>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Tipo de cuota</Label>
+                    <Label>Tipo de cápita</Label>
                     <Select
                       value={formData.fee_type}
                       onValueChange={(value: FeeType) =>
@@ -200,7 +200,7 @@ export function FeeTypeHistoryDialog({ memberId, memberName }: FeeTypeHistoryDia
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Tipo de cuota</TableHead>
+                    <TableHead>Tipo de cápita</TableHead>
                     <TableHead>Vigente desde</TableHead>
                     <TableHead className="w-[100px]">Acciones</TableHead>
                   </TableRow>
@@ -281,8 +281,8 @@ export function FeeTypeHistoryDialog({ memberId, memberName }: FeeTypeHistoryDia
           <AlertDialogHeader>
             <AlertDialogTitle>¿Eliminar la entrada?</AlertDialogTitle>
             <AlertDialogDescription>
-              Se eliminará esta entrada del historial de tipo de cuota. Esto puede
-              afectar cómo se calculan las cuotas de meses anteriores.
+              Se eliminará esta entrada del historial de tipo de cápita. Esto puede
+              afectar cómo se calculan las cápitas de meses anteriores.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

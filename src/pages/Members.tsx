@@ -37,20 +37,21 @@ import {
 import { Search, MoreHorizontal, Pencil, Trash2, Filter, X, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { FEE_TYPE_LABELS, MASONIC_GRADE_LABELS, MemberBalance } from '@/lib/types';
+import { FEE_TYPE_LABELS, MASONIC_GRADE_LABELS, MemberBalance, PaymentStatus } from '@/lib/types';
 import { parseLocalDate, formatCurrency } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TableSkeleton } from '@/components/ui/loading';
 import { useSearchParams } from 'react-router-dom';
-import { requiresAttention } from '@/lib/attention';
+import { requiresAttention, getMemberCapitaStatus } from '@/lib/attention';
+import { MemberStatusBadge } from '@/components/dashboard/MemberStatusBadge';
 
 const STATUS_OPTIONS = [
   { value: 'active', label: 'Activo' },
   { value: 'inactive', label: 'Inactivo' },
-  { value: 'ahead', label: 'Adelantado' },
-  { value: 'up_to_date', label: 'Al día' },
-  { value: 'unpaid', label: 'Impago' },
-  { value: 'overdue', label: 'Demorado' },
+  { value: 'adelantado', label: 'Adelantado' },
+  { value: 'al_dia', label: 'Al día' },
+  { value: 'impago', label: 'Impago' },
+  { value: 'demorado', label: 'Demorado' },
 ] as const;
 
 type SortColumn = 'name' | 'fee_type' | 'balance' | 'status' | 'joined';
@@ -107,35 +108,22 @@ export default function Members() {
   const getOverallBalance = (member: MemberBalance) => getMonthlyBalance(member) + getEventsBalance(member.member_id);
 
   /**
-   * Capita-only status. Event debt is reported separately so a member who
-   * is up-to-date with monthly fees but owes an event isn't shown as
-   * Demorado/Impago by mistake.
+   * Capita-only status, classified into the four canonical states via the
+   * shared derivation. Event debt is excluded (memberEventData is passed so
+   * capitaOwed strips it), so a member who is up-to-date with monthly fees
+   * but owes an event isn't shown as Demorado/Impago by mistake.
    */
-  const getPaymentStatus = (member: MemberBalance) => {
-    const monthlyBalance = getMonthlyBalance(member);
-    const monthlyFeeRate = currentMonthFees[member.fee_type] || 0;
-    if (monthlyBalance < -monthlyFeeRate) return 'overdue';
-    if (monthlyBalance < 0) return 'unpaid';
-    if (monthlyBalance > monthlyFeeRate) return 'ahead';
-    return 'up_to_date';
-  };
+  const getPaymentStatus = (member: MemberBalance): PaymentStatus =>
+    getMemberCapitaStatus(member, currentMonthFees, undefined, memberEventData);
 
-  /** Event-only status: "Al día" if balance >= 0, else "Pendiente". */
-  const getEventStatus = (memberId: string) => {
-    return getEventsBalance(memberId) >= 0 ? 'event_ok' : 'event_pending';
-  };
-
-  const getStatusBadge = (status: string) => {
-    const config = {
-      ahead: { label: 'Adelantado', className: 'status-ahead' },
-      up_to_date: { label: 'Al día', className: 'status-up-to-date' },
-      unpaid: { label: 'Impago', className: 'status-unpaid' },
-      overdue: { label: 'Demorado', className: 'status-overdue' },
-      event_ok: { label: 'Al día', className: 'status-up-to-date' },
-      event_pending: { label: 'Pendiente', className: 'status-unpaid' },
-    };
-    const c = config[status as keyof typeof config] || config.up_to_date;
-    return <span className={`status-badge ${c.className}`}>{c.label}</span>;
+  /** Event-only status badge: "Al día" if balance >= 0, else "Pendiente". */
+  const getEventStatusBadge = (memberId: string) => {
+    const ok = getEventsBalance(memberId) >= 0;
+    return (
+      <span className={`status-badge ${ok ? 'status-al-dia' : 'status-impago'}`}>
+        {ok ? 'Al día' : 'Pendiente'}
+      </span>
+    );
   };
 
   const toggleStatus = (status: string) => {
@@ -176,9 +164,9 @@ export default function Members() {
       case 'fee_type': return direction * a.fee_type.localeCompare(b.fee_type);
       case 'balance': return direction * (getOverallBalance(a) - getOverallBalance(b));
       case 'status': {
-        const statusOrder = { overdue: 0, unpaid: 1, up_to_date: 2, ahead: 3 };
-        const statusA = a.is_active ? statusOrder[getPaymentStatus(a) as keyof typeof statusOrder] : -1;
-        const statusB = b.is_active ? statusOrder[getPaymentStatus(b) as keyof typeof statusOrder] : -1;
+        const statusOrder: Record<PaymentStatus, number> = { demorado: 0, impago: 1, al_dia: 2, adelantado: 3 };
+        const statusA = a.is_active ? statusOrder[getPaymentStatus(a)] : -1;
+        const statusB = b.is_active ? statusOrder[getPaymentStatus(b)] : -1;
         return direction * (statusA - statusB);
       }
       case 'joined': return direction * (parseLocalDate(a.join_date).getTime() - parseLocalDate(b.join_date).getTime());
@@ -316,14 +304,14 @@ export default function Members() {
                   <p className={`font-mono text-sm font-semibold ${getMonthlyBalance(member) < 0 ? 'text-destructive' : 'text-emerald-600'}`}>
                     {formatCurrency(getMonthlyBalance(member))}
                   </p>
-                  {member.is_active && getStatusBadge(getPaymentStatus(member))}
+                  {member.is_active && <MemberStatusBadge status={getPaymentStatus(member)} />}
                 </div>
                 <div className="space-y-1">
                   <p className="text-muted-foreground text-xs">Evento</p>
                   <p className={`font-mono text-sm font-semibold ${getEventsBalance(member.member_id) < 0 ? 'text-destructive' : 'text-emerald-600'}`}>
                     {formatCurrency(getEventsBalance(member.member_id))}
                   </p>
-                  {member.is_active && getStatusBadge(getEventStatus(member.member_id))}
+                  {member.is_active && getEventStatusBadge(member.member_id)}
                 </div>
               </div>
             </div>
@@ -343,7 +331,7 @@ export default function Members() {
               </TableHead>
               <TableHead>
                 <Button variant="ghost" size="sm" className="-ml-3 h-8" onClick={() => handleSort('fee_type')}>
-                  Tipo de Cuota {getSortIcon('fee_type')}
+                  Tipo de Cápita {getSortIcon('fee_type')}
                 </Button>
               </TableHead>
               <TableHead className="text-right">Cápita Mensual</TableHead>
@@ -389,7 +377,7 @@ export default function Members() {
                     {formatCurrency(getOverallBalance(member))}
                   </TableCell>
                   <TableCell>
-                    {member.is_active ? getStatusBadge(getPaymentStatus(member)) : <Badge variant="outline">Inactivo</Badge>}
+                    {member.is_active ? <MemberStatusBadge status={getPaymentStatus(member)} /> : <Badge variant="outline">Inactivo</Badge>}
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">

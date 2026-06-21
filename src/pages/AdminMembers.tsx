@@ -159,7 +159,7 @@ export default function AdminMembers() {
               </div>
               <div className="grid grid-cols-2 gap-2 text-sm">
                 <div>
-                  <p className="text-muted-foreground text-xs">Tipo de Cuota</p>
+                  <p className="text-muted-foreground text-xs">Tipo de Cápita</p>
                   <Badge variant="secondary" className="mt-1">{FEE_TYPE_LABELS[member.fee_type]}</Badge>
                 </div>
                 <div>
@@ -184,7 +184,7 @@ export default function AdminMembers() {
                 <Button variant="ghost" size="sm" className="-ml-3 h-8" onClick={() => handleSort('name')}>Miembro{getSortIcon('name')}</Button>
               </TableHead>
               <TableHead>
-                <Button variant="ghost" size="sm" className="-ml-3 h-8" onClick={() => handleSort('fee_type')}>Tipo de Cuota{getSortIcon('fee_type')}</Button>
+                <Button variant="ghost" size="sm" className="-ml-3 h-8" onClick={() => handleSort('fee_type')}>Tipo de Cápita{getSortIcon('fee_type')}</Button>
               </TableHead>
               <TableHead>
                 <Button variant="ghost" size="sm" className="-ml-3 h-8" onClick={() => handleSort('joined')}>Ingreso{getSortIcon('joined')}</Button>

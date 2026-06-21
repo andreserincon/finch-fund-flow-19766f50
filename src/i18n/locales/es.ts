@@ -109,13 +109,14 @@ export default {
       attentionCount: '{{count}} miembros requieren atención',
       attentionTotal: 'Deben en total {{amount}}',
       financialDetail: 'Detalle financiero',
-      // Event stages mirror the capita status. The milder, near-deadline stage
-      // reads "Evento Impago"; once the deadline passes it escalates to
-      // "Evento Demorado". The keys keep their original internal names.
-      eventDemorado: 'Evento Impago',
-      eventMoroso: 'Evento Demorado',
-      eventDemoradoHint: '≤ 15 días del vencimiento',
-      eventMorosoHint: 'Vencimiento superado',
+      // Event stages mirror the capita lexicon. Impago is the milder,
+      // near-deadline stage (dentro de los 15 dias del vencimiento); Demorado
+      // is the worse stage once the vencimiento has passed. Key names match the
+      // rendered state so internal vars and i18n agree.
+      eventUnpaid: 'Evento Impago',
+      eventOverdue: 'Evento Demorado',
+      eventUnpaidHint: 'Dentro de los 15 días del vencimiento',
+      eventOverdueHint: 'Vencimiento superado',
       pendingReminders: 'Recordatorios pendientes',
       pendingRemindersHint: 'Listos para revisar y enviar',
       feeMatrixTitle: 'Estado de Capitas Mensuales',
@@ -124,7 +125,7 @@ export default {
       feeMatrixNoActive: 'No hay miembros activos',
       feeMatrixAllUpToDate: '¡Todos los miembros están al día!',
       statusPaid: 'Pagado',
-      statusCurrentUnpaid: 'Actual (impago)',
+      statusCurrentUnpaid: 'Impago',
       statusOverdue: 'Demorado',
       statusFuture: 'Futuro',
     },
@@ -149,7 +150,7 @@ export default {
       searchPlaceholder: 'Buscar por nombre o teléfono...',
       filterByStatus: 'Filtrar por Estado',
       noMembersFound: 'No se encontraron miembros',
-      feeType: 'Tipo de Cuota',
+      feeType: 'Tipo de Cápita',
       joined: 'Ingreso',
       balance: 'Saldo',
       monthlyFee: 'Cápita Mensual',
@@ -163,14 +164,14 @@ export default {
       deleteConfirm: '¿Estás seguro de que deseas eliminar a {{name}}? Esta acción no se puede deshacer y eliminará todo el historial de transacciones asociado.',
     },
 
-    // Member Status
+    // Member Status (four canonical capita states + active/inactive)
     status: {
       active: 'Activo',
       inactive: 'Inactivo',
-      ahead: 'Adelantado',
-      upToDate: 'Al día',
-      unpaid: 'Impago',
-      overdue: 'Demorado',
+      alDia: 'Al día',
+      adelantado: 'Adelantado',
+      impago: 'Impago',
+      demorado: 'Demorado',
     },
 
     // Fee Types

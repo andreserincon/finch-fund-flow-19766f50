@@ -54,7 +54,7 @@ const memberSchema = z.object({
       message: 'Formato esperado: +5491155551234',
     }),
   whatsapp_opt_out: z.boolean().optional().default(false),
-  monthly_fee_amount: z.number().min(0, 'La cuota debe ser positiva'),
+  monthly_fee_amount: z.number().min(0, 'La cápita debe ser positiva'),
   fee_type: z.enum(['standard', 'solidarity']),
   masonic_grade: z.enum(['profano', 'aprendiz', 'companero', 'maestro']),
   is_active: z.boolean(),
@@ -220,7 +220,7 @@ export function EditMemberForm({ member, open, onOpenChange }: EditMemberFormPro
             </div>
 
             <div className="space-y-2">
-              <Label>Tipo de Cuota</Label>
+              <Label>Tipo de Cápita</Label>
               <Select
                 value={feeType}
                 onValueChange={(value: FeeType) => setValue('fee_type', value)}
@@ -312,7 +312,7 @@ export function EditMemberForm({ member, open, onOpenChange }: EditMemberFormPro
                   onChange={(e) => setValue('inactive_since', e.target.value ? `${e.target.value}-01` : null)}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Desde este mes el miembro no acumula capita. Las cuotas impagas anteriores siguen vigentes.
+                  Desde este mes el miembro no acumula capita. Las cápitas impagas anteriores siguen vigentes.
                 </p>
               </div>
             )}

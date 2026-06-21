@@ -86,10 +86,10 @@ export function useMonthlyFees() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['monthly_fees'] });
-      toast.success('Cuota mensual actualizada correctamente');
+      toast.success('Cápita mensual actualizada correctamente');
     },
     onError: (error: Error) => {
-      toast.error(`Error al actualizar la cuota mensual: ${error.message}`);
+      toast.error(`Error al actualizar la cápita mensual: ${error.message}`);
     },
   });
 

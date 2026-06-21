@@ -165,7 +165,7 @@ export function AddMemberForm() {
           </div>
 
           <div className="space-y-2">
-            <Label>Tipo de Cuota</Label>
+            <Label>Tipo de Cápita</Label>
             <Select
               value={feeType}
               onValueChange={(value: FeeType) => setValue('fee_type', value)}

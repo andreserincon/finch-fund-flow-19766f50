@@ -11,9 +11,12 @@
  *   "requiere atención" / "pago demorado" count.
  */
 
-import { MemberBalance, FeeType } from '@/lib/types';
+import { MemberBalance, FeeType, PaymentStatus } from '@/lib/types';
 
 export type FeeRates = Record<FeeType, number>;
+
+/** Tolerance for floating-point capita comparisons (sub-cent). */
+const EPSILON = 0.01;
 
 /** Per-member event totals, keyed by member_id. */
 export interface MemberEventTotals {
@@ -34,6 +37,55 @@ export function capitaOwed(m: MemberBalance, ev: MemberEventTotals = EMPTY_EVENT
   const monthlyOwed = m.total_fees_owed - eventOwed;
   const monthlyPaid = m.total_paid - eventPaid;
   return monthlyOwed - monthlyPaid;
+}
+
+/**
+ * Capita-only paid total for a member (event payments stripped out), used to
+ * decide whether prior months are covered. Mirrors the stripping in capitaOwed.
+ */
+function capitaPaid(m: MemberBalance, ev: MemberEventTotals): number {
+  return m.total_paid - (ev.paid[m.member_id] || 0);
+}
+
+/**
+ * Classify a member's MONTHLY CAPITA standing into one of the four canonical
+ * states. Event debt is excluded (reuses capitaOwed's stripping), so a member
+ * who is current on capitas but owes an event is never shown as impago/demorado.
+ *
+ * The "owes a prior month" test mirrors the fee matrix's per-cell rule. The
+ * matrix marks a month as covered when total capita paid reaches the cumulative
+ * owed THROUGH that month. So a member only owes the current month (impago) when
+ * their capita paid already covers everything owed through the PREVIOUS month;
+ * if it does not, an earlier month is unpaid and the deadline has passed
+ * (demorado). owedThroughPrevMonth = capitaOwed (total) minus this month's fee.
+ *
+ * @param m              member balance row (carries capita-only owed/paid once events are stripped)
+ * @param fees           current-month capita fee per fee_type
+ * @param _currentMonth  reserved for API symmetry with the matrix; the figures
+ *                       in m are already computed as of the reference month
+ * @param ev             per-member event totals to strip from both sides
+ */
+export function getMemberCapitaStatus(
+  m: MemberBalance,
+  fees: FeeRates,
+  _currentMonth?: Date,
+  ev: MemberEventTotals = EMPTY_EVENTS,
+): PaymentStatus {
+  const owed = capitaOwed(m, ev);
+  const monthlyFee = fees[m.fee_type] || 0;
+
+  // Fully paid or in credit. A real credit (paid strictly more than owed) is
+  // "adelantado"; exactly even (within epsilon) is "al_dia".
+  if (owed <= EPSILON) {
+    return owed < -EPSILON ? 'adelantado' : 'al_dia';
+  }
+
+  // Owes something. Did capita paid cover everything owed through last month?
+  // If yes, the only debt is the current month -> impago. If not, a prior
+  // month is unpaid past its deadline -> demorado.
+  const owedThroughPrevMonth = (m.total_fees_owed - (ev.owed[m.member_id] || 0)) - monthlyFee;
+  const coversPrevMonths = capitaPaid(m, ev) >= owedThroughPrevMonth - EPSILON;
+  return coversPrevMonths ? 'impago' : 'demorado';
 }
 
 /** True when an active member owes more than one month's capita. */

@@ -75,6 +75,10 @@ export default {
           DEFAULT: "hsl(var(--overdue))",
           foreground: "hsl(var(--overdue-foreground))",
         },
+        info: {
+          DEFAULT: "hsl(var(--info))",
+          foreground: "hsl(var(--info-foreground))",
+        },
         income: "hsl(var(--income))",
         expense: "hsl(var(--expense))",
       },

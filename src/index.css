@@ -52,6 +52,11 @@
     --overdue: 0 72% 51%;
     --overdue-foreground: 0 0% 100%;
 
+    /* Adelantado / informational. A calm blue, deliberately NOT the brand
+       gold (--primary), so a credit standing never reads as a brand accent. */
+    --info: 217 80% 50%;
+    --info-foreground: 0 0% 100%;
+
     /* Income/Expense */
     --income: 160 84% 39%;
     --expense: 0 72% 51%;
@@ -122,6 +127,9 @@
     --overdue: 0 62% 55%;
     --overdue-foreground: 0 0% 100%;
 
+    --info: 217 70% 60%;
+    --info-foreground: 0 0% 100%;
+
     --income: 160 55% 50%;
     --expense: 0 62% 55%;
 
@@ -178,20 +186,27 @@
     @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
   }
 
+  /* Canonical member-status colors. al_dia -> green, adelantado -> blue
+     (info, never the brand gold), impago -> amber, demorado -> red. The
+     legacy aliases below keep older class names rendering the same color. */
+  .status-al-dia,
   .status-up-to-date {
     @apply bg-success/10 text-success;
   }
 
+  .status-adelantado,
   .status-ahead {
-    @apply bg-primary/10 text-primary;
+    @apply bg-info/10 text-info;
   }
 
-  .status-overdue {
-    @apply bg-overdue/10 text-overdue;
-  }
-
+  .status-impago,
   .status-unpaid {
     @apply bg-warning/10 text-warning;
+  }
+
+  .status-demorado,
+  .status-overdue {
+    @apply bg-overdue/10 text-overdue;
   }
 
   .amount-positive {

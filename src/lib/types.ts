@@ -35,8 +35,23 @@ export type TransactionCategory =
   | 'loan_repayment'
   | 'account_yield';
 
-/** Derived payment status for dashboard badges */
-export type PaymentStatus = 'up_to_date' | 'ahead' | 'overdue';
+/**
+ * Derived monthly-capita standing for a member, used for status badges
+ * everywhere. Four canonical states:
+ *   al_dia      paid through the current month (no credit)
+ *   adelantado  paid strictly more than owed (a real credit)
+ *   impago      owes only the current month (amber)
+ *   demorado    owes a past month, deadline passed (red)
+ */
+export type PaymentStatus = 'al_dia' | 'adelantado' | 'impago' | 'demorado';
+
+/** Spanish labels for the four canonical member statuses. */
+export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
+  al_dia: 'Al día',
+  adelantado: 'Adelantado',
+  impago: 'Impago',
+  demorado: 'Demorado',
+};
 
 /** Masonic degree level */
 export type MasonicGrade = 'profano' | 'aprendiz' | 'companero' | 'maestro';

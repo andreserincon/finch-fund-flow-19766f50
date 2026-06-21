@@ -45,7 +45,8 @@ import {
 } from 'lucide-react';
 import { format, lastDayOfMonth, startOfMonth, startOfYear, addMonths, isAfter } from 'date-fns';
 import { parseLocalDate } from '@/lib/utils';
-import { getAttentionMembers, attentionTotalOwed, capitaOwed } from '@/lib/attention';
+import { getAttentionMembers, attentionTotalOwed, capitaOwed, getMemberCapitaStatus } from '@/lib/attention';
+import { MemberStatusBadge } from '@/components/dashboard/MemberStatusBadge';
 import { useMemberEventTotals } from '@/hooks/useMemberEventTotals';
 import { es } from 'date-fns/locale';
 import { Link } from 'react-router-dom';
@@ -345,11 +346,13 @@ export default function Dashboard() {
     return m.total_paid < m.total_fees_owed;
   }).length;
 
-  // Event-only metrics
+  // Event-only metrics. Event Impago = dentro de los 15 dias del vencimiento
+  // (the milder, near-deadline warning, source flag s.demorado && !s.moroso).
+  // Event Demorado = vencimiento pasado (the worse stage, source flag s.moroso).
   const activeMemberIds = new Set(adjustedMemberBalances.filter(m => m.is_active).map(m => m.member_id));
-  const eventDemoradoCount = Object.entries(memberEventStatuses)
+  const eventUnpaidCount = Object.entries(memberEventStatuses)
     .filter(([id, s]) => activeMemberIds.has(id) && s.demorado && !s.moroso).length;
-  const eventMorosoCount = Object.entries(memberEventStatuses)
+  const eventOverdueCount = Object.entries(memberEventStatuses)
     .filter(([id, s]) => activeMemberIds.has(id) && s.moroso).length;
   
   // Monthly income/expenses for the selected month
@@ -462,13 +465,16 @@ export default function Dashboard() {
 
         const totalARSDue = ownCapita + ownEvents + ownLoansARS;
         const hasAnyDue = totalARSDue > 0 || ownLoansUSD > 0;
-        // "Demorado" reserves the red badge for being more than a month behind
-        // on capitas; anything else outstanding is the calmer "Pendiente".
+        // This pill reflects the member's COMBINED account state (capitas +
+        // events + loans), not capita standing alone, so it is not the shared
+        // four-state badge. It still uses the canonical color tokens: red
+        // (demorado) when more than a month behind on capitas, amber (impago)
+        // for any other outstanding balance, green (al dia) when clear.
         const ownStatus = !hasAnyDue
-          ? { label: 'Al día', cls: 'status-up-to-date' }
+          ? { label: 'Al día', cls: 'status-al-dia' }
           : ownCapita > monthlyRate
-            ? { label: 'Demorado', cls: 'status-overdue' }
-            : { label: 'Pendiente', cls: 'status-unpaid' };
+            ? { label: 'Demorado', cls: 'status-demorado' }
+            : { label: 'Pendiente', cls: 'status-impago' };
 
         const breakdown: { label: string; amount: number; currency: 'ARS' | 'USD'; to?: string }[] = [
           { label: 'Capitas', amount: ownCapita, currency: 'ARS' },
@@ -614,11 +620,14 @@ export default function Dashboard() {
                 const eventDebt = memberEventDebts[member.member_id] || 0;
                 const monthlyFeeRate = effectiveFees[member.fee_type] || 0;
                 const isMonthlyOverdue = monthlyDebt > monthlyFeeRate;
+                const capitaStatus = getMemberCapitaStatus(member, effectiveFees, undefined, eventTotals);
                 const hasEventDebt = eventDebt > 0;
                 const eventStatus = memberEventStatuses[member.member_id];
-                const isEventMoroso = !!eventStatus?.moroso;
-                const isEventDemorado = !!eventStatus?.demorado && !isEventMoroso;
-                
+                // Event Overdue = vencimiento pasado (worse). Event Unpaid =
+                // dentro de los 15 dias del vencimiento (milder, pre-due).
+                const isEventOverdue = !!eventStatus?.moroso;
+                const isEventUnpaid = !!eventStatus?.demorado && !isEventOverdue;
+
                 return (
                   <div
                     key={member.member_id}
@@ -646,21 +655,19 @@ export default function Dashboard() {
                     </div>
                     <div className="flex gap-1 flex-shrink-0 flex-wrap justify-end">
                       {isMonthlyOverdue && (
+                        <MemberStatusBadge status={capitaStatus} />
+                      )}
+                      {isEventOverdue && (
                         <span className="text-[10px] px-1.5 py-0.5 rounded bg-destructive/10 text-destructive font-medium">
-                          {t('dashboard.fees')}
+                          {t('dashboard.eventOverdue')}
                         </span>
                       )}
-                      {isEventMoroso && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-destructive/10 text-destructive font-medium">
-                          Evento demorado
-                        </span>
-                      )}
-                      {isEventDemorado && (
+                      {isEventUnpaid && (
                         <span className="text-[10px] px-1.5 py-0.5 rounded bg-warning/10 text-warning font-medium">
-                          Evento impago
+                          {t('dashboard.eventUnpaid')}
                         </span>
                       )}
-                      {hasEventDebt && !isEventMoroso && !isEventDemorado && (
+                      {hasEventDebt && !isEventOverdue && !isEventUnpaid && (
                         <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-medium">
                           {t('dashboard.event')}
                         </span>
@@ -722,18 +729,18 @@ export default function Dashboard() {
               to="/members"
             />
             <StatCard
-              title={t('dashboard.eventDemorado')}
-              value={eventDemoradoCount}
-              subtitle={t('dashboard.eventDemoradoHint')}
+              title={t('dashboard.eventUnpaid')}
+              value={eventUnpaidCount}
+              subtitle={t('dashboard.eventUnpaidHint')}
               icon={<AlertTriangle className="h-8 w-8 text-warning/40" />}
-              variant={eventDemoradoCount > 0 ? 'warning' : 'success'}
+              variant={eventUnpaidCount > 0 ? 'warning' : 'success'}
             />
             <StatCard
-              title={t('dashboard.eventMoroso')}
-              value={eventMorosoCount}
-              subtitle={t('dashboard.eventMorosoHint')}
+              title={t('dashboard.eventOverdue')}
+              value={eventOverdueCount}
+              subtitle={t('dashboard.eventOverdueHint')}
               icon={<AlertTriangle className="h-8 w-8 text-overdue/50" />}
-              variant={eventMorosoCount > 0 ? 'danger' : 'success'}
+              variant={eventOverdueCount > 0 ? 'danger' : 'success'}
             />
             {!isMemberOnly && pendingRemindersCount > 0 && (
               <StatCard

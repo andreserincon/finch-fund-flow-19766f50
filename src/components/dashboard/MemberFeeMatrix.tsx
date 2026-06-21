@@ -43,12 +43,15 @@ function generateMonthRange(startDate: Date, endDate: Date): string[] {
   return result;
 }
 
+// Per-cell colors share the canonical status tokens used by the StatusBadge:
+// paid -> green (success), current_unpaid -> amber (warning, the impago color),
+// overdue -> red (overdue, the demorado color), future -> muted.
 function getStatusClasses(status: PaymentStatus): string {
   switch (status) {
     case 'paid':
       return 'bg-success/20 text-success border-success/30';
     case 'overdue':
-      return 'bg-destructive/20 text-destructive border-destructive/30';
+      return 'bg-overdue/20 text-overdue border-overdue/30';
     case 'current_unpaid':
       return 'bg-warning/20 text-warning border-warning/30';
     case 'future':
@@ -344,7 +347,7 @@ export function MemberFeeMatrix({ filterMemberId, referenceMonth, adjustedTotalP
             <span>{t('dashboard.statusCurrentUnpaid')}</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded bg-destructive/20 border border-destructive/30" />
+            <div className="w-3 h-3 rounded bg-overdue/20 border border-overdue/30" />
             <span>{t('dashboard.statusOverdue')}</span>
           </div>
           <div className="flex items-center gap-2">
