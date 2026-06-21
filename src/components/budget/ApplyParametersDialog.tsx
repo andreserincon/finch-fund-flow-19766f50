@@ -4,7 +4,7 @@
  *   scenario's parameters, it computes what the cells would look like if
  *   the inflation, membership-growth and extraordinary-income multiplier
  *   were applied, previews the delta (old total → new total per section),
- *   and — on confirm — writes the result into a NEW derived scenario so
+ *   and, on confirm, writes the result into a NEW derived scenario so
  *   the original numbers are preserved.
  *
  *   Math:
@@ -65,7 +65,7 @@ function projectAmount(
   const base = Number(line.budgeted_amount) || 0;
   if (base === 0) return 0;
 
-  // Monthly compounding over (month - 1) periods — Jan is unchanged.
+  // Monthly compounding over (month - 1) periods; Jan is unchanged.
   const monthsFromStart = Math.max(0, line.month - 1);
   const monthlyInflation = inflationPercent / 100 / 12;
   const inflationFactor = Math.pow(1 + monthlyInflation, monthsFromStart);

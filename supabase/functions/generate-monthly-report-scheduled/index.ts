@@ -140,7 +140,7 @@ Deno.serve(async (req) => {
     const monthlyFees = monthlyFeesResult.data || [];
     const feeTypeHistory = feeTypeHistoryResult.data || [];
 
-    // Fetch all transactions, transfers, and loan payments up to month end —
+    // Fetch all transactions, transfers, and loan payments up to month end;
     // needed for balance calculations and point-in-time loan snapshots.
     const [allTransactionsResult, allTransfersResult, loanPaymentsResult] = await Promise.all([
       supabase.from('transactions').select('*').lte('transaction_date', monthEndStr),
@@ -154,7 +154,7 @@ Deno.serve(async (req) => {
     // monthEnd (not cancelled, not yet fully paid as of that date), and
     // override amount_paid with the sum of payments dated on or before
     // monthEnd. Downstream code reads `loan.amount_paid` / computes
-    // `amount - amount_paid` — overriding the field keeps the rest of the
+    // `amount - amount_paid`; overriding the field keeps the rest of the
     // function unchanged.
     const paidByLoanId = new Map<string, number>();
     for (const p of loanPaymentsAsOfMonthEnd) {
@@ -940,7 +940,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
   // Per-event detail blocks: one card per event with activity this month.
   // Cuota collected, member/guest counts, plus a table of individual
   // expenses with their short summary and full description. Lite report
-  // skips this — too detailed for the single-page version.
+  // skips this; too detailed for the single-page version.
   let perEventDetailsSection = '';
   if (!isLite && Array.isArray(data.perEventDetails) && data.perEventDetails.length > 0) {
     const blocks = data.perEventDetails.map((ev: any) => {
@@ -1516,7 +1516,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
     <span>${reportTitleFormatted}</span>
   </div>`}
 
-  ${isLite ? '' : `<!-- Section 2: Member Financial Detail — splittable across pages. -->
+  ${isLite ? '' : `<!-- Section 2: Member Financial Detail, splittable across pages. -->
   <div class="section section--splittable">
     <h2 class="section-title">${memberSectionTitle}</h2>
     ${memberSection}

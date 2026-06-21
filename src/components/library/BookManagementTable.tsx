@@ -232,7 +232,7 @@ export function BookManagementTable() {
                       {book.status === 'available' ? t('library.available') : t('library.onLoan')}
                     </Badge>
                   </TableCell>
-                  <TableCell>{book.holder_name || '—'}</TableCell>
+                  <TableCell>{book.holder_name || '-'}</TableCell>
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -294,7 +294,7 @@ export function BookManagementTable() {
                     <Badge variant="outline">{t(`library.grades.${book.grade_level}`)}</Badge>
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">
-                    {book.description || '—'}
+                    {book.description || '-'}
                   </TableCell>
                   <TableCell>
                     <DropdownMenu>

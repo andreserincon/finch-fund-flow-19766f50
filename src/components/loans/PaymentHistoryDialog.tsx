@@ -136,7 +136,7 @@ export function PaymentHistoryDialog({
                             +{formatCurrency(payment.amount, currency)}
                           </TableCell>
                           <TableCell className="text-muted-foreground max-w-[200px] truncate">
-                            {payment.notes || '—'}
+                            {payment.notes || '-'}
                           </TableCell>
                           <TableCell>
                             <DropdownMenu>

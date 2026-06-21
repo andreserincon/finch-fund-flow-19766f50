@@ -21,7 +21,7 @@ import { toast } from 'sonner';
 /**
  * Recompute amount_paid for a single event_member_payment row by
  * summing all event_payment transactions that point at it. Treat as a
- * canonical reconciliation — overrides any previously stored value.
+ * canonical reconciliation; overrides any previously stored value.
  */
 async function recomputeAmountPaid(eventMemberPaymentId: string | null | undefined) {
   if (!eventMemberPaymentId) return;

@@ -153,7 +153,7 @@ export default function Dashboard() {
     // One pass over the filtered transactions to sum each member's capita
     // (monthly_fee income) paid, instead of re-filtering the whole transaction
     // list once per member. Event payments are intentionally EXCLUDED so this
-    // stays consistent with the capita-only total_fees_owed below — events are
+    // stays consistent with the capita-only total_fees_owed below; events are
     // tracked separately via memberEventDebts / memberEventInfo. (Mixing event
     // payments in here made the "Estado de Capitas Mensuales" matrix and the
     // capita-only metrics credit event money against monthly-dues debt.)

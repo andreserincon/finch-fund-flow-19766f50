@@ -105,7 +105,7 @@ export interface Member {
   full_name: string;
   /**
    * Stores the member's lodge enrollment number (Matrícula). Despite the
-   * column name this is NOT a phone number — see whatsapp_number for that.
+   * column name this is NOT a phone number (see whatsapp_number for that).
    */
   phone_number: string;
   /** Real WhatsApp contact number in E.164 format (+5491155551234) */
@@ -237,7 +237,7 @@ export interface EventMemberPayment {
 }
 
 /**
- * Row in the `payment_reminders` table — queue of outgoing WhatsApp
+ * Row in the `payment_reminders` table; queue of outgoing WhatsApp
  * overdue reminders that the treasurer reviews and dispatches manually.
  */
 export interface PaymentReminder {

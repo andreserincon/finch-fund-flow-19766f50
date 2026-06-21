@@ -341,7 +341,7 @@ export default function Loans() {
                       {formatCurrency(remainingDue, currency)}
                     </TableCell>
                     <TableCell>{getStatusBadge(loan.status)}</TableCell>
-                    <TableCell className="max-w-[150px] truncate text-muted-foreground">{loan.notes || '—'}</TableCell>
+                    <TableCell className="max-w-[150px] truncate text-muted-foreground">{loan.notes || '-'}</TableCell>
                     {isAdmin ? (
                       <TableCell>
                         <DropdownMenu>

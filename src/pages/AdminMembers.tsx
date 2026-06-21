@@ -226,7 +226,7 @@ export default function AdminMembers() {
                         onClick={() => isAdmin && startEditMatricula(member)}
                         title={isAdmin ? 'Click para editar' : undefined}
                       >
-                        {member.phone_number || '—'}
+                        {member.phone_number || '-'}
                       </span>
                     )}
                   </TableCell>

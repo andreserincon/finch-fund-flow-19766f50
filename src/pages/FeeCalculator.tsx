@@ -192,7 +192,7 @@ export default function FeeCalculator() {
 
       // ========== Sheet 1: Índice CVS ==========
       const s1Data: (string | number | null)[][] = [
-        ['Índice de Salarios (INDEC) — Variación Mensual', null, null],
+        ['Índice de Salarios (INDEC): Variación Mensual', null, null],
         [],
         ['Mes', 'Índice (base oct-2016=100)', 'Variación Mensual %'],
         ...monthly.map((p) => [p.monthLabel, p.indexValue, p.variation]),
@@ -200,7 +200,7 @@ export default function FeeCalculator() {
         [],
         ['Índice Acumulado Anual (12 meses)', null, yoyAccumulated > 0 ? yoyAccumulated : 'N/D'],
         [],
-        ['Fuente: Ministerio de Economía — datos.gob.ar / INDEC', null, null],
+        ['Fuente: Ministerio de Economía: datos.gob.ar / INDEC', null, null],
         ['💡 Para insertar gráfico: seleccioná las columnas A y C → Insertar → Gráfico de líneas', null, null],
       ];
       const ws1 = XLSX.utils.aoa_to_sheet(s1Data);
@@ -214,9 +214,9 @@ export default function FeeCalculator() {
 
       // ========== Sheet 2: Trimestral CVS ==========
       const s2Data: (string | number | null)[][] = [
-        ['Resumen Trimestral — CVS Acumulado', null, null, null, null, null],
+        ['Resumen Trimestral: CVS Acumulado', null, null, null, null, null],
         [],
-        ['Trimestre', 'CVS Trimestral %', 'Mes 1 — Variación %', 'Mes 2 — Variación %', 'Mes 3 — Variación %', '¿Trimestre Seleccionado?'],
+        ['Trimestre', 'CVS Trimestral %', 'Mes 1: Variación %', 'Mes 2: Variación %', 'Mes 3: Variación %', '¿Trimestre Seleccionado?'],
         ...quarterly.map((q) => [
           q.quarterLabel,
           q.cvs,
@@ -240,11 +240,11 @@ export default function FeeCalculator() {
       const lowP = proposals.find(p => p.buffer === -2);
       const baseP = proposals.find(p => p.buffer === 0);
       const highP = proposals.find(p => p.buffer === 2);
-      const getKpiVal = (p: typeof lowP, key: keyof ProposalKPIs) => p ? p.kpis[key] : '—';
-      const getCustomVal = (key: keyof ProposalKPIs) => customKPIs ? customKPIs[key] : '—';
+      const getKpiVal = (p: typeof lowP, key: keyof ProposalKPIs) => p ? p.kpis[key] : '-';
+      const getCustomVal = (key: keyof ProposalKPIs) => customKPIs ? customKPIs[key] : '-';
 
       const s3Data: (string | number | null)[][] = [
-        ['Propuestas de Aranceles — Calculadora de Aranceles', null, null, null, null, null, null],
+        ['Propuestas de Aranceles: Calculadora de Aranceles', null, null, null, null, null, null],
         [],
         ['Período Base:', baseMonthLabel],
         ['Trimestre CVS:', quarterLabel],
@@ -256,8 +256,8 @@ export default function FeeCalculator() {
         ['Miembros Solidaridad activos:', solMemberCount],
         [],
         ['', 'Conservador', 'Base CVS', 'Alto', 'Personalizado'],
-        ['Arancel Estándar Propuesto', lowP?.proposedStd ?? '—', baseP?.proposedStd ?? '—', highP?.proposedStd ?? '—', customKPIs ? customStdNum : '—'],
-        ['Arancel Solidaridad Propuesto', lowP?.proposedSol ?? '—', baseP?.proposedSol ?? '—', highP?.proposedSol ?? '—', customKPIs ? customSolNum : '—'],
+        ['Arancel Estándar Propuesto', lowP?.proposedStd ?? '-', baseP?.proposedStd ?? '-', highP?.proposedStd ?? '-', customKPIs ? customStdNum : '-'],
+        ['Arancel Solidaridad Propuesto', lowP?.proposedSol ?? '-', baseP?.proposedSol ?? '-', highP?.proposedSol ?? '-', customKPIs ? customSolNum : '-'],
         ['GL Estándar Proyectado', getKpiVal(lowP, 'projectedGlStd'), getKpiVal(baseP, 'projectedGlStd'), getKpiVal(highP, 'projectedGlStd'), getCustomVal('projectedGlStd')],
         ['GL Solidaridad Proyectado', getKpiVal(lowP, 'projectedGlSol'), getKpiVal(baseP, 'projectedGlSol'), getKpiVal(highP, 'projectedGlSol'), getCustomVal('projectedGlSol')],
         [],
@@ -278,7 +278,7 @@ export default function FeeCalculator() {
 
       // ========== Sheet 4: Mi Calculadora ==========
       const s4Data: (string | number | null | { f: string })[][] = [
-        ['Mi Calculadora — Espacio de Trabajo', null, null, null, null, null],
+        ['Mi Calculadora: Espacio de Trabajo', null, null, null, null, null],
         [],
         ['Usá esta hoja para tus propios cálculos. Los valores en azul son referencias traídas de la calculadora. Podés modificar cualquier celda.'],
         [],
@@ -624,7 +624,7 @@ export default function FeeCalculator() {
             <Label className="text-xs text-muted-foreground">Trimestre CVS</Label>
             {!fetchError && selectedQuarter ? (
               <div className="h-10 flex items-center px-3 rounded-md border border-input bg-muted/50 text-sm w-[260px]">
-                {selectedQuarter.quarterLabel} — CVS: <span className="font-semibold ml-1">{formatPct(selectedQuarter.cvs)}</span>
+                {selectedQuarter.quarterLabel}, CVS: <span className="font-semibold ml-1">{formatPct(selectedQuarter.cvs)}</span>
               </div>
             ) : !fetchError && cvsLoading ? (
               <Skeleton className="h-10 w-[260px]" />
@@ -678,7 +678,7 @@ export default function FeeCalculator() {
           </div>
         )}
 
-        {/* Section 1 — Current Reference */}
+        {/* Section 1: Current Reference */}
         <div>
           <h2 className="section-header">{t('feeCalculator.currentReference')}</h2>
           <div className="grid grid-cols-2 landscape:grid-cols-3 lg:grid-cols-3 gap-2 landscape:gap-1.5 md:gap-4">
@@ -688,12 +688,12 @@ export default function FeeCalculator() {
             <StatCard title={t('feeCalculator.activeSolMembers')} value={solMemberCount} icon={<Users className="h-5 w-5 text-muted-foreground" />} />
             <StatCard
               title={t('feeCalculator.glStdFee')}
-              value={glStdNum > 0 ? formatARS(glStdNum) : '—'}
+              value={glStdNum > 0 ? formatARS(glStdNum) : '-'}
               subtitle={glStdNum > 0 && hasCvs ? `Proyectado: ${formatARS(Math.round(glStdNum * (1 + selectedCVS / 100)))}` : undefined}
             />
             <StatCard
               title={t('feeCalculator.glSolFee')}
-              value={glSolNum > 0 ? formatARS(glSolNum) : '—'}
+              value={glSolNum > 0 ? formatARS(glSolNum) : '-'}
               subtitle={glSolNum > 0 && hasCvs ? `Proyectado: ${formatARS(Math.round(glSolNum * (1 + selectedCVS / 100)))}` : undefined}
             />
           </div>
@@ -701,7 +701,7 @@ export default function FeeCalculator() {
 
 
 
-        {/* Section 4 — Proposals */}
+        {/* Section 4: Proposals */}
         <div>
           <h2 className="section-header">{t('feeCalculator.proposals')}</h2>
           {!hasCvs ? (
@@ -727,7 +727,7 @@ export default function FeeCalculator() {
           )}
         </div>
 
-        {/* Section 5 — Custom Scenario */}
+        {/* Section 5: Custom Scenario */}
         <Card className="border-dashed">
           <CardHeader className="pb-3">
             <Badge variant="outline" className="border-dashed w-fit">
@@ -750,7 +750,7 @@ export default function FeeCalculator() {
             {customKPIs ? (
               <KPIList kpis={customKPIs} t={t} noGlData={noGlData} />
             ) : (
-              <div className="text-center text-sm text-muted-foreground py-4">—</div>
+              <div className="text-center text-sm text-muted-foreground py-4">-</div>
             )}
           </CardContent>
         </Card>

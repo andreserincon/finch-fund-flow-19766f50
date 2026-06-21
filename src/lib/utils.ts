@@ -57,7 +57,7 @@ export function getCurrencyForAccount(account: string): Currency {
 /**
  * Return the date of the Nth business day of a given month (1 = January).
  * Saturdays and Sundays are skipped. Argentine public holidays are NOT
- * skipped — that's a deliberate v1 choice; add a holiday calendar later
+ * skipped; that is a deliberate v1 choice; add a holiday calendar later
  * if needed.
  *
  * @example getNthBusinessDayOfMonth(2026, 5, 3) // → Wed 2026-05-06

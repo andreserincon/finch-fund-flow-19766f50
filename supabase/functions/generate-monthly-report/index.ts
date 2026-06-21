@@ -199,7 +199,7 @@ Deno.serve(async (req) => {
     const monthlyFees = monthlyFeesResult.data || [];
     const feeTypeHistory = feeTypeHistoryResult.data || [];
 
-    // Fetch all transactions, transfers, and loan payments up to month end —
+    // Fetch all transactions, transfers, and loan payments up to month end;
     // needed for balance calculations and point-in-time loan snapshots.
     const [allTransactionsResult, allTransfersResult, loanPaymentsResult] = await Promise.all([
       supabase.from('transactions').select('*').lte('transaction_date', monthEndStr),
@@ -215,7 +215,7 @@ Deno.serve(async (req) => {
     // monthEnd (not cancelled, not yet fully paid as of that date), and
     // override amount_paid with the sum of payments dated on or before
     // monthEnd. Downstream code reads `loan.amount_paid` / computes
-    // `amount - amount_paid` — overriding the field keeps the rest of the
+    // `amount - amount_paid`; overriding the field keeps the rest of the
     // function unchanged.
     const paidByLoanId = new Map<string, number>();
     for (const p of loanPaymentsAsOfMonthEnd) {
@@ -479,7 +479,7 @@ Deno.serve(async (req) => {
       reportId = newReport.id;
     }
 
-    // Create member snapshots — status is derived from capita balance only.
+    // Create member snapshots; status is derived from capita balance only.
     const memberSnapshots = memberBalances.map((mb: any) => {
       const capitaBalance = Number(mb.capita_balance || 0);
       const eventBalance = Number(mb.event_balance || 0);
@@ -554,7 +554,7 @@ Deno.serve(async (req) => {
       await supabase.from('report_loan_snapshots').insert(loanSnapshotsForDb);
     }
 
-    // Create event snapshots — exclude events whose charge_from_date is after month end.
+    // Create event snapshots; exclude events whose charge_from_date is after month end.
     const eligibleEventsForReport = events.filter(
       (e: any) => !e.charge_from_date || e.charge_from_date <= monthEndStr
     );
@@ -565,7 +565,7 @@ Deno.serve(async (req) => {
       const membersIncluded = eventPaymentsForEvent.length;
       const membersUnpaid = eventPaymentsForEvent.filter((ep: any) => ep.amount_paid < ep.amount_owed).length;
 
-      // Gastos del evento ESTE MES (ARS only — USD gastos en eventos son
+      // Gastos del evento ESTE MES (ARS only; USD gastos en eventos son
       // edge case, se ven en la sección Detalle por Evento si los hay).
       const expensesArs = transactions
         .filter((t: any) =>
@@ -906,7 +906,7 @@ Deno.serve(async (req) => {
     const liteContent = generatePDFHTML(reportData, 'lite', logoBase64);
 
     // Running header & footer rendered by PDFShift on every page (page 1
-    // skips the running header — the big main header already lives there).
+    // skips the running header; the big main header already lives there).
     // <span class="pageNumber"></span> / <span class="totalPages"></span>
     // are Chromium placeholders that PDFShift fills in per page.
     const logoForHeader = logoBase64
@@ -1053,7 +1053,7 @@ function buildFlowTable(data: any, formatCurrency: (amount: number, currency?: s
   }).join('');
 
   // Transfers between owned accounts (account_transfers) are a wash at
-  // the organization level — same money moving between cuentas. They
+  // the organization level; same money moving between cuentas. They
   // shouldn't appear in the category-flow table since they have zero
   // net impact on total holdings. Per-account balances are still
   // computed correctly elsewhere using the same transfers data.
@@ -1125,7 +1125,7 @@ function buildFlowTable(data: any, formatCurrency: (amount: number, currency?: s
     + '<td class="text-right negative">' + formatCurrency(totalExpUSD, 'USD') + '</td>'
     + '</tr>'
     // Balance del Mes = ingresos - egresos del mes (sin contar el balance
-    // inicial). Resultado neto del mes — útil para ver si el mes fue
+    // inicial). Resultado neto del mes; útil para ver si el mes fue
     // superavitario o deficitario sin tener que restar mentalmente.
     + (() => {
         const monthBalanceARS = totalIncARS - totalExpARS;
@@ -1209,7 +1209,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
   const loansSectionNum = '3';
   const eventsSectionNum = isLite ? '4' : '5';
 
-  // Build member rows — separate Saldo Capita and Saldo Eventos columns.
+  // Build member rows; separate Saldo Capita and Saldo Eventos columns.
   const memberRows = membersToShow.map((m: any) => {
     const capita = Number(m.capita_balance ?? m.balance_at_month_end ?? 0);
     const events = Number(m.event_balance ?? 0);
@@ -1391,7 +1391,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
   // Per-event detail blocks: one card per event with activity this month.
   // Cuota collected, member/guest counts, plus a table of individual
   // expenses with their short summary and full description. Lite report
-  // skips this — too detailed for the single-page version.
+  // skips this; too detailed for the single-page version.
   let perEventDetailsSection = '';
   if (!isLite && Array.isArray(data.perEventDetails) && data.perEventDetails.length > 0) {
     const cardSubNum = isLite ? (eventsSectionNum + '.1') : (eventsSectionNum + '.1');
@@ -2018,7 +2018,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
     <span>${reportTitleFormatted}</span>
   </div>`}
 
-  ${isLite ? '' : `<!-- Section 4: Member Financial Detail — marked splittable so
+  ${isLite ? '' : `<!-- Section 4: Member Financial Detail, marked splittable so
        a long member list flows across pages instead of leaving a
        half-empty page above it. Column headers repeat on each new
        page thanks to thead { display: table-header-group }. -->

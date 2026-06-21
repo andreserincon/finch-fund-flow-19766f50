@@ -379,7 +379,7 @@ export function EditTransactionDialog({
                     const balance = Number(p.amount_owed) - Number(p.amount_paid);
                     return (
                       <SelectItem key={p.id} value={p.id}>
-                        {name} ({tag}) — saldo {balance.toFixed(2)}
+                        {name} ({tag}) - saldo {balance.toFixed(2)}
                       </SelectItem>
                     );
                   })}

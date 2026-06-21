@@ -187,7 +187,7 @@ Deno.serve(async (req) => {
 
       if (error) {
         if (error.code === '23505') {
-          // unique violation — already queued for this period
+          // unique violation; already queued for this period
           alreadyQueued++;
           continue;
         }

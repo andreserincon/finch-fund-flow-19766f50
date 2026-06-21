@@ -402,11 +402,11 @@ export default function Transactions() {
                   </TableCell>
                   <TableCell>
                     {transaction.member?.full_name || (
-                      <span className="text-muted-foreground">—</span>
+                      <span className="text-muted-foreground">-</span>
                     )}
                   </TableCell>
                   <TableCell className="max-w-[200px] truncate text-muted-foreground">
-                    {transaction.notes || '—'}
+                    {transaction.notes || '-'}
                   </TableCell>
                   <TableCell className="text-right font-mono">
                     <span

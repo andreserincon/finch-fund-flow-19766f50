@@ -299,7 +299,7 @@ function TypeSection({
               <td key={m} className="px-1 py-1 text-right">
                 {readOnly ? (
                   <span className="font-mono text-xs">
-                    {value ? formatCurrencyCompact(Number(value), currency) : '—'}
+                    {value ? formatCurrencyCompact(Number(value), currency) : '-'}
                   </span>
                 ) : (
                   <input

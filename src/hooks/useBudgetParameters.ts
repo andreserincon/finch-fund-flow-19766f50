@@ -3,7 +3,7 @@
  * @description Fetches and updates the 1:1 parameters row for a scenario.
  *   The row is auto-created by the `trg_budget_scenarios_create_parameters`
  *   trigger whenever a scenario is inserted, so this hook only needs to
- *   read and update — not insert.
+ *   read and update, not insert.
  */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';

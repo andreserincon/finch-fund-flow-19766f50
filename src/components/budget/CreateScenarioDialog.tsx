@@ -168,10 +168,10 @@ export function CreateScenarioDialog({
                 }
               >
                 <SelectTrigger id="copy_from">
-                  <SelectValue placeholder="— Ninguno —" />
+                  <SelectValue placeholder="(Ninguno)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">— Ninguno —</SelectItem>
+                  <SelectItem value="none">(Ninguno)</SelectItem>
                   {existingScenarios.map((s) => (
                     <SelectItem key={s.id} value={s.id}>
                       {s.scenario_name} ({s.year})

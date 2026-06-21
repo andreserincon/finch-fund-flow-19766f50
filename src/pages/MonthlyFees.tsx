@@ -53,7 +53,7 @@ function EditableCell({
   value,
   onSave,
   disabled,
-  placeholder = '—',
+  placeholder = '-',
   isMuted = false,
 }: {
   value: number | null;
@@ -141,7 +141,7 @@ export default function MonthlyFees() {
           amount: val ?? 0,
         });
       } else {
-        // GL fields — save on both fee_type rows
+        // GL fields, saved on both fee_type rows
         const glPayload = field === 'gl_standard'
           ? { gl_standard_amount: val }
           : { gl_solidarity_amount: val };

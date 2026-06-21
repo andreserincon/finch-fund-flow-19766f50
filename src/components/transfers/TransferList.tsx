@@ -126,7 +126,7 @@ export function TransferList() {
                     <Badge variant="outline">{ACCOUNT_LABELS[transfer.to_account]}</Badge>
                   </TableCell>
                   <TableCell className="max-w-[200px] truncate text-muted-foreground">
-                    {transfer.notes || '—'}
+                    {transfer.notes || '-'}
                   </TableCell>
                   <TableCell className="text-right font-mono font-semibold">
                     {formatCurrency(transfer.amount, currency)}
