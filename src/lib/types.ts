@@ -295,7 +295,7 @@ export interface DashboardStats {
 /* ================================================================== */
 
 export const CATEGORY_LABELS: Record<TransactionCategory, string> = {
-  monthly_fee: 'Cuota Mensual',
+  monthly_fee: 'Cápita Mensual',
   extraordinary_income: 'Ingreso Extraordinario',
   donation: 'Donación',
   reimbursement: 'Reembolso',

@@ -233,7 +233,7 @@ export default function FeeCalculator() {
       (ws2['!views'] as any[])[0] = { state: 'frozen', ySplit: 3 };
       XLSX.utils.book_append_sheet(wb, ws2, 'Trimestral CVS');
 
-      // ========== Sheet 3: Propuestas de Aranceles ==========
+      // ========== Sheet 3: Propuestas de Cápitas ==========
       const baseMonthLabel = availableFeeMonths.find(m => m.value === selectedBaseMonth)?.label ?? selectedBaseMonth ?? '';
       const quarterLabel = selectedQuarter?.quarterLabel ?? 'Manual';
 
@@ -244,20 +244,20 @@ export default function FeeCalculator() {
       const getCustomVal = (key: keyof ProposalKPIs) => customKPIs ? customKPIs[key] : '-';
 
       const s3Data: (string | number | null)[][] = [
-        ['Propuestas de Aranceles: Calculadora de Aranceles', null, null, null, null, null, null],
+        ['Propuestas de Cápitas: Calculadora de Cápitas', null, null, null, null, null, null],
         [],
         ['Período Base:', baseMonthLabel],
         ['Trimestre CVS:', quarterLabel],
         ['CVS Aplicado:', selectedCVS],
         ['Índice YoY Acumulado:', yoyAccumulated],
-        ['Arancel GL Estándar actual:', glStdNum],
-        ['Arancel GL Solidaridad actual:', glSolNum],
+        ['Cápita GL Estándar actual:', glStdNum],
+        ['Cápita GL Solidaria actual:', glSolNum],
         ['Miembros Estándar activos:', stdMemberCount],
         ['Miembros Solidaridad activos:', solMemberCount],
         [],
         ['', 'Conservador', 'Base CVS', 'Alto', 'Personalizado'],
-        ['Arancel Estándar Propuesto', lowP?.proposedStd ?? '-', baseP?.proposedStd ?? '-', highP?.proposedStd ?? '-', customKPIs ? customStdNum : '-'],
-        ['Arancel Solidaridad Propuesto', lowP?.proposedSol ?? '-', baseP?.proposedSol ?? '-', highP?.proposedSol ?? '-', customKPIs ? customSolNum : '-'],
+        ['Cápita Estándar Propuesta', lowP?.proposedStd ?? '-', baseP?.proposedStd ?? '-', highP?.proposedStd ?? '-', customKPIs ? customStdNum : '-'],
+        ['Cápita Solidaria Propuesta', lowP?.proposedSol ?? '-', baseP?.proposedSol ?? '-', highP?.proposedSol ?? '-', customKPIs ? customSolNum : '-'],
         ['GL Estándar Proyectado', getKpiVal(lowP, 'projectedGlStd'), getKpiVal(baseP, 'projectedGlStd'), getKpiVal(highP, 'projectedGlStd'), getCustomVal('projectedGlStd')],
         ['GL Solidaridad Proyectado', getKpiVal(lowP, 'projectedGlSol'), getKpiVal(baseP, 'projectedGlSol'), getKpiVal(highP, 'projectedGlSol'), getCustomVal('projectedGlSol')],
         [],
@@ -266,7 +266,7 @@ export default function FeeCalculator() {
         ['Ingreso Neto Mensual', getKpiVal(lowP, 'netMonthlyIncome'), getKpiVal(baseP, 'netMonthlyIncome'), getKpiVal(highP, 'netMonthlyIncome'), getCustomVal('netMonthlyIncome')],
         ['Incremento Propio %', getKpiVal(lowP, 'ourFeeIncrease'), getKpiVal(baseP, 'ourFeeIncrease'), getKpiVal(highP, 'ourFeeIncrease'), getCustomVal('ourFeeIncrease')],
         ['GL % de Capita', getKpiVal(lowP, 'delta'), getKpiVal(baseP, 'delta'), getKpiVal(highP, 'delta'), getCustomVal('delta')],
-        ['Variación Interanual Arancel %', lowP?.kpis.yoyFeeVariation ?? 'N/D', baseP?.kpis.yoyFeeVariation ?? 'N/D', highP?.kpis.yoyFeeVariation ?? 'N/D', customKPIs?.yoyFeeVariation ?? 'N/D'],
+        ['Variación Interanual Cápita %', lowP?.kpis.yoyFeeVariation ?? 'N/D', baseP?.kpis.yoyFeeVariation ?? 'N/D', highP?.kpis.yoyFeeVariation ?? 'N/D', customKPIs?.yoyFeeVariation ?? 'N/D'],
         ['Índice Acumulado YoY (ref.)', getKpiVal(lowP, 'yoyAccumulatedIndex'), getKpiVal(baseP, 'yoyAccumulatedIndex'), getKpiVal(highP, 'yoyAccumulatedIndex'), getCustomVal('yoyAccumulatedIndex')],
       ];
       const ws3 = XLSX.utils.aoa_to_sheet(s3Data);
@@ -274,7 +274,7 @@ export default function FeeCalculator() {
       ws3['!cols'] = [{ wch: 32 }, { wch: 20 }, { wch: 20 }, { wch: 20 }, { wch: 20 }];
       if (!ws3['!views']) ws3['!views'] = [{}];
       (ws3['!views'] as any[])[0] = { state: 'frozen', ySplit: 12 };
-      XLSX.utils.book_append_sheet(wb, ws3, 'Propuestas de Aranceles');
+      XLSX.utils.book_append_sheet(wb, ws3, 'Propuestas de Cápitas');
 
       // ========== Sheet 4: Mi Calculadora ==========
       const s4Data: (string | number | null | { f: string })[][] = [
@@ -286,16 +286,16 @@ export default function FeeCalculator() {
         ['REFERENCIAS (traídas de la calculadora)'],
         ['CVS Trimestral %', selectedCVS],
         ['Índice YoY Acumulado %', yoyAccumulated],
-        ['Arancel Estándar Actual', currentStdFee],
-        ['Arancel Solidaridad Actual', currentSolFee],
+        ['Cápita Estándar Actual', currentStdFee],
+        ['Cápita Solidaria Actual', currentSolFee],
         ['GL Estándar', glStdNum],
         ['GL Solidaridad', glSolNum],
         ['Miembros Estándar', stdMemberCount],
         ['Miembros Solidaridad', solMemberCount],
         [],
         ['MI ESCENARIO'],
-        ['Mi Arancel Estándar', null],
-        ['Mi Arancel Solidaridad', null],
+        ['Mi Cápita Estándar', null],
+        ['Mi Cápita Solidaria', null],
         ['Ajuste adicional %', null],
         ['Notas', null],
         [],
@@ -338,7 +338,7 @@ export default function FeeCalculator() {
       XLSX.utils.book_append_sheet(wb, ws4, 'Mi Calculadora');
 
       // ========== Write & Download ==========
-      const fileName = `aranceles-${selectedBaseMonth?.slice(0, 7) ?? 'calculadora'}-${new Date().toISOString().slice(0, 10)}.xlsx`;
+      const fileName = `capitas-${selectedBaseMonth?.slice(0, 7) ?? 'calculadora'}-${new Date().toISOString().slice(0, 10)}.xlsx`;
       XLSX.writeFile(wb, fileName);
       toast.success('Planilla exportada correctamente');
     } catch (err) {

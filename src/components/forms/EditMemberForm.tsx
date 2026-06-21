@@ -206,7 +206,7 @@ export function EditMemberForm({ member, open, onOpenChange }: EditMemberFormPro
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="edit_monthly_fee_amount">Cuota Mensual</Label>
+              <Label htmlFor="edit_monthly_fee_amount">Cápita Mensual</Label>
               <Input
                 id="edit_monthly_fee_amount"
                 type="number"

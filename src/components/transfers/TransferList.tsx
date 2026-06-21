@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAccountTransfers } from '@/hooks/useAccountTransfers';
 import { EditTransferDialog } from '@/components/forms/EditTransferDialog';
 import { DeleteTransferDialog } from '@/components/forms/DeleteTransferDialog';
@@ -25,6 +26,7 @@ import { formatCurrency, getCurrencyForAccount, parseLocalDate } from '@/lib/uti
 import { LodgeLoader } from '@/components/lodge/LodgeLoader';
 
 export function TransferList() {
+  const { t } = useTranslation();
   const { transfers, isLoading } = useAccountTransfers();
   const [editingTransfer, setEditingTransfer] = useState<AccountTransfer | null>(null);
   const [deletingTransfer, setDeletingTransfer] = useState<AccountTransfer | null>(null);
@@ -38,7 +40,7 @@ export function TransferList() {
   if (transfers.length === 0) {
     return (
       <div className="text-center py-8 text-muted-foreground bg-card rounded-lg border">
-        No hay transferencias registradas
+        {t('transfer.noTransfers')}
       </div>
     );
   }
@@ -75,14 +77,14 @@ export function TransferList() {
                     <DropdownMenuContent align="end" className="bg-popover">
                       <DropdownMenuItem onClick={() => setEditingTransfer(transfer)}>
                         <Pencil className="mr-2 h-4 w-4" />
-                        Edit
+                        {t('common.edit')}
                       </DropdownMenuItem>
-                      <DropdownMenuItem 
+                      <DropdownMenuItem
                         onClick={() => setDeletingTransfer(transfer)}
                         className="text-destructive focus:text-destructive"
                       >
                         <Trash2 className="mr-2 h-4 w-4" />
-                        Delete
+                        {t('common.delete')}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -103,11 +105,11 @@ export function TransferList() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Date</TableHead>
-              <TableHead>From</TableHead>
-              <TableHead>To</TableHead>
-              <TableHead>Notes</TableHead>
-              <TableHead className="text-right">Amount</TableHead>
+              <TableHead>{t('transfer.date')}</TableHead>
+              <TableHead>{t('transfer.from')}</TableHead>
+              <TableHead>{t('transfer.to')}</TableHead>
+              <TableHead>{t('common.notes')}</TableHead>
+              <TableHead className="text-right">{t('transfer.amount')}</TableHead>
               <TableHead className="w-[50px]"></TableHead>
             </TableRow>
           </TableHeader>
@@ -136,20 +138,20 @@ export function TransferList() {
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon" className="h-8 w-8">
                           <MoreHorizontal className="h-4 w-4" />
-                          <span className="sr-only">Open menu</span>
+                          <span className="sr-only">{t('common.openMenu')}</span>
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="bg-popover">
                         <DropdownMenuItem onClick={() => setEditingTransfer(transfer)}>
                           <Pencil className="mr-2 h-4 w-4" />
-                          Edit
+                          {t('common.edit')}
                         </DropdownMenuItem>
-                        <DropdownMenuItem 
+                        <DropdownMenuItem
                           onClick={() => setDeletingTransfer(transfer)}
                           className="text-destructive focus:text-destructive"
                         >
                           <Trash2 className="mr-2 h-4 w-4" />
-                          Delete
+                          {t('common.delete')}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>

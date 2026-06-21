@@ -21,27 +21,31 @@ import { AccountType, ACCOUNT_LABELS } from '@/lib/types';
 import { formatCurrency, getCurrencyForAccount } from '@/lib/utils';
 import { ArrowLeft, ArrowLeftRight, ArrowRight, Plus, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 
-const transferSchema = z.object({
-  transfer_date: z.string().min(1, 'Date is required'),
-  source_amount: z.number().positive('Amount must be positive'),
-  destination_amount: z.number().positive('Amount must be positive'),
+const makeTransferSchema = (t: TFunction) => z.object({
+  transfer_date: z.string().min(1, t('transfer.dateRequired')),
+  source_amount: z.number().positive(t('transfer.amountPositive')),
+  destination_amount: z.number().positive(t('transfer.amountPositive')),
   from_account: z.enum(['bank', 'great_lodge', 'savings']),
   to_account: z.enum(['bank', 'great_lodge', 'savings']),
   notes: z.string().max(500).optional(),
 }).refine(data => data.from_account !== data.to_account, {
-  message: 'Source and destination accounts must be different',
+  message: t('transfer.differentAccounts'),
   path: ['to_account'],
 });
 
-type TransferFormData = z.infer<typeof transferSchema>;
+type TransferFormData = z.infer<ReturnType<typeof makeTransferSchema>>;
 
 export default function AccountTransfer() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { addTransfer } = useAccountTransfers();
   const { exchangeRate } = useExchangeRate();
   const [showForm, setShowForm] = useState(false);
+  const transferSchema = useMemo(() => makeTransferSchema(t), [t]);
 
   const {
     register,
@@ -146,14 +150,14 @@ export default function AccountTransfer() {
             </Button>
           </Link>
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Transfer Funds</h1>
-            <p className="text-muted-foreground">Move money between accounts</p>
+            <h1 className="text-2xl font-bold text-foreground">{t('transfer.title')}</h1>
+            <p className="text-muted-foreground">{t('transfer.subtitle')}</p>
           </div>
         </div>
         {!showForm && (
           <Button onClick={() => setShowForm(true)}>
             <Plus className="h-4 w-4 mr-2" />
-            New Transfer
+            {t('transfer.newTransfer')}
           </Button>
         )}
       </div>
@@ -165,13 +169,13 @@ export default function AccountTransfer() {
               <div>
                 <CardTitle className="flex items-center gap-2">
                   <ArrowLeftRight className="h-5 w-5 text-primary" />
-                  New Transfer
+                  {t('transfer.newTransfer')}
                 </CardTitle>
                 <CardDescription>
-                  Transfer funds between accounts
+                  {t('transfer.transferFunds')}
                   {isCrossCurrencyTransfer && (
                     <span className="block mt-1 text-warning">
-                      Currency conversion required: {fromCurrency} → {toCurrency}
+                      {t('transfer.currencyConversion', { from: fromCurrency, to: toCurrency })}
                     </span>
                   )}
                 </CardDescription>
@@ -185,7 +189,7 @@ export default function AccountTransfer() {
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>From Account</Label>
+                  <Label>{t('transfer.fromAccount')}</Label>
                   <Select
                     value={fromAccount}
                     onValueChange={(value: AccountType) => {
@@ -210,7 +214,7 @@ export default function AccountTransfer() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>To Account</Label>
+                  <Label>{t('transfer.toAccount')}</Label>
                   <Select
                     value={toAccount}
                     onValueChange={(value: AccountType) => {
@@ -239,7 +243,7 @@ export default function AccountTransfer() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="transfer_date">Date</Label>
+                <Label htmlFor="transfer_date">{t('transfer.date')}</Label>
                 <Input
                   id="transfer_date"
                   type="date"
@@ -253,10 +257,10 @@ export default function AccountTransfer() {
               {isCrossCurrencyTransfer ? (
                 <div className="space-y-4">
                   <div className="p-4 rounded-lg bg-muted/50 border border-border">
-                    <p className="text-sm font-medium mb-3">Currency Conversion</p>
+                    <p className="text-sm font-medium mb-3">{t('transfer.currencyConversionTitle')}</p>
                     <div className="grid grid-cols-1 sm:grid-cols-[1fr,auto,1fr] gap-3 items-end">
                       <div className="space-y-2">
-                        <Label htmlFor="source_amount">Amount ({fromCurrency})</Label>
+                        <Label htmlFor="source_amount">{t('transfer.amount')} ({fromCurrency})</Label>
                         <Input
                           id="source_amount"
                           type="number"
@@ -268,7 +272,7 @@ export default function AccountTransfer() {
                       </div>
                       <ArrowRight className="h-5 w-5 text-muted-foreground mb-2 hidden sm:block" />
                       <div className="space-y-2">
-                        <Label htmlFor="destination_amount">Amount ({toCurrency})</Label>
+                        <Label htmlFor="destination_amount">{t('transfer.amount')} ({toCurrency})</Label>
                         <Input
                           id="destination_amount"
                           type="number"
@@ -282,30 +286,29 @@ export default function AccountTransfer() {
                     {impliedRate && impliedRate > 0 && (
                       <div className="mt-2 space-y-1">
                         <p className="text-xs text-muted-foreground">
-                          Implied rate: 1 USD = {impliedRate.toFixed(2)} ARS
+                          {t('transfer.impliedRate', { rate: impliedRate.toFixed(2) })}
                         </p>
                         {exchangeRate > 0 && (
                           <p className="text-xs text-muted-foreground">
-                            Current rate: 1 USD = {exchangeRate.toFixed(2)} ARS
+                            {t('transfer.currentRate', { rate: exchangeRate.toFixed(2) })}
                           </p>
                         )}
                         {exchangeRate > 0 &&
                           Math.abs(impliedRate - exchangeRate) / exchangeRate > 0.02 && (
                             <p className="text-xs font-medium text-warning">
-                              Implied rate differs from the current rate by{' '}
-                              {((Math.abs(impliedRate - exchangeRate) / exchangeRate) * 100).toFixed(1)}%. Confirm this is intentional.
+                              {t('transfer.rateDivergence', { pct: ((Math.abs(impliedRate - exchangeRate) / exchangeRate) * 100).toFixed(1) })}
                             </p>
                           )}
                       </div>
                     )}
                   </div>
                   {(errors.source_amount || errors.destination_amount) && (
-                    <p className="text-sm text-destructive">Both amounts are required</p>
+                    <p className="text-sm text-destructive">{t('transfer.bothAmountsRequired')}</p>
                   )}
                 </div>
               ) : (
                 <div className="space-y-2">
-                  <Label htmlFor="source_amount">Amount ({fromCurrency})</Label>
+                  <Label htmlFor="source_amount">{t('transfer.amount')} ({fromCurrency})</Label>
                   <Input
                     id="source_amount"
                     type="number"
@@ -321,11 +324,11 @@ export default function AccountTransfer() {
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="notes">Notes (Optional)</Label>
+                <Label htmlFor="notes">{t('transfer.notesOptional')}</Label>
                 <Textarea
                   id="notes"
                   {...register('notes')}
-                  placeholder="Reason for transfer..."
+                  placeholder={t('transfer.notesPlaceholder')}
                   rows={3}
                 />
                 {errors.notes && (
@@ -335,10 +338,10 @@ export default function AccountTransfer() {
 
               <div className="flex gap-3 pt-4">
                 <Button type="button" variant="outline" onClick={handleCancel}>
-                  Cancel
+                  {t('common.cancel')}
                 </Button>
                 <Button type="submit" disabled={isSubmitting} className="flex-1">
-                  {isSubmitting ? 'Processing...' : 'Complete Transfer'}
+                  {isSubmitting ? t('common.processing') : t('transfer.completeTransfer')}
                 </Button>
               </div>
             </form>
@@ -348,7 +351,7 @@ export default function AccountTransfer() {
 
       {/* Transfer History */}
       <div className="space-y-4">
-        <h2 className="text-lg font-semibold">Transfer History</h2>
+        <h2 className="text-lg font-semibold">{t('transfer.transferHistory')}</h2>
         <TransferList />
       </div>
     </div>

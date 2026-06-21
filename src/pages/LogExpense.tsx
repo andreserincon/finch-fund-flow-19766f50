@@ -23,8 +23,8 @@ import { ArrowLeft, Wallet } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const expenseSchema = z.object({
-  transaction_date: z.string().min(1, 'Date is required'),
-  amount: z.number().positive('Amount must be positive'),
+  transaction_date: z.string().min(1, 'La fecha es obligatoria'),
+  amount: z.number().positive('El monto debe ser positivo'),
   category: z.enum([
     'event_expense',
     'parent_organization_fee',
@@ -228,7 +228,7 @@ export default function LogExpense() {
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="notes">{t('common.notes')} ({t('common.optional')})</Label>
+              <Label htmlFor="notes">{t('common.notes')} (opcional)</Label>
               <Textarea
                 id="notes"
                 {...register('notes')}

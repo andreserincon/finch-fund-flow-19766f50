@@ -243,7 +243,7 @@ export function MemberFeeMatrix({ filterMemberId, referenceMonth, adjustedTotalP
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
             <CardTitle className="text-lg md:text-xl font-display">
-              {filterMemberId !== undefined ? 'Tu cuota por mes' : t('dashboard.feeMatrixTitle')}
+              {filterMemberId !== undefined ? 'Tu cápita por mes' : t('dashboard.feeMatrixTitle')}
             </CardTitle>
             <CardDescription className="text-xs md:text-sm">
               {filterMemberId !== undefined ? 'Tu estado de capitas por mes' : t('dashboard.feeMatrixDesc')}

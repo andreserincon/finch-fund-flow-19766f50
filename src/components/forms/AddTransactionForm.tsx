@@ -280,7 +280,7 @@ export function AddTransactionForm({ defaultType = 'income', triggerLabel = 'Reg
     <DialogFooter className="flex flex-col-reverse gap-2 sm:flex-row sm:flex-wrap sm:justify-end sm:space-x-0">
       <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
       <Button type="submit" variant="outline" disabled={submitting || disabled} onClick={() => { addAnotherRef.current = true; }}>
-        Registrar y otro
+        Registrar y agregar otro
       </Button>
       <Button type="submit" disabled={submitting || disabled} onClick={() => { addAnotherRef.current = false; }}>
         {submitting ? 'Registrando...' : 'Registrar movimiento'}

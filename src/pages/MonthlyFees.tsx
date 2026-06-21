@@ -178,9 +178,9 @@ export default function MonthlyFees() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-xl md:text-2xl font-bold text-foreground font-display">Cuotas Mensuales</h1>
+          <h1 className="text-xl md:text-2xl font-bold text-foreground font-display">Cápitas Mensuales</h1>
           <p className="text-sm text-muted-foreground">
-            Configurá los montos de cuota para socios Estándar y Solidaria
+            Configurá los montos de cápita para socios Estándar y Solidaria
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -209,10 +209,10 @@ export default function MonthlyFees() {
 
       {/* History - Mobile Card View */}
       <div className="md:hidden space-y-3">
-        <h3 className="font-semibold">Historial de cuotas</h3>
+        <h3 className="font-semibold">Historial de cápitas</h3>
         {sortedMonths.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground bg-card rounded-lg border">
-            Todavía no hay cuotas configuradas
+            Todavía no hay cápitas configuradas
           </div>
         ) : (
           sortedMonths.map((month) => {
@@ -258,7 +258,7 @@ export default function MonthlyFees() {
       {/* History - Desktop Table View */}
       <Card className="hidden md:block">
         <CardHeader>
-          <CardTitle>Historial de cuotas</CardTitle>
+          <CardTitle>Historial de cápitas</CardTitle>
           <CardDescription>Tocá cualquier valor para editarlo</CardDescription>
         </CardHeader>
         <CardContent>
@@ -266,8 +266,8 @@ export default function MonthlyFees() {
             <TableHeader>
               <TableRow>
                 <TableHead>Mes</TableHead>
-                <TableHead className="text-right">Cuota Estándar</TableHead>
-                <TableHead className="text-right">Cuota Solidaria</TableHead>
+                <TableHead className="text-right">Cápita Estándar</TableHead>
+                <TableHead className="text-right">Cápita Solidaria</TableHead>
                 <TableHead className="text-right">GL Est.</TableHead>
                 <TableHead className="text-right">GL Sol.</TableHead>
               </TableRow>
@@ -276,7 +276,7 @@ export default function MonthlyFees() {
               {sortedMonths.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                    Todavía no hay cuotas configuradas
+                    Todavía no hay cápitas configuradas
                   </TableCell>
                 </TableRow>
               ) : (
@@ -334,7 +334,7 @@ function CurrentMonthFeeCard({
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4">
         <CardTitle className="text-xs md:text-sm font-medium">
-          Cuota {FEE_TYPE_LABELS[feeType]}
+          Cápita {FEE_TYPE_LABELS[feeType]}
         </CardTitle>
       </CardHeader>
       <CardContent className="p-4 pt-0">
@@ -394,13 +394,13 @@ function AddMonthlyFeeDialog({
       <DialogTrigger asChild>
         <Button>
           <PlusCircle className="mr-2 h-4 w-4" />
-          Agregar cuotas
+          Agregar cápitas
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Agregar cuotas</DialogTitle>
-          <DialogDescription>Definí los montos de cuota para un mes</DialogDescription>
+          <DialogTitle>Agregar cápitas</DialogTitle>
+          <DialogDescription>Definí los montos de cápita para un mes</DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
           <div className="space-y-2">
@@ -427,25 +427,25 @@ function AddMonthlyFeeDialog({
               </PopoverContent>
             </Popover>
             {alreadyExists && (
-              <p className="text-sm text-destructive">Ya existen cuotas para este mes. Editalas en su lugar.</p>
+              <p className="text-sm text-destructive">Ya existen cápitas para este mes. Editalas en su lugar.</p>
             )}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="standard_amount">Monto cuota Estándar</Label>
+            <Label htmlFor="standard_amount">Monto cápita Estándar</Label>
             <Input id="standard_amount" type="number" step="0.01" value={standardAmount} onChange={(e) => setStandardAmount(e.target.value)} placeholder="0.00" />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="solidarity_amount">Monto cuota Solidaria</Label>
+            <Label htmlFor="solidarity_amount">Monto cápita Solidaria</Label>
             <Input id="solidarity_amount" type="number" step="0.01" value={solidarityAmount} onChange={(e) => setSolidarityAmount(e.target.value)} placeholder="0.00" />
           </div>
           <div className="pt-2 border-t">
-            <p className="text-xs font-medium text-muted-foreground mb-3">Cuotas Gran Logia (opcional)</p>
+            <p className="text-xs font-medium text-muted-foreground mb-3">Cápitas Gran Logia (opcional)</p>
             <div className="space-y-2">
-              <Label htmlFor="gl_standard_amount">Cuota GL Estándar (ARS)</Label>
+              <Label htmlFor="gl_standard_amount">Cápita GL Estándar (ARS)</Label>
               <Input id="gl_standard_amount" type="number" step="0.01" value={glStandardAmount} onChange={(e) => setGlStandardAmount(e.target.value)} placeholder="0.00" />
             </div>
             <div className="space-y-2 mt-2">
-              <Label htmlFor="gl_solidarity_amount">Cuota GL Solidaria (ARS)</Label>
+              <Label htmlFor="gl_solidarity_amount">Cápita GL Solidaria (ARS)</Label>
               <Input id="gl_solidarity_amount" type="number" step="0.01" value={glSolidarityAmount} onChange={(e) => setGlSolidarityAmount(e.target.value)} placeholder="0.00" />
             </div>
           </div>
@@ -453,7 +453,7 @@ function AddMonthlyFeeDialog({
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
           <Button onClick={handleSubmit} disabled={isSubmitting || alreadyExists}>
-            {isSubmitting ? 'Guardando...' : 'Guardar cuotas'}
+            {isSubmitting ? 'Guardando...' : 'Guardar cápitas'}
           </Button>
         </DialogFooter>
       </DialogContent>

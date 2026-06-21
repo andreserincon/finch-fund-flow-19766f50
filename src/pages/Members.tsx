@@ -346,7 +346,7 @@ export default function Members() {
                   Tipo de Cuota {getSortIcon('fee_type')}
                 </Button>
               </TableHead>
-              <TableHead className="text-right">Cuota Mensual</TableHead>
+              <TableHead className="text-right">Cápita Mensual</TableHead>
               <TableHead className="text-right">Saldo Mensual</TableHead>
               <TableHead className="text-right">Saldo Eventos</TableHead>
               <TableHead className="text-right">Saldo General</TableHead>

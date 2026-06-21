@@ -2,6 +2,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -41,6 +42,7 @@ const incomeCategories: TransactionCategory[] = [
 ];
 
 export default function LogPayment() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { addTransaction } = useTransactions();
   const { members } = useMembers();
@@ -210,7 +212,7 @@ export default function LogPayment() {
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="notes">Notas (Opcional)</Label>
+              <Label htmlFor="notes">Notas (opcional)</Label>
               <Textarea id="notes" {...register('notes')} placeholder="Detalles adicionales sobre este pago..." rows={3} />
               {errors.notes && <p className="text-sm text-destructive">{errors.notes.message}</p>}
             </div>
@@ -223,7 +225,7 @@ export default function LogPayment() {
                 onClick={() => { addAnotherRef.current = true; }}
                 disabled={isSubmitting || (category === 'event_payment' && (!selectedEventId || !selectedMemberId))}
               >
-                {isSubmitting ? 'Registrando...' : 'Registrar y agregar otro'}
+                {isSubmitting ? 'Registrando...' : t('common.addAnother')}
               </Button>
               <Button
                 type="submit"
