@@ -30,6 +30,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
+import { TermTooltip } from '@/components/ui/TermTooltip';
 import { cn } from '@/lib/utils';
 import { format, startOfMonth, isFuture, startOfDay, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -268,8 +269,12 @@ export default function MonthlyFees() {
                 <TableHead>Mes</TableHead>
                 <TableHead className="text-right">Cápita Estándar</TableHead>
                 <TableHead className="text-right">Cápita Solidaria</TableHead>
-                <TableHead className="text-right">GL Est.</TableHead>
-                <TableHead className="text-right">GL Sol.</TableHead>
+                <TableHead className="text-right">
+                  <TermTooltip termKey="glPortion" className="justify-end">GL Est.</TermTooltip>
+                </TableHead>
+                <TableHead className="text-right">
+                  <TermTooltip termKey="glPortion" className="justify-end">GL Sol.</TermTooltip>
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

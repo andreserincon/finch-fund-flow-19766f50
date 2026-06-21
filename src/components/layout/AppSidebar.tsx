@@ -107,7 +107,8 @@ export function AppSidebar() {
 
   /* ── Treasury nav items ── */
   const mainNavItems = [
-    { title: t('nav.dashboard'), url: '/panel', icon: LayoutDashboard },
+    { title: t('nav.home'), url: '/home', icon: Home },
+    { title: t('nav.financialDetail'), url: '/panel', icon: LayoutDashboard },
     { title: t('nav.members'), url: '/members', icon: Users },
     // Member-only: their own read-only payment ledger + loans
     ...(isMemberOnly
@@ -225,7 +226,7 @@ export function AppSidebar() {
                       <SidebarMenuButton asChild>
                         <NavLink
                           to={item.url}
-                          end={item.url === '/panel'}
+                          end={item.url === '/panel' || item.url === '/home'}
                           className="sidebar-nav-item"
                           activeClassName="active"
                         >
@@ -365,17 +366,8 @@ export function AppSidebar() {
         )}
       </SidebarContent>
 
-      {/* ── Footer: home link, user info, sign-out ── */}
+      {/* ── Footer: user info + sign-out (Inicio now lives in the nav) ── */}
       <SidebarFooter className="p-4 border-t border-sidebar-border space-y-2">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => navigate('/home')}
-          className="w-full justify-start text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent"
-        >
-          <Home className="mr-2 h-4 w-4" />
-          {t('home.title', 'Inicio')}
-        </Button>
         <div className="flex items-center justify-between">
           <div className="flex-1 truncate">
             <p className="text-sm font-medium text-sidebar-foreground truncate">

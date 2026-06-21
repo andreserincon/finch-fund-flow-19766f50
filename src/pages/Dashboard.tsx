@@ -1,6 +1,5 @@
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useHiddenMode } from '@/contexts/HiddenModeContext';
 import { useMembers } from '@/hooks/useMembers';
 import { useTransactions } from '@/hooks/useTransactions';
 import { useMonthlyFees } from '@/hooks/useMonthlyFees';
@@ -35,7 +34,6 @@ import {
   Users,
   AlertTriangle,
   TrendingUp,
-  ArrowRight,
   Landmark,
   HandCoins,
   CalendarDays,
@@ -45,18 +43,15 @@ import {
 } from 'lucide-react';
 import { format, lastDayOfMonth, startOfMonth, startOfYear, addMonths, isAfter } from 'date-fns';
 import { parseLocalDate } from '@/lib/utils';
-import { getAttentionMembers, attentionTotalOwed, capitaOwed, getMemberCapitaStatus } from '@/lib/attention';
-import { MemberStatusBadge } from '@/components/dashboard/MemberStatusBadge';
+import { getAttentionMembers, capitaOwed } from '@/lib/attention';
 import { useMemberEventTotals } from '@/hooks/useMemberEventTotals';
 import { es } from 'date-fns/locale';
 import { Link } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
 import { FeeType } from '@/lib/types';
 
 
 export default function Dashboard() {
   const { t, i18n } = useTranslation();
-  const { displayName } = useHiddenMode();
   const { members, memberBalances, isLoading: membersLoading } = useMembers();
   const { transactions, isLoading: transactionsLoading } = useTransactions();
   const { monthlyFees, currentMonthFees, isLoading: feesLoading } = useMonthlyFees();
@@ -241,7 +236,6 @@ export default function Dashboard() {
     },
   });
 
-  const memberEventDebts = memberEventInfo.totals;
   const memberEventStatuses = memberEventInfo.statuses;
 
   const isLoading = membersLoading || transactionsLoading || feesLoading || transfersLoading || loansLoading || historyLoading || eventTotalsLoading;
@@ -370,10 +364,10 @@ export default function Dashboard() {
   }, [adjustedMemberBalances]);
 
   // Members requiring attention (capita-only "pago demorado"). Shared
-  // definition (src/lib/attention) so the Panel banner, the "Pago Demorado"
-  // card, the Inicio overview, and the Members filter always agree.
+  // definition (src/lib/attention) so the "Pago Demorado" card, the Inicio
+  // overview, and the Members filter always agree. The count drives the
+  // Pago Demorado StatCard below; the list and banner live on Inicio.
   const overdueMembers = getAttentionMembers(memberBalances, currentMonthFees, eventTotals);
-  const attentionTotal = attentionTotalOwed(overdueMembers, eventTotals);
   const membersOverdue = overdueMembers.length;
 
   const formatCurrency = (amount: number, currency: 'ARS' | 'USD' = 'ARS') => {
@@ -393,10 +387,10 @@ export default function Dashboard() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-3">
           <div>
-            <h1 className="text-xl md:text-2xl font-bold text-foreground font-display">{t('dashboard.title')}</h1>
+            <h1 className="text-xl md:text-2xl font-bold text-foreground font-display">{t('dashboard.detailTitle')}</h1>
             <p className="text-sm text-muted-foreground">
               {isCurrentMonth
-                ? t('dashboard.financialOverview', { month: format(selectedDate, 'MMMM yyyy', { locale: dateLocale }) })
+                ? t('dashboard.detailSubtitle', { month: format(selectedDate, 'MMMM yyyy', { locale: dateLocale }) })
                 : `Al ${format(cutoffDate, "d 'de' MMMM yyyy", { locale: dateLocale })}`
               }
             </p>
@@ -537,37 +531,8 @@ export default function Dashboard() {
         );
       })()}
 
-      {/* Attention banner: the treasurer's first question, answered up top */}
-      {!isMemberOnly && (
-        overdueMembers.length > 0 ? (
-          <Link
-            to="/members?atencion=1"
-            className="press block rounded-xl border border-overdue/40 bg-overdue/10 p-4 md:p-5 animate-fade-in"
-          >
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-start gap-3">
-                <AlertTriangle className="h-6 w-6 text-overdue shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-base md:text-lg font-semibold text-foreground">
-                    {t('dashboard.attentionCount', { count: overdueMembers.length })}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {t('dashboard.attentionTotal', { amount: formatCurrency(attentionTotal) })}
-                  </p>
-                </div>
-              </div>
-              <ArrowRight className="h-5 w-5 text-overdue shrink-0" />
-            </div>
-          </Link>
-        ) : (
-          <div className="rounded-xl border border-success/30 bg-success/10 p-4 md:p-5 flex items-center gap-3 animate-fade-in">
-            <Users className="h-6 w-6 text-success shrink-0" />
-            <p className="text-base md:text-lg font-semibold text-foreground">
-              {t('dashboard.allMembersUpToDate')}
-            </p>
-          </div>
-        )
-      )}
+      {/* Attention banner and the "Miembros que Requieren Atención" list now
+          live only on Inicio; the Panel is the financial-detail view. */}
 
       {/* Primary balances: the three accounts, money at a glance.
           Full-width on phone so large amounts never truncate. */}
@@ -596,90 +561,6 @@ export default function Dashboard() {
           variant={showSavings >= 0 ? 'success' : 'danger'}
         />
       </div>
-
-      {/* Overdue Members - hidden for member-only users */}
-      {!isMemberOnly && (
-        <div className="stat-card">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="section-header mb-0">{t('dashboard.membersRequiringAttention')}</h2>
-            <Link to="/members?atencion=1">
-              <Button variant="ghost" size="sm">
-                {t('common.viewAll')} <ArrowRight className="ml-1 h-4 w-4" />
-              </Button>
-            </Link>
-          </div>
-          {overdueMembers.length === 0 ? (
-            <div className="text-center py-8">
-              <Users className="h-12 w-12 text-success/30 mx-auto mb-2" />
-              <p className="text-muted-foreground">{t('dashboard.allMembersUpToDate')}</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {overdueMembers.map((member) => {
-                const monthlyDebt = capitaOwed(member, eventTotals);
-                const eventDebt = memberEventDebts[member.member_id] || 0;
-                const monthlyFeeRate = effectiveFees[member.fee_type] || 0;
-                const isMonthlyOverdue = monthlyDebt > monthlyFeeRate;
-                const capitaStatus = getMemberCapitaStatus(member, effectiveFees, undefined, eventTotals);
-                const hasEventDebt = eventDebt > 0;
-                const eventStatus = memberEventStatuses[member.member_id];
-                // Event Overdue = vencimiento pasado (worse). Event Unpaid =
-                // dentro de los 15 dias del vencimiento (milder, pre-due).
-                const isEventOverdue = !!eventStatus?.moroso;
-                const isEventUnpaid = !!eventStatus?.demorado && !isEventOverdue;
-
-                return (
-                  <div
-                    key={member.member_id}
-                    className="flex items-center justify-between py-2 border-b border-border/50 last:border-0"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm">{displayName(member.full_name, member.phone_number)}</p>
-                      <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs">
-                        {isMonthlyOverdue && (
-                          <span className="text-destructive">
-                            {t('dashboard.fees')}: {formatCurrency(monthlyDebt)}
-                          </span>
-                        )}
-                        {hasEventDebt && (
-                          <span className="text-warning">
-                            {t('dashboard.event')}: {formatCurrency(eventDebt)}
-                          </span>
-                        )}
-                        {!isMonthlyOverdue && !hasEventDebt && monthlyDebt > 0 && (
-                          <span className="text-muted-foreground">
-                            {t('dashboard.owes')} {formatCurrency(monthlyDebt)}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex gap-1 flex-shrink-0 flex-wrap justify-end">
-                      {isMonthlyOverdue && (
-                        <MemberStatusBadge status={capitaStatus} />
-                      )}
-                      {isEventOverdue && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-destructive/10 text-destructive font-medium">
-                          {t('dashboard.eventOverdue')}
-                        </span>
-                      )}
-                      {isEventUnpaid && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-warning/10 text-warning font-medium">
-                          {t('dashboard.eventUnpaid')}
-                        </span>
-                      )}
-                      {hasEventDebt && !isEventOverdue && !isEventUnpaid && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-medium">
-                          {t('dashboard.event')}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
 
       {/* Secondary metrics (treasurer aggregates about other members), hidden from member-only users */}
       {!isMemberOnly && (

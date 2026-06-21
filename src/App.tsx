@@ -318,10 +318,10 @@ function RootGate() {
     return <Landing />;
   }
 
-  // Signed-in web users land on the dashboard at its own stable route (/panel),
-  // so "/" stays purely the entry gate and the Panel is reachable in the
-  // installed PWA without re-showing the lock screen.
-  return <Navigate to="/panel" replace />;
+  // Signed-in web users land on Inicio (/home), the single canonical home.
+  // "/" stays purely the entry gate; the financial detail (Panel) lives at its
+  // own stable route (/panel), reachable from the nav.
+  return <Navigate to="/home" replace />;
 }
 
 /* ================================================================== */

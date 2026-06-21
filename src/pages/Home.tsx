@@ -121,7 +121,7 @@ export default function Home() {
 
   /* ---- quick links (role-gated) ---- */
   const quickLinks = [
-    { label: 'Panel', to: '/panel', icon: LayoutDashboard, show: true },
+    { label: 'Detalle financiero', to: '/panel', icon: LayoutDashboard, show: true },
     { label: 'Miembros', to: '/members', icon: Users, show: true },
     { label: 'Transacciones', to: '/transactions', icon: Receipt, show: !isMemberOnly },
     { label: 'Préstamos', to: '/loans', icon: LoanIcon, show: !isMemberOnly },
@@ -305,7 +305,7 @@ export default function Home() {
         <div className="grid gap-4 sm:grid-cols-2">
           {isMemberOnly && (
             <>
-              <ModuleTile title="Panel" subtitle="Tu estado de cuenta y la tesorería de la logia" icon={<LayoutDashboard className="h-6 w-6 text-primary-foreground" />} onClick={() => navigate('/panel')} />
+              <ModuleTile title="Detalle financiero" subtitle="Tu estado de cuenta y la tesorería de la logia" icon={<LayoutDashboard className="h-6 w-6 text-primary-foreground" />} onClick={() => navigate('/panel')} />
               <ModuleTile title="Mis pagos" subtitle="Tu historial de pagos" icon={<Receipt className="h-6 w-6 text-primary-foreground" />} onClick={() => navigate('/mis-pagos')} />
               <ModuleTile title="Mis préstamos" subtitle="El estado de tus préstamos" icon={<HandCoins className="h-6 w-6 text-primary-foreground" />} onClick={() => navigate('/loans')} />
             </>

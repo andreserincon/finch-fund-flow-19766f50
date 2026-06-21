@@ -44,12 +44,36 @@ export default {
       selectModule: 'Seleccioná un módulo para comenzar',
     },
 
+    // Glossary: short, one-sentence explanations of insider jargon, surfaced
+    // at point of use via TermTooltip so a brand-new treasurer is never stuck
+    // on an undefined term.
+    glossary: {
+      gl: 'Gran Logia: la organización matriz; parte de cada cápita se le gira.',
+      glPortion: 'La porción de la cápita que se gira a la Gran Logia.',
+      glPctCapita: 'El porcentaje de la cápita total que representa la porción de la Gran Logia.',
+      cvs: 'Coeficiente de Variación Salarial: índice usado para ajustar las cápitas.',
+      ratioGl: 'Propuesta que mantiene la misma proporción GL sobre cápita que hace un año.',
+      gl65: 'Propuesta donde la cápita GL representa el 65% de la cápita total.',
+      incrementoPropio: 'El aumento de nuestra cápita respecto del período anterior, en porcentaje.',
+      indiceAnual: 'El índice CVS acumulado de los últimos 12 meses, como referencia.',
+      capita: 'La cuota mensual de cada miembro.',
+      estandar: 'Cápita estándar: el monto que paga la mayoría de los miembros.',
+      solidaria: 'Cápita solidaria: un monto reducido para miembros con esa condición.',
+      impago: 'Debe la cápita del mes corriente.',
+      demorado: 'Debe la cápita de un mes anterior (vencida).',
+      adelantado: 'Pagó cápitas de meses que todavía no vencieron.',
+      matricula: 'Número de matrícula del miembro.',
+      nc: 'n/c: aún no era miembro ese mes.',
+    },
+
     // Sidebar & Navigation
     nav: {
       treasury: 'Tesorería',
       managementSystem: 'Sistema de Gestión',
       overview: 'Resumen',
+      home: 'Inicio',
       dashboard: 'Panel',
+      financialDetail: 'Detalle financiero',
       members: 'Miembros',
       transactions: 'Transacciones',
       loans: 'Préstamos',
@@ -80,6 +104,8 @@ export default {
     // Dashboard
     dashboard: {
       title: 'Panel',
+      detailTitle: 'Detalle financiero',
+      detailSubtitle: 'Análisis financiero de {{month}}',
       financialOverview: 'Resumen financiero para {{month}}',
       logTransaction: 'Registrar movimiento',
       bankMainAccount: 'Cuenta Bancaria Principal',
@@ -128,6 +154,7 @@ export default {
       statusCurrentUnpaid: 'Impago',
       statusOverdue: 'Demorado',
       statusFuture: 'Futuro',
+      statusNotMember: 'n/c = aún no era miembro',
     },
 
     // Insights Agent

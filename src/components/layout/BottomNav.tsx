@@ -5,7 +5,7 @@
  *   within thumb reach. Hidden on md+ where the sidebar carries navigation.
  *   Role-gated with the same hooks as AppSidebar. Honors the bottom safe-area.
  */
-import { LayoutDashboard, Users, MessageSquare, BookOpen, Receipt, Plus } from 'lucide-react';
+import { Home, Users, MessageSquare, BookOpen, Receipt, Plus } from 'lucide-react';
 import { ComponentType } from 'react';
 import { useTranslation } from 'react-i18next';
 import { NavLink } from '@/components/NavLink';
@@ -51,7 +51,7 @@ export function BottomNav() {
   const pending = reminders.filter((r) => r.status === 'pending_review').length;
 
   const leftTabs: Tab[] = [
-    { to: '/panel', end: true, icon: LayoutDashboard, label: t('nav.dashboard') },
+    { to: '/home', end: true, icon: Home, label: t('nav.home') },
     { to: '/members', icon: Users, label: t('nav.members') },
   ].filter(() => canViewTreasury);
 

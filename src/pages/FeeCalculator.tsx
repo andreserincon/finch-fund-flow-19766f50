@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { TermTooltip } from '@/components/ui/TermTooltip';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { StatCard } from '@/components/dashboard/StatCard';
@@ -44,9 +45,9 @@ function KPIList({ kpis, t, noGlData, baselineKpis }: { kpis: ProposalKPIs; t: (
   const formatDelta = (val: number) => `${val >= 0 ? '+' : ''}${formatARS(val)}`;
   const formatDeltaPct = (val: number) => `${val >= 0 ? '+' : ''}${val.toFixed(1)}%`;
 
-  const rows = isDelta ? [
+  const rows: { label: string; value: string; color: string; term?: string }[] = isDelta ? [
     { label: t('feeCalculator.totalMonthlyIncome'), value: formatDelta(kpis.totalMonthlyIncome - baselineKpis.totalMonthlyIncome), color: kpis.totalMonthlyIncome >= baselineKpis.totalMonthlyIncome ? 'text-success' : 'text-destructive' },
-    { label: t('feeCalculator.delta'), value: `${(kpis.delta - baselineKpis.delta).toFixed(1)}pp`, color: '' },
+    { label: t('feeCalculator.delta'), value: `${(kpis.delta - baselineKpis.delta).toFixed(1)}pp`, color: '', term: 'glPctCapita' },
   ] : [
     { label: t('feeCalculator.totalMonthlyIncome'), value: formatARS(kpis.totalMonthlyIncome), color: '' },
     { label: t('feeCalculator.glTotalCost'), value: formatARS(kpis.glTotalCost), color: '' },
@@ -55,16 +56,18 @@ function KPIList({ kpis, t, noGlData, baselineKpis }: { kpis: ProposalKPIs; t: (
       value: formatARS(kpis.netMonthlyIncome),
       color: kpis.netMonthlyIncome > 0 ? 'text-success' : 'text-overdue',
     },
-    { label: t('feeCalculator.ourFeeIncrease'), value: formatPct(kpis.ourFeeIncrease), color: '' },
+    { label: t('feeCalculator.ourFeeIncrease'), value: formatPct(kpis.ourFeeIncrease), color: '', term: 'incrementoPropio' },
     {
       label: t('feeCalculator.delta'),
       value: `${kpis.delta.toFixed(1)}%`,
       color: '',
+      term: 'glPctCapita',
     },
     {
       label: t('feeCalculator.deltaVsGlYearAgo'),
       value: kpis.deltaVsGlYearAgo !== null ? `${kpis.deltaVsGlYearAgo.toFixed(1)}%` : t('feeCalculator.noYoyData'),
       color: 'text-muted-foreground',
+      term: 'glPctCapita',
     },
     {
       label: t('feeCalculator.yoyFeeVariation'),
@@ -75,6 +78,7 @@ function KPIList({ kpis, t, noGlData, baselineKpis }: { kpis: ProposalKPIs; t: (
       label: t('feeCalculator.yoyIndexRef'),
       value: `${kpis.yoyAccumulatedIndex.toFixed(1)}%`,
       color: 'text-muted-foreground',
+      term: 'indiceAnual',
     },
   ];
 
@@ -88,7 +92,13 @@ function KPIList({ kpis, t, noGlData, baselineKpis }: { kpis: ProposalKPIs; t: (
       )}
       {rows.map((row) => (
         <div key={row.label} className="flex items-center justify-between text-[10px] landscape:text-[9px] md:text-sm">
-          <span className="text-muted-foreground truncate mr-1">{row.label}</span>
+          {row.term ? (
+            <TermTooltip termKey={row.term} className="text-muted-foreground truncate mr-1">
+              {row.label}
+            </TermTooltip>
+          ) : (
+            <span className="text-muted-foreground truncate mr-1">{row.label}</span>
+          )}
           <span className={`font-medium whitespace-nowrap ${row.color}`}>{row.value}</span>
         </div>
       ))}
@@ -98,6 +108,7 @@ function KPIList({ kpis, t, noGlData, baselineKpis }: { kpis: ProposalKPIs; t: (
 
 function ProposalCard({
   name,
+  termKey,
   badgeColor,
   bufferPct,
   proposedStd,
@@ -109,6 +120,7 @@ function ProposalCard({
   baselineKpis,
 }: {
   name: string;
+  termKey?: string;
   badgeColor: string;
   bufferPct: number;
   proposedStd: number;
@@ -123,7 +135,15 @@ function ProposalCard({
     <Card>
       <CardHeader className="p-2 landscape:p-1.5 md:p-6 pb-1 landscape:pb-0.5 md:pb-3">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1">
-          <Badge className={`${badgeColor} text-[10px] landscape:text-[9px] md:text-xs`}>{name}</Badge>
+          <Badge className={`${badgeColor} text-[10px] landscape:text-[9px] md:text-xs`}>
+            {termKey ? (
+              <TermTooltip termKey={termKey} className="decoration-current/40">
+                {name}
+              </TermTooltip>
+            ) : (
+              name
+            )}
+          </Badge>
           <span className="text-[9px] md:text-xs text-muted-foreground hidden sm:inline">
             {t('feeCalculator.deltaVsGl', { pct: bufferPct })}
           </span>
@@ -514,14 +534,14 @@ export default function FeeCalculator() {
     const ratioSol = targetDelta && targetDelta > 0 ? ceil500(projectedGlSol / (targetDelta / 100)) : baseSol;
 
     type ProposalItem = {
-      name: string; color: string; isVariant: boolean;
+      name: string; termKey?: string; color: string; isVariant: boolean;
       proposedStd: number; proposedSol: number; kpis: ProposalKPIs;
       baselineKpis?: ProposalKPIs; buffer: number;
     };
 
     const items: ProposalItem[] = [
       {
-        buffer: 0, name: 'Ratio GL', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+        buffer: 0, name: 'Ratio GL', termKey: 'ratioGl', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
         isVariant: false, proposedStd: ratioStd, proposedSol: ratioSol,
         kpis: computeKPIs(ratioStd, ratioSol),
       },
@@ -531,7 +551,7 @@ export default function FeeCalculator() {
         kpis: computeKPIs(baseStd, baseSol),
       },
       {
-        buffer: 0, name: 'GL 65%', color: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
+        buffer: 0, name: 'GL 65%', termKey: 'gl65', color: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
         isVariant: false,
         proposedStd: ceil500(projectedGlStd / 0.65),
         proposedSol: ceil500(projectedGlSol / 0.65),
@@ -621,7 +641,9 @@ export default function FeeCalculator() {
           </div>
 
         <div className="flex flex-col gap-1">
-            <Label className="text-xs text-muted-foreground">Trimestre CVS</Label>
+            <Label className="text-xs text-muted-foreground">
+              Trimestre <TermTooltip termKey="cvs">CVS</TermTooltip>
+            </Label>
             {!fetchError && selectedQuarter ? (
               <div className="h-10 flex items-center px-3 rounded-md border border-input bg-muted/50 text-sm w-[260px]">
                 {selectedQuarter.quarterLabel}, CVS: <span className="font-semibold ml-1">{formatPct(selectedQuarter.cvs)}</span>
@@ -714,6 +736,7 @@ export default function FeeCalculator() {
                 <ProposalCard
                   key={idx}
                   name={p.name}
+                  termKey={p.termKey}
                   badgeColor={p.color}
                   bufferPct={p.buffer}
                   proposedStd={p.proposedStd}

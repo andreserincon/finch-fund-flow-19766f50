@@ -76,10 +76,13 @@ export function MemberFeeMatrix({ filterMemberId, referenceMonth, adjustedTotalP
 
   const refDate = referenceMonth ?? new Date();
 
-  // Generate array of months centered on the reference date
+  // Generate array of months centered on the reference date. On mobile we show
+  // a 3-month window (current month plus the two prior) instead of a single
+  // column, so a treasurer can see recent history at a glance; the wider
+  // desktop window stays unchanged.
   const months = useMemo(() => {
     const result = [];
-    const startOffset = isMobile ? 0 : -3;
+    const startOffset = isMobile ? -2 : -3;
     const endOffset = isMobile ? 0 : 3;
 
     for (let i = startOffset; i <= endOffset; i++) {
@@ -267,9 +270,13 @@ export function MemberFeeMatrix({ filterMemberId, referenceMonth, adjustedTotalP
         </div>
       </CardHeader>
       <CardContent className="p-3 md:p-6">
-        <div className={cn("overflow-x-auto", !isMobile && "-mx-3 md:mx-0")}>
-          <div className={cn(!isMobile && "min-w-[600px]", "px-3 md:px-0")}>
-            <Table>
+        {/* Relative wrapper carries the right-edge fade that hints at more
+            columns to scroll. The fade sits above the scroller but ignores
+            pointer events so it never blocks horizontal swiping. */}
+        <div className="relative">
+          <div className={cn("overflow-x-auto", !isMobile && "-mx-3 md:mx-0")}>
+            <div className={cn(isMobile ? "min-w-[360px]" : "min-w-[600px]", "px-3 md:px-0")}>
+              <Table>
               <TableHeader>
               <TableRow>
                 <TableHead className="sticky left-0 bg-card z-10">Miembro</TableHead>
@@ -335,7 +342,15 @@ export function MemberFeeMatrix({ filterMemberId, referenceMonth, adjustedTotalP
               )}
             </TableBody>
             </Table>
+            </div>
           </div>
+          {/* Right-edge fade: a quiet affordance that more columns exist past
+              the viewport. Decorative only, so it is hidden from assistive tech
+              and never intercepts taps. */}
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-card to-transparent"
+          />
         </div>
         <div className="flex flex-wrap gap-3 md:gap-4 mt-4 text-xs">
           <div className="flex items-center gap-2">
@@ -353,6 +368,10 @@ export function MemberFeeMatrix({ filterMemberId, referenceMonth, adjustedTotalP
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded bg-muted/50 border border-border" />
             <span>{t('dashboard.statusFuture')}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-muted-foreground/30 text-[10px] w-3 text-center">n/c</span>
+            <span>{t('dashboard.statusNotMember')}</span>
           </div>
         </div>
       </CardContent>
