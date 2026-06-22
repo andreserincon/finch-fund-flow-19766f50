@@ -69,7 +69,9 @@ function getParticipantStatus(
   const todayStr = new Date().toISOString().slice(0, 10);
   const overdue = !!deadline && deadline.slice(0, 10) < todayStr;
   if (overdue) return { key: 'demorado', label: 'Demorado', className: 'status-overdue' };
-  if (paid > 0) return { key: 'pendiente', label: 'Pendiente', className: 'status-ahead' };
+  // "Pendiente" (partial payment, not yet overdue) reads like a pending state:
+  // amber, not the blue .status-ahead it used to borrow.
+  if (paid > 0) return { key: 'pendiente', label: 'Pendiente', className: 'event-pending-chip' };
   return { key: 'impago', label: 'Impago', className: 'status-unpaid' };
 }
 

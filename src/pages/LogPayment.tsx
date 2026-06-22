@@ -104,7 +104,20 @@ export default function LogPayment() {
         account: data.account,
         notes: data.notes || null,
       });
-      // The mutation hook already toasts on success; just decide where to go next.
+      // The mutation hook already fires a generic success toast. For a monthly
+      // capita paid by a known member, add a result toast that names the effect
+      // truthfully (the member's balance and status were updated). It deliberately
+      // does NOT claim "al dia": payments apply cumulatively to the oldest unpaid
+      // month first and are not tagged to a month, so a single or partial payment
+      // may not settle the member's debt. This only adds a message; it never
+      // touches the save path or how the balance is computed.
+      if (data.category === 'monthly_fee' && data.member_id && data.member_id !== 'guest') {
+        const paidMember = members.find((mm) => mm.id === data.member_id);
+        if (paidMember) {
+          toast.success(`Pago de cápita registrado para ${paidMember.full_name}. Su saldo y estado se actualizaron.`);
+        }
+      }
+      // Decide where to go next.
       if (addAnotherRef.current) {
         reset({ transaction_date: data.transaction_date, category: 'monthly_fee', account: data.account });
       } else {

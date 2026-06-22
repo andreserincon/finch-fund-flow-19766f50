@@ -165,6 +165,14 @@ export function BudgetMatrixEditor({ scenarioId, readOnly = false }: BudgetMatri
     }
   };
 
+  // True when the scenario has no budgeted amounts yet (every cell reads 0 and
+  // there are no pending drafts). Drives a one-line primer so a new treasurer
+  // knows the grid is editable. Read-only viewers do not see the prompt.
+  const isAllZeros =
+    !readOnly &&
+    Object.keys(drafts).length === 0 &&
+    Array.from(linesByKey.values()).every((l) => l.budgeted_amount === 0);
+
   if (isLoading) {
     return (
       <LodgeLoader />
@@ -173,6 +181,11 @@ export function BudgetMatrixEditor({ scenarioId, readOnly = false }: BudgetMatri
 
   return (
     <div className="space-y-8">
+      {isAllZeros && (
+        <p className="rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+          Tocá cualquier celda para ingresar el monto previsto; los totales se calculan solos.
+        </p>
+      )}
       {CURRENCIES.map((currency) => (
         <div key={currency} className="rounded-lg border bg-card">
           <div className="flex items-center justify-between border-b px-4 py-3">

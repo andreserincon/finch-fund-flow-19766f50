@@ -209,6 +209,21 @@
     @apply bg-overdue/10 text-overdue;
   }
 
+  /* Dedicated, NON-status chips. These are deliberately decoupled from the
+     status taxonomy above so a future status-color remap never silently
+     repaints them. */
+
+  /* A role label is not a payment status: keep it neutral (secondary). */
+  .role-chip {
+    @apply bg-secondary text-secondary-foreground;
+  }
+
+  /* "Pendiente" event participants read like a pending/impago state: use the
+     same amber token as impago (never blue, never gold). */
+  .event-pending-chip {
+    @apply bg-warning/10 text-warning;
+  }
+
   .amount-positive {
     @apply text-success font-semibold;
     font-variant-numeric: tabular-nums;

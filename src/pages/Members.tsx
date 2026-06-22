@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useHiddenMode } from '@/contexts/HiddenModeContext';
 import { useMembers } from '@/hooks/useMembers';
 import { useMonthlyFees } from '@/hooks/useMonthlyFees';
@@ -63,6 +64,7 @@ interface SortConfig {
 }
 
 export default function Members() {
+  const { t } = useTranslation();
   const { memberBalances, members, isLoading } = useMembers();
   // member_balances (the view) does not carry the masonic grade, so map it
   // from the full member rows for display.
@@ -210,7 +212,7 @@ export default function Members() {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar por nombre o matrícula..."
+            placeholder={t('members.searchPlaceholder')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9"

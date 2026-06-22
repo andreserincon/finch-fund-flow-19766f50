@@ -108,6 +108,7 @@ function KPIList({ kpis, t, noGlData, baselineKpis }: { kpis: ProposalKPIs; t: (
 
 function ProposalCard({
   name,
+  sublabel,
   termKey,
   badgeColor,
   bufferPct,
@@ -120,6 +121,7 @@ function ProposalCard({
   baselineKpis,
 }: {
   name: string;
+  sublabel?: string;
   termKey?: string;
   badgeColor: string;
   bufferPct: number;
@@ -148,6 +150,13 @@ function ProposalCard({
             {t('feeCalculator.deltaVsGl', { pct: bufferPct })}
           </span>
         </div>
+        {/* Plain-language sublabel: what this proposal actually does, so a new
+            treasurer does not have to decode the badge name. */}
+        {sublabel && (
+          <p className="mt-1 text-[9px] landscape:text-[8px] md:text-xs text-muted-foreground leading-snug">
+            {sublabel}
+          </p>
+        )}
       </CardHeader>
       <CardContent className="p-2 landscape:p-1.5 md:p-6 pt-0 md:pt-0 space-y-1.5 landscape:space-y-1 md:space-y-4">
         <div className="space-y-1 landscape:space-y-0.5 md:grid md:grid-cols-2 md:gap-4 md:space-y-0">
@@ -534,24 +543,24 @@ export default function FeeCalculator() {
     const ratioSol = targetDelta && targetDelta > 0 ? ceil500(projectedGlSol / (targetDelta / 100)) : baseSol;
 
     type ProposalItem = {
-      name: string; termKey?: string; color: string; isVariant: boolean;
+      name: string; sublabel: string; termKey?: string; color: string; isVariant: boolean;
       proposedStd: number; proposedSol: number; kpis: ProposalKPIs;
       baselineKpis?: ProposalKPIs; buffer: number;
     };
 
     const items: ProposalItem[] = [
       {
-        buffer: 0, name: 'Ratio GL', termKey: 'ratioGl', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+        buffer: 0, name: 'Ratio GL', sublabel: 'Mantiene la proporción con la Gran Logia', termKey: 'ratioGl', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
         isVariant: false, proposedStd: ratioStd, proposedSol: ratioSol,
         kpis: computeKPIs(ratioStd, ratioSol),
       },
       {
-        buffer: 0, name: t('feeCalculator.baseline'), color: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200',
+        buffer: 0, name: t('feeCalculator.baseline'), sublabel: 'Sigue la inflación (CVS)', color: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200',
         isVariant: false, proposedStd: baseStd, proposedSol: baseSol,
         kpis: computeKPIs(baseStd, baseSol),
       },
       {
-        buffer: 0, name: 'GL 65%', termKey: 'gl65', color: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
+        buffer: 0, name: 'GL 65%', sublabel: 'La Gran Logia al 65% de la cápita', termKey: 'gl65', color: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
         isVariant: false,
         proposedStd: ceil500(projectedGlStd / 0.65),
         proposedSol: ceil500(projectedGlSol / 0.65),
@@ -620,6 +629,13 @@ export default function FeeCalculator() {
               <RefreshCw className={`h-4 w-4 ${cvsFetching ? 'animate-spin' : ''}`} />
             </Button>
           </div>
+        </div>
+
+        {/* Cómo usar: a short primer so a new treasurer knows what this tool
+            does and that it never writes anything until a value is copied into
+            Cápitas Mensuales. */}
+        <div className="rounded-lg border border-border bg-muted/40 px-4 py-3 text-xs md:text-sm text-muted-foreground -mt-2">
+          {t('feeCalculator.howToUse')}
         </div>
 
         {/* Filters row: Month + Quarter side by side */}
@@ -736,6 +752,7 @@ export default function FeeCalculator() {
                 <ProposalCard
                   key={idx}
                   name={p.name}
+                  sublabel={p.sublabel}
                   termKey={p.termKey}
                   badgeColor={p.color}
                   bufferPct={p.buffer}

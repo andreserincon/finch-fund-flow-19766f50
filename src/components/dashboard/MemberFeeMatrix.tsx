@@ -15,12 +15,12 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
 import { cn, formatCurrencyCompact } from '@/lib/utils';
 import { LodgeLoader } from '@/components/lodge/LodgeLoader';
 
-type PaymentStatus = 'paid' | 'overdue' | 'current_unpaid' | 'future' | 'not_member';
+// Per-cell payment state for a single member/month. Named CellStatus so it does
+// not shadow the imported member-status union (PaymentStatus from @/lib/types).
+type CellStatus = 'paid' | 'overdue' | 'current_unpaid' | 'future' | 'not_member';
 
 interface MemberFeeMatrixProps {
   filterMemberId?: string | null | undefined;
@@ -46,7 +46,7 @@ function generateMonthRange(startDate: Date, endDate: Date): string[] {
 // Per-cell colors share the canonical status tokens used by the StatusBadge:
 // paid -> green (success), current_unpaid -> amber (warning, the impago color),
 // overdue -> red (overdue, the demorado color), future -> muted.
-function getStatusClasses(status: PaymentStatus): string {
+function getStatusClasses(status: CellStatus): string {
   switch (status) {
     case 'paid':
       return 'bg-success/20 text-success border-success/30';
@@ -139,14 +139,14 @@ export function MemberFeeMatrix({ filterMemberId, referenceMonth, adjustedTotalP
 
     const map = new Map<
       string,
-      { perMonth: Record<string, { status: PaymentStatus; amount: number }>; hasUnpaid: boolean }
+      { perMonth: Record<string, { status: CellStatus; amount: number }>; hasUnpaid: boolean }
     >();
 
     for (const member of memberBalances) {
       if (!member.is_active) continue;
       const joinMonth = startOfMonth(parseISO(member.join_date));
       const totalPaid = getEffectiveTotalPaid(member);
-      const perMonth: Record<string, { status: PaymentStatus; amount: number }> = {};
+      const perMonth: Record<string, { status: CellStatus; amount: number }> = {};
       let hasUnpaid = false;
       let cumulativeOwed: number | null = null;
 
@@ -175,7 +175,7 @@ export function MemberFeeMatrix({ filterMemberId, referenceMonth, adjustedTotalP
         const prevMonthOwed = cumulativeOwed - feeAmount;
         const isPaid = totalPaid >= cumulativeOwed;
 
-        let status: PaymentStatus;
+        let status: CellStatus;
         let amount: number;
         if (isPaid) {
           status = 'paid';
@@ -224,15 +224,6 @@ export function MemberFeeMatrix({ filterMemberId, referenceMonth, adjustedTotalP
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [memberBalances, showAllMembers, filterMemberId, memberStatus, adjustedTotalPaid]);
 
-  const paidMembersCount = useMemo(() => {
-    if (filterMemberId !== undefined) return 0;
-    let count = 0;
-    for (const m of memberBalances) {
-      if (m.is_active && !(memberStatus.get(m.member_id)?.hasUnpaid ?? false)) count++;
-    }
-    return count;
-  }, [memberBalances, filterMemberId, memberStatus]);
-
   if (isLoading) {
     return (
       <Card>
@@ -249,22 +240,40 @@ export function MemberFeeMatrix({ filterMemberId, referenceMonth, adjustedTotalP
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
             <CardTitle className="text-lg md:text-xl font-display">
-              {filterMemberId !== undefined ? 'Tu cápita por mes' : t('dashboard.feeMatrixTitle')}
+              {filterMemberId !== undefined ? t('dashboard.feeMatrixMineTitle') : t('dashboard.feeMatrixTitle')}
             </CardTitle>
             <CardDescription className="text-xs md:text-sm">
-              {filterMemberId !== undefined ? 'Tu estado de capitas por mes' : t('dashboard.feeMatrixDesc')}
+              {filterMemberId !== undefined ? t('dashboard.feeMatrixMineDesc') : t('dashboard.feeMatrixDesc')}
             </CardDescription>
           </div>
           {filterMemberId === undefined && (
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="show-all-members"
-                checked={showAllMembers}
-                onCheckedChange={setShowAllMembers}
-              />
-              <Label htmlFor="show-all-members" className="text-xs md:text-sm cursor-pointer">
-                {t('dashboard.feeMatrixShowAll', { count: paidMembersCount })}
-              </Label>
+            // Two-chip filter over the COMPLETE active roster. "Todos" shows
+            // everyone; "Solo con deuda" (the debtors-first default) shows only
+            // members with an unpaid/overdue cell. Same showAllMembers logic as
+            // before, just framed as a filter rather than a partial-view toggle.
+            <div className="inline-flex items-center gap-1 rounded-lg border border-border bg-muted/40 p-0.5" role="group" aria-label={t('dashboard.feeMatrixTitle')}>
+              <button
+                type="button"
+                onClick={() => setShowAllMembers(true)}
+                aria-pressed={showAllMembers}
+                className={cn(
+                  'rounded-md px-2.5 py-1 text-xs md:text-sm font-medium transition-colors',
+                  showAllMembers ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
+                )}
+              >
+                {t('dashboard.feeMatrixFilterAll')}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowAllMembers(false)}
+                aria-pressed={!showAllMembers}
+                className={cn(
+                  'rounded-md px-2.5 py-1 text-xs md:text-sm font-medium transition-colors',
+                  !showAllMembers ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
+                )}
+              >
+                {t('dashboard.feeMatrixFilterDebtors')}
+              </button>
             </div>
           )}
         </div>
@@ -279,7 +288,7 @@ export function MemberFeeMatrix({ filterMemberId, referenceMonth, adjustedTotalP
               <Table>
               <TableHeader>
               <TableRow>
-                <TableHead className="sticky left-0 bg-card z-10">Miembro</TableHead>
+                <TableHead className="sticky left-0 bg-card z-10">{t('dashboard.feeMatrixMember')}</TableHead>
                 {months.map((month) => (
                   <TableHead
                     key={month.key}
@@ -312,7 +321,7 @@ export function MemberFeeMatrix({ filterMemberId, referenceMonth, adjustedTotalP
                       {displayName(member.full_name, member.phone_number)}
                     </TableCell>
                     {months.map((month) => {
-                      const { status, amount } = perMonth?.[month.key] ?? { status: 'not_member' as PaymentStatus, amount: 0 };
+                      const { status, amount } = perMonth?.[month.key] ?? { status: 'not_member' as CellStatus, amount: 0 };
                       return (
                         <TableCell
                           key={month.key}

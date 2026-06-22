@@ -42,18 +42,40 @@ export function TermTooltip({
   const text = definition ?? (termKey ? t(`glossary.${termKey}`) : '');
   const [open, setOpen] = React.useState(false);
 
-  // Open on hover/focus (desktop) as well as click/tap (mobile). The Popover
-  // root is controlled so a tap toggles it and a pointer-leave closes it.
+  // A short grace period so moving the pointer from the trigger across the gap
+  // into the content does not close the popover mid-flight. Hovering EITHER the
+  // trigger or the content keeps it open; leaving both closes it after the
+  // delay. Tap/click still toggles (mobile), and outside-click / Escape still
+  // close it via the Popover root.
+  const closeTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const cancelClose = () => {
+    if (closeTimer.current) {
+      clearTimeout(closeTimer.current);
+      closeTimer.current = null;
+    }
+  };
+  const openNow = () => {
+    cancelClose();
+    setOpen(true);
+  };
+  const scheduleClose = () => {
+    cancelClose();
+    closeTimer.current = setTimeout(() => setOpen(false), 120);
+  };
+
+  React.useEffect(() => cancelClose, []);
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <button
           type="button"
           // A tap reveals the definition; hover/focus do too on desktop.
-          onMouseEnter={() => setOpen(true)}
-          onMouseLeave={() => setOpen(false)}
-          onFocus={() => setOpen(true)}
-          onBlur={() => setOpen(false)}
+          onMouseEnter={openNow}
+          onMouseLeave={scheduleClose}
+          onFocus={openNow}
+          onBlur={scheduleClose}
           aria-label={typeof children === 'string' ? `${children}: ${text}` : text}
           className={cn(
             'inline-flex items-center gap-0.5 text-left underline decoration-dotted decoration-muted-foreground/50 underline-offset-2 outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm',
@@ -70,6 +92,10 @@ export function TermTooltip({
         side="top"
         align="start"
         className="w-64 p-3 text-xs leading-relaxed text-popover-foreground motion-reduce:animate-none"
+        // Keep it open while the pointer is over the content; close shortly
+        // after it leaves.
+        onMouseEnter={openNow}
+        onMouseLeave={scheduleClose}
         // On touch the trigger keeps focus; let a second tap outside close it.
         onOpenAutoFocus={(e) => e.preventDefault()}
       >

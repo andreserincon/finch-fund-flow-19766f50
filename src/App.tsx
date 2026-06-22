@@ -363,6 +363,8 @@ const App = () => (
         <Route path="/loans" element={<TreasuryRoute><Loans /></TreasuryRoute>} />
         <Route path="/monthly-fees" element={<TreasuryStaffRoute><MonthlyFees /></TreasuryStaffRoute>} />
         <Route path="/expense-categories" element={<TreasuryStaffRoute><ExtraordinaryExpenses /></TreasuryStaffRoute>} />
+        {/* /eventos is the noun-matching alias for the events list page. */}
+        <Route path="/eventos" element={<Navigate to="/expense-categories" replace />} />
         <Route path="/events/:id" element={<TreasuryStaffRoute><EventOverview /></TreasuryStaffRoute>} />
         <Route path="/fee-calculator" element={<TreasuryStaffRoute><FeeCalculator /></TreasuryStaffRoute>} />
         <Route path="/reports" element={<TreasuryStaffRoute><Reports /></TreasuryStaffRoute>} />

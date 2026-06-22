@@ -17,9 +17,12 @@ import { ResetPasswordDialog } from '@/components/users/ResetPasswordDialog';
 import { ROLE_OPTIONS, getRoleLabel } from '@/lib/roles';
 import { Users, UserPlus, Pencil, KeyRound, MoreHorizontal } from 'lucide-react';
 
+// Role chips are NOT payment statuses. The treasurer chip uses a dedicated
+// neutral token (role-chip) so it is no longer coupled to the .status-ahead
+// color, which was remapped to blue for the "Adelantado" status.
 const ROLE_CHIP: Record<string, string> = {
   admin: 'status-up-to-date',
-  treasurer: 'status-ahead',
+  treasurer: 'role-chip',
   vm: 'bg-secondary text-secondary-foreground',
   bibliotecario: 'status-unpaid',
   member: 'bg-muted text-muted-foreground',

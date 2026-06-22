@@ -159,6 +159,23 @@ export function AppSidebar() {
     await signOut();
   };
 
+  // Footer caption: the user's ACTUAL role, derived from the same hooks that
+  // gate the rest of the UI. Order is by authority so the most privileged label
+  // wins: super-admin -> Administrador, Venerable (can manage users but is not a
+  // super-admin) -> Venerable, admin write access -> Tesorero, librarian ->
+  // Bibliotecario, member-only -> Miembro, anything else -> Visualizador.
+  const roleCaption = isSuperAdmin
+    ? t('nav.administrator')
+    : canManageUsers
+      ? t('nav.venerable')
+      : isAdmin
+        ? t('nav.treasurer')
+        : isBibliotecario
+          ? t('nav.bibliotecario')
+          : isMemberOnly
+            ? t('nav.member')
+            : t('nav.viewer');
+
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
       {/* ── Header: module switcher dropdown ── */}
@@ -374,7 +391,7 @@ export function AppSidebar() {
               {user?.email}
             </p>
             <p className="text-xs text-sidebar-foreground/60">
-              {isMemberOnly ? 'Miembro' : isAdmin ? t('nav.treasurer') : t('nav.viewer')}
+              {roleCaption}
             </p>
           </div>
           <Button
