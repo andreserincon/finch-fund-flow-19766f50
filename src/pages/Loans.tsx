@@ -204,7 +204,7 @@ export default function Loans() {
                     {isAdmin ? (
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-10 w-10 press"><MoreHorizontal className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="icon" className="h-10 w-10"><MoreHorizontal className="h-4 w-4" /></Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="bg-popover">
                           {loan.status === 'active' && (
@@ -242,7 +242,7 @@ export default function Loans() {
                         </DropdownMenuContent>
                       </DropdownMenu>
                     ) : !isMemberOnly ? (
-                      <Button variant="ghost" size="icon" className="h-10 w-10 press" onClick={() => setViewingHistoryLoan(loan)}>
+                      <Button variant="ghost" size="icon" className="h-10 w-10" onClick={() => setViewingHistoryLoan(loan)}>
                         <History className="h-4 w-4" />
                       </Button>
                     ) : null}

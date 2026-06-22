@@ -33,6 +33,7 @@ import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { CreateScenarioDialog } from '@/components/budget/CreateScenarioDialog';
 import { BudgetMatrixEditor } from '@/components/budget/BudgetMatrixEditor';
 import { BudgetParametersPanel } from '@/components/budget/BudgetParametersPanel';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 export default function Budget() {
   const { isAdmin } = useIsAdmin();
@@ -76,24 +77,20 @@ export default function Budget() {
 
   return (
     <div className="space-y-4 md:space-y-6 animate-fade-in">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-xl md:text-2xl font-bold text-foreground">
-            Presupuesto anual
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Planificación por mes, cuenta y categoría. Crea escenarios para
-            modelar diferentes supuestos.
-          </p>
-        </div>
-        {isAdmin && (
-          <CreateScenarioDialog
-            defaultYear={year}
-            existingScenarios={scenarios}
-            onCreated={(s) => setSelectedScenarioId(s.id)}
-          />
-        )}
-      </div>
+      <PageHeader
+        title="Presupuesto anual"
+        subtitle="Planificación por mes, cuenta y categoría. Crea escenarios para modelar diferentes supuestos."
+        hairline
+        actions={
+          isAdmin && (
+            <CreateScenarioDialog
+              defaultYear={year}
+              existingScenarios={scenarios}
+              onCreated={(s) => setSelectedScenarioId(s.id)}
+            />
+          )
+        }
+      />
 
       {/* ── Year + scenario selectors ── */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end">

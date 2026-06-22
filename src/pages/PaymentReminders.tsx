@@ -134,11 +134,11 @@ function ReminderCard({ item }: { item: ReminderItem }) {
             {displayName(member.full_name, member.phone_number)}
           </CardTitle>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" className="press" onClick={copy}>
+            <Button variant="outline" size="sm" onClick={copy}>
               <Copy className="mr-1.5 h-4 w-4" /> Copiar
             </Button>
             {link && (
-              <Button size="sm" className="press" asChild>
+              <Button size="sm" asChild>
                 <a href={link}>
                   <MessageSquare className="mr-1.5 h-4 w-4" /> Enviar por WhatsApp
                 </a>

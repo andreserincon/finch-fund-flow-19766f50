@@ -53,7 +53,7 @@ function UserActions({ user, onEdit, onReset }: { user: UserWithRole; onEdit: ()
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-10 w-10 press" aria-label="Acciones del usuario">
+        <Button variant="ghost" size="icon" className="h-10 w-10" aria-label="Acciones del usuario">
           <MoreHorizontal className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
@@ -90,7 +90,7 @@ export default function UserManagement() {
           <div className="rule-gold mt-2" />
           <p className="text-muted-foreground mt-2">Gestión de usuarios con acceso a la aplicación</p>
         </div>
-        <Button className="press shrink-0" onClick={() => setIsCreateDialogOpen(true)}>
+        <Button className="shrink-0" onClick={() => setIsCreateDialogOpen(true)}>
           <UserPlus className="h-4 w-4 mr-2" />
           Otorgar acceso
         </Button>

@@ -81,7 +81,7 @@ function AddExpenseDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="press"><PlusCircle className="mr-2 h-4 w-4" />Nuevo evento</Button>
+        <Button><PlusCircle className="mr-2 h-4 w-4" />Nuevo evento</Button>
       </DialogTrigger>
       <DialogContent className="max-h-[90dvh] overflow-y-auto">
         <DialogHeader>
@@ -182,7 +182,7 @@ function EditExpenseDialog({ expense }: { expense: ExtraordinaryExpense }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="icon" className="press" aria-label="Editar evento"><Pencil className="h-4 w-4" /></Button>
+        <Button variant="ghost" size="icon" aria-label="Editar evento"><Pencil className="h-4 w-4" /></Button>
       </DialogTrigger>
       <DialogContent className="max-h-[90dvh] overflow-y-auto">
         <DialogHeader>
@@ -239,7 +239,6 @@ function OpenOverviewButton({ expense }: { expense: ExtraordinaryExpense }) {
     <Button
       variant="ghost"
       size="icon"
-      className="press"
       onClick={() => navigate(`/events/${expense.id}`)}
       aria-label="Abrir resumen del evento"
     >
@@ -253,7 +252,7 @@ function DeleteExpenseDialog({ expense }: { expense: ExtraordinaryExpense }) {
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>
-        <Button variant="ghost" size="icon" className="press text-destructive hover:text-destructive" aria-label="Eliminar evento"><Trash2 className="h-4 w-4" /></Button>
+        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" aria-label="Eliminar evento"><Trash2 className="h-4 w-4" /></Button>
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>

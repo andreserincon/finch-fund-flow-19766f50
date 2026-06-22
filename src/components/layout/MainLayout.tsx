@@ -57,7 +57,7 @@ export function MainLayout({ children }: MainLayoutProps) {
                   type="button"
                   onClick={toggleHiddenMode}
                   aria-pressed={hiddenMode}
-                  aria-label={t('nav.hiddenMode', 'Modo oculto')}
+                  aria-label={t('nav.hiddenModeLabel', 'Ocultar nombres')}
                   title={t('nav.hiddenModeHint', 'Oculta los nombres de los miembros')}
                   className={cn(
                     'press flex items-center gap-2 rounded-full border px-2.5 py-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
@@ -67,7 +67,11 @@ export function MainLayout({ children }: MainLayoutProps) {
                   )}
                 >
                   {hiddenMode ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  <span className="text-xs font-medium">{t('nav.hiddenMode', 'Oculto')}</span>
+                  {/* Clearer label on roomier screens; collapses to icon-only on
+                      mobile, where the aria-label and title still convey it. */}
+                  <span className="hidden text-xs font-medium sm:inline">
+                    {t('nav.hiddenModeLabel', 'Ocultar nombres')}
+                  </span>
                 </button>
               </div>
             </div>

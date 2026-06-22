@@ -43,7 +43,7 @@ interface Tab {
 
 function TabLink({ to, end, icon: Icon, label, dot }: Tab) {
   return (
-    <NavLink to={to} end={end} className={tabClass} activeClassName="text-primary-strong" aria-label={label} title={label}>
+    <NavLink to={to} end={end} className={tabClass} activeClassName="text-primary" aria-label={label} title={label}>
       <span className="relative">
         <Icon className="h-5 w-5" />
         {dot && (

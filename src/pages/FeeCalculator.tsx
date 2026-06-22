@@ -13,6 +13,7 @@ import { TermTooltip } from '@/components/ui/TermTooltip';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { StatCard } from '@/components/dashboard/StatCard';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { useMonthlyFees } from '@/hooks/useMonthlyFees';
 import { useMembers } from '@/hooks/useMembers';
 import { useCVSIndex, QuarterlyIndex } from '@/hooks/useCVSIndex';
@@ -596,40 +597,46 @@ export default function FeeCalculator() {
     <TooltipProvider>
       <div className="space-y-4 landscape:space-y-2 md:space-y-6 animate-fade-in p-4 md:p-6">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 landscape:gap-1 md:gap-4">
-          <div>
-            <h1 className="text-xl landscape:text-lg md:text-3xl font-bold flex items-center gap-2">
+        <PageHeader
+          className="gap-2 landscape:gap-1 md:gap-4"
+          title={
+            <span className="flex items-center gap-2">
               <Calculator className="h-5 w-5 landscape:h-4 landscape:w-4 md:h-7 md:w-7 text-primary" />
               {t('feeCalculator.title')}
-            </h1>
-            <p className="text-muted-foreground mt-1 text-sm landscape:hidden">{t('feeCalculator.subtitle')}</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={exportCvsToExcel}
-                  disabled={!monthly.length}
-                  className="h-8 w-8"
-                >
-                  <Download className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Exportar planilla Excel (.xlsx)</TooltipContent>
-            </Tooltip>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => refetchCvs()}
-              disabled={cvsFetching}
-              className="h-8 w-8"
-            >
-              <RefreshCw className={`h-4 w-4 ${cvsFetching ? 'animate-spin' : ''}`} />
-            </Button>
-          </div>
-        </div>
+            </span>
+          }
+          titleClassName="text-xl landscape:text-lg md:text-3xl"
+          subtitle={t('feeCalculator.subtitle')}
+          subtitleClassName="landscape:hidden"
+          hairline
+          actions={
+            <>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={exportCvsToExcel}
+                    disabled={!monthly.length}
+                    className="h-8 w-8"
+                  >
+                    <Download className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Exportar planilla Excel (.xlsx)</TooltipContent>
+              </Tooltip>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => refetchCvs()}
+                disabled={cvsFetching}
+                className="h-8 w-8"
+              >
+                <RefreshCw className={`h-4 w-4 ${cvsFetching ? 'animate-spin' : ''}`} />
+              </Button>
+            </>
+          }
+        />
 
         {/* Cómo usar: a short primer so a new treasurer knows what this tool
             does and that it never writes anything until a value is copied into

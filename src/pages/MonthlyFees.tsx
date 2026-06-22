@@ -101,7 +101,9 @@ function EditableCell({
     <span
       onClick={startEdit}
       className={cn(
-        'font-mono text-sm cursor-pointer rounded px-1.5 py-0.5 transition-colors',
+        // Reserve the exact footprint of the edit Input (h-8 w-24, right
+        // aligned) so swapping display for input does not reflow the row.
+        'inline-flex h-8 min-w-[6rem] items-center justify-end rounded px-1.5 font-mono text-sm cursor-pointer transition-colors',
         disabled ? 'cursor-default' : 'hover:bg-muted',
         isMuted && 'text-muted-foreground',
       )}

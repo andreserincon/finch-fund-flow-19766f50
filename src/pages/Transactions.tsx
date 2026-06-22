@@ -308,7 +308,7 @@ export default function Transactions() {
                   {isAdmin && (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-10 w-10 press">
+                        <Button variant="ghost" size="icon" className="h-10 w-10">
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>

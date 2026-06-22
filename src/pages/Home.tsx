@@ -337,7 +337,7 @@ function ModuleTile({
   return (
     <button
       onClick={onClick}
-      className="press flex items-center gap-3 rounded-xl border bg-card p-4 text-left hover:shadow-md hover:border-primary/40 transition-all"
+      className="press flex items-center gap-3 rounded-xl border bg-card p-4 text-left hover:shadow-md hover:border-primary/40 transition-[box-shadow,border-color] [transition-duration:var(--dur-base)] [transition-timing-function:var(--ease-soft)]"
     >
       <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg gradient-primary">{icon}</span>
       <span className="min-w-0">

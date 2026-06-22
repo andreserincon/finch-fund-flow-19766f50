@@ -100,7 +100,7 @@ export default {
       administration: 'Administración',
       adminSubtitle: 'Gestión del sistema',
       toggleSidebar: 'Abrir o cerrar el menú',
-      hiddenMode: 'Oculto',
+      hiddenModeLabel: 'Ocultar nombres',
       hiddenModeHint: 'Oculta los nombres de los miembros',
       portrait: 'Vista vertical',
       landscape: 'Vista horizontal',

@@ -17,6 +17,7 @@ import {
 import { useAccountTransfers } from '@/hooks/useAccountTransfers';
 import { useExchangeRate } from '@/hooks/useExchangeRate';
 import { TransferList } from '@/components/transfers/TransferList';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { AccountType, ACCOUNT_LABELS } from '@/lib/types';
 import { formatCurrency, getCurrencyForAccount } from '@/lib/utils';
 import { ArrowLeft, ArrowLeftRight, ArrowRight, Plus, X } from 'lucide-react';
@@ -142,32 +143,33 @@ export default function AccountTransfer() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
+      <PageHeader
+        title={t('transfer.title')}
+        subtitle={t('transfer.subtitle')}
+        hairline
+        leading={
           <Link to="/panel">
             <Button variant="ghost" size="icon">
               <ArrowLeft className="h-4 w-4" />
             </Button>
           </Link>
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">{t('transfer.title')}</h1>
-            <p className="text-muted-foreground">{t('transfer.subtitle')}</p>
-          </div>
-        </div>
-        {!showForm && (
-          <Button onClick={() => setShowForm(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            {t('transfer.newTransfer')}
-          </Button>
-        )}
-      </div>
+        }
+        actions={
+          !showForm && (
+            <Button onClick={() => setShowForm(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              {t('transfer.newTransfer')}
+            </Button>
+          )
+        }
+      />
 
       {showForm && (
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className="font-display flex items-center gap-2">
                   <ArrowLeftRight className="h-5 w-5 text-primary" />
                   {t('transfer.newTransfer')}
                 </CardTitle>

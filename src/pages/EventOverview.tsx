@@ -130,7 +130,7 @@ function AddGuestDialog({ eventId, defaultAmount, defaultInstallments, className
       }}
     >
       <DialogTrigger asChild>
-        <Button variant="outline" className={`press ${className ?? ''}`}>
+        <Button variant="outline" className={className}>
           <UserPlus className="mr-2 h-4 w-4" />
           Agregar invitado
         </Button>
@@ -407,7 +407,7 @@ function ParticipantEditSheet({ payment, eventId }: { payment: EventMemberPaymen
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetTrigger asChild>
-        <Button variant="outline" size="sm" className="press">
+        <Button variant="outline" size="sm">
           <Pencil className="mr-1 h-4 w-4" />
           Editar
         </Button>
@@ -441,7 +441,7 @@ function ParticipantEditSheet({ payment, eventId }: { payment: EventMemberPaymen
                 type="button"
                 variant="outline"
                 size="icon"
-                className="h-12 w-12 press"
+                className="h-12 w-12"
                 onClick={() => setCuotas((c) => Math.max(1, c - 1))}
                 disabled={cuotas <= 1}
                 aria-label="Quitar una cuota"
@@ -453,7 +453,7 @@ function ParticipantEditSheet({ payment, eventId }: { payment: EventMemberPaymen
                 type="button"
                 variant="outline"
                 size="icon"
-                className="h-12 w-12 press"
+                className="h-12 w-12"
                 onClick={() => setCuotas((c) => Math.min(36, c + 1))}
                 disabled={cuotas >= 36}
                 aria-label="Agregar una cuota"
@@ -470,7 +470,7 @@ function ParticipantEditSheet({ payment, eventId }: { payment: EventMemberPaymen
           <SheetClose asChild>
             <Button type="button" variant="outline" className="h-11 w-full sm:w-auto">Cancelar</Button>
           </SheetClose>
-          <Button type="button" className="h-11 w-full sm:w-auto press" onClick={save} disabled={updatePayment.isPending}>
+          <Button type="button" className="h-11 w-full sm:w-auto" onClick={save} disabled={updatePayment.isPending}>
             {updatePayment.isPending ? 'Guardando...' : 'Guardar'}
           </Button>
         </SheetFooter>
@@ -515,7 +515,7 @@ function EditGuestDialog({ payment, eventId }: { payment: EventMemberPayment; ev
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="press">
+        <Button variant="outline" size="sm">
           <Pencil className="mr-1 h-4 w-4" />
           Datos
         </Button>
@@ -570,7 +570,7 @@ function RemoveParticipantDialog({ payment, eventId, displayName }: { payment: E
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>
-        <Button variant="outline" size="sm" className="press text-destructive hover:text-destructive">
+        <Button variant="outline" size="sm" className="text-destructive hover:text-destructive">
           <Trash2 className="mr-1 h-4 w-4" />
           Quitar
         </Button>
@@ -675,7 +675,7 @@ function ParticipantCard({
             payment={payment}
             eventId={eventId}
             trigger={
-              <Button className="w-full h-11 press">
+              <Button className="w-full h-11">
                 <Receipt className="mr-2 h-4 w-4" />
                 Registrar pago
               </Button>
@@ -906,7 +906,7 @@ function AssignAllMembersButton({ eventId, defaultAmount, defaultInstallments, c
   return (
     <Button
       variant="outline"
-      className={`press ${className ?? ''}`}
+      className={className}
       onClick={() =>
         createPaymentsForAllMembers.mutate({ eventId, amountPerMember: defaultAmount, installments: defaultInstallments })
       }
@@ -1097,7 +1097,7 @@ export default function EventOverview() {
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <Button variant="ghost" size="sm" onClick={() => navigate('/expense-categories')} className="mb-2 press">
+          <Button variant="ghost" size="sm" onClick={() => navigate('/expense-categories')} className="mb-2">
             <ArrowLeft className="mr-2 h-4 w-4" /> Eventos
           </Button>
           <h1 className="text-2xl font-bold text-foreground">{event.name}</h1>
@@ -1111,7 +1111,7 @@ export default function EventOverview() {
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="press shrink-0 sm:mt-9" disabled={generatingRoster}>
+            <Button variant="outline" className="shrink-0 sm:mt-9" disabled={generatingRoster}>
               <FileText className="mr-2 h-4 w-4" />
               {generatingRoster ? 'Generando...' : 'Lista de asistencia'}
             </Button>
@@ -1197,7 +1197,7 @@ export default function EventOverview() {
                       </SelectContent>
                     </Select>
                     <Button
-                      className="press shrink-0"
+                      className="shrink-0"
                       onClick={async () => {
                         if (!memberToAdd) return;
                         await addMemberToEvent.mutateAsync({

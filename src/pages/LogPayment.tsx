@@ -19,6 +19,7 @@ import { useMonthlyFees } from '@/hooks/useMonthlyFees';
 import { TransactionCategory, CATEGORY_LABELS, AccountType, ACCOUNT_LABELS } from '@/lib/types';
 import { ArrowLeft, PlusCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useEffect, useRef } from 'react';
@@ -132,17 +133,18 @@ export default function LogPayment() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6 animate-fade-in">
-      <div className="flex items-center gap-4">
-        <Link to="/panel"><Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button></Link>
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Registrar Pago</h1>
-          <p className="text-muted-foreground">Registrar una transacción de ingreso</p>
-        </div>
-      </div>
+      <PageHeader
+        title="Registrar Pago"
+        subtitle="Registrar una transacción de ingreso"
+        hairline
+        leading={
+          <Link to="/panel"><Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button></Link>
+        }
+      />
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="font-display flex items-center gap-2">
             <PlusCircle className="h-5 w-5 text-success" />
             Nuevo Ingreso
           </CardTitle>

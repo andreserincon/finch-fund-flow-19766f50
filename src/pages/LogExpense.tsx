@@ -21,6 +21,7 @@ import { useExtraordinaryExpenses } from '@/hooks/useExtraordinaryExpenses';
 import { TransactionCategory, CATEGORY_LABELS, AccountType, ACCOUNT_LABELS } from '@/lib/types';
 import { ArrowLeft, Wallet } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 const expenseSchema = z.object({
   transaction_date: z.string().min(1, 'La fecha es obligatoria'),
@@ -104,21 +105,22 @@ export default function LogExpense() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6 animate-fade-in">
-      <div className="flex items-center gap-4">
-        <Link to="/panel">
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-        </Link>
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">{t('logExpense.title')}</h1>
-          <p className="text-muted-foreground">{t('logExpense.subtitle')}</p>
-        </div>
-      </div>
+      <PageHeader
+        title={t('logExpense.title')}
+        subtitle={t('logExpense.subtitle')}
+        hairline
+        leading={
+          <Link to="/panel">
+            <Button variant="ghost" size="icon">
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          </Link>
+        }
+      />
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="font-display flex items-center gap-2">
             <Wallet className="h-5 w-5 text-overdue" />
             {t('logExpense.newExpense')}
           </CardTitle>

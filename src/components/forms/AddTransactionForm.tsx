@@ -292,7 +292,7 @@ export function AddTransactionForm({ defaultType = 'income', triggerLabel = 'Reg
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {trigger ?? (
-          <Button className="press">
+          <Button>
             <PlusCircle className="mr-2 h-4 w-4" />
             {triggerLabel}
           </Button>

@@ -32,7 +32,11 @@ export const MemberStatusBadge = React.forwardRef<HTMLSpanElement, MemberStatusB
   ({ status, className, ...props }, ref) => {
     const { t } = useTranslation();
     return (
-      <span ref={ref} className={cn('status-badge', STATUS_CLASS[status], className)} {...props}>
+      <span ref={ref} className={cn('status-badge gap-1.5', STATUS_CLASS[status], className)} {...props}>
+        {/* Small dot in the status color: a quiet, non-color-only cue so the
+            state reads even where hue alone is hard to tell apart. Inherits the
+            badge text color via currentColor, so it tracks each status. */}
+        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-current" aria-hidden="true" />
         {t(STATUS_I18N[status])}
       </span>
     );

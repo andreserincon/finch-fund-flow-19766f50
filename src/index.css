@@ -19,12 +19,18 @@
     --popover: 0 0% 100%;
     --popover-foreground: 240 8% 9%;
 
-    /* Primary - Antique gold (the single accent) */
-    --primary: 42 54% 47%;
-    --primary-foreground: 240 8% 6%;
-    /* Deeper bronze for gold text/icons on light surfaces (passes AA contrast,
-       where the bright gold above does not). Use for text-primary on warm white. */
-    --primary-strong: 40 60% 30%;
+    /* Primary - Antique gold (the single accent). Darkened to a bronze that
+       passes WCAG AA as text on the warm-white ground (about 5:1), so the SAME
+       token serves as both brand fill and text accent. There is no longer a
+       separate lighter "fill gold"; one gold, used everywhere on light. */
+    --primary: 40 60% 33%;
+    /* Light label on the bronze fill (the near-black foreground failed AA on
+       the darker gold). */
+    --primary-foreground: 40 30% 97%;
+    /* On LIGHT surfaces --primary-strong is now an alias of --primary so any
+       legacy text-primary-strong resolves to the same accessible gold. The
+       documented divergent value lives only in the .dark block below. */
+    --primary-strong: 40 60% 33%;
 
     /* Secondary - Warm neutral */
     --secondary: 40 20% 92%;
@@ -64,7 +70,7 @@
     /* Borders & inputs */
     --border: 40 15% 86%;
     --input: 40 15% 86%;
-    --ring: 42 54% 47%;
+    --ring: 40 60% 33%;
 
     --radius: 0.625rem;
 
@@ -164,7 +170,10 @@
 
 @layer components {
   .stat-card {
-    @apply bg-card rounded-xl border border-border p-6 shadow-sm transition-all;
+    @apply bg-card rounded-xl border border-border p-6 shadow-sm;
+    transition-property: box-shadow, border-color;
+    transition-duration: var(--dur-base);
+    transition-timing-function: var(--ease-soft);
   }
 
   /* Only cards that actually navigate get the lift, so a plain metric never
@@ -266,14 +275,15 @@
     @apply font-display text-lg font-semibold text-foreground mb-4;
   }
 
-  /* The lodge brand move: a short gold hairline under every section title. */
+  /* The lodge brand move: a short gold hairline under every section title.
+     Derived from the unified --primary so every gold reads as one identity. */
   .section-header::after {
     content: "";
     display: block;
     width: 40px;
     height: 1px;
     margin-top: 0.375rem;
-    background: hsl(42 54% 47% / 0.45);
+    background: hsl(var(--primary) / 0.55);
   }
 }
 
@@ -283,14 +293,14 @@
   }
   
   .gradient-primary {
-    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(42 54% 36%) 100%);
+    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(40 60% 26%) 100%);
   }
 
   /* The lodge gold hairline rule */
   .rule-gold {
     height: 1px;
     width: 64px;
-    background: hsl(42 54% 47% / 0.45);
+    background: hsl(var(--primary) / 0.55);
     border: 0;
   }
 

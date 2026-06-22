@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 const monthNames = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -143,12 +144,11 @@ export default function Reports() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">{t('reports.title')}</h1>
-          <p className="text-muted-foreground">{t('reports.subtitle')}</p>
-        </div>
-        {isAdmin && (
+      <PageHeader
+        title={t('reports.title')}
+        subtitle={t('reports.subtitle')}
+        hairline
+        actions={isAdmin && (
           <Dialog open={isGenerateDialogOpen} onOpenChange={setIsGenerateDialogOpen}>
             <DialogTrigger asChild>
               <Button>
@@ -226,11 +226,11 @@ export default function Reports() {
             </DialogContent>
           </Dialog>
         )}
-      </div>
+      />
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="font-display flex items-center gap-2">
             <Calendar className="h-5 w-5" />
             {t('reports.reportsList')}
           </CardTitle>
