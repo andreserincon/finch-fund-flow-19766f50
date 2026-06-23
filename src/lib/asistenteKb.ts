@@ -270,7 +270,10 @@ export const ASISTENTE_TASKS: KbTask[] = [
     screen: 'Reportes',
     route: '/reports',
     nav: 'En escritorio, Reportes esta en el menú de Resumen de la barra lateral. En el celular, esta en la pestaña Más, dentro de Resumen.',
-    access: 'staff',
+    // Acceso 'admin': generar el reporte requiere Tesorero/Administrador (el
+    // boton Generar Reporte solo aparece con isAdmin), aunque la pantalla de
+    // Reportes sea visible para el personal de tesorería.
+    access: 'admin',
     // Stems de intencion: reporte/informe mensual. "report" cubre
     // reporte/reportes/reportar; "informe" es el sinonimo comun.
     keywords: ['report', 'informe'],
@@ -441,7 +444,10 @@ export const ASISTENTE_TASKS: KbTask[] = [
     screen: 'Miembros',
     route: '/members',
     nav: 'En escritorio, Miembros esta en Resumen en la barra lateral. En el celular, es una pestaña fija en la barra inferior.',
-    access: 'treasury',
+    // Acceso 'admin': dar de alta un miembro requiere Tesorero/Administrador (el
+    // boton Agregar Miembro solo aparece con isAdmin), aunque la lista de
+    // Miembros sea visible para el personal de tesorería.
+    access: 'admin',
     // Stems de intencion: alta/gestion de un miembro o socio. "miembro" y
     // "socio" cubren los sustantivos; "dar de alta" cubre el verbo de incorporar
     // (la frase completa evita falsos positivos como "salta" o "resalta").
@@ -486,7 +492,10 @@ export const ASISTENTE_TASKS: KbTask[] = [
     screen: 'Eventos',
     route: '/expense-categories',
     nav: 'En escritorio, Eventos esta en Configuración en la barra lateral. En el celular, esta en la pestaña Más, dentro de Configuración. (La ruta /eventos lleva a la misma pantalla.)',
-    access: 'staff',
+    // Acceso 'admin': crear o gestionar un evento requiere Tesorero/Administrador
+    // (Nuevo evento solo aparece con isAdmin), aunque la pantalla de Eventos sea
+    // visible para el personal de tesorería.
+    access: 'admin',
     // Stems de intencion: crear o gestionar un evento. "evento" cubre
     // evento/eventos.
     keywords: ['evento'],

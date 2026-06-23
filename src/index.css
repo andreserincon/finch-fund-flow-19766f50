@@ -478,3 +478,9 @@
   background: hsl(40 60% 28%);
   border-color: hsl(40 60% 28%);
 }
+/* In dark mode the resting gold is lighter (see .dark --primary), so hover must
+   lighten, not darken, to keep the feedback direction correct. */
+.dark .driver-popover.driver-popover .driver-popover-footer .driver-popover-next-btn:hover {
+  background: hsl(42 62% 64%);
+  border-color: hsl(42 62% 64%);
+}
