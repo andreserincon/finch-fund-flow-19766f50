@@ -12,7 +12,7 @@
  *   copia. Estilo Direction 3 (calmo, dorado), mobile-first y accesible.
  */
 
-import { ListChecks, Map, BookOpen } from 'lucide-react';
+import { ListChecks, Map, BookOpen, Sparkles } from 'lucide-react';
 
 import {
   Accordion,
@@ -20,12 +20,17 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import {
   ASISTENTE_TASKS,
   ASISTENTE_GLOSSARY,
   type KbTaskId,
 } from '@/lib/asistenteKb';
+import { canAccessTour } from '@/lib/asistenteMatch';
+import { useIsAdmin } from '@/hooks/useIsAdmin';
+import { useCanViewTreasury } from '@/hooks/useCanViewTreasury';
+import { useIsMemberOnly } from '@/hooks/useIsMemberOnly';
 
 /**
  * Un paso de la lista "Primeros pasos": las tareas centrales de la primera
@@ -53,13 +58,30 @@ const TASK_TITLE_BY_ID: Record<string, string> = Object.fromEntries(
 
 interface AsistenteFallbackProps {
   className?: string;
+  /**
+   * Opcional. Cuando se provee, bajo cada tarea que tiene recorrido guiado y a
+   * cuya pantalla el usuario puede llegar, se muestra un boton "Mostrame en la
+   * app" que llama a onStartTour con el id de la tarea. Si no se provee, no se
+   * renderiza ningun boton de recorrido (la guía sigue siendo usable sola, por
+   * ejemplo en el estado degradado sin chat detras).
+   */
+  onStartTour?: (taskId: string) => void;
 }
 
 /**
  * Guía rápida estática. Pensada para vivir dentro del scroll del chat, por eso
  * no controla su propio overflow: el contenedor padre maneja el desplazamiento.
  */
-export function AsistenteFallback({ className }: AsistenteFallbackProps) {
+export function AsistenteFallback({
+  className,
+  onStartTour,
+}: AsistenteFallbackProps) {
+  // Gate por tarea de los botones del recorrido, espejo de los guards de
+  // App.tsx. Solo se usa cuando onStartTour esta presente.
+  const { isAdmin } = useIsAdmin();
+  const { canViewTreasury } = useCanViewTreasury();
+  const { isMemberOnly } = useIsMemberOnly();
+
   return (
     <div className={cn('space-y-6', className)}>
       <header className="space-y-1">
@@ -169,6 +191,29 @@ export function AsistenteFallback({ className }: AsistenteFallbackProps) {
                       </li>
                     ))}
                   </ol>
+
+                  {/* Boton del recorrido guiado, solo cuando el contenedor
+                      provee onStartTour, la tarea tiene recorrido y el usuario
+                      puede llegar a su pantalla (gate por rol, espejo de los
+                      guards de App.tsx). */}
+                  {onStartTour &&
+                    task.tour &&
+                    canAccessTour(task.access, {
+                      isAdmin,
+                      canViewTreasury,
+                      isMemberOnly,
+                    }) && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onStartTour(task.id)}
+                        className="gap-2"
+                      >
+                        <Sparkles className="h-4 w-4" aria-hidden="true" />
+                        Mostrame en la app
+                      </Button>
+                    )}
                 </div>
               </AccordionContent>
             </AccordionItem>

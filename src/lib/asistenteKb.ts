@@ -20,6 +20,17 @@ import type { TourStep } from '@/lib/asistenteTour';
 
 export type KbTaskId = 'T1' | 'T2' | 'T3' | 'T4' | 'T5' | 'T6' | 'T7' | 'T8';
 
+/**
+ * Nivel de acceso de la pantalla de la tarea, segun los guards reales de
+ * App.tsx. Solo se usa para decidir, en el cliente, si mostrar el boton del
+ * recorrido guiado ("Mostrame en la app") para esa tarea. NUNCA se envia al
+ * modelo (no entra en buildKbText).
+ *   - 'admin'    -> AdminRoute: requiere isAdmin (T1, T2, T3).
+ *   - 'staff'    -> TreasuryStaffRoute: canViewTreasury && !isMemberOnly (T4, T5, T6, T8).
+ *   - 'treasury' -> TreasuryRoute: canViewTreasury (T7).
+ */
+export type KbTaskAccess = 'admin' | 'staff' | 'treasury';
+
 export interface KbTask {
   /** Identificador estable de la tarea. */
   id: KbTaskId;
@@ -31,6 +42,21 @@ export interface KbTask {
   route: string;
   /** Como llegar a la pantalla en escritorio y en celular. */
   nav: string;
+  /**
+   * Nivel de acceso de la pantalla, espejo del guard real de App.tsx. Solo
+   * sirve para el gate del boton del recorrido en la UI; nunca se envia al
+   * modelo (no aparece en buildKbText).
+   */
+  access: KbTaskAccess;
+  /**
+   * Tokens de intencion en espanol (stems) para el matcher de texto libre.
+   * Se comparan sin acentos ni mayusculas y por inclusion, asi las
+   * conjugaciones coinciden (por ejemplo "pag" cubre pago/pagar/pague). Se
+   * eligen mayormente disjuntos entre tareas para evitar ambiguedad. Solo se
+   * usan en el cliente para detectar la tarea de una pregunta tipeada; nunca se
+   * envian al modelo (no aparecen en buildKbText).
+   */
+  keywords: string[];
   /** Pasos ordenados para completar la tarea. */
   steps: string[];
   /** Terminos del glosario relevantes para esta tarea. */
@@ -57,6 +83,11 @@ export const ASISTENTE_TASKS: KbTask[] = [
     screen: 'Registrar Pago',
     route: '/log-payment',
     nav: 'En el celular, tocá el botón "+" central de la barra inferior y elegí registrar un ingreso. En escritorio, abrí el formulario de movimiento desde Detalle financiero (Panel).',
+    access: 'admin',
+    // Stems de intencion: registrar un pago/cobro. Se evita el stem ambiguo
+    // "capita" (lo comparten T1 y T5); el chip lleva el id explicito, asi que
+    // no lo necesita.
+    keywords: ['pago', 'pagar', 'pague', 'cobro', 'cobrar', 'ingreso'],
     note: ACCESO_DINERO,
     steps: [
       'Elegí la Cuenta donde entra el dinero (Banco, Gran Logia o Ahorros). Ahorros es en USD; las demas en ARS.',
@@ -116,6 +147,9 @@ export const ASISTENTE_TASKS: KbTask[] = [
     screen: 'Registrar Gasto',
     route: '/log-expense',
     nav: 'En el celular, tocá el botón "+" central de la barra inferior y elegí registrar un gasto. En escritorio, abrí el formulario de movimiento desde Detalle financiero (Panel).',
+    access: 'admin',
+    // Stems de intencion: registrar un gasto/egreso. "gast" cubre gasto/gastos/gastar.
+    keywords: ['gast', 'egreso'],
     note: ACCESO_DINERO,
     steps: [
       'Elegí la Cuenta de donde sale el dinero (Banco, Gran Logia o Ahorros). Ahorros es en USD; las demas en ARS.',
@@ -171,6 +205,10 @@ export const ASISTENTE_TASKS: KbTask[] = [
     screen: 'Transferir Fondos',
     route: '/account-transfer',
     nav: 'En escritorio, entrá desde el menú de tesorería al historial de transferencias. En el celular, abrilo desde la pestaña Más. Una vez en la pantalla, tocá Nueva transferencia.',
+    access: 'admin',
+    // Stems de intencion: transferir entre cuentas. "transf" cubre
+    // transferir/transferencia; "entre cuentas" desambigua de un movimiento comun.
+    keywords: ['transf', 'entre cuentas'],
     note: ACCESO_DINERO,
     steps: [
       'Tocá Nueva transferencia para abrir el formulario.',
@@ -232,6 +270,10 @@ export const ASISTENTE_TASKS: KbTask[] = [
     screen: 'Reportes',
     route: '/reports',
     nav: 'En escritorio, Reportes esta en el menú de Resumen de la barra lateral. En el celular, esta en la pestaña Más, dentro de Resumen.',
+    access: 'staff',
+    // Stems de intencion: reporte/informe mensual. "report" cubre
+    // reporte/reportes/reportar; "informe" es el sinonimo comun.
+    keywords: ['report', 'informe'],
     steps: [
       'Tocá Generar Reporte (arriba a la derecha).',
       'Elegí el Año y el Mes del período a reportar.',
@@ -285,6 +327,11 @@ export const ASISTENTE_TASKS: KbTask[] = [
     screen: 'Calculadora de Cápitas',
     route: '/fee-calculator',
     nav: 'En escritorio, Calculadora de Cápitas esta en Configuración en la barra lateral. En el celular, esta en la pestaña Más, dentro de Configuración.',
+    access: 'staff',
+    // Stems de intencion: calcular las cápitas. "calcul" cubre
+    // calcular/calculo/calculadora; "cvs" es el indice propio de esta tarea. Se
+    // evita el stem ambiguo "capita" (lo comparten T1 y T5).
+    keywords: ['calcul', 'cvs'],
     steps: [
       'Elegí el Mes base; la app toma de referencia las cápitas vigentes de ese mes.',
       'Revisá el Trimestre CVS: se carga solo desde el índice oficial. Si no hay dato, ingresá el CVS a mano.',
@@ -339,6 +386,10 @@ export const ASISTENTE_TASKS: KbTask[] = [
     screen: 'Recordatorios',
     route: '/recordatorios',
     nav: 'En escritorio, Recordatorios esta en Configuración en la barra lateral (con un punto cuando hay pendientes). En el celular, esta como pestaña fija en la barra inferior.',
+    access: 'staff',
+    // Stems de intencion: recordatorios por WhatsApp. "recordatori" cubre
+    // recordatorio/recordatorios; "whatsapp" es el canal de esta tarea.
+    keywords: ['recordatori', 'whatsapp'],
     steps: [
       'Abrí Recordatorios: aparece una tarjeta por cada socio con saldo pendiente, con el mensaje ya armado (cápitas y cuotas de eventos).',
       'Leé el mensaje de cada tarjeta y revisá que el detalle de la deuda sea correcto.',
@@ -390,6 +441,11 @@ export const ASISTENTE_TASKS: KbTask[] = [
     screen: 'Miembros',
     route: '/members',
     nav: 'En escritorio, Miembros esta en Resumen en la barra lateral. En el celular, es una pestaña fija en la barra inferior.',
+    access: 'treasury',
+    // Stems de intencion: alta/gestion de un miembro o socio. "miembro" y
+    // "socio" cubren los sustantivos; "dar de alta" cubre el verbo de incorporar
+    // (la frase completa evita falsos positivos como "salta" o "resalta").
+    keywords: ['miembro', 'socio', 'dar de alta'],
     steps: [
       'En Miembros, tocá el botón para agregar un miembro (arriba a la derecha; solo visible con acceso de edición).',
       'Completá los datos del socio: nombre, matrícula y demas campos de la ficha.',
@@ -430,6 +486,10 @@ export const ASISTENTE_TASKS: KbTask[] = [
     screen: 'Eventos',
     route: '/expense-categories',
     nav: 'En escritorio, Eventos esta en Configuración en la barra lateral. En el celular, esta en la pestaña Más, dentro de Configuración. (La ruta /eventos lleva a la misma pantalla.)',
+    access: 'staff',
+    // Stems de intencion: crear o gestionar un evento. "evento" cubre
+    // evento/eventos.
+    keywords: ['evento'],
     steps: [
       'En Eventos, tocá Nuevo evento (arriba a la derecha; solo con acceso de edición).',
       'Poné el Nombre del evento y, si querés, una Descripción.',
@@ -497,6 +557,22 @@ export const ASISTENTE_TASKS: KbTask[] = [
     ],
   },
 ];
+
+/**
+ * Pregunta sugerida (chip) por tarea, en lenguaje natural del tesorero. Vive aca
+ * (fuente canonica) para que el chat y el test usen el mismo texto y el contrato
+ * chip -> tarea no derive si cambia la copia.
+ */
+export const CHIP_QUESTIONS: Record<KbTaskId, string> = {
+  T1: '¿Cómo registro un pago de cápita?',
+  T2: '¿Cómo registro un gasto?',
+  T3: '¿Cómo transfiero fondos entre cuentas?',
+  T4: '¿Cómo genero el reporte mensual?',
+  T5: '¿Cómo calculo las cápitas?',
+  T6: '¿Cómo reviso y envío los recordatorios?',
+  T7: '¿Cómo doy de alta un miembro?',
+  T8: '¿Cómo creo o gestiono un evento?',
+};
 
 /**
  * Glosario relevante para el asistente. Las definiciones reflejan el namespace
