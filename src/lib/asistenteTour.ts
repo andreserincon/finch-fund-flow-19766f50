@@ -89,6 +89,146 @@ export function anchorSelector(anchor: string): string {
   return `[data-asistente="${anchor}"]`;
 }
 
+/** Which driver.js footer buttons a step shows. */
+export type StepButton = 'next' | 'previous' | 'close';
+
+/** The Spanish labels and role-gated copy the runner feeds buildStepPlan. */
+export type StepPlanLabels = {
+  /** Next button label (Spanish). */
+  next: string;
+  /** Previous button label (Spanish). */
+  prev: string;
+  /** Close / Done button label (Spanish). */
+  close: string;
+  /** Title shown when a guard redirected us off the step route. */
+  roleGatedTitle: string;
+  /** Neutral body used when no access note was provided for a role-gated stop. */
+  roleGatedFallbackBody: string;
+};
+
+/**
+ * A plain, framework-free description of the popover a single step should show.
+ * The runner turns this into a driver.js highlight call. It carries ONLY static
+ * config (text, which buttons, button labels); the click handlers stay in the
+ * runner because they touch React/router/driver state.
+ *
+ *   - 'role-gated-stop' a guard moved us off the step route: show the access note
+ *                       (or a neutral fallback) with only a Close button. No
+ *                       element. The runner ends the tour after showing this.
+ *   - 'text-continue'   on the right route but the anchored control is absent:
+ *                       show the caption with no spotlight and the nav buttons.
+ *   - 'spotlight'       highlight the anchored element with the caption and nav.
+ */
+export type StepPlan =
+  | {
+      kind: 'role-gated-stop';
+      element?: undefined;
+      popover: {
+        title: string;
+        description: string;
+        showButtons: StepButton[];
+        doneBtnText: string;
+      };
+    }
+  | {
+      kind: 'text-continue';
+      element?: undefined;
+      popover: {
+        title: string;
+        description: string;
+        showButtons: StepButton[];
+        nextBtnText: string;
+        prevBtnText: string;
+        doneBtnText: string;
+      };
+    }
+  | {
+      kind: 'spotlight';
+      element: string;
+      popover: {
+        title: string;
+        description: string;
+        showButtons: StepButton[];
+        nextBtnText: string;
+        prevBtnText: string;
+        doneBtnText: string;
+      };
+    };
+
+export type BuildStepPlanParams = {
+  /** How the step resolved once navigation settled. */
+  resolution: StepResolution;
+  /** The step being shown. */
+  step: TourStep;
+  /** Whether this is the first step (hides the Previous button). */
+  isFirst: boolean;
+  /** Whether this is the last step (Next is relabeled to the Close label). */
+  isLast: boolean;
+  /** The shared access note for a role-gated stop; a neutral fallback is used if absent. */
+  accessNote?: string;
+  /** Spanish button labels and role-gated copy. */
+  labels: StepPlanLabels;
+};
+
+/**
+ * Build the static popover descriptor for one step. Pure: no DOM, no driver.js,
+ * no React, so the per-step decision is fully unit testable. It encodes exactly
+ * the rules the runner used inline:
+ *
+ *   - role-gated-stop: role-gated title + the access note (or neutral fallback),
+ *     only a Close button.
+ *   - text-continue:   step title/body, no element, nav buttons.
+ *   - spotlight:       step title/body, element = anchorSelector(step.anchor),
+ *     nav buttons.
+ *
+ * The first step omits Previous; the last step relabels Next to the Close label.
+ */
+export function buildStepPlan(params: BuildStepPlanParams): StepPlan {
+  const { resolution, step, isFirst, isLast, accessNote, labels } = params;
+
+  if (resolution === 'role-gated-stop') {
+    return {
+      kind: 'role-gated-stop',
+      popover: {
+        title: labels.roleGatedTitle,
+        description: accessNote ?? labels.roleGatedFallbackBody,
+        showButtons: ['close'],
+        doneBtnText: labels.close,
+      },
+    };
+  }
+
+  // First step hides Previous; later steps show it.
+  const showButtons: StepButton[] = isFirst
+    ? ['next', 'close']
+    : ['next', 'previous', 'close'];
+
+  // On the last step the Next button is relabeled to the Close label so the
+  // final advance reads as ending the tour.
+  const navPopover = {
+    title: step.title,
+    description: step.body,
+    showButtons,
+    nextBtnText: isLast ? labels.close : labels.next,
+    prevBtnText: labels.prev,
+    doneBtnText: labels.close,
+  };
+
+  if (resolution === 'spotlight') {
+    return {
+      kind: 'spotlight',
+      element: anchorSelector(step.anchor as string),
+      popover: navPopover,
+    };
+  }
+
+  // text-continue: on the right route but the control is absent.
+  return {
+    kind: 'text-continue',
+    popover: navPopover,
+  };
+}
+
 /** What waitForSettled reports back once it resolves. */
 export type SettledResult = {
   /**

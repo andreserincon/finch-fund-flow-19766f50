@@ -31,13 +31,27 @@ import {
   type TourStep,
   classifyStep,
   waitForSettled,
-  anchorSelector,
+  buildStepPlan,
 } from '@/lib/asistenteTour';
 
 /** Spanish button labels for the popover, fixed across the tour. */
 const BTN_NEXT = 'Siguiente';
 const BTN_PREV = 'Anterior';
 const BTN_CLOSE = 'Cerrar';
+
+/** Role-gated stop copy, shown when a guard redirects us off a step route. */
+const ROLE_GATED_TITLE = 'No tenés acceso a esta pantalla';
+const ROLE_GATED_FALLBACK_BODY =
+  'Esta acción requiere un acceso que tu usuario no tiene en este momento.';
+
+/** The static labels handed to buildStepPlan; fixed across the tour. */
+const STEP_PLAN_LABELS = {
+  next: BTN_NEXT,
+  prev: BTN_PREV,
+  close: BTN_CLOSE,
+  roleGatedTitle: ROLE_GATED_TITLE,
+  roleGatedFallbackBody: ROLE_GATED_FALLBACK_BODY,
+} as const;
 
 function prefersReducedMotion(): boolean {
   if (typeof window === 'undefined' || !window.matchMedia) return false;
@@ -93,9 +107,22 @@ export function useAsistenteTour(): AsistenteTourController {
     }
     const el = returnFocusRef.current;
     returnFocusRef.current = null;
-    // Return focus to the launcher so keyboard users are not stranded.
-    if (el && typeof el.focus === 'function') {
+    // Return focus to the launcher so keyboard users are not stranded. But a tour
+    // often navigates to another screen, which unmounts the chat trigger that
+    // launched it; focusing a detached node is a no-op and focus falls to <body>.
+    // So: focus the stored trigger only if it is still connected to the document;
+    // otherwise fall back to the floating assistant FAB if it is present; if
+    // neither exists, leave focus where it is rather than crash.
+    const hasDoc = typeof document !== 'undefined';
+    if (el && typeof el.focus === 'function' && (!hasDoc || document.contains(el))) {
       el.focus();
+    } else if (hasDoc) {
+      const fab = document.querySelector<HTMLElement>(
+        'button[aria-label^="Abrir el asistente"]',
+      );
+      if (fab && typeof fab.focus === 'function') {
+        fab.focus();
+      }
     }
   }, []);
 
@@ -171,39 +198,33 @@ export function useAsistenteTour(): AsistenteTourController {
         const isFirst = index === 0;
         const isLast = index === steps.length - 1;
 
-        if (resolution === 'role-gated-stop') {
+        // The pure core decides the static popover config (text, which buttons,
+        // button labels, and whether there is an element to spotlight). The click
+        // handlers stay here because they touch React/router/driver state.
+        const plan = buildStepPlan({
+          resolution,
+          step,
+          isFirst,
+          isLast,
+          accessNote,
+          labels: STEP_PLAN_LABELS,
+        });
+
+        if (plan.kind === 'role-gated-stop') {
           // A guard redirected us. Show the access note with NO spotlight and end.
           d.highlight({
             popover: {
-              title: 'No tenés acceso a esta pantalla',
-              description:
-                accessNote ??
-                'Esta acción requiere un acceso que tu usuario no tiene en este momento.',
-              showButtons: ['close'],
-              doneBtnText: BTN_CLOSE,
+              ...plan.popover,
               onCloseClick: () => cleanup(),
             },
           });
           return;
         }
 
-        // Buttons: first step hides Prev; the last step's Next becomes Cerrar
-        // (handled by doneBtnText since driver shows Done on the last step only
-        // when steps are driven internally; here we drive manually, so we wire
-        // Next/Prev explicitly and relabel Next to Cerrar on the last step).
-        const showButtons: ('next' | 'previous' | 'close')[] = isFirst
-          ? ['next', 'close']
-          : ['next', 'previous', 'close'];
-
-        const popoverBase = {
-          title: step.title,
-          description: step.body,
-          showButtons,
-          nextBtnText: isLast ? BTN_CLOSE : BTN_NEXT,
-          prevBtnText: BTN_PREV,
-          doneBtnText: BTN_CLOSE,
-          // Next/Prev move OUR index. They never touch app controls. On the last
-          // step, Next ends the tour.
+        // Next/Prev move OUR index. They never touch app controls. On the last
+        // step, Next ends the tour. (The last step's Next is already relabeled to
+        // Cerrar by buildStepPlan; the handler ends the tour rather than advancing.)
+        const navHandlers = {
           onNextClick: () => {
             if (isLast) {
               cleanup();
@@ -217,15 +238,15 @@ export function useAsistenteTour(): AsistenteTourController {
           onCloseClick: () => cleanup(),
         };
 
-        if (resolution === 'spotlight') {
+        if (plan.kind === 'spotlight') {
           d.highlight({
-            element: anchorSelector(step.anchor as string),
-            popover: popoverBase,
+            element: plan.element,
+            popover: { ...plan.popover, ...navHandlers },
           });
         } else {
           // text-continue: on the right route but the control is absent. Show the
           // caption with no spotlight so the tour never points at nothing.
-          d.highlight({ popover: popoverBase });
+          d.highlight({ popover: { ...plan.popover, ...navHandlers } });
         }
       };
 
