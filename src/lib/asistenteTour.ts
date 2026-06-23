@@ -229,6 +229,35 @@ export function buildStepPlan(params: BuildStepPlanParams): StepPlan {
   };
 }
 
+/**
+ * Whether the current step should make revealing the NEXT control mandatory.
+ *
+ * Some steps spotlight a control whose only job is to OPEN a form/dialog (for
+ * example the "Registrar movimiento" or "Nuevo evento" button). The next step
+ * then targets a field inside that form. If the user tapped Siguiente without
+ * opening it, the following steps would point at controls that are not on screen.
+ *
+ * So: when we are spotlighting a control, the next step targets an anchor on the
+ * SAME screen, and that anchor is NOT yet in the DOM, the runner hides Siguiente
+ * and instead auto-advances once the anchor appears (the user opened the form).
+ * That makes opening the form the only way forward. Pure: the DOM presence of the
+ * next anchor is passed in as nextAnchorPresent.
+ */
+export function shouldGateForReveal(params: {
+  resolution: StepResolution;
+  nextStep: TourStep | undefined;
+  currentPathname: string;
+  nextAnchorPresent: boolean;
+}): boolean {
+  const { resolution, nextStep, currentPathname, nextAnchorPresent } = params;
+  if (resolution !== 'spotlight') return false;
+  if (!nextStep || !nextStep.anchor) return false;
+  // The next step must be reachable on the current screen (no navigation), so the
+  // only thing between here and it is a UI element the user must open.
+  if (nextStep.route && nextStep.route !== currentPathname) return false;
+  return !nextAnchorPresent;
+}
+
 /** What waitForSettled reports back once it resolves. */
 export type SettledResult = {
   /**

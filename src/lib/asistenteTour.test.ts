@@ -5,6 +5,7 @@ import {
   waitForSettled,
   anchorSelector,
   buildStepPlan,
+  shouldGateForReveal,
   type StepResolution,
   type TourStep,
   type StepPlanLabels,
@@ -275,5 +276,45 @@ describe('classifyStep -> buildStepPlan pipeline', () => {
     });
     expect(plan.kind).toBe('role-gated-stop');
     expect(plan.popover.description).toBe('Solo el tesorero puede registrar pagos.');
+  });
+});
+
+describe('shouldGateForReveal', () => {
+  const step = (anchor?: string, route?: string): TourStep => ({ anchor, route, title: 't', body: 'b' });
+
+  it('gates when the next anchor is absent on the same route (the form must be opened)', () => {
+    expect(
+      shouldGateForReveal({ resolution: 'spotlight', nextStep: step('mov-cuenta', '/home'), currentPathname: '/home', nextAnchorPresent: false }),
+    ).toBe(true);
+  });
+
+  it('does not gate when the next anchor is already on screen', () => {
+    expect(
+      shouldGateForReveal({ resolution: 'spotlight', nextStep: step('mov-cuenta', '/home'), currentPathname: '/home', nextAnchorPresent: true }),
+    ).toBe(false);
+  });
+
+  it('does not gate when the next step has no anchor (info-only step)', () => {
+    expect(
+      shouldGateForReveal({ resolution: 'spotlight', nextStep: step(undefined, '/home'), currentPathname: '/home', nextAnchorPresent: false }),
+    ).toBe(false);
+  });
+
+  it('does not gate on the last step (no next step)', () => {
+    expect(
+      shouldGateForReveal({ resolution: 'spotlight', nextStep: undefined, currentPathname: '/home', nextAnchorPresent: false }),
+    ).toBe(false);
+  });
+
+  it('does not gate when the next step is on a different route (needs navigation, not a reveal)', () => {
+    expect(
+      shouldGateForReveal({ resolution: 'spotlight', nextStep: step('x', '/other'), currentPathname: '/home', nextAnchorPresent: false }),
+    ).toBe(false);
+  });
+
+  it('does not gate for non-spotlight resolutions', () => {
+    expect(
+      shouldGateForReveal({ resolution: 'text-continue', nextStep: step('x', '/home'), currentPathname: '/home', nextAnchorPresent: false }),
+    ).toBe(false);
   });
 });

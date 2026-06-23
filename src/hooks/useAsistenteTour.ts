@@ -32,6 +32,8 @@ import {
   classifyStep,
   waitForSettled,
   buildStepPlan,
+  anchorSelector,
+  shouldGateForReveal,
 } from '@/lib/asistenteTour';
 
 /** Spanish button labels for the popover, fixed across the tour. */
@@ -91,8 +93,17 @@ export function useAsistenteTour(): AsistenteTourController {
   // A monotonically increasing run id; an exit bumps it so an in-flight async
   // step loop from a previous run stops touching driver.js after cleanup.
   const runIdRef = useRef(0);
+  // Interval that watches for a form to open so a "reveal" step can auto-advance.
+  const revealWatchRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const clearReveal = useCallback(() => {
+    if (revealWatchRef.current !== null) {
+      clearInterval(revealWatchRef.current);
+      revealWatchRef.current = null;
+    }
+  }, []);
 
   const cleanup = useCallback(() => {
+    clearReveal();
     runIdRef.current += 1;
     const d = driverRef.current;
     driverRef.current = null;
@@ -124,7 +135,7 @@ export function useAsistenteTour(): AsistenteTourController {
         fab.focus();
       }
     }
-  }, []);
+  }, [clearReveal]);
 
   const start = useCallback(
     (opts: StartTourOptions) => {
@@ -171,6 +182,8 @@ export function useAsistenteTour(): AsistenteTourController {
       // ourselves, then hand driver.js a single highlight per step. The popover
       // Next/Prev buttons advance our own index; they never click app controls.
       const runStep = async (index: number) => {
+        // Moving to any step cancels a pending reveal watcher from the prior step.
+        clearReveal();
         if (isStale()) return;
         if (index < 0 || index >= steps.length) {
           cleanup();
@@ -239,10 +252,57 @@ export function useAsistenteTour(): AsistenteTourController {
         };
 
         if (plan.kind === 'spotlight') {
-          d.highlight({
-            element: plan.element,
-            popover: { ...plan.popover, ...navHandlers },
+          // If the next step targets a control that is not on screen yet on this
+          // same route, the user must reveal it (open a form/dialog) before the
+          // tour can continue. In that case hide Siguiente and auto-advance once
+          // the control appears, so opening the form is the only way forward.
+          const nextStep = steps[index + 1];
+          const nextAnchorPresent =
+            typeof document !== 'undefined' && !!nextStep?.anchor
+              ? !!document.querySelector(anchorSelector(nextStep.anchor))
+              : false;
+          const gate = shouldGateForReveal({
+            resolution,
+            nextStep,
+            currentPathname:
+              typeof window !== 'undefined' ? window.location.pathname : '',
+            nextAnchorPresent,
           });
+
+          const basePopover = { ...plan.popover, ...navHandlers };
+          // When the next control still has to be revealed, disable Siguiente so
+          // the only way forward is to actually open the form; the watcher below
+          // auto-advances once it appears. (driver.js renders Prev/Next regardless
+          // of showButtons in this version, so we disable rather than hide.)
+          const popover = gate
+            ? {
+                ...basePopover,
+                disableButtons: ['next'] as Array<'next' | 'previous' | 'close'>,
+                description: `${plan.popover.description} El recorrido continúa cuando lo abrís.`,
+              }
+            : basePopover;
+
+          d.highlight({ element: plan.element, popover });
+
+          if (gate && nextStep?.anchor) {
+            const watchAnchor = nextStep.anchor;
+            revealWatchRef.current = setInterval(() => {
+              if (isStale()) {
+                clearReveal();
+                return;
+              }
+              if (typeof document === 'undefined') return;
+              // The user navigated off this screen: stop watching.
+              if (step.route && window.location.pathname !== step.route) {
+                clearReveal();
+                return;
+              }
+              if (document.querySelector(anchorSelector(watchAnchor))) {
+                clearReveal();
+                void runStep(index + 1);
+              }
+            }, 200);
+          }
         } else {
           // text-continue: on the right route but the control is absent. Show the
           // caption with no spotlight so the tour never points at nothing.
@@ -252,7 +312,7 @@ export function useAsistenteTour(): AsistenteTourController {
 
       void runStep(0);
     },
-    [navigate, cleanup],
+    [navigate, cleanup, clearReveal],
   );
 
   const stop = useCallback(() => {
@@ -262,6 +322,10 @@ export function useAsistenteTour(): AsistenteTourController {
   // Safety net: if the launching component unmounts mid-tour, tear down.
   useEffect(() => {
     return () => {
+      if (revealWatchRef.current !== null) {
+        clearInterval(revealWatchRef.current);
+        revealWatchRef.current = null;
+      }
       const d = driverRef.current;
       driverRef.current = null;
       if (d && d.isActive()) d.destroy();
