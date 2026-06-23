@@ -16,9 +16,13 @@
  *   curated text from buildKbText(); `turns` is prior chat text the user typed
  *   or the assistant produced. No financial data is ever read or sent here.
  *
- *   This is purely additive UI. The full offline / over-cap fallback is S4; here
- *   a failed or non-streaming response shows a single inline error and does not
- *   crash.
+ *   Graceful degradation (S4): when a send fails because the device is offline,
+ *   the monthly cap is reached (429), or the function is otherwise unavailable
+ *   (404 before deploy, 5xx, empty stream), we never leave a dead end. We show a
+ *   calm Spanish message and render the static <AsistenteFallback/> guide so the
+ *   user can keep working offline. The conversation stays usable: a later send
+ *   clears the fallback and tries again. The fallback is also reachable from the
+ *   empty state via a quiet "Ver guía rápida" affordance even when the API works.
  */
 
 import { useEffect, useRef, useState } from 'react';
@@ -36,6 +40,7 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { ASISTENTE_TASKS, buildKbText } from '@/lib/asistenteKb';
+import { AsistenteFallback } from './AsistenteFallback';
 
 /** A single message kept in the visible conversation. */
 interface ChatMessage {
@@ -74,6 +79,36 @@ function chipQuestion(taskId: string, title: string): string {
   return CHIP_QUESTIONS[taskId] ?? `¿Cómo: ${title}?`;
 }
 
+// The three graceful-degradation cases. Each maps to a calm Spanish lead-in
+// shown right above the static <AsistenteFallback/> guide, so a failure is never
+// a dead end.
+//   - 'cap'     : 429, the monthly question cap was reached.
+//   - 'offline' : no connection (navigator.onLine is false, or fetch threw).
+//   - 'down'    : any other non-ok response (404 before deploy, 5xx, empty body).
+type DegradeReason = 'cap' | 'offline' | 'down';
+
+const DEGRADE_MESSAGES: Record<DegradeReason, string> = {
+  cap: 'Llegaste al límite mensual de preguntas del asistente. Mientras tanto, acá tenés la guía rápida:',
+  offline:
+    'No hay conexión con el asistente en este momento. Acá tenés la guía rápida sin conexión:',
+  down: 'El asistente no está disponible ahora. Mientras tanto, acá tenés la guía rápida:',
+};
+
+/**
+ * Error thrown inside send() that carries the degradation reason, so the catch
+ * block can show the right message + the fallback. A plain Error (or any other
+ * throw) is treated as a generic outage ('down'), except a thrown fetch network
+ * error / offline device, which we classify as 'offline'.
+ */
+class AsistenteDegradeError extends Error {
+  reason: DegradeReason;
+  constructor(reason: DegradeReason, message?: string) {
+    super(message ?? reason);
+    this.name = 'AsistenteDegradeError';
+    this.reason = reason;
+  }
+}
+
 interface AsistenteChatProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -87,7 +122,12 @@ export function AsistenteChat({ open, onOpenChange }: AsistenteChatProps) {
   const [streaming, setStreaming] = useState<string | null>(null);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  // When a send degrades, this holds which fallback message to show above the
+  // static guide. Null means no degradation right now.
+  const [degrade, setDegrade] = useState<DegradeReason | null>(null);
+  // The empty-state "Ver guía rápida" affordance opens the same static guide
+  // inline even when the API works.
+  const [showGuide, setShowGuide] = useState(false);
   const [showTrustNote, setShowTrustNote] = useState(true);
 
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -96,7 +136,7 @@ export function AsistenteChat({ open, onOpenChange }: AsistenteChatProps) {
   useEffect(() => {
     const el = scrollRef.current;
     if (el) el.scrollTop = el.scrollHeight;
-  }, [messages, streaming, error]);
+  }, [messages, streaming, degrade]);
 
   const isEmpty = messages.length === 0 && streaming === null && !isLoading;
 
@@ -104,7 +144,10 @@ export function AsistenteChat({ open, onOpenChange }: AsistenteChatProps) {
     const question = rawQuestion.trim();
     if (!question || isLoading) return;
 
-    setError(null);
+    // A new send clears any prior degradation and the manually opened guide; the
+    // conversation stays usable and the user can always retry.
+    setDegrade(null);
+    setShowGuide(false);
     setInput('');
 
     // Prior turns are everything already committed. We send these so the model
@@ -117,6 +160,12 @@ export function AsistenteChat({ open, onOpenChange }: AsistenteChatProps) {
     setIsLoading(true);
 
     try {
+      // If the device reports it is offline, fail fast as 'offline' rather than
+      // waiting for fetch to time out.
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+        throw new AsistenteDegradeError('offline');
+      }
+
       const {
         data: { session },
       } = await supabase.auth.getSession();
@@ -131,18 +180,30 @@ export function AsistenteChat({ open, onOpenChange }: AsistenteChatProps) {
         kb: buildKbText(),
       };
 
-      const resp = await fetch(`${SUPABASE_URL}/functions/v1/asistente`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-          apikey: SUPABASE_ANON_KEY,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
+      // A thrown fetch (DNS failure, dropped connection, CORS) means there is no
+      // usable connection to the assistant: treat it as 'offline'.
+      let resp: Response;
+      try {
+        resp = await fetch(`${SUPABASE_URL}/functions/v1/asistente`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+            apikey: SUPABASE_ANON_KEY,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload),
+        });
+      } catch {
+        throw new AsistenteDegradeError('offline');
+      }
 
+      // Read the status BEFORE failing so we can tell the monthly cap (429)
+      // apart from a generic outage (404 before deploy, 5xx, missing body).
+      if (resp.status === 429) {
+        throw new AsistenteDegradeError('cap');
+      }
       if (!resp.ok || !resp.body) {
-        throw new Error('No pude conectar con el asistente. Probá de nuevo en un momento.');
+        throw new AsistenteDegradeError('down');
       }
 
       // Parse NATIVE ANTHROPIC SSE. Each event arrives as one or more lines; the
@@ -199,19 +260,21 @@ export function AsistenteChat({ open, onOpenChange }: AsistenteChatProps) {
       }
 
       if (assistantText.trim() === '') {
-        // Streamed but produced nothing usable.
-        throw new Error('El asistente no devolvió una respuesta. Probá de nuevo.');
+        // Streamed but produced nothing usable: treat as an outage.
+        throw new AsistenteDegradeError('down');
       }
 
       // Commit the finished assistant turn so it becomes part of `turns` for the
       // next follow-up question.
       setMessages((prev) => [...prev, { role: 'assistant', content: assistantText }]);
     } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : 'Ocurrió un error con el asistente. Probá de nuevo.',
-      );
+      // Map every failure to a graceful-degradation reason so the user always
+      // gets the static guide instead of a dead end. A classified
+      // AsistenteDegradeError keeps its reason (cap / offline / down); anything
+      // else (including a thrown auth/session error) is a generic outage.
+      const reason: DegradeReason =
+        err instanceof AsistenteDegradeError ? err.reason : 'down';
+      setDegrade(reason);
     } finally {
       setStreaming(null);
       setIsLoading(false);
@@ -267,7 +330,7 @@ export function AsistenteChat({ open, onOpenChange }: AsistenteChatProps) {
           aria-live="polite"
         >
           {isEmpty ? (
-            <div className="space-y-3">
+            <div className="space-y-4">
               <p className="text-sm text-muted-foreground">
                 Preguntame cómo hacer algo en la app. Por ejemplo:
               </p>
@@ -286,6 +349,23 @@ export function AsistenteChat({ open, onOpenChange }: AsistenteChatProps) {
                   );
                 })}
               </div>
+
+              {/* Quiet, always-available affordance: open the same static guide
+                  inline even when the API works. */}
+              <button
+                type="button"
+                onClick={() => setShowGuide((v) => !v)}
+                aria-expanded={showGuide}
+                className="press rounded-md text-xs font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                {showGuide ? 'Ocultar la guía rápida' : 'Ver guía rápida'}
+              </button>
+
+              {showGuide && (
+                <div className="border-t border-border pt-4">
+                  <AsistenteFallback />
+                </div>
+              )}
             </div>
           ) : (
             <div className="space-y-4">
@@ -311,9 +391,15 @@ export function AsistenteChat({ open, onOpenChange }: AsistenteChatProps) {
                 </div>
               )}
 
-              {error && (
-                <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3.5 py-2.5 text-sm text-destructive">
-                  {error}
+              {/* Graceful degradation: a calm message and the static guide so a
+                  failure is never a dead end. The user can keep working offline
+                  and retry later. */}
+              {degrade && (
+                <div className="space-y-4 rounded-lg border border-border bg-accent/30 p-3.5">
+                  <p className="text-sm leading-relaxed text-foreground">
+                    {DEGRADE_MESSAGES[degrade]}
+                  </p>
+                  <AsistenteFallback />
                 </div>
               )}
             </div>
