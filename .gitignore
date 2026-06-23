@@ -12,6 +12,11 @@ dist
 dist-ssr
 *.local
 
+# Environment variables. The .env.*.local variants are already covered by
+# *.local above. The committed .env holds only publishable client (VITE_) values;
+# never put a server-side secret in it.
+.env
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
