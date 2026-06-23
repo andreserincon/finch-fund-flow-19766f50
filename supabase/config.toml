@@ -9,6 +9,9 @@ verify_jwt = false
 [functions.treasury-insights]
 verify_jwt = false
 
+[functions.asistente]
+verify_jwt = false
+
 [functions.admin-create-user]
 verify_jwt = false
 
