@@ -81,7 +81,7 @@ function AddExpenseDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button><PlusCircle className="mr-2 h-4 w-4" />Nuevo evento</Button>
+        <Button data-asistente="evento-nuevo"><PlusCircle className="mr-2 h-4 w-4" />Nuevo evento</Button>
       </DialogTrigger>
       <DialogContent className="max-h-[90dvh] overflow-y-auto">
         <DialogHeader>
@@ -91,21 +91,21 @@ function AddExpenseDialog() {
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="name">Nombre del evento</Label>
-            <Input id="name" {...register('name')} placeholder="ej., Cena de Fin de Año" />
+            <Input id="name" data-asistente="evento-nombre" {...register('name')} placeholder="ej., Cena de Fin de Año" />
             {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
           </div>
           <div className="space-y-2">
             <Label htmlFor="description">Descripción (opcional)</Label>
-            <Textarea id="description" {...register('description')} placeholder="Breve descripción..." rows={2} />
+            <Textarea id="description" data-asistente="evento-descripcion" {...register('description')} placeholder="Breve descripción..." rows={2} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="default_amount">Cuota por miembro (ARS)</Label>
-            <Input id="default_amount" type="number" inputMode="decimal" step="0.01" {...register('default_amount', { valueAsNumber: true })} />
+            <Input id="default_amount" type="number" inputMode="decimal" step="0.01" data-asistente="evento-cuota" {...register('default_amount', { valueAsNumber: true })} />
             {errors.default_amount && <p className="text-sm text-destructive">{errors.default_amount.message}</p>}
           </div>
           <div className="space-y-2">
             <Label htmlFor="installments">Número de cuotas</Label>
-            <Input id="installments" type="number" min="1" max="36" step="1" {...register('installments', { valueAsNumber: true })} />
+            <Input id="installments" type="number" min="1" max="36" step="1" data-asistente="evento-cuotas" {...register('installments', { valueAsNumber: true })} />
             <p className="text-xs text-muted-foreground">
               Una cuota por mes desde la fecha de cobro.{' '}
               {installments > 1
@@ -116,20 +116,20 @@ function AddExpenseDialog() {
           </div>
           <div className="space-y-2">
             <Label htmlFor="charge_from_date">Cobrar a partir de (opcional)</Label>
-            <Input id="charge_from_date" type="date" {...register('charge_from_date')} />
+            <Input id="charge_from_date" type="date" data-asistente="evento-cobrar-desde" {...register('charge_from_date')} />
             <p className="text-xs text-muted-foreground">
               Marca el mes de la primera cuota. Además, excluye al evento de reportes anteriores a esa fecha.
             </p>
           </div>
           <div className="space-y-2">
             <Label htmlFor="payment_deadline">Fecha límite de pago (opcional)</Label>
-            <Input id="payment_deadline" type="date" {...register('payment_deadline')} />
+            <Input id="payment_deadline" type="date" data-asistente="evento-vencimiento" {...register('payment_deadline')} />
             <p className="text-xs text-muted-foreground">
               A 15 días o menos del vencimiento, los miembros con deuda figuran como "impagos". Pasado el vencimiento, "demorados".
             </p>
           </div>
           <div className="flex items-center space-x-2 p-3 bg-muted rounded-lg">
-            <Checkbox id="assign_to_members" checked={assignToMembers} onCheckedChange={(checked) => setValue('assign_to_members', !!checked)} />
+            <Checkbox id="assign_to_members" data-asistente="evento-asignar" checked={assignToMembers} onCheckedChange={(checked) => setValue('assign_to_members', !!checked)} />
             <div className="flex-1">
               <Label htmlFor="assign_to_members" className="cursor-pointer">Asignar cuota a todos los miembros activos</Label>
               <p className="text-xs text-muted-foreground">
@@ -139,7 +139,7 @@ function AddExpenseDialog() {
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
-            <Button type="submit" disabled={isSubmitting}>{isSubmitting ? 'Creando...' : 'Crear evento'}</Button>
+            <Button type="submit" data-asistente="evento-crear" disabled={isSubmitting}>{isSubmitting ? 'Creando...' : 'Crear evento'}</Button>
           </DialogFooter>
         </form>
       </DialogContent>

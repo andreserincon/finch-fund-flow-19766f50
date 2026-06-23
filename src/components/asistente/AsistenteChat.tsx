@@ -27,7 +27,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { HelpCircle, Send, Loader2, X } from 'lucide-react';
+import { HelpCircle, Send, Loader2, X, Sparkles } from 'lucide-react';
 
 import {
   Sheet,
@@ -39,7 +39,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
-import { ASISTENTE_TASKS } from '@/lib/asistenteKb';
+import { ASISTENTE_TASKS, CHIP_QUESTIONS } from '@/lib/asistenteKb';
+import { matchTaskByText, canAccessTour, findTaskById } from '@/lib/asistenteMatch';
+import { useIsAdmin } from '@/hooks/useIsAdmin';
+import { useCanViewTreasury } from '@/hooks/useCanViewTreasury';
+import { useIsMemberOnly } from '@/hooks/useIsMemberOnly';
+import { useAsistenteTourController } from '@/contexts/AsistenteTourContext';
 import {
   type ChatMessage,
   type DegradeReason,
@@ -56,22 +61,11 @@ const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 const TRUST_NOTE =
   'Soy una guía de uso de la app. Te muestro cómo hacer las cosas; no consulto ni informo saldos ni datos de miembros.';
 
-// Chips offer one phrased question per task title, e.g. "Registrar un pago de
-// cápita" -> "¿Cómo registro un pago de cápita?". A small per-task override
-// keeps the verb conjugation natural; everything else falls back to the title.
-const CHIP_QUESTIONS: Record<string, string> = {
-  T1: '¿Cómo registro un pago de cápita?',
-  T2: '¿Cómo registro un gasto?',
-  T3: '¿Cómo transfiero fondos entre cuentas?',
-  T4: '¿Cómo genero el reporte mensual?',
-  T5: '¿Cómo calculo las cápitas?',
-  T6: '¿Cómo reviso y envío los recordatorios?',
-  T7: '¿Cómo doy de alta un miembro?',
-  T8: '¿Cómo creo o gestiono un evento?',
-};
-
+// The chip questions (one per task) are the canonical copy in asistenteKb, so the
+// chat and the matcher test share one source. Fall back to the title only if a
+// task id ever lacks a chip entry.
 function chipQuestion(taskId: string, title: string): string {
-  return CHIP_QUESTIONS[taskId] ?? `¿Cómo: ${title}?`;
+  return CHIP_QUESTIONS[taskId as keyof typeof CHIP_QUESTIONS] ?? `¿Cómo: ${title}?`;
 }
 
 // The three graceful-degradation cases each map to a calm Spanish lead-in shown
@@ -105,8 +99,27 @@ export function AsistenteChat({ open, onOpenChange }: AsistenteChatProps) {
   // inline even when the API works.
   const [showGuide, setShowGuide] = useState(false);
   const [showTrustNote, setShowTrustNote] = useState(true);
+  // The task the current conversation is about, for the guided-tour trigger. Set
+  // on each send: a chip passes its id explicitly (exact), a typed question runs
+  // through the deterministic matcher. Null when we cannot tell. The model never
+  // triggers or routes the tour.
+  const [lastTaskId, setLastTaskId] = useState<string | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
+  // The button that launches the tour, so focus can return to it when the tour
+  // ends (the hook handles the actual return).
+  const tourTriggerRef = useRef<HTMLButtonElement>(null);
+
+  // Per-task role gate: the live "Mostrame en la app" trigger only appears when
+  // the user could actually reach the task's screen (mirror of the App.tsx route
+  // guards). These three flags feed canAccessTour for the matched task's access
+  // level (admin / staff / treasury). The runner that drives driver.js + routing
+  // is hosted above the routes (AsistenteTourProvider) so the tour survives the
+  // navigation it triggers; here we just get a handle to start it.
+  const { isAdmin } = useIsAdmin();
+  const { canViewTreasury } = useCanViewTreasury();
+  const { isMemberOnly } = useIsMemberOnly();
+  const tour = useAsistenteTourController();
 
   // Keep the latest message in view as content streams.
   useEffect(() => {
@@ -116,7 +129,7 @@ export function AsistenteChat({ open, onOpenChange }: AsistenteChatProps) {
 
   const isEmpty = messages.length === 0 && streaming === null && !isLoading;
 
-  const send = async (rawQuestion: string) => {
+  const send = async (rawQuestion: string, explicitTaskId?: string) => {
     const question = rawQuestion.trim();
     if (!question || isLoading) return;
 
@@ -125,6 +138,10 @@ export function AsistenteChat({ open, onOpenChange }: AsistenteChatProps) {
     setDegrade(null);
     setShowGuide(false);
     setInput('');
+    // Remember which task this turn is about so the live tour trigger can appear.
+    // A chip passes its id explicitly (deterministic, exact); a typed question
+    // goes through the deterministic free-text matcher. The model is never asked.
+    setLastTaskId(explicitTaskId ?? matchTaskByText(question));
 
     // Prior turns are everything already committed. We send these so the model
     // has follow-up context; they are user/assistant TEXT only.
@@ -252,6 +269,26 @@ export function AsistenteChat({ open, onOpenChange }: AsistenteChatProps) {
     send(input);
   };
 
+  // Launch the live guided tour for any task. We close the chat sheet first so
+  // the spotlight is not hidden behind it, then start the runner with that task's
+  // steps and its access note. The runner navigates to the task's screen and
+  // highlights each control in order; it never fills or submits anything.
+  const launchTour = (taskId: string) => {
+    const task = findTaskById(taskId);
+    if (!task?.tour) return;
+    const trigger = tourTriggerRef.current;
+    onOpenChange(false);
+    tour.start({ steps: task.tour, accessNote: task.note, returnFocusTo: trigger });
+  };
+
+  // The live trigger shows only when the current turn maps to a task that has a
+  // tour AND the user could actually reach that task's screen (per-task role gate,
+  // a mirror of the App.tsx route guards). Deterministic: the model is never used.
+  const lastTask = lastTaskId ? findTaskById(lastTaskId) : undefined;
+  const showTourTrigger =
+    !!lastTask?.tour &&
+    canAccessTour(lastTask.access, { isAdmin, canViewTreasury, isMemberOnly });
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
@@ -307,7 +344,7 @@ export function AsistenteChat({ open, onOpenChange }: AsistenteChatProps) {
                     <button
                       key={task.id}
                       type="button"
-                      onClick={() => send(q)}
+                      onClick={() => send(q, task.id)}
                       className="press rounded-full border border-primary/30 bg-primary/5 px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     >
                       {q}
@@ -329,7 +366,8 @@ export function AsistenteChat({ open, onOpenChange }: AsistenteChatProps) {
 
               {showGuide && (
                 <div className="border-t border-border pt-4">
-                  <AsistenteFallback />
+                  {/* launchTour already closes the sheet, so pass it directly. */}
+                  <AsistenteFallback onStartTour={launchTour} />
                 </div>
               )}
             </div>
@@ -338,6 +376,26 @@ export function AsistenteChat({ open, onOpenChange }: AsistenteChatProps) {
               {messages.map((m, i) => (
                 <MessageBubble key={i} role={m.role} content={m.content} />
               ))}
+
+              {/* Live guided tour trigger. Deterministic and per-task role gated:
+                  it appears for any of the eight tasks whose screen the user can
+                  reach. It launches the driver.js spotlight on the task's screen;
+                  it never fills or submits anything. */}
+              {showTourTrigger && lastTaskId && !isLoading && streaming === null && (
+                <div className="flex justify-start">
+                  <Button
+                    ref={tourTriggerRef}
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => launchTour(lastTaskId)}
+                    className="gap-2"
+                  >
+                    <Sparkles className="h-4 w-4" aria-hidden="true" />
+                    Mostrame en la app
+                  </Button>
+                </div>
+              )}
 
               {/* The in-progress assistant message. */}
               {streaming !== null && (
@@ -365,7 +423,8 @@ export function AsistenteChat({ open, onOpenChange }: AsistenteChatProps) {
                   <p className="text-sm leading-relaxed text-foreground">
                     {DEGRADE_MESSAGES[degrade]}
                   </p>
-                  <AsistenteFallback />
+                  {/* launchTour already closes the sheet, so pass it directly. */}
+                  <AsistenteFallback onStartTour={launchTour} />
                 </div>
               )}
             </div>

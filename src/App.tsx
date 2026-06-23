@@ -41,6 +41,7 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import { InstallPrompt } from "@/components/pwa/InstallPrompt";
 import { HiddenModeProvider } from "@/contexts/HiddenModeContext";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { AsistenteTourProvider } from "@/contexts/AsistenteTourContext";
 import Dashboard from "./pages/Dashboard";
 import Members from "./pages/Members";
 import AdminMembers from "./pages/AdminMembers";
@@ -340,6 +341,10 @@ const App = () => (
     <InstallPrompt />
 
     <BrowserRouter>
+      {/* The guided-tour runner is hosted once here, above the routes, so a tour
+          survives the route change it triggers (each route mounts its own
+          MainLayout; see AsistenteTourContext). */}
+      <AsistenteTourProvider>
       <Routes>
         {/* Public */}
         <Route path="/auth" element={<AuthRoute><Auth /></AuthRoute>} />
@@ -386,6 +391,7 @@ const App = () => (
         {/* Fallback */}
         <Route path="*" element={<NotFound />} />
       </Routes>
+      </AsistenteTourProvider>
     </BrowserRouter>
     </HiddenModeProvider>
     </AuthProvider>

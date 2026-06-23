@@ -136,7 +136,7 @@ export default function LogExpense() {
                 value={selectedAccount}
                 onValueChange={(value: AccountType) => setValue('account', value)}
               >
-                <SelectTrigger>
+                <SelectTrigger data-asistente="gasto-cuenta">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -155,6 +155,7 @@ export default function LogExpense() {
                 <Input
                   id="transaction_date"
                   type="date"
+                  data-asistente="gasto-fecha"
                   {...register('transaction_date')}
                 />
                 {errors.transaction_date && (
@@ -168,6 +169,7 @@ export default function LogExpense() {
                   id="amount"
                   type="number"
                   step="0.01"
+                  data-asistente="gasto-monto"
                   {...register('amount', { valueAsNumber: true })}
                   placeholder="0.00"
                 />
@@ -189,7 +191,7 @@ export default function LogExpense() {
                   }
                 }}
               >
-                <SelectTrigger>
+                <SelectTrigger data-asistente="gasto-categoria">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -209,7 +211,7 @@ export default function LogExpense() {
                   value={selectedEventId || ''}
                   onValueChange={(value) => setValue('event_id', value)}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger data-asistente="gasto-evento">
                     <SelectValue placeholder={t('logExpense.selectEventPlaceholder')} />
                   </SelectTrigger>
                   <SelectContent>
@@ -256,6 +258,7 @@ export default function LogExpense() {
               </Button>
               <Button
                 type="submit"
+                data-asistente="gasto-guardar"
                 onClick={() => { addAnotherRef.current = false; }}
                 disabled={isSubmitting}
                 className="flex-1"

@@ -404,3 +404,83 @@
 
 /* The rotate-to-read landscape hack was removed: the mobile card views are now
    the canonical phone layout in any orientation, so no forced table flip. */
+
+/* Asistente guided tour (driver.js) themed to the Direction 3 gold system.
+   The stock driver.css renders a generic white card with a Helvetica stack,
+   gray buttons, a 5px radius, and a hard black shadow. We override it onto the
+   lodge tokens. The selector doubles the class (.driver-popover.driver-popover)
+   so it outranks the vendor rule (specificity 0,2,0 vs 0,1,0) without depending
+   on stylesheet import order or !important. The popover keeps the --popover
+   (white) background, so driver.js's white arrow already matches and needs no
+   recolor. */
+.driver-popover.driver-popover {
+  background: hsl(var(--popover));
+  color: hsl(var(--popover-foreground));
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius);
+  box-shadow: 0 10px 30px hsl(var(--primary) / 0.12), 0 2px 8px hsl(240 8% 9% / 0.08);
+  font-family: 'Inter', system-ui, sans-serif;
+  max-width: 320px;
+  /* A tour step can spotlight a control inside a modal Radix dialog. When such a
+     dialog is open it sets pointer-events:none on <body>, which the popover would
+     inherit, making Siguiente/Anterior/Cerrar untappable. Re-enable interaction
+     on the popover subtree so the tour can always be advanced and closed. */
+  pointer-events: auto;
+}
+
+.driver-popover.driver-popover .driver-popover-title {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  color: hsl(var(--foreground));
+}
+
+.driver-popover.driver-popover .driver-popover-description {
+  color: hsl(var(--muted-foreground));
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+/* The top-right close (x). */
+.driver-popover.driver-popover .driver-popover-close-btn {
+  color: hsl(var(--muted-foreground));
+  transition: color var(--dur-fast) var(--ease-soft);
+}
+.driver-popover.driver-popover .driver-popover-close-btn:hover,
+.driver-popover.driver-popover .driver-popover-close-btn:focus-visible {
+  color: hsl(var(--foreground));
+}
+
+/* Footer buttons share the app's button feel: a calm secondary by default. */
+.driver-popover.driver-popover .driver-popover-footer button {
+  text-shadow: none;
+  border: 1px solid hsl(var(--border));
+  border-radius: calc(var(--radius) - 0.25rem);
+  background: hsl(var(--secondary));
+  color: hsl(var(--secondary-foreground));
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  padding: 0.375rem 0.75rem;
+  transition: background var(--dur-fast) var(--ease-soft), border-color var(--dur-fast) var(--ease-soft);
+}
+.driver-popover.driver-popover .driver-popover-footer button:hover {
+  background: hsl(var(--muted));
+}
+
+/* The advance button (Siguiente, or Cerrar on the last step) is the gold primary. */
+.driver-popover.driver-popover .driver-popover-footer .driver-popover-next-btn {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  border-color: hsl(var(--primary));
+}
+.driver-popover.driver-popover .driver-popover-footer .driver-popover-next-btn:hover {
+  background: hsl(40 60% 28%);
+  border-color: hsl(40 60% 28%);
+}
+/* In dark mode the resting gold is lighter (see .dark --primary), so hover must
+   lighten, not darken, to keep the feedback direction correct. */
+.dark .driver-popover.driver-popover .driver-popover-footer .driver-popover-next-btn:hover {
+  background: hsl(42 62% 64%);
+  border-color: hsl(42 62% 64%);
+}
