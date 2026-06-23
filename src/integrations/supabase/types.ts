@@ -47,6 +47,24 @@ export type Database = {
         }
         Relationships: []
       }
+      asistente_usage: {
+        Row: {
+          count: number
+          user_id: string
+          year_month: string
+        }
+        Insert: {
+          count?: number
+          user_id: string
+          year_month: string
+        }
+        Update: {
+          count?: number
+          user_id?: string
+          year_month?: string
+        }
+        Relationships: []
+      }
       book_transfer_requests: {
         Row: {
           book_id: string
@@ -1266,6 +1284,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      increment_asistente_usage: {
+        Args: { _user_id: string; _year_month: string }
+        Returns: number
       }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
       is_bibliotecario: { Args: { _user_id: string }; Returns: boolean }
