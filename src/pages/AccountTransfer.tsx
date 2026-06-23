@@ -156,7 +156,7 @@ export default function AccountTransfer() {
         }
         actions={
           !showForm && (
-            <Button data-asistente="transfer-nueva" onClick={() => setShowForm(true)}>
+            <Button onClick={() => setShowForm(true)}>
               <Plus className="h-4 w-4 mr-2" />
               {t('transfer.newTransfer')}
             </Button>
@@ -202,7 +202,7 @@ export default function AccountTransfer() {
                       }
                     }}
                   >
-                    <SelectTrigger data-asistente="transfer-origen">
+                    <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -227,7 +227,7 @@ export default function AccountTransfer() {
                       }
                     }}
                   >
-                    <SelectTrigger data-asistente="transfer-destino">
+                    <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -249,7 +249,6 @@ export default function AccountTransfer() {
                 <Input
                   id="transfer_date"
                   type="date"
-                  data-asistente="transfer-fecha"
                   {...register('transfer_date')}
                 />
                 {errors.transfer_date && (
@@ -316,7 +315,6 @@ export default function AccountTransfer() {
                     id="source_amount"
                     type="number"
                     step="0.01"
-                    data-asistente="transfer-monto"
                     value={sourceAmount || ''}
                     onChange={handleSourceAmountChange}
                     placeholder="0.00"
@@ -344,7 +342,7 @@ export default function AccountTransfer() {
                 <Button type="button" variant="outline" onClick={handleCancel}>
                   {t('common.cancel')}
                 </Button>
-                <Button type="submit" data-asistente="transfer-completar" disabled={isSubmitting} className="flex-1">
+                <Button type="submit" disabled={isSubmitting} className="flex-1">
                   {isSubmitting ? t('common.processing') : t('transfer.completeTransfer')}
                 </Button>
               </div>

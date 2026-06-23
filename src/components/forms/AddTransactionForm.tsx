@@ -282,7 +282,7 @@ export function AddTransactionForm({ defaultType = 'income', triggerLabel = 'Reg
       <Button type="submit" variant="outline" disabled={submitting || disabled} onClick={() => { addAnotherRef.current = true; }}>
         Registrar y agregar otro
       </Button>
-      <Button type="submit" disabled={submitting || disabled} onClick={() => { addAnotherRef.current = false; }}>
+      <Button type="submit" data-asistente="mov-guardar" disabled={submitting || disabled} onClick={() => { addAnotherRef.current = false; }}>
         {submitting ? 'Registrando...' : 'Registrar movimiento'}
       </Button>
     </DialogFooter>
@@ -292,7 +292,7 @@ export function AddTransactionForm({ defaultType = 'income', triggerLabel = 'Reg
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {trigger ?? (
-          <Button>
+          <Button data-asistente="mov-abrir">
             <PlusCircle className="mr-2 h-4 w-4" />
             {triggerLabel}
           </Button>
@@ -310,6 +310,7 @@ export function AddTransactionForm({ defaultType = 'income', triggerLabel = 'Reg
             <button
               key={m.key}
               type="button"
+              data-asistente={`mov-tipo-${m.key}`}
               onClick={() => switchModo(m.key)}
               className={cn(
                 'press rounded-md px-1.5 py-1.5 text-[11px] font-semibold leading-tight transition-colors',
@@ -350,7 +351,7 @@ export function AddTransactionForm({ defaultType = 'income', triggerLabel = 'Reg
               <div className={cn('space-y-2', modo === 'evento' && 'sm:col-span-2')}>
                 <Label>Cuenta</Label>
                 <Select value={selectedAccount} onValueChange={(v: AccountType) => setValue('account', v)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger data-asistente="mov-cuenta"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {ACCOUNTS.map((acc) => <SelectItem key={acc} value={acc}>{ACCOUNT_LABELS[acc]}</SelectItem>)}
                   </SelectContent>
@@ -360,7 +361,7 @@ export function AddTransactionForm({ defaultType = 'income', triggerLabel = 'Reg
                 <div className="space-y-2">
                   <Label>Categoría</Label>
                   <Select value={category} onValueChange={(v: TransactionCategory) => setValue('category', v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger data-asistente="mov-categoria"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {availableCategories.map((cat) => <SelectItem key={cat} value={cat}>{CATEGORY_LABELS[cat]}</SelectItem>)}
                     </SelectContent>
@@ -372,12 +373,12 @@ export function AddTransactionForm({ defaultType = 'income', triggerLabel = 'Reg
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label htmlFor="transaction_date">Fecha</Label>
-                <Input id="transaction_date" type="date" {...register('transaction_date')} />
+                <Input id="transaction_date" type="date" data-asistente="mov-fecha" {...register('transaction_date')} />
                 {errors.transaction_date && <p className="text-sm text-destructive">{errors.transaction_date.message}</p>}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="amount">Monto ({selectedAccount === 'savings' ? 'USD' : 'ARS'})</Label>
-                <Input id="amount" type="number" step="0.01" {...register('amount', { valueAsNumber: true })} placeholder="0.00" />
+                <Input id="amount" type="number" step="0.01" data-asistente="mov-monto" {...register('amount', { valueAsNumber: true })} placeholder="0.00" />
                 {errors.amount && <p className="text-sm text-destructive">{errors.amount.message}</p>}
               </div>
             </div>
@@ -386,7 +387,7 @@ export function AddTransactionForm({ defaultType = 'income', triggerLabel = 'Reg
               <div className="space-y-2">
                 <Label>Miembro</Label>
                 <Select value={watch('member_id') || ''} onValueChange={(v) => setValue('member_id', v || undefined)}>
-                  <SelectTrigger><SelectValue placeholder="Seleccionar miembro..." /></SelectTrigger>
+                  <SelectTrigger data-asistente="mov-miembro"><SelectValue placeholder="Seleccionar miembro..." /></SelectTrigger>
                   <SelectContent>
                     {members.map((m) => <SelectItem key={m.id} value={m.id}>{m.full_name}</SelectItem>)}
                   </SelectContent>
@@ -414,7 +415,7 @@ export function AddTransactionForm({ defaultType = 'income', triggerLabel = 'Reg
                   Resumen breve del gasto
                   <span className="text-xs text-muted-foreground ml-1">({(expenseSummary?.length ?? 0)}/40)</span>
                 </Label>
-                <Input id="expense_summary" {...register('expense_summary')} maxLength={40}
+                <Input id="expense_summary" data-asistente="mov-resumen" {...register('expense_summary')} maxLength={40}
                   placeholder={isEventExpense ? 'Ej: Catering bebidas y mozo' : 'Ej: Compra papelería oficina'} />
                 {errors.expense_summary && <p className="text-sm text-destructive">{errors.expense_summary.message}</p>}
               </div>
@@ -462,7 +463,7 @@ export function AddTransactionForm({ defaultType = 'income', triggerLabel = 'Reg
               <div className="space-y-2">
                 <Label>Cuenta origen</Label>
                 <Select value={tFrom} onValueChange={(v: AccountType) => setTFrom(v)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger data-asistente="mov-transfer-origen"><SelectValue /></SelectTrigger>
                   <SelectContent>{ACCOUNTS.map((a) => <SelectItem key={a} value={a}>{ACCOUNT_LABELS[a]}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
@@ -470,7 +471,7 @@ export function AddTransactionForm({ defaultType = 'income', triggerLabel = 'Reg
               <div className="space-y-2">
                 <Label>Cuenta destino</Label>
                 <Select value={tTo} onValueChange={(v: AccountType) => setTTo(v)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger data-asistente="mov-transfer-destino"><SelectValue /></SelectTrigger>
                   <SelectContent>{ACCOUNTS.map((a) => <SelectItem key={a} value={a}>{ACCOUNT_LABELS[a]}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
@@ -491,7 +492,7 @@ export function AddTransactionForm({ defaultType = 'income', triggerLabel = 'Reg
             ) : (
               <div className="space-y-2">
                 <Label htmlFor="t_source">Monto ({fromCurrency})</Label>
-                <Input id="t_source" type="number" step="0.01" value={tSource} onChange={(e) => setTSource(e.target.value)} placeholder="0.00" />
+                <Input id="t_source" type="number" step="0.01" data-asistente="mov-transfer-monto" value={tSource} onChange={(e) => setTSource(e.target.value)} placeholder="0.00" />
               </div>
             )}
 
