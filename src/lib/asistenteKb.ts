@@ -10,10 +10,14 @@
  *   envia a la edge function en cada consulta, por eso el texto se mantiene
  *   compacto.
  *
- *   Nota de acceso: las tres tareas de escritura de dinero (T1 registrar pago,
- *   T2 registrar gasto, T3 transferir) requieren rol Tesorero o Administrador.
- *   Un Venerable (vm) puede ver tesorería pero no ejecutarlas. T4 a T8 estan
- *   disponibles para el personal de tesorería en general.
+ *   Nota de acceso: el campo `access` de cada tarea refleja el rol que necesita
+ *   la ACCION de la tarea (no solo el guard de la ruta). Las tres tareas de
+ *   escritura de dinero (T1, T2, T3) viven en AdminRoute. Ademas T4 (generar
+ *   reporte), T7 (alta de miembro) y T8 (crear evento) requieren isAdmin aunque
+ *   su pantalla sea visible al personal de tesorería, porque su control
+ *   principal (Generar Reporte / Agregar Miembro / Nuevo evento) solo aparece
+ *   con isAdmin. Solo T5 (calculadora) y T6 (recordatorios) son de personal de
+ *   tesorería (staff). El recorrido se ofrece solo a quien puede hacer la tarea.
  */
 
 import type { TourStep } from '@/lib/asistenteTour';
@@ -25,9 +29,11 @@ export type KbTaskId = 'T1' | 'T2' | 'T3' | 'T4' | 'T5' | 'T6' | 'T7' | 'T8';
  * App.tsx. Solo se usa para decidir, en el cliente, si mostrar el boton del
  * recorrido guiado ("Mostrame en la app") para esa tarea. NUNCA se envia al
  * modelo (no entra en buildKbText).
- *   - 'admin'    -> AdminRoute: requiere isAdmin (T1, T2, T3).
- *   - 'staff'    -> TreasuryStaffRoute: canViewTreasury && !isMemberOnly (T4, T5, T6, T8).
- *   - 'treasury' -> TreasuryRoute: canViewTreasury (T7).
+ *   - 'admin'    -> requiere isAdmin: T1, T2, T3 (AdminRoute) y tambien T4, T7, T8
+ *                  (pantalla de tesorería, pero su control de crear/generar/dar
+ *                  de alta solo aparece con isAdmin).
+ *   - 'staff'    -> canViewTreasury && !isMemberOnly: T5, T6.
+ *   - 'treasury' -> canViewTreasury. Nivel valido pero hoy sin tareas asignadas.
  */
 export type KbTaskAccess = 'admin' | 'staff' | 'treasury';
 
