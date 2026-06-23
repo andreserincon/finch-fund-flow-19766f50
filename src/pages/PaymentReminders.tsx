@@ -134,11 +134,11 @@ function ReminderCard({ item }: { item: ReminderItem }) {
             {displayName(member.full_name, member.phone_number)}
           </CardTitle>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={copy}>
+            <Button variant="outline" size="sm" onClick={copy} data-asistente="recordatorio-copiar">
               <Copy className="mr-1.5 h-4 w-4" /> Copiar
             </Button>
             {link && (
-              <Button size="sm" asChild>
+              <Button size="sm" asChild data-asistente="recordatorio-enviar">
                 <a href={link}>
                   <MessageSquare className="mr-1.5 h-4 w-4" /> Enviar por WhatsApp
                 </a>
@@ -161,8 +161,9 @@ function ReminderCard({ item }: { item: ReminderItem }) {
               placeholder="+5491155551234"
               className="h-9 sm:w-56"
               onKeyDown={(e) => { if (e.key === 'Enter') saveNumber(); }}
+              data-asistente="recordatorio-numero"
             />
-            <Button size="sm" onClick={saveNumber} disabled={!number.trim() || updateMember.isPending}>
+            <Button size="sm" onClick={saveNumber} disabled={!number.trim() || updateMember.isPending} data-asistente="recordatorio-guardar-numero">
               {updateMember.isPending ? 'Guardando...' : 'Guardar número'}
             </Button>
           </div>

@@ -126,6 +126,44 @@ export const ASISTENTE_TASKS: KbTask[] = [
       'Tocá Registrar Gasto para guardar, o Agregar otro para cargar otro gasto sin salir.',
     ],
     glossaryTerms: ['gl', 'glPortion'],
+    tour: [
+      {
+        route: '/log-expense',
+        anchor: 'gasto-cuenta',
+        title: 'Elegí la cuenta',
+        body: 'Seleccioná la cuenta de donde sale el dinero: Banco, Gran Logia o Ahorros. Ahorros es en USD; las demas en ARS.',
+      },
+      {
+        route: '/log-expense',
+        anchor: 'gasto-fecha',
+        title: 'Confirmá la fecha',
+        body: 'Viene la fecha de hoy. Cambiala si el gasto corresponde a otro día.',
+      },
+      {
+        route: '/log-expense',
+        anchor: 'gasto-monto',
+        title: 'Ingresá el monto',
+        body: 'Cargá el monto del gasto en la moneda de la cuenta elegida.',
+      },
+      {
+        route: '/log-expense',
+        anchor: 'gasto-categoria',
+        title: 'Elegí la categoría',
+        body: 'Gasto de Evento, Aporte a la organización matriz u Otro Gasto.',
+      },
+      {
+        route: '/log-expense',
+        anchor: 'gasto-evento',
+        title: 'Seleccioná el evento',
+        body: 'Solo si elegiste Gasto de Evento: indicá el evento al que corresponde. Su nombre se agrega a la nota.',
+      },
+      {
+        route: '/log-expense',
+        anchor: 'gasto-guardar',
+        title: 'Guardá el gasto',
+        body: 'Cuando todo este correcto, tocá Registrar Gasto. (El recorrido no lo toca: lo guardás vos.)',
+      },
+    ],
   },
   {
     id: 'T3',
@@ -144,6 +182,49 @@ export const ASISTENTE_TASKS: KbTask[] = [
       'Tocá Completar Transferencia para guardar. Queda registrada en el historial de transferencias.',
     ],
     glossaryTerms: ['gl'],
+    tour: [
+      {
+        route: '/account-transfer',
+        anchor: 'transfer-nueva',
+        title: 'Abrí una transferencia',
+        body: 'Tocá Nueva Transferencia para abrir el formulario.',
+      },
+      {
+        route: '/account-transfer',
+        anchor: 'transfer-origen',
+        title: 'Elegí la cuenta de origen',
+        body: 'Seleccioná la cuenta de donde sale el dinero. Debe ser distinta de la de destino.',
+      },
+      {
+        route: '/account-transfer',
+        anchor: 'transfer-destino',
+        title: 'Elegí la cuenta de destino',
+        body: 'Seleccioná la cuenta a donde entra el dinero. Tiene que ser distinta de la de origen.',
+      },
+      {
+        route: '/account-transfer',
+        anchor: 'transfer-fecha',
+        title: 'Confirmá la fecha',
+        body: 'Viene la fecha de hoy. Cambiala si la transferencia corresponde a otro día.',
+      },
+      {
+        route: '/account-transfer',
+        anchor: 'transfer-monto',
+        title: 'Ingresá el monto',
+        body: 'Cargá el monto a transferir. Si origen y destino usan la misma moneda, alcanza con este campo.',
+      },
+      {
+        route: '/account-transfer',
+        title: 'Si son monedas distintas',
+        body: 'Cuando origen y destino usan monedas distintas (por ejemplo ARS y USD en Ahorros), se abren dos campos: el monto que sale y el que llega. La app calcula el tipo de cambio implicito y avisa si se aparta mucho del vigente.',
+      },
+      {
+        route: '/account-transfer',
+        anchor: 'transfer-completar',
+        title: 'Completá la transferencia',
+        body: 'Cuando todo este correcto, tocá Completar Transferencia. Queda registrada en el historial. (El recorrido no lo toca: lo guardás vos.)',
+      },
+    ],
   },
   {
     id: 'T4',
@@ -159,6 +240,44 @@ export const ASISTENTE_TASKS: KbTask[] = [
       'Cuando este listo, usá el menú de descarga de la fila para bajar el reporte Completo o el Resumen, o compartirlo si tu dispositivo lo permite.',
     ],
     glossaryTerms: ['capita', 'gl'],
+    tour: [
+      {
+        route: '/reports',
+        anchor: 'reporte-generar-reporte',
+        title: 'Abrí Generar Reporte',
+        body: 'Tocá Generar Reporte (arriba a la derecha) para abrir el formulario del período.',
+      },
+      {
+        route: '/reports',
+        anchor: 'reporte-anio',
+        title: 'Elegí el año',
+        body: 'Seleccioná el año del período que querés reportar.',
+      },
+      {
+        route: '/reports',
+        anchor: 'reporte-mes',
+        title: 'Elegí el mes',
+        body: 'Seleccioná el mes del período a reportar.',
+      },
+      {
+        route: '/reports',
+        anchor: 'reporte-sobrescribir',
+        title: 'Rehacer un reporte ya existente',
+        body: 'Si el reporte de ese período ya existe y querés rehacerlo, marcá esta opción para sobrescribirlo.',
+      },
+      {
+        route: '/reports',
+        anchor: 'reporte-generar',
+        title: 'Generá y esperá',
+        body: 'Tocá Generar y esperá. El estado pasa a Generando y luego a Generado. (El recorrido no lo toca: lo generás vos.)',
+      },
+      {
+        route: '/reports',
+        anchor: 'reporte-descargar',
+        title: 'Descargá o compartí',
+        body: 'Cuando este listo, usá el menú de descarga de la fila para bajar el Reporte Completo o el Resumen, o compartirlo si tu dispositivo lo permite.',
+      },
+    ],
   },
   {
     id: 'T5',
@@ -175,6 +294,44 @@ export const ASISTENTE_TASKS: KbTask[] = [
       'Con el botón de descarga podés exportar todo a una planilla Excel. La calculadora no modifica nada: el valor elegido se carga despues, a mano, en Cápitas Mensuales.',
     ],
     glossaryTerms: ['capita', 'cvs', 'ratioGl', 'gl65', 'incrementoPropio', 'indiceAnual', 'glPctCapita', 'estandar', 'solidaria'],
+    tour: [
+      {
+        route: '/fee-calculator',
+        anchor: 'calc-mes-base',
+        title: 'Elegí el mes base',
+        body: 'La app toma de referencia las cápitas vigentes de ese mes. Viene preseleccionado el primer mes del trimestre actual.',
+      },
+      {
+        route: '/fee-calculator',
+        anchor: 'calc-trimestre-cvs',
+        title: 'Revisá el trimestre CVS',
+        body: 'Se carga solo desde el índice oficial. Si no hay dato, aparece un campo para ingresar el CVS a mano.',
+      },
+      {
+        route: '/fee-calculator',
+        anchor: 'calc-referencia-actual',
+        title: 'Mirá la referencia actual',
+        body: 'Cápitas estándar y solidaria vigentes, miembros activos de cada tipo y las cápitas de la Gran Logia.',
+      },
+      {
+        route: '/fee-calculator',
+        anchor: 'calc-propuestas',
+        title: 'Compará las propuestas',
+        body: 'Ratio GL (mantiene la proporción con la Gran Logia), Base CVS (sigue la inflación) y GL 65%.',
+      },
+      {
+        route: '/fee-calculator',
+        anchor: 'calc-escenario-personalizado',
+        title: 'Probá un escenario propio',
+        body: 'Cargá tu propia cápita estándar y solidaria para ver los indicadores con esos valores.',
+      },
+      {
+        route: '/fee-calculator',
+        anchor: 'calc-exportar',
+        title: 'Exportá a Excel',
+        body: 'Con el botón de descarga bajás todo a una planilla. La calculadora no modifica nada: el valor elegido se carga despues, a mano, en Cápitas Mensuales.',
+      },
+    ],
   },
   {
     id: 'T6',
@@ -190,6 +347,42 @@ export const ASISTENTE_TASKS: KbTask[] = [
       'Si un socio aparece sin desglose de cuotas, revisá su detalle a mano antes de enviar.',
     ],
     glossaryTerms: ['capita', 'impago', 'demorado', 'matricula'],
+    tour: [
+      {
+        route: '/recordatorios',
+        title: 'Una tarjeta por socio con saldo',
+        body: 'Aparece una tarjeta por cada socio con saldo pendiente, con el mensaje ya armado (capitas y cuotas de eventos). Si todos estan al dia, no aparece ninguna.',
+      },
+      {
+        route: '/recordatorios',
+        title: 'Revisa el mensaje',
+        body: 'Lee el mensaje de cada tarjeta y confirma que el detalle de la deuda sea correcto antes de enviarlo.',
+      },
+      {
+        route: '/recordatorios',
+        anchor: 'recordatorio-enviar',
+        title: 'Envia por WhatsApp',
+        body: 'Toca Enviar por WhatsApp para abrir WhatsApp con el mensaje cargado. El envio es manual desde tu propio WhatsApp. (El recorrido no lo envia: lo mandas vos.)',
+      },
+      {
+        route: '/recordatorios',
+        anchor: 'recordatorio-copiar',
+        title: 'O copia el mensaje',
+        body: 'Si preferis, toca Copiar para llevar el mensaje al portapapeles y pegarlo donde quieras.',
+      },
+      {
+        route: '/recordatorios',
+        anchor: 'recordatorio-numero',
+        title: 'Falta el numero de WhatsApp',
+        body: 'Si a un socio le falta el numero, cargalo en formato internacional (por ejemplo +5491155551234). Este campo solo aparece cuando no hay numero guardado.',
+      },
+      {
+        route: '/recordatorios',
+        anchor: 'recordatorio-guardar-numero',
+        title: 'Guarda el numero',
+        body: 'Toca Guardar numero para guardarlo en la ficha del socio. Despues vas a poder enviar el recordatorio por WhatsApp.',
+      },
+    ],
   },
   {
     id: 'T7',
@@ -205,6 +398,31 @@ export const ASISTENTE_TASKS: KbTask[] = [
       'Para corregir datos despues, usá el menú de la fila (Editar). Podés filtrar por estado (Activo, Inactivo, Al día, Impago, Demorado, Adelantado) y buscar por nombre o matrícula.',
     ],
     glossaryTerms: ['capita', 'estandar', 'solidaria', 'matricula', 'impago', 'demorado', 'adelantado', 'nc'],
+    tour: [
+      {
+        route: '/members',
+        anchor: 'miembro-agregar',
+        title: 'Abrí el alta de miembro',
+        body: 'Tocá Agregar Miembro (arriba a la derecha). Solo aparece si tenes acceso de edicion. Se abre el formulario del nuevo socio.',
+      },
+      {
+        route: '/members',
+        title: 'Completá la ficha y guardá',
+        body: 'En el formulario cargá nombre, matricula y los demas datos, elegí el tipo de cápita (estándar para la mayoría, solidaria para monto reducido) y tocá Agregar Miembro. El nuevo socio aparece en la lista y empieza a generar cápita.',
+      },
+      {
+        route: '/members',
+        anchor: 'miembro-estado',
+        title: 'Filtrá por estado',
+        body: 'Con el filtro Estado podés ver los socios por Activo, Inactivo, Al día, Impago, Demorado o Adelantado.',
+      },
+      {
+        route: '/members',
+        anchor: 'miembro-buscar',
+        title: 'Buscá un miembro',
+        body: 'Escribí acá para buscar por nombre o matricula. Para corregir datos despues, usá el menú de la fila (Editar).',
+      },
+    ],
   },
   {
     id: 'T8',
@@ -221,6 +439,62 @@ export const ASISTENTE_TASKS: KbTask[] = [
       'Tocá Crear evento. Despues podés activar o desactivar, editar o eliminar cada evento, y tocarlo para ver su resumen completo.',
     ],
     glossaryTerms: ['impago', 'demorado'],
+    tour: [
+      {
+        route: '/expense-categories',
+        anchor: 'evento-nuevo',
+        title: 'Abrí Nuevo evento',
+        body: 'Tocá Nuevo evento (arriba a la derecha). Solo aparece con acceso de edición.',
+      },
+      {
+        route: '/expense-categories',
+        anchor: 'evento-nombre',
+        title: 'Poné el nombre',
+        body: 'Escribí el Nombre del evento (por ejemplo, Cena de Fin de Año).',
+      },
+      {
+        route: '/expense-categories',
+        anchor: 'evento-descripcion',
+        title: 'Agregá una descripción',
+        body: 'Si querés, sumá una breve Descripción. Es opcional.',
+      },
+      {
+        route: '/expense-categories',
+        anchor: 'evento-cuota',
+        title: 'Cargá la cuota',
+        body: 'Ingresá la Cuota por miembro en ARS.',
+      },
+      {
+        route: '/expense-categories',
+        anchor: 'evento-cuotas',
+        title: 'Definí el número de cuotas',
+        body: 'Indicá el Número de cuotas. Se cobra una por mes desde la fecha de cobro.',
+      },
+      {
+        route: '/expense-categories',
+        anchor: 'evento-cobrar-desde',
+        title: 'Elegí desde cuándo cobrar',
+        body: 'Si corresponde, marcá Cobrar a partir de para fijar el mes de la primera cuota. Es opcional.',
+      },
+      {
+        route: '/expense-categories',
+        anchor: 'evento-vencimiento',
+        title: 'Poné la fecha límite',
+        body: 'Si corresponde, cargá la Fecha límite de pago. Es opcional.',
+      },
+      {
+        route: '/expense-categories',
+        anchor: 'evento-asignar',
+        title: 'Asigná la cuota a los socios',
+        body: 'Dejá marcada la opción de asignar la cuota a todos los miembros activos para generarles el cargo. La app muestra el total estimado.',
+      },
+      {
+        route: '/expense-categories',
+        anchor: 'evento-crear',
+        title: 'Creá el evento',
+        body: 'Cuando todo este correcto, tocá Crear evento. (El recorrido no lo toca: lo creás vos.) Despues podés activar, desactivar, editar o eliminar cada evento.',
+      },
+    ],
   },
 ];
 

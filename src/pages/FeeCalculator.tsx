@@ -619,6 +619,7 @@ export default function FeeCalculator() {
                     onClick={exportCvsToExcel}
                     disabled={!monthly.length}
                     className="h-8 w-8"
+                    data-asistente="calc-exportar"
                   >
                     <Download className="h-4 w-4" />
                   </Button>
@@ -650,7 +651,7 @@ export default function FeeCalculator() {
           <div className="flex flex-col gap-1">
             <Label className="text-xs text-muted-foreground">Mes base</Label>
             <Select value={selectedBaseMonth} onValueChange={setSelectedBaseMonth}>
-              <SelectTrigger className="w-[200px]">
+              <SelectTrigger className="w-[200px]" data-asistente="calc-mes-base">
                 <SelectValue placeholder="Mes base" />
               </SelectTrigger>
               <SelectContent>
@@ -663,7 +664,7 @@ export default function FeeCalculator() {
             </Select>
           </div>
 
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-col gap-1" data-asistente="calc-trimestre-cvs">
             <Label className="text-xs text-muted-foreground">
               Trimestre <TermTooltip termKey="cvs">CVS</TermTooltip>
             </Label>
@@ -724,7 +725,7 @@ export default function FeeCalculator() {
         )}
 
         {/* Section 1: Current Reference */}
-        <div>
+        <div data-asistente="calc-referencia-actual">
           <h2 className="section-header">{t('feeCalculator.currentReference')}</h2>
           <div className="grid grid-cols-2 landscape:grid-cols-3 lg:grid-cols-3 gap-2 landscape:gap-1.5 md:gap-4">
             <StatCard title={t('feeCalculator.currentStdFee')} value={formatARS(currentStdFee)} />
@@ -747,7 +748,7 @@ export default function FeeCalculator() {
 
 
         {/* Section 4: Proposals */}
-        <div>
+        <div data-asistente="calc-propuestas">
           <h2 className="section-header">{t('feeCalculator.proposals')}</h2>
           {!hasCvs ? (
             <div className="rounded-lg border border-dashed p-8 text-center text-muted-foreground">
@@ -786,7 +787,7 @@ export default function FeeCalculator() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label>{t('feeCalculator.customStdFee')}</Label>
-                <Input type="number" step="1" placeholder="0" value={customStd} onChange={(e) => setCustomStd(e.target.value)} />
+                <Input type="number" step="1" placeholder="0" value={customStd} onChange={(e) => setCustomStd(e.target.value)} data-asistente="calc-escenario-personalizado" />
               </div>
               <div className="space-y-1.5">
                 <Label>{t('feeCalculator.customSolFee')}</Label>

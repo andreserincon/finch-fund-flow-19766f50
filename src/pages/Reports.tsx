@@ -151,7 +151,7 @@ export default function Reports() {
         actions={isAdmin && (
           <Dialog open={isGenerateDialogOpen} onOpenChange={setIsGenerateDialogOpen}>
             <DialogTrigger asChild>
-              <Button>
+              <Button data-asistente="reporte-generar-reporte">
                 <FileText className="h-4 w-4 mr-2" />
                 {t('reports.generateReport')}
               </Button>
@@ -166,7 +166,7 @@ export default function Reports() {
                   <div className="space-y-2">
                     <Label>{t('reports.year')}</Label>
                     <Select value={selectedYear} onValueChange={setSelectedYear}>
-                      <SelectTrigger>
+                      <SelectTrigger data-asistente="reporte-anio">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -181,7 +181,7 @@ export default function Reports() {
                   <div className="space-y-2">
                     <Label>{t('reports.month')}</Label>
                     <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-                      <SelectTrigger>
+                      <SelectTrigger data-asistente="reporte-mes">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -197,6 +197,7 @@ export default function Reports() {
                 <div className="flex items-center space-x-2">
                   <Checkbox
                     id="forceRegenerate"
+                    data-asistente="reporte-sobrescribir"
                     checked={forceRegenerate}
                     onCheckedChange={(checked) => setForceRegenerate(checked === true)}
                   />
@@ -209,7 +210,7 @@ export default function Reports() {
                 <Button variant="outline" onClick={() => setIsGenerateDialogOpen(false)}>
                   {t('common.cancel')}
                 </Button>
-                <Button onClick={handleGenerateReport} disabled={generateReport.isPending}>
+                <Button data-asistente="reporte-generar" onClick={handleGenerateReport} disabled={generateReport.isPending}>
                   {generateReport.isPending ? (
                     <>
                       <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
@@ -293,7 +294,7 @@ export default function Reports() {
                       {report.status === 'generated' && report.pdf_path && (
                         <DropdownMenu modal={false}>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
+                            <Button variant="ghost" size="sm" data-asistente="reporte-descargar">
                               <Download className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>

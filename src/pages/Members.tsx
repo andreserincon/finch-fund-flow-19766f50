@@ -197,7 +197,11 @@ export default function Members() {
             {isMemberOnly ? 'Tu estado de cuenta' : `${memberBalances.filter((m) => m.is_active).length} miembros activos`}
           </p>
         </div>
-        {isAdmin && !isMemberOnly && <AddMemberForm />}
+        {isAdmin && !isMemberOnly && (
+          <span data-asistente="miembro-agregar" className="inline-flex">
+            <AddMemberForm />
+          </span>
+        )}
       </div>
 
       {atencion && (
@@ -216,11 +220,12 @@ export default function Members() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9"
+            data-asistente="miembro-buscar"
           />
         </div>
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="outline" className="w-full sm:w-auto justify-start">
+            <Button variant="outline" className="w-full sm:w-auto justify-start" data-asistente="miembro-estado">
               <Filter className="mr-2 h-4 w-4" />
               Estado
               {selectedStatuses.length > 0 && (
