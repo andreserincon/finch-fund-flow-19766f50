@@ -39,21 +39,16 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
-import { ASISTENTE_TASKS, buildKbText } from '@/lib/asistenteKb';
+import { ASISTENTE_TASKS } from '@/lib/asistenteKb';
+import {
+  type ChatMessage,
+  type DegradeReason,
+  AsistenteDegradeError,
+  buildAsistentePayload,
+  classifyAsistenteError,
+  parseAnthropicTextDelta,
+} from '@/lib/asistenteClient';
 import { AsistenteFallback } from './AsistenteFallback';
-
-/** A single message kept in the visible conversation. */
-interface ChatMessage {
-  role: 'user' | 'assistant';
-  content: string;
-}
-
-/** Wire shape sent to the edge function. Intentionally minimal: no app data. */
-interface AsistentePayload {
-  question: string;
-  turns: ChatMessage[];
-  kb: string;
-}
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -79,35 +74,16 @@ function chipQuestion(taskId: string, title: string): string {
   return CHIP_QUESTIONS[taskId] ?? `¿Cómo: ${title}?`;
 }
 
-// The three graceful-degradation cases. Each maps to a calm Spanish lead-in
-// shown right above the static <AsistenteFallback/> guide, so a failure is never
-// a dead end.
-//   - 'cap'     : 429, the monthly question cap was reached.
-//   - 'offline' : no connection (navigator.onLine is false, or fetch threw).
-//   - 'down'    : any other non-ok response (404 before deploy, 5xx, empty body).
-type DegradeReason = 'cap' | 'offline' | 'down';
-
+// The three graceful-degradation cases each map to a calm Spanish lead-in shown
+// right above the static <AsistenteFallback/> guide, so a failure is never a
+// dead end. The reasons (cap / offline / down) and the AsistenteDegradeError
+// that carries them live in src/lib/asistenteClient.ts.
 const DEGRADE_MESSAGES: Record<DegradeReason, string> = {
   cap: 'Llegaste al límite mensual de preguntas del asistente. Mientras tanto, acá tenés la guía rápida:',
   offline:
     'No hay conexión con el asistente en este momento. Acá tenés la guía rápida sin conexión:',
   down: 'El asistente no está disponible ahora. Mientras tanto, acá tenés la guía rápida:',
 };
-
-/**
- * Error thrown inside send() that carries the degradation reason, so the catch
- * block can show the right message + the fallback. A plain Error (or any other
- * throw) is treated as a generic outage ('down'), except a thrown fetch network
- * error / offline device, which we classify as 'offline'.
- */
-class AsistenteDegradeError extends Error {
-  reason: DegradeReason;
-  constructor(reason: DegradeReason, message?: string) {
-    super(message ?? reason);
-    this.name = 'AsistenteDegradeError';
-    this.reason = reason;
-  }
-}
 
 interface AsistenteChatProps {
   open: boolean;
@@ -174,11 +150,7 @@ export function AsistenteChat({ open, onOpenChange }: AsistenteChatProps) {
         throw new Error('Tu sesión expiró. Volvé a iniciar sesión.');
       }
 
-      const payload: AsistentePayload = {
-        question,
-        turns: priorTurns,
-        kb: buildKbText(),
-      };
+      const payload = buildAsistentePayload({ question, turns: priorTurns });
 
       // A thrown fetch (DNS failure, dropped connection, CORS) means there is no
       // usable connection to the assistant: treat it as 'offline'.
@@ -239,17 +211,13 @@ export function AsistenteChat({ open, onOpenChange }: AsistenteChatProps) {
 
           try {
             const obj = JSON.parse(jsonStr);
-            if (
-              obj.type === 'content_block_delta' &&
-              obj.delta?.type === 'text_delta' &&
-              typeof obj.delta.text === 'string'
-            ) {
-              assistantText += obj.delta.text;
+            // Only content_block_delta/text_delta yields visible text; every
+            // other event type is intentionally ignored for the stream.
+            const text = parseAnthropicTextDelta(obj);
+            if (text !== null) {
+              assistantText += text;
               setStreaming(assistantText);
             }
-            // All other event types (message_start, content_block_start,
-            // content_block_stop, message_delta, message_stop, ping, error) are
-            // intentionally ignored for the visible stream.
           } catch {
             // A partial JSON line at a chunk boundary: put it back and wait for
             // more bytes before trying to parse again.
@@ -272,9 +240,7 @@ export function AsistenteChat({ open, onOpenChange }: AsistenteChatProps) {
       // gets the static guide instead of a dead end. A classified
       // AsistenteDegradeError keeps its reason (cap / offline / down); anything
       // else (including a thrown auth/session error) is a generic outage.
-      const reason: DegradeReason =
-        err instanceof AsistenteDegradeError ? err.reason : 'down';
-      setDegrade(reason);
+      setDegrade(classifyAsistenteError(err));
     } finally {
       setStreaming(null);
       setIsLoading(false);
