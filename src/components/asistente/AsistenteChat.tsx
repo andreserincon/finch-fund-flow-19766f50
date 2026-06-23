@@ -27,7 +27,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { HelpCircle, Send, Loader2, X } from 'lucide-react';
+import { HelpCircle, Send, Loader2, X, Sparkles } from 'lucide-react';
 
 import {
   Sheet,
@@ -40,6 +40,8 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { ASISTENTE_TASKS } from '@/lib/asistenteKb';
+import { useIsAdmin } from '@/hooks/useIsAdmin';
+import { useAsistenteTourController } from '@/contexts/AsistenteTourContext';
 import {
   type ChatMessage,
   type DegradeReason,
@@ -74,6 +76,23 @@ function chipQuestion(taskId: string, title: string): string {
   return CHIP_QUESTIONS[taskId] ?? `¿Cómo: ${title}?`;
 }
 
+// Minimal task detection for the spike: map a question back to a task id. A chip
+// click sends the exact chip question, so the exact-match case covers chips; the
+// loose contains() catches a close free-typed question. S3 will replace this with
+// the real intent signal from the answer. Returns null if nothing matches.
+function matchTaskId(question: string): string | null {
+  const q = question.trim().toLowerCase();
+  for (const [id, phrase] of Object.entries(CHIP_QUESTIONS)) {
+    if (q === phrase.toLowerCase()) return id;
+  }
+  // T1 is the only task wired in this slice; a loose match keeps the spike honest
+  // without pretending to route every task.
+  if (q.includes('cápita') || q.includes('capita')) {
+    if (q.includes('pago') || q.includes('registr')) return 'T1';
+  }
+  return null;
+}
+
 // The three graceful-degradation cases each map to a calm Spanish lead-in shown
 // right above the static <AsistenteFallback/> guide, so a failure is never a
 // dead end. The reasons (cap / offline / down) and the AsistenteDegradeError
@@ -105,8 +124,21 @@ export function AsistenteChat({ open, onOpenChange }: AsistenteChatProps) {
   // inline even when the API works.
   const [showGuide, setShowGuide] = useState(false);
   const [showTrustNote, setShowTrustNote] = useState(true);
+  // The task the current conversation is about, for the guided-tour trigger. Set
+  // on each send. Null when we cannot tell. (Spike-level; S3 generalizes this.)
+  const [lastTaskId, setLastTaskId] = useState<string | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
+  // The button that launches the tour, so focus can return to it when the tour
+  // ends (the hook handles the actual return).
+  const tourTriggerRef = useRef<HTMLButtonElement>(null);
+
+  // Admin gate: T1 is an AdminRoute money task, so the live "Mostrame en la app"
+  // trigger only appears for admins. The runner that drives driver.js + routing
+  // is hosted above the routes (AsistenteTourProvider) so the tour survives the
+  // navigation it triggers; here we just get a handle to start it.
+  const { isAdmin } = useIsAdmin();
+  const tour = useAsistenteTourController();
 
   // Keep the latest message in view as content streams.
   useEffect(() => {
@@ -125,6 +157,8 @@ export function AsistenteChat({ open, onOpenChange }: AsistenteChatProps) {
     setDegrade(null);
     setShowGuide(false);
     setInput('');
+    // Remember which task this turn is about so the live tour trigger can appear.
+    setLastTaskId(matchTaskId(question));
 
     // Prior turns are everything already committed. We send these so the model
     // has follow-up context; they are user/assistant TEXT only.
@@ -252,6 +286,24 @@ export function AsistenteChat({ open, onOpenChange }: AsistenteChatProps) {
     send(input);
   };
 
+  // Launch the live guided tour for T1. We close the chat sheet first so the
+  // spotlight is not hidden behind it, then start the runner with T1's steps and
+  // its access note. The runner navigates to /log-payment and highlights each
+  // control in order; it never fills or submits anything. S3 generalizes this to
+  // every task; for the spike only T1 is wired and only admins see the trigger.
+  const launchT1Tour = () => {
+    const t1 = ASISTENTE_TASKS.find((task) => task.id === 'T1');
+    if (!t1?.tour) return;
+    const trigger = tourTriggerRef.current;
+    onOpenChange(false);
+    tour.start({ steps: t1.tour, accessNote: t1.note, returnFocusTo: trigger });
+  };
+
+  // The live trigger shows only when: the conversation is about T1, the user is an
+  // admin (T1 is an AdminRoute money task), and T1 actually has a tour defined.
+  const showTourTrigger =
+    isAdmin && lastTaskId === 'T1' && !!ASISTENTE_TASKS.find((t) => t.id === 'T1')?.tour;
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
@@ -338,6 +390,25 @@ export function AsistenteChat({ open, onOpenChange }: AsistenteChatProps) {
               {messages.map((m, i) => (
                 <MessageBubble key={i} role={m.role} content={m.content} />
               ))}
+
+              {/* Live guided tour trigger. Admin-only, T1-only for this spike.
+                  It launches the driver.js spotlight on /log-payment; it never
+                  fills or submits the form. S3 generalizes this to every task. */}
+              {showTourTrigger && !isLoading && streaming === null && (
+                <div className="flex justify-start">
+                  <Button
+                    ref={tourTriggerRef}
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={launchT1Tour}
+                    className="gap-2"
+                  >
+                    <Sparkles className="h-4 w-4" aria-hidden="true" />
+                    Mostrame en la app
+                  </Button>
+                </div>
+              )}
 
               {/* The in-progress assistant message. */}
               {streaming !== null && (

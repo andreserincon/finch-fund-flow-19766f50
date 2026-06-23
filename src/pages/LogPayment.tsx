@@ -155,7 +155,7 @@ export default function LogPayment() {
             <div className="space-y-2">
               <Label>Cuenta</Label>
               <Select value={selectedAccount} onValueChange={(value: AccountType) => setValue('account', value)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger data-asistente="pago-cuenta"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {(['bank', 'great_lodge', 'savings'] as AccountType[]).map((acc) => (
                     <SelectItem key={acc} value={acc}>{ACCOUNT_LABELS[acc]}</SelectItem>
@@ -167,12 +167,12 @@ export default function LogPayment() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="transaction_date">Fecha</Label>
-                <Input id="transaction_date" type="date" {...register('transaction_date')} />
+                <Input id="transaction_date" type="date" data-asistente="pago-fecha" {...register('transaction_date')} />
                 {errors.transaction_date && <p className="text-sm text-destructive">{errors.transaction_date.message}</p>}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="amount">Monto ({selectedAccount === 'savings' ? 'USD' : 'ARS'})</Label>
-                <Input id="amount" type="number" step="0.01" {...register('amount', { valueAsNumber: true })} placeholder={selectedEvent ? selectedEvent.default_amount.toString() : '0.00'} />
+                <Input id="amount" type="number" step="0.01" data-asistente="pago-monto" {...register('amount', { valueAsNumber: true })} placeholder={selectedEvent ? selectedEvent.default_amount.toString() : '0.00'} />
                 {errors.amount && <p className="text-sm text-destructive">{errors.amount.message}</p>}
               </div>
             </div>
@@ -184,7 +184,7 @@ export default function LogPayment() {
                 if (value !== 'event_payment') setValue('event_id', undefined);
                 if (value !== 'monthly_fee' && value !== 'event_payment') setValue('member_id', undefined);
               }}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger data-asistente="pago-categoria"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {incomeCategories.map((cat) => (
                     <SelectItem key={cat} value={cat}>{CATEGORY_LABELS[cat]}</SelectItem>
@@ -215,7 +215,7 @@ export default function LogPayment() {
               <div className="space-y-2">
                 <Label>Miembro</Label>
                 <Select value={selectedMemberId || ''} onValueChange={(value) => setValue('member_id', value || undefined)}>
-                  <SelectTrigger><SelectValue placeholder="Seleccionar miembro..." /></SelectTrigger>
+                  <SelectTrigger data-asistente="pago-miembro"><SelectValue placeholder="Seleccionar miembro..." /></SelectTrigger>
                   <SelectContent>
                     {members.map((member) => (
                       <SelectItem key={member.id} value={member.id}>{member.full_name}</SelectItem>
@@ -244,6 +244,7 @@ export default function LogPayment() {
               </Button>
               <Button
                 type="submit"
+                data-asistente="pago-guardar"
                 onClick={() => { addAnotherRef.current = false; }}
                 disabled={isSubmitting || (category === 'event_payment' && (!selectedEventId || !selectedMemberId))}
                 className="flex-1"

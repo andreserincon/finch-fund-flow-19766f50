@@ -16,6 +16,8 @@
  *   disponibles para el personal de tesorería en general.
  */
 
+import type { TourStep } from '@/lib/asistenteTour';
+
 export type KbTaskId = 'T1' | 'T2' | 'T3' | 'T4' | 'T5' | 'T6' | 'T7' | 'T8';
 
 export interface KbTask {
@@ -35,6 +37,13 @@ export interface KbTask {
   glossaryTerms: string[];
   /** Nota opcional de acceso o advertencia. */
   note?: string;
+  /**
+   * Pasos del recorrido guiado (spotlight) para esta tarea, en orden de los
+   * controles reales de la pantalla. Opcional: por ahora solo T1 lo trae (Phase
+   * 2 Slice 1). El recorrido solo resalta y describe; nunca completa ni envia el
+   * formulario.
+   */
+  tour?: TourStep[];
 }
 
 /** Nota de acceso compartida por las tareas de escritura de dinero (T1, T2, T3). */
@@ -59,6 +68,47 @@ export const ASISTENTE_TASKS: KbTask[] = [
       'El pago se aplica a la cápita adeudada mas antigua primero; un pago parcial puede no dejar al socio al día.',
     ],
     glossaryTerms: ['capita', 'estandar', 'solidaria'],
+    // Recorrido guiado: resalta cada control en el orden real del formulario de
+    // Registrar Pago. Solo muestra y describe; no completa ni envia nada. El
+    // usuario hace cada paso. Los textos salen de los pasos de T1 de arriba.
+    tour: [
+      {
+        route: '/log-payment',
+        anchor: 'pago-cuenta',
+        title: 'Elegí la cuenta',
+        body: 'Seleccioná la cuenta donde entra el dinero: Banco, Gran Logia o Ahorros. Ahorros es en USD; las demas en ARS.',
+      },
+      {
+        route: '/log-payment',
+        anchor: 'pago-fecha',
+        title: 'Confirmá la fecha',
+        body: 'Viene la fecha de hoy. Cambiala si el pago corresponde a otro día.',
+      },
+      {
+        route: '/log-payment',
+        anchor: 'pago-monto',
+        title: 'Revisá el monto',
+        body: 'Con la categoría Cápita Mensual, el monto se completa solo con la cápita estándar del mes. Ajustalo si hace falta.',
+      },
+      {
+        route: '/log-payment',
+        anchor: 'pago-categoria',
+        title: 'Dejá la categoría en Cápita Mensual',
+        body: 'Es la opción por defecto para un pago de cápita. No hace falta cambiarla.',
+      },
+      {
+        route: '/log-payment',
+        anchor: 'pago-miembro',
+        title: 'Elegí el miembro',
+        body: 'Seleccioná el socio que paga. Si es un invitado, elegí Invitado.',
+      },
+      {
+        route: '/log-payment',
+        anchor: 'pago-guardar',
+        title: 'Guardá el pago',
+        body: 'Cuando todo este correcto, tocá Registrar Pago. (El recorrido no lo toca: lo guardás vos.)',
+      },
+    ],
   },
   {
     id: 'T2',
