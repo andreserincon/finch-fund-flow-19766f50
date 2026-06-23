@@ -11,6 +11,7 @@ import { useTranslation } from 'react-i18next';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { AppSidebar } from './AppSidebar';
 import { BottomNav } from './BottomNav';
+import { AsistenteButton } from '@/components/asistente/AsistenteButton';
 import { useHiddenMode } from '@/contexts/HiddenModeContext';
 import { Eye, EyeOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -85,6 +86,9 @@ export function MainLayout({ children }: MainLayoutProps) {
 
         {/* Mobile bottom navigation */}
         <BottomNav />
+
+        {/* Floating usage assistant. Self-hides for non-staff and member-only. */}
+        <AsistenteButton />
       </div>
     </SidebarProvider>
   );
