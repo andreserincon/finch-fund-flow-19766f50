@@ -1309,12 +1309,14 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
   const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
                       'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 
-  // Format generation date in Spanish ceremonial format
-  const now = new Date();
-  const dayNum = now.getDate();
-  const monthNameGenerated = monthNames[now.getMonth()];
-  const yearGenerated = now.getFullYear();
-  const formattedDate = `Or.·. de Buenos Aires, ${dayNum} de ${monthNameGenerated} del ${yearGenerated} (E.·.V.·.)`;
+  // Dateline: the first calendar day AFTER the report month ends (a Junio report
+  // is dated "1 de Julio"), so the date is deterministic and reflects the period
+  // close, not the moment the PDF happened to be generated. data.month is
+  // 1-based, so data.month % 12 already indexes the next month (Junio 6 -> 6 =
+  // Julio; Diciembre 12 -> 0 = Enero of the next year).
+  const dsMonthIndex = data.month % 12;
+  const dsYear = data.month === 12 ? data.year + 1 : data.year;
+  const formattedDate = `Or.·. de Buenos Aires, 1 de ${monthNames[dsMonthIndex]} del ${dsYear} (E.·.V.·.)`;
 
   // Report title format
   const reportTitleFormatted = `REPORTE FINANCIERO MENSUAL ${data.monthName.toUpperCase()} ${data.year}`;
