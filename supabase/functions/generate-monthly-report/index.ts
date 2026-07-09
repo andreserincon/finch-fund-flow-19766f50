@@ -1214,11 +1214,15 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
   const mr = computeMonthResult(data);
   
   const formatCurrency = (amount: number, currency = 'ARS') => {
-    return new Intl.NumberFormat('es-AR', {
+    // Accounting-style negatives: parentheses instead of a leading minus, so the
+    // sign survives grayscale printing and colour-blind reading (a second channel
+    // beyond the red/green colour).
+    const formatted = new Intl.NumberFormat('es-AR', {
       style: 'currency',
       currency: currency === 'USD' ? 'USD' : 'ARS',
       minimumFractionDigits: 2,
-    }).format(amount);
+    }).format(Math.abs(amount));
+    return amount < 0 ? `(${formatted})` : formatted;
   };
 
   const feeTypeLabels: Record<string, string> = {
@@ -1413,7 +1417,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
         <td class="text-right ${balanceClass}"><strong>${formatCurrency(balanceArs)}</strong></td>
         <td class="text-center">${e.members_included}</td>
         <td class="text-center">${e.members_unpaid}</td>
-        <td class="text-center">${e.event_status === 'settled' ? '✅ Saldado' : '⏳ Pendiente'}</td>
+        <td class="text-center">${e.event_status === 'settled' ? '<span class="status-badge status-up_to_date">Saldado</span>' : '<span class="status-badge status-overdue">Pendiente</span>'}</td>
       </tr>
     `;
     }).join('');
@@ -1963,7 +1967,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
   </style>
 </head>
 <body>
-  <button class="print-button no-print" onclick="window.print()">📄 Imprimir / Guardar PDF</button>
+  <button class="print-button no-print" onclick="window.print()">Imprimir / Guardar PDF</button>
 
   <!-- Main Header -->
   <div class="header">
@@ -1983,8 +1987,9 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
     </div>
   </div>
 
-  <!-- Section 1: Global Financial Overview -->
-  <div class="section">
+  <!-- Section 1: Global Financial Overview. Marked splittable so it back-fills
+       page 1 instead of being ejected whole (which left a near-blank cover). -->
+  <div class="section section--splittable">
     <h2 class="section-title">1. Resumen Financiero Global</h2>
     
     <h3 class="subsection-title">Saldos de Cuentas</h3>
@@ -2080,14 +2085,10 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
 
   ${perEventDetailsSection}
 
-  ${isLite ? '' : `<div class="page-break"></div>
-
-  <!-- Page 2 header (only shows when printing, before the member table) -->
-  <div class="page-header">
-    ${logoBase64 ? `<img src="data:image/png;base64,${logoBase64}" alt="Logo" class="logo-small" />` : ''}
-    <span>R.·.L.·. Simón Bolívar N° 646</span>
-    <span>${reportTitleFormatted}</span>
-  </div>`}
+  ${isLite ? '' : `<!-- Page break before the member roster. The running header on
+       pages 2+ is supplied by PDFShift (start_at:2); no in-body masthead here,
+       which previously double-stacked a second header on page 4. -->
+  <div class="page-break"></div>`}
 
   ${isLite ? '' : `<!-- Section 4: Member Financial Detail, marked splittable so
        a long member list flows across pages instead of leaving a
