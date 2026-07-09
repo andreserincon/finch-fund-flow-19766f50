@@ -40,6 +40,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useEventOverview } from '@/hooks/useEventOverview';
+import { useExchangeRate } from '@/hooks/useExchangeRate';
 import { useEventMemberPayments } from '@/hooks/useEventMemberPayments';
 import { useMembers } from '@/hooks/useMembers';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
@@ -926,6 +927,7 @@ export default function EventOverview() {
   const navigate = useNavigate();
   const { isAdmin } = useIsAdmin();
   const { data, isLoading, error } = useEventOverview(id);
+  const { exchangeRate } = useExchangeRate();
   const { members } = useMembers();
   const { addMemberToEvent } = useEventMemberPayments(id);
   const [memberToAdd, setMemberToAdd] = useState<string>('');
@@ -989,12 +991,17 @@ export default function EventOverview() {
     const delta = Number(p.amount_owed) - Number(p.amount_paid);
     return s + (delta > 0 ? delta : 0);
   }, 0);
+  // USD legs (savings account) are converted to ARS at the official rate so the
+  // event balance is a single, correct peso figure that matches the monthly
+  // report (which folds USD the same way).
+  const foldToARS = (t: { account: string | null; amount: number | string }) =>
+    t.account === 'savings' ? Number(t.amount) * exchangeRate : Number(t.amount);
   const actualIncome = transactions
     .filter((t) => t.transaction_type === 'income')
-    .reduce((s, t) => s + Number(t.amount), 0);
+    .reduce((s, t) => s + foldToARS(t), 0);
   const actualExpenses = transactions
     .filter((t) => t.transaction_type === 'expense')
-    .reduce((s, t) => s + Number(t.amount), 0);
+    .reduce((s, t) => s + foldToARS(t), 0);
   const eventBalance = actualIncome - actualExpenses;
 
   const totalParticipants = payments.length;
