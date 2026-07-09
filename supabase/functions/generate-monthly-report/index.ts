@@ -575,6 +575,23 @@ Deno.serve(async (req) => {
         )
         .reduce((sum: number, t: any) => sum + Number(t.amount), 0);
 
+      // Overall (lifetime up to month end) cash position of the event, from the
+      // real transactions tagged with this event, matching the events module
+      // (EventOverview): ingresos event_payment menos gastos event_expense.
+      // USD legs (account 'savings') se convierten a ARS al TC del reporte para
+      // un único balance histórico. Fixes the old "Balance Evento" that mixed
+      // cuota histórica con gastos de un solo mes.
+      const eventTx = (allTransactions || []).filter((t: any) => t.event_id === event.id);
+      const foldToARS = (t: any) =>
+        t.account === 'savings' ? Number(t.amount) * exchangeRate : Number(t.amount);
+      const recaudadoHistorico = eventTx
+        .filter((t: any) => t.category === 'event_payment')
+        .reduce((sum: number, t: any) => sum + foldToARS(t), 0);
+      const gastadoHistorico = eventTx
+        .filter((t: any) => t.category === 'event_expense')
+        .reduce((sum: number, t: any) => sum + foldToARS(t), 0);
+      const balanceHistorico = recaudadoHistorico - gastadoHistorico;
+
       return {
         report_id: reportId,
         event_id: event.id,
@@ -585,6 +602,9 @@ Deno.serve(async (req) => {
         // Render-only fields (stripped before DB insert below).
         expenses_ars: expensesArs,
         balance_ars: amountCollected - expensesArs,
+        recaudado_historico: recaudadoHistorico,
+        gastado_historico: gastadoHistorico,
+        balance_historico: balanceHistorico,
         members_included: membersIncluded,
         members_unpaid: membersUnpaid,
         event_status: amountCollected >= totalAmount ? 'settled' : 'pending',
@@ -595,7 +615,7 @@ Deno.serve(async (req) => {
       // expenses_ars and balance_ars are render-only; strip before
       // persisting since report_event_snapshots doesn't have those columns.
       const eventSnapshotsForDb = eventSnapshots.map(
-        ({ expenses_ars, balance_ars, ...rest }: any) => rest
+        ({ expenses_ars, balance_ars, recaudado_historico, gastado_historico, balance_historico, ...rest }: any) => rest
       );
       await supabase.from('report_event_snapshots').insert(eventSnapshotsForDb);
     }
@@ -1426,8 +1446,8 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
   if (data.eventSnapshots.length > 0) {
     const eventRows = data.eventSnapshots.map((e: any) => {
       const expensesArs = Number(e.expenses_ars ?? 0);
-      const balanceArs = Number(e.balance_ars ?? (Number(e.amount_collected) - expensesArs));
-      const balanceClass = balanceArs >= 0 ? 'positive' : 'negative';
+      const balanceHist = Number(e.balance_historico ?? 0);
+      const balanceClass = balanceHist >= 0 ? 'positive' : 'negative';
       return `
       <tr>
         <td>${e.event_name}</td>
@@ -1435,7 +1455,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
         <td class="text-right positive">${formatCurrency(e.amount_collected)}</td>
         <td class="text-right negative">${formatCurrency(e.outstanding_amount)}</td>
         <td class="text-right ${expensesArs > 0 ? 'negative' : ''}">${expensesArs > 0 ? formatCurrency(expensesArs) : '-'}</td>
-        <td class="text-right ${balanceClass}"><strong>${formatCurrency(balanceArs)}</strong></td>
+        <td class="text-right ${balanceClass}"><strong>${formatCurrency(balanceHist)}</strong></td>
         <td class="text-center">${e.members_included}</td>
         <td class="text-center">${e.members_unpaid}</td>
         <td class="text-center">${e.event_status === 'settled' ? '<span class="status-badge status-up_to_date">Saldado</span>' : '<span class="status-badge status-overdue">Pendiente</span>'}</td>
@@ -1447,7 +1467,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
     const totalEventCollected = data.eventSnapshots.reduce((s: number, e: any) => s + e.amount_collected, 0);
     const totalEventOutstanding = data.eventSnapshots.reduce((s: number, e: any) => s + e.outstanding_amount, 0);
     const totalEventExpenses = data.eventSnapshots.reduce((s: number, e: any) => s + Number(e.expenses_ars ?? 0), 0);
-    const totalEventBalance = totalEventCollected - totalEventExpenses;
+    const totalEventBalance = data.eventSnapshots.reduce((s: number, e: any) => s + Number(e.balance_historico ?? 0), 0);
     const totalBalanceClass = totalEventBalance >= 0 ? 'positive' : 'negative';
 
     eventsSection = `
@@ -1460,8 +1480,8 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
               <th class="text-right">Total Cuota</th>
               <th class="text-right">Cuota Recaudada</th>
               <th class="text-right">Cuota Pendiente</th>
-              <th class="text-right">Gastos</th>
-              <th class="text-right">Balance Evento</th>
+              <th class="text-right">Gastos del Mes</th>
+              <th class="text-right">Balance Histórico</th>
               <th class="text-center">Miembros</th>
               <th class="text-center">Sin Pagar</th>
               <th class="text-center">Estado</th>
@@ -1491,6 +1511,11 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
   let perEventDetailsSection = '';
   if (!isLite && Array.isArray(data.perEventDetails) && data.perEventDetails.length > 0) {
     const cardSubNum = `${eventsSectionNum}.1`;
+    // Join the per-event detail to its snapshot (which carries the all-time
+    // histórico figures) by event name.
+    const snapByName = new Map<string, any>(
+      (data.eventSnapshots || []).map((s: any) => [s.event_name, s])
+    );
     const blocks = data.perEventDetails.map((ev: any) => {
       const expensesTotal = ev.expenses.reduce(
         (acc: { ars: number; usd: number }, x: any) => {
@@ -1527,6 +1552,11 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
         ev.cuota_collected_ars > 0 ? formatCurrency(ev.cuota_collected_ars) : null,
         ev.cuota_collected_usd > 0 ? formatCurrency(ev.cuota_collected_usd, 'USD') : null,
       ].filter(Boolean).join(' / ') || formatCurrency(0);
+      const snap = snapByName.get(ev.event_name);
+      const recH = Number(snap?.recaudado_historico ?? 0);
+      const gasH = Number(snap?.gastado_historico ?? 0);
+      const balH = Number(snap?.balance_historico ?? (recH - gasH));
+      const estadoGeneral = balH >= 0 ? 'Superávit' : 'Déficit';
       return `
         <div class="section" style="page-break-inside: avoid; margin-top: 16px;">
           <h3 style="margin: 0 0 8px 0; font-size: 14px;">${ev.event_name}</h3>
@@ -1542,6 +1572,22 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
             <div class="stat-card">
               <div class="stat-label">Invitados Asistiendo</div>
               <div class="stat-value">${ev.guest_count}</div>
+            </div>
+          </div>
+          <div class="subsection-title" style="margin-top: 10px;">Estado General del Evento (histórico)</div>
+          <div class="grid">
+            <div class="stat-card success">
+              <div class="stat-label">Recaudado Histórico</div>
+              <div class="stat-value positive">${formatCurrency(recH)}</div>
+            </div>
+            <div class="stat-card danger">
+              <div class="stat-label">Gastado Histórico</div>
+              <div class="stat-value negative">${formatCurrency(gasH)}</div>
+            </div>
+            <div class="stat-card ${balH >= 0 ? 'success' : 'danger'}">
+              <div class="stat-label">Balance Histórico</div>
+              <div class="stat-value ${balH >= 0 ? 'positive' : 'negative'}">${formatCurrency(balH)}</div>
+              <div class="stat-subtext">${estadoGeneral}</div>
             </div>
           </div>
           <table style="margin-top: 8px;">
