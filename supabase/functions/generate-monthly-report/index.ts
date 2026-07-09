@@ -92,6 +92,13 @@ Deno.serve(async (req) => {
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
+    // A call carrying the service-role key is the scheduled/cron path (the
+    // automatic monthly generator delegating here). It has no logged-in user,
+    // so we trust the secret itself and skip the per-user treasurer gate.
+    // Every other caller must be an authenticated treasurer or admin.
+    const bearerToken = authHeader.slice('Bearer '.length).trim();
+    const isSystemCall = bearerToken === supabaseServiceKey;
+
     // Client for auth validation
     const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } },
@@ -100,29 +107,34 @@ Deno.serve(async (req) => {
     // Service client for data operations
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { data: { user }, error: userError } = await supabaseAuth.auth.getUser();
-    if (userError || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
+    // Null on the system path, mirroring the old scheduled job (generated_by null).
+    let userId: string | null = null;
 
-    const userId = user.id;
+    if (!isSystemCall) {
+      const { data: { user }, error: userError } = await supabaseAuth.auth.getUser();
+      if (userError || !user) {
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
 
-    // Check if user is treasurer or admin
-    const { data: roleData } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', userId)
-      .in('role', ['treasurer', 'admin'])
-      .maybeSingle();
+      userId = user.id;
 
-    if (!roleData) {
-      return new Response(JSON.stringify({ error: 'Only treasurers can generate reports' }), {
-        status: 403,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      // Check if user is treasurer or admin
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .in('role', ['treasurer', 'admin'])
+        .maybeSingle();
+
+      if (!roleData) {
+        return new Response(JSON.stringify({ error: 'Only treasurers can generate reports' }), {
+          status: 403,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
     }
 
     const { year, month, forceRegenerate = false }: ReportData = await req.json();
