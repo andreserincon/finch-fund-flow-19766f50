@@ -855,11 +855,19 @@ Deno.serve(async (req) => {
     // Also account for transfers in/out this month
     const monthTransfers = allTransfers.filter((t: any) => t.transfer_date >= monthStartStr && t.transfer_date <= monthEndStr);
 
-    // Lodge officers for the signature block. Their names are shown on purpose
-    // (the rest of the report is Matrícula-only); blank if the office is
-    // unassigned so the line can still be signed by hand.
-    const tesoreroOfficer = members.find((m: any) => m.lodge_office === 'tesorero');
-    const vmOfficer = members.find((m: any) => m.lodge_office === 'venerable_maestro');
+    // Officer names for the signature block, from the app roles (the source of
+    // truth for who is VM / Tesorero). get_users_with_roles returns member_name
+    // per user; call it with the caller's session so the RPC's role gate passes.
+    // Fall back to members.lodge_office. Names are shown on purpose (the rest of
+    // the report is Matrícula-only); blank if unassigned so the line can still
+    // be signed by hand.
+    const { data: usersWithRoles } = await supabaseAuth.rpc('get_users_with_roles');
+    const officerName = (role: string, office: string) =>
+      ((usersWithRoles || []).find((u: any) => u.role === role)?.member_name)
+      || members.find((m: any) => m.lodge_office === office)?.full_name
+      || '';
+    const vmName = officerName('vm', 'venerable_maestro');
+    const tesoreroName = officerName('treasurer', 'tesorero');
 
     const reportData = {
       year,
@@ -902,8 +910,8 @@ Deno.serve(async (req) => {
       initialARS,
       initialUSD,
       monthTransfers,
-      tesoreroName: tesoreroOfficer?.full_name || '',
-      vmName: vmOfficer?.full_name || '',
+      tesoreroName,
+      vmName,
     };
 
     // Fetch logo as base64 for embedding in HTML
