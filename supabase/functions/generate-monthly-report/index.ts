@@ -660,12 +660,12 @@ Deno.serve(async (req) => {
 
     // Build category flow breakdown from this month's transactions
     const categoryLabels: Record<string, string> = {
-      monthly_fee: 'Cuota Mensual',
+      monthly_fee: 'Cápita Mensual',
       extraordinary_income: 'Ingreso Extraordinario',
       donation: 'Donación',
       reimbursement: 'Reembolso',
       event_expense: 'Gasto de Evento',
-      parent_organization_fee: 'Pago GL',
+      parent_organization_fee: 'Pago Gran Logia',
       other_expense: 'Otro Gasto',
       other_income: 'Otro Ingreso',
       event_payment: 'Pago de Evento',
@@ -1085,10 +1085,8 @@ function buildFlowTable(data: any, formatCurrency: (amount: number, currency?: s
   // each tagged with its short summary. Replaces the previous aggregated
   // "Otro Gasto" row.
   const otherExpenseRowsHtml = (data.otherExpenseRows || []).map((row: any) => {
-    const summary = row.summary && row.summary.trim().length > 0
-      ? row.summary
-      : '(sin resumen)';
-    const concepto = `Otro Gasto - ${summary}`;
+    const hasSummary = row.summary && row.summary.trim().length > 0;
+    const concepto = hasSummary ? `Otro Gasto - ${row.summary}` : 'Otro Gasto';
     const isUSD = row.currency === 'USD';
     if (isUSD) totalExpUSD += row.amount;
     else totalExpARS += row.amount;
@@ -1121,10 +1119,10 @@ function buildFlowTable(data: any, formatCurrency: (amount: number, currency?: s
     if (row.type === 'cuota') {
       concepto = `Abono Cuota Evento - "${eventNameTrunc}"`;
     } else {
-      const summary = row.summary && String(row.summary).trim().length > 0
-        ? row.summary
-        : '(sin resumen)';
-      concepto = `Gasto Evento - "${eventNameTrunc}" - ${summary}`;
+      const hasSummary = row.summary && String(row.summary).trim().length > 0;
+      concepto = hasSummary
+        ? `Gasto Evento - "${eventNameTrunc}" - ${row.summary}`
+        : `Gasto Evento - "${eventNameTrunc}"`;
     }
     totalIncARS += Number(row.income_ars || 0);
     totalIncUSD += Number(row.income_usd || 0);
@@ -1304,7 +1302,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
   const loansSectionNum = hasLoansSection ? String(++sectionCounter) : '';
   const eventsSectionNum = hasEventsSection ? String(++sectionCounter) : '';
   const memberSectionNum = !isLite ? String(++sectionCounter) : '';
-  const feeSectionTitle = `2. ${isLite ? 'Cobranza de Capita' : 'Cobertura de Cuotas Mensuales'}`;
+  const feeSectionTitle = `2. Cobranza de Cápita`;
   const memberSectionTitle = `${memberSectionNum}. Detalle Financiero de Miembros`;
 
   // Build member rows; separate Saldo Capita and Saldo Eventos columns.
@@ -1332,7 +1330,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
           <tr>
             <th>Matrícula</th>
             <th class="text-center">Tipo Cuota</th>
-            <th class="text-right">Capita Mensual</th>
+            <th class="text-right">Cápita Mensual</th>
             <th class="text-right">Saldo Capita</th>
             <th class="text-right">Saldo Eventos</th>
             <th class="text-center">Estado</th>
@@ -1342,7 +1340,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
         </thead>
         <tbody>${memberRows}</tbody>
       </table>`
-    : `<p style="color: #000; text-align: center;">No hay miembros con más de un mes de capita pendiente.</p>`;
+    : `<p style="color: #000; text-align: center;">No hay miembros activos para mostrar este mes.</p>`;
 
   // Build loans section
   let loansSection = '';
@@ -1534,7 +1532,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
           <h3 style="margin: 0 0 8px 0; font-size: 14px;">${ev.event_name}</h3>
           <div class="grid">
             <div class="stat-card">
-              <div class="stat-label">Ingresos por Capita (mes)</div>
+              <div class="stat-label">Ingresos por Cápita (mes)</div>
               <div class="stat-value positive">${cuotaDisplay}</div>
             </div>
             <div class="stat-card">
@@ -2027,7 +2025,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
       <div class="stat-card ${data.totalARSBalance >= 0 ? 'success' : 'danger'}">
         <div class="stat-label">Balance Total (ARS)</div>
         <div class="stat-value">${formatCurrency(data.totalARSBalance)}</div>
-        ${isLite ? '' : `<div style="font-size: 10px; color: #000; margin-top: 4px;">Incluye USD al TC Oficial: ${formatCurrency(data.exchangeRate)}</div>`}
+        ${isLite ? '' : `<div style="font-size: 10px; color: #000; margin-top: 4px;">TC Oficial: $${new Intl.NumberFormat('es-AR', { maximumFractionDigits: 0 }).format(data.exchangeRate)} por USD</div>`}
       </div>
       <div class="stat-card ${data.bankBalance >= 0 ? 'success' : 'danger'}">
         <div class="stat-label">Cuenta Bancaria (ARS)</div>
@@ -2059,9 +2057,9 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
         <div class="stat-value positive">${formatCurrency(data.prepaidMemberCredit)}</div>
       </div>
       <div class="stat-card warning">
-        <div class="stat-label">Miembros Impagos</div>
+        <div class="stat-label">Con Saldo de Cápita</div>
         <div class="stat-value" style="color: #f39c12;">${data.memberSnapshots.filter((m: any) => m.status === 'unpaid' || m.status === 'overdue').length}</div>
-        <div class="stat-subtext">Con cuotas pendientes</div>
+        <div class="stat-subtext">Saldo de cápita pendiente (acumulado)</div>
       </div>
       <div class="stat-card danger">
         <div class="stat-label">Miembros Demorados</div>
@@ -2077,11 +2075,11 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
     <h2 class="section-title">${feeSectionTitle}</h2>
     <div class="grid">
       <div class="stat-card">
-        <div class="stat-label">Cuotas Esperadas</div>
+        <div class="stat-label">Cápita Esperada</div>
         <div class="stat-value">${formatCurrency(data.expectedMonthlyFees)}</div>
       </div>
       <div class="stat-card success">
-        <div class="stat-label">Cuotas Recaudadas</div>
+        <div class="stat-label">Cápita Recaudada</div>
         <div class="stat-value">${formatCurrency(data.collectedMonthlyFees)}</div>
       </div>
       <div class="stat-card ${data.collectionPercentage >= 80 ? 'success' : data.collectionPercentage >= 50 ? 'warning' : 'danger'}">
@@ -2090,7 +2088,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
       </div>
     </div>
     ${isLite ? '' : `<p style="margin-top: 15px; color: #000;">
-      <strong>${data.membersMissingPayment}</strong> miembro(s) sin pago registrado este mes.
+      <strong>${data.membersMissingPayment}</strong> ${data.membersMissingPayment === 1 ? 'miembro' : 'miembros'} sin ningún pago de cápita registrado este mes.
     </p>`}
   </div>
 
