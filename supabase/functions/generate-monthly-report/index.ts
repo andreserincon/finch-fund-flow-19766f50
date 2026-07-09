@@ -974,6 +974,10 @@ Deno.serve(async (req) => {
     }
 
     // Update report with both PDF paths and mark as generated
+    // Persist the canonical month result (the same computeMonthResult both PDFs
+    // display) so the app's stored Ingresos/Egresos and net_result match the
+    // report headline and sum consistently (net_result = inflows - outflows).
+    const canonicalMonthResult = computeMonthResult(reportData);
     await supabase
       .from('monthly_reports')
       .update({
@@ -981,6 +985,9 @@ Deno.serve(async (req) => {
         generated_at: new Date().toISOString(),
         pdf_path: pdfPath,
         lite_pdf_path: litePdfPath,
+        total_inflows: canonicalMonthResult.ingresosEquiv,
+        total_outflows: canonicalMonthResult.egresosEquiv,
+        net_result: canonicalMonthResult.equivArs,
       })
       .eq('id', reportId);
 
@@ -1004,6 +1011,48 @@ Deno.serve(async (req) => {
     );
   }
 });
+
+/**
+ * Canonical month result. Sums the SAME legs the flujo-del-mes table renders
+ * (categoryFlows + eventMovementRows + otherExpenseRows), per currency, so the
+ * Completo ledger, its reconciling "Resultado del Mes (equiv. ARS)" row, the
+ * Resumen headline, and the persisted net_result all agree by construction.
+ * equivArs folds the USD leg at the single per-run exchangeRate (fallback 1200).
+ */
+function computeMonthResult(data: any): {
+  incARS: number; incUSD: number; expARS: number; expUSD: number;
+  monthARS: number; monthUSD: number;
+  ingresosEquiv: number; egresosEquiv: number; equivArs: number;
+} {
+  let incARS = 0, incUSD = 0, expARS = 0, expUSD = 0;
+  const flows = data.categoryFlows || {};
+  for (const cat of Object.keys(flows)) {
+    const f = flows[cat];
+    incARS += Number(f.incomeARS || 0);
+    incUSD += Number(f.incomeUSD || 0);
+    expARS += Number(f.expenseARS || 0);
+    expUSD += Number(f.expenseUSD || 0);
+  }
+  for (const row of (data.eventMovementRows || [])) {
+    incARS += Number(row.income_ars || 0);
+    incUSD += Number(row.income_usd || 0);
+    expARS += Number(row.expense_ars || 0);
+    expUSD += Number(row.expense_usd || 0);
+  }
+  for (const row of (data.otherExpenseRows || [])) {
+    if (row.currency === 'USD') expUSD += Number(row.amount || 0);
+    else expARS += Number(row.amount || 0);
+  }
+  const rate = Number(data.exchangeRate) || 1200;
+  const monthARS = incARS - expARS;
+  const monthUSD = incUSD - expUSD;
+  return {
+    incARS, incUSD, expARS, expUSD, monthARS, monthUSD,
+    ingresosEquiv: incARS + incUSD * rate,
+    egresosEquiv: expARS + expUSD * rate,
+    equivArs: monthARS + monthUSD * rate,
+  };
+}
 
 function buildFlowTable(data: any, formatCurrency: (amount: number, currency?: string) => string): string {
   // Order categories: loan_disbursement before loan_repayment
@@ -1138,6 +1187,16 @@ function buildFlowTable(data: any, formatCurrency: (amount: number, currency?: s
           + '<td class="text-right">-</td>'
           + '</tr>';
       })()
+    // Reconciling line: the month result folded to a single equiv-ARS figure
+    // (USD converted at TC Oficial). This is the SAME number the Resumen
+    // headline shows, so the two documents agree on the month's bottom line.
+    + (() => {
+        const mr = computeMonthResult(data);
+        return '<tr class="summary-row">'
+          + '<td>Resultado del Mes (equiv. ARS)</td>'
+          + '<td class="text-right ' + (mr.equivArs >= 0 ? 'positive' : 'negative') + '" colspan="4"><strong>' + formatCurrency(mr.equivArs) + '</strong></td>'
+          + '</tr>';
+      })()
     + '<tr class="summary-row">'
     + '<td><strong>Balance Final</strong></td>'
     + '<td class="text-right ' + (finalARS >= 0 ? 'positive' : 'negative') + '"><strong>' + formatCurrency(finalARS) + '</strong></td>'
@@ -1150,6 +1209,9 @@ function buildFlowTable(data: any, formatCurrency: (amount: number, currency?: s
 
 function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comprehensive', logoBase64?: string): string {
   const isLite = reportType === 'lite';
+  // Canonical month result, shared by the Resumen headline and the Completo
+  // reconciling row so both variants show the same bottom line.
+  const mr = computeMonthResult(data);
   
   const formatCurrency = (amount: number, currency = 'ARS') => {
     return new Intl.NumberFormat('es-AR', {
@@ -1204,10 +1266,19 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
     ? [] // Lite report doesn't show member details
     : sortedMembers;
   
-  const memberSectionTitle = '4. Detalle Financiero de Miembros';
-  const feeSectionTitle = isLite ? '2. Cobranza de Capita' : '2. Cobertura de Cuotas Mensuales';
-  const loansSectionNum = '3';
-  const eventsSectionNum = isLite ? '4' : '5';
+  // Section numbers derive from render order (Préstamos, Eventos, and the
+  // Completo-only Detalle de Miembros are all conditional) so the printed
+  // number always matches the page position. Order: 1 Resumen Global, 2
+  // Cobranza, then Préstamos, Eventos (+ its 4.1 Detalle por Evento), and
+  // Detalle Financiero de Miembros last. Fixes the old 1,2,3,5,5.1,4 drift.
+  const hasLoansSection = isLite ? (data.totalActiveLoans > 0) : (data.loanSnapshots.length > 0);
+  const hasEventsSection = data.eventSnapshots.length > 0;
+  let sectionCounter = 2;
+  const loansSectionNum = hasLoansSection ? String(++sectionCounter) : '';
+  const eventsSectionNum = hasEventsSection ? String(++sectionCounter) : '';
+  const memberSectionNum = !isLite ? String(++sectionCounter) : '';
+  const feeSectionTitle = `2. ${isLite ? 'Cobranza de Capita' : 'Cobertura de Cuotas Mensuales'}`;
+  const memberSectionTitle = `${memberSectionNum}. Detalle Financiero de Miembros`;
 
   // Build member rows; separate Saldo Capita and Saldo Eventos columns.
   const memberRows = membersToShow.map((m: any) => {
@@ -1394,7 +1465,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
   // skips this; too detailed for the single-page version.
   let perEventDetailsSection = '';
   if (!isLite && Array.isArray(data.perEventDetails) && data.perEventDetails.length > 0) {
-    const cardSubNum = isLite ? (eventsSectionNum + '.1') : (eventsSectionNum + '.1');
+    const cardSubNum = `${eventsSectionNum}.1`;
     const blocks = data.perEventDetails.map((ev: any) => {
       const expensesTotal = ev.expenses.reduce(
         (acc: { ars: number; usd: number }, x: any) => {
@@ -1944,15 +2015,15 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
     ${isLite ? `<div class="grid" style="grid-template-columns: repeat(3, 1fr);">
       <div class="stat-card success">
         <div class="stat-label">Ingresos</div>
-        <div class="stat-value positive">${formatCurrency(data.totalInflows)}</div>
+        <div class="stat-value positive">${formatCurrency(mr.ingresosEquiv)}</div>
       </div>
       <div class="stat-card danger">
         <div class="stat-label">Egresos</div>
-        <div class="stat-value negative">${formatCurrency(data.totalOutflows)}</div>
+        <div class="stat-value negative">${formatCurrency(mr.egresosEquiv)}</div>
       </div>
-      <div class="stat-card ${data.netResult >= 0 ? 'success' : 'danger'}">
-        <div class="stat-label">Resultado Neto</div>
-        <div class="stat-value ${data.netResult >= 0 ? 'positive' : 'negative'}">${formatCurrency(data.netResult)}</div>
+      <div class="stat-card ${mr.equivArs >= 0 ? 'success' : 'danger'}">
+        <div class="stat-label">Resultado del Mes</div>
+        <div class="stat-value ${mr.equivArs >= 0 ? 'positive' : 'negative'}">${formatCurrency(mr.equivArs)}</div>
       </div>
     </div>` : buildFlowTable(data, formatCurrency)}
 
