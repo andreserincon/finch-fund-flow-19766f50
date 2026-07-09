@@ -1267,6 +1267,13 @@ const MASTHEAD_STYLE = `
     .signatures .sig-line { border-top: 1px solid #1a1a1a; margin-top: 44px; padding-top: 6px; }
     .signatures .sig-name { font-weight: bold; font-size: 12px; color: #1a1a1a; }
     .signatures .sig-role { font-size: 10px; color: #555; text-transform: uppercase; letter-spacing: 0.6px; margin-top: 1px; }
+    /* Keep each stat-card grid intact across page breaks (Chromium honors
+       break-inside:avoid on grid containers, verified). Fixes the "Posición de
+       Miembros" grid splitting across an A4 page. */
+    .grid { break-inside: avoid; page-break-inside: avoid; }
+    /* Keep a subsection heading with the block that follows it (no orphaned
+       "Saldos de Cuentas" / "Flujo del Mes" title at a page bottom). */
+    .subsection-title { break-after: avoid; page-break-after: avoid; }
   `;
 
 function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comprehensive', logoBase64?: string): string {
