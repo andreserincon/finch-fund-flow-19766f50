@@ -855,15 +855,32 @@ Deno.serve(async (req) => {
     // Also account for transfers in/out this month
     const monthTransfers = allTransfers.filter((t: any) => t.transfer_date >= monthStartStr && t.transfer_date <= monthEndStr);
 
-    // Officer names for the signature block, from the app roles (the source of
-    // truth for who is VM / Tesorero). get_users_with_roles returns member_name
-    // per user; call it with the caller's session so the RPC's role gate passes.
-    // Fall back to members.lodge_office. Names are shown on purpose (the rest of
-    // the report is Matrícula-only); blank if unassigned so the line can still
-    // be signed by hand.
-    const { data: usersWithRoles } = await supabaseAuth.rpc('get_users_with_roles');
+    // Officer names for the signature block. The head (VM) and Tesorero are app
+    // ROLES ('vm' / 'treasurer'), not lodge offices. Resolve robustly across
+    // contexts, in order: (1) get_users_with_roles on the caller's session (when
+    // a user triggered generation); (2) a SERVICE-ROLE path so the sessionless
+    // scheduled/cron job also resolves them (user_roles -> member via
+    // get_user_member_id); (3) members.lodge_office. Names shown on purpose (the
+    // rest of the report is Matrícula-only); blank if unassigned (still signable).
+    let usersWithRoles: any[] | null = null;
+    try {
+      const r = await supabaseAuth.rpc('get_users_with_roles');
+      usersWithRoles = (r.data as any[]) || null;
+    } catch (_e) { /* no caller session (cron path); fall through */ }
+    const svcOfficer: Record<string, string> = {};
+    try {
+      const { data: roleRows } = await supabase
+        .from('user_roles').select('user_id, role').in('role', ['vm', 'treasurer']);
+      for (const rr of (roleRows || [])) {
+        if (svcOfficer[rr.role]) continue;
+        const { data: mid } = await supabase.rpc('get_user_member_id', { _user_id: rr.user_id });
+        const mm = members.find((m: any) => m.id === mid);
+        if (mm?.full_name) svcOfficer[rr.role] = mm.full_name;
+      }
+    } catch (_e) { /* ignore; fall through to lodge_office */ }
     const officerName = (role: string, office: string) =>
       ((usersWithRoles || []).find((u: any) => u.role === role)?.member_name)
+      || svcOfficer[role]
       || members.find((m: any) => m.lodge_office === office)?.full_name
       || '';
     const vmName = officerName('vm', 'venerable_maestro');
