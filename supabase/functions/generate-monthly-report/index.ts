@@ -150,7 +150,7 @@ Deno.serve(async (req) => {
     // Check if report already exists
     const { data: existingReport } = await supabase
       .from('monthly_reports')
-      .select('id, status')
+      .select('*')
       .eq('report_year', year)
       .eq('report_month', month)
       .maybeSingle();
@@ -355,8 +355,24 @@ Deno.serve(async (req) => {
     // available quote. We take the most recent official quote dated on or
     // before monthEndStr, which also steps over weekends/holidays with no
     // quote. Source: ArgentinaDatos daily official series (venta/sell rate).
+    //
+    // The resolved rate is persisted on the report row (exchange_rate). If the
+    // series is ever unavailable while regenerating a CLOSED month, we reuse
+    // that stored rate instead of stamping today's rate onto a past month, so a
+    // closed month stays reproducible even across an outage. The live fetch
+    // stays primary, so a closed month always re-resolves the same correct
+    // month-end value on the happy path (no stale mid-month rate gets locked).
+    const persistedRate =
+      existingReport && (existingReport as any).exchange_rate != null
+        ? Number((existingReport as any).exchange_rate)
+        : null;
+    const todayStr = new Date().toISOString().split('T')[0];
+    const isClosedMonth = monthEndStr < todayStr;
+
     let exchangeRate = 1200; // Default fallback rate
     let rateResolved = false;
+
+    // 1) Primary: the official rate as of the report month-end.
     try {
       const seriesRes = await fetch('https://api.argentinadatos.com/v1/cotizaciones/dolares/oficial');
       if (seriesRes.ok) {
@@ -374,19 +390,35 @@ Deno.serve(async (req) => {
     } catch (e) {
       console.warn('Failed to fetch historical official rate series:', e);
     }
-    // Fallback when the historical series is unavailable: today's official rate,
-    // then the 1200 default. Only a past month during an outage is affected.
+
+    // 2) Closed month with the series down: reuse the previously stored rate so
+    //    a past month reproduces instead of getting today's (wrong) rate.
+    if (!rateResolved && isClosedMonth && persistedRate != null) {
+      exchangeRate = persistedRate;
+      rateResolved = true;
+      console.log(`Reusing persisted rate for closed month ${year}-${month}: ${exchangeRate}`);
+    }
+
+    // 3) Fallback: today's official rate (the right intent for the current month).
     if (!rateResolved) {
       try {
         const rateResponse = await fetch('https://dolarapi.com/v1/dolares/oficial');
         if (rateResponse.ok) {
           const rateData = await rateResponse.json();
           exchangeRate = Number(rateData.venta) || 1200;
+          rateResolved = true;
           console.log(`Fallback current exchange rate: ${exchangeRate}`);
         }
       } catch (e) {
-        console.warn('Failed to fetch fallback exchange rate, using 1200:', e);
+        console.warn('Failed to fetch fallback exchange rate:', e);
       }
+    }
+
+    // 4) Last resort: any previously stored rate, else the 1200 default.
+    if (!rateResolved && persistedRate != null) {
+      exchangeRate = persistedRate;
+      rateResolved = true;
+      console.log(`Reusing persisted rate (last resort) for ${year}-${month}: ${exchangeRate}`);
     }
 
     // Calculate total ARS balance including savings converted
@@ -1083,6 +1115,17 @@ Deno.serve(async (req) => {
         net_result: canonicalMonthResult.equivArs,
       })
       .eq('id', reportId);
+
+    // Persist the resolved rate for reproducibility + audit. Best-effort: if the
+    // exchange_rate column has not been added yet, this logs and no-ops rather
+    // than failing a generation that is already complete.
+    const { error: ratePersistError } = await supabase
+      .from('monthly_reports')
+      .update({ exchange_rate: exchangeRate })
+      .eq('id', reportId);
+    if (ratePersistError) {
+      console.warn('Could not persist exchange_rate (has the column been added?):', ratePersistError.message);
+    }
 
     return new Response(
       JSON.stringify({ 
