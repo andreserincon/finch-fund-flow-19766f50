@@ -52,13 +52,13 @@ export function useMembers() {
       whatsapp_opt_out?: boolean;
       monthly_fee_amount: number;
       fee_type: FeeType;
-      masonic_grade?: string;
+      masonic_grade?: 'profano' | 'aprendiz' | 'companero' | 'maestro';
       lodge_office?: string | null;
       join_date: string;
     }) => {
       const { data, error } = await supabase
         .from('members')
-        .insert(member)
+        .insert([member])
         .select()
         .single();
       if (error) throw error;
