@@ -348,17 +348,45 @@ Deno.serve(async (req) => {
       else if (t.to_account === 'savings') savingsBalance += t.amount;
     });
 
-    // Fetch official exchange rate for USD to ARS conversion
+    // Resolve the TC Oficial as of the report's month-end. For a CLOSED month
+    // this is a fixed historical value, so regenerating the month always
+    // reproduces the same ARS-equivalent figures. For the CURRENT month the
+    // month-end is in the future, so this naturally resolves to the latest
+    // available quote. We take the most recent official quote dated on or
+    // before monthEndStr, which also steps over weekends/holidays with no
+    // quote. Source: ArgentinaDatos daily official series (venta/sell rate).
     let exchangeRate = 1200; // Default fallback rate
+    let rateResolved = false;
     try {
-      const rateResponse = await fetch('https://dolarapi.com/v1/dolares/oficial');
-      if (rateResponse.ok) {
-        const rateData = await rateResponse.json();
-        exchangeRate = rateData.venta || 1200;
-        console.log(`Exchange rate fetched: ${exchangeRate}`);
+      const seriesRes = await fetch('https://api.argentinadatos.com/v1/cotizaciones/dolares/oficial');
+      if (seriesRes.ok) {
+        const series = await seriesRes.json();
+        const chosen = (Array.isArray(series) ? series : [])
+          .filter((q: any) => typeof q?.fecha === 'string' && q.fecha <= monthEndStr && Number(q?.venta) > 0)
+          .sort((a: any, b: any) => a.fecha.localeCompare(b.fecha))
+          .at(-1);
+        if (chosen) {
+          exchangeRate = Number(chosen.venta);
+          rateResolved = true;
+          console.log(`TC Oficial as of <= ${monthEndStr}: ${exchangeRate} (fecha ${chosen.fecha})`);
+        }
       }
     } catch (e) {
-      console.warn('Failed to fetch exchange rate, using fallback:', e);
+      console.warn('Failed to fetch historical official rate series:', e);
+    }
+    // Fallback when the historical series is unavailable: today's official rate,
+    // then the 1200 default. Only a past month during an outage is affected.
+    if (!rateResolved) {
+      try {
+        const rateResponse = await fetch('https://dolarapi.com/v1/dolares/oficial');
+        if (rateResponse.ok) {
+          const rateData = await rateResponse.json();
+          exchangeRate = Number(rateData.venta) || 1200;
+          console.log(`Fallback current exchange rate: ${exchangeRate}`);
+        }
+      } catch (e) {
+        console.warn('Failed to fetch fallback exchange rate, using 1200:', e);
+      }
     }
 
     // Calculate total ARS balance including savings converted
