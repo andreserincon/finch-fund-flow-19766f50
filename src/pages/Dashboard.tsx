@@ -470,12 +470,12 @@ export default function Dashboard() {
             ? { label: 'Demorado', cls: 'status-demorado' }
             : { label: 'Pendiente', cls: 'status-impago' };
 
-        const breakdown: { label: string; amount: number; currency: 'ARS' | 'USD'; to?: string }[] = [
-          { label: 'Capitas', amount: ownCapita, currency: 'ARS' },
-          { label: 'Eventos', amount: ownEvents, currency: 'ARS' },
-          { label: 'Préstamos', amount: ownLoansARS, currency: 'ARS', to: '/loans' },
-          { label: 'Préstamos (USD)', amount: ownLoansUSD, currency: 'USD', to: '/loans' },
-        ].filter((r) => r.amount > 0);
+        const breakdown: { label: string; amount: number; currency: 'ARS' | 'USD'; to?: string }[] = ([
+          { label: 'Capitas', amount: ownCapita, currency: 'ARS' as const },
+          { label: 'Eventos', amount: ownEvents, currency: 'ARS' as const },
+          { label: 'Préstamos', amount: ownLoansARS, currency: 'ARS' as const, to: '/loans' },
+          { label: 'Préstamos (USD)', amount: ownLoansUSD, currency: 'USD' as const, to: '/loans' },
+        ]).filter((r) => r.amount > 0);
 
         // Headline: the ARS total normally; if the only debt is a USD loan,
         // show that figure instead of a misleading $0.
