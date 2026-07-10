@@ -749,6 +749,7 @@ export type Database = {
           collected_monthly_fees: number
           collection_percentage: number
           created_at: string
+          exchange_rate: number | null
           expected_monthly_fees: number
           generated_at: string | null
           generated_by: string | null
@@ -778,6 +779,7 @@ export type Database = {
           collected_monthly_fees?: number
           collection_percentage?: number
           created_at?: string
+          exchange_rate?: number | null
           expected_monthly_fees?: number
           generated_at?: string | null
           generated_by?: string | null
@@ -807,6 +809,7 @@ export type Database = {
           collected_monthly_fees?: number
           collection_percentage?: number
           created_at?: string
+          exchange_rate?: number | null
           expected_monthly_fees?: number
           generated_at?: string | null
           generated_by?: string | null
