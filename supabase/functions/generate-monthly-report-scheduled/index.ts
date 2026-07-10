@@ -24,6 +24,21 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Auth: only the pg_cron job (which sends X-Cron-Secret) or an operator
+    // with the service-role key may invoke this. Unauthenticated calls are
+    // rejected to prevent overwriting reports and burning PDFSHIFT credits.
+    const cronSecret = req.headers.get('x-cron-secret');
+    const expectedCronSecret = Deno.env.get('CRON_SECRET');
+    const authHeader = req.headers.get('authorization') ?? '';
+    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+    const hasServiceRole = serviceKey.length > 0 && authHeader === `Bearer ${serviceKey}`;
+    const hasCronSecret = !!expectedCronSecret && cronSecret === expectedCronSecret;
+    if (!hasCronSecret && !hasServiceRole) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
