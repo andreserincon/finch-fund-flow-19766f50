@@ -1353,7 +1353,7 @@ const MASTHEAD_STYLE = `
     .negative { color: #A32219; }
     .stat-card.success { border-left-color: #1F6B3B; }
     .stat-card.danger { border-left-color: #A32219; }
-    .section-title { background: transparent; color: #1a1a1a; border-radius: 0; border-bottom: 1.5px solid #C9A24B; padding: 4px 0 3px; letter-spacing: 1.5px; text-transform: uppercase; }
+    .section-title { background: transparent; color: #1a1a1a; border-radius: 0; border-bottom: 1.5px solid #C9A24B; padding: 4px 0 3px; letter-spacing: 1.5px; text-transform: uppercase; break-after: avoid; page-break-after: avoid; }
     .verdict-hero { border: 1px solid #E4DFD2; border-left: 4px solid #C9A24B; border-radius: 4px; padding: 12px 16px; margin: 0 0 14px; background: #fff; }
     .verdict-hero .verdict-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #6b6b6b; margin-bottom: 2px; }
     .verdict-hero .verdict-figure { font-size: 30px; line-height: 1.1; font-weight: bold; font-family: 'HeritageSerif', Georgia, serif; }
@@ -1688,8 +1688,8 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
       const balH = Number(snap?.balance_historico ?? (recH - gasH));
       const estadoGeneral = balH >= 0 ? 'Superávit' : 'Déficit';
       return `
-        <div class="section" style="page-break-inside: avoid; margin-top: 16px;">
-          <h3 style="margin: 0 0 8px 0; font-size: 14px;">${ev.event_name}</h3>
+        <div class="section" style="margin-top: 16px;">
+          <h3 style="margin: 0 0 8px 0; font-size: 14px; break-after: avoid; page-break-after: avoid;">${ev.event_name}</h3>
           <div class="grid">
             <div class="stat-card">
               <div class="stat-label">Ingresos por Cápita (mes)</div>
@@ -2034,12 +2034,12 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
       }
     }
 
-    /* By default sections try to stay on one page (avoid awkward splits
-       of small cards/tables). The .section--splittable modifier opts
-       a section in to flowing across pages. */
-    .section { margin-bottom: 15px; page-break-inside: avoid; }
-    .section.section--splittable { page-break-inside: auto; }
-    .section.section--splittable table { page-break-inside: auto; }
+    /* Sections FLOW across page boundaries so each page fills top to bottom.
+       Only atomic blocks stay intact (see MASTHEAD_STYLE): each .grid (a row of
+       stat cards) and each table row (tr) keep-together, so no visual is split
+       mid-block. This reclaims the large blank areas that appeared when a whole
+       section refused to share a page and ejected to the next one. */
+    .section { margin-bottom: 15px; page-break-inside: auto; }
     
     .section-title {
       background: #000;
@@ -2275,15 +2275,10 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
 
   ${perEventDetailsSection}
 
-  ${isLite ? '' : `<!-- Page break before the member roster. The running header on
-       pages 2+ is supplied by PDFShift (start_at:2); no in-body masthead here,
-       which previously double-stacked a second header on page 4. -->
-  <div class="page-break"></div>`}
-
-  ${isLite ? '' : `<!-- Section 4: Member Financial Detail, marked splittable so
-       a long member list flows across pages instead of leaving a
-       half-empty page above it. Column headers repeat on each new
-       page thanks to thead { display: table-header-group }. -->
+  ${isLite ? '' : `<!-- Section 4: Member Financial Detail. It flows directly after
+       the events section (no forced page break) so the page above fills up; a
+       long member list still splits at row boundaries with the column headers
+       repeating on each new page thanks to thead { display: table-header-group }. -->
   <div class="section section--splittable">
     <h2 class="section-title">${memberSectionTitle}</h2>
     ${memberSection}
