@@ -44,7 +44,7 @@ export function MainLayout({ children }: MainLayoutProps) {
             className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60"
             style={{ paddingTop: 'env(safe-area-inset-top)' }}
           >
-            <div className="flex h-14 landscape:h-11 items-center justify-between gap-4 px-4 md:px-6">
+            <div className="flex h-14 items-center justify-between gap-4 px-4 md:px-6">
               <div className="flex items-center gap-4">
                 {/* Hamburger / sidebar trigger */}
                 <SidebarTrigger className="-ml-2" aria-label={t('nav.toggleSidebar', 'Abrir o cerrar el menú')} />

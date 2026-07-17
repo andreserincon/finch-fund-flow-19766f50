@@ -84,7 +84,7 @@ function KPIList({ kpis, t, noGlData, baselineKpis }: { kpis: ProposalKPIs; t: (
   ];
 
   return (
-    <div className="space-y-1 landscape:space-y-0.5 md:space-y-2">
+    <div className="space-y-1 md:space-y-2">
       {noGlData && !isDelta && (
         <p className="text-[9px] md:text-xs text-muted-foreground italic mb-1 md:mb-2">{t('feeCalculator.enterGlFees')}</p>
       )}
@@ -92,7 +92,7 @@ function KPIList({ kpis, t, noGlData, baselineKpis }: { kpis: ProposalKPIs; t: (
         <p className="text-[9px] md:text-xs text-muted-foreground italic mb-1 md:mb-2">{t('feeCalculator.vsBaseline')}</p>
       )}
       {rows.map((row) => (
-        <div key={row.label} className="flex items-center justify-between text-[10px] landscape:text-[9px] md:text-sm">
+        <div key={row.label} className="flex items-center justify-between text-[10px] md:text-sm">
           {row.term ? (
             <TermTooltip termKey={row.term} className="text-muted-foreground truncate mr-1">
               {row.label}
@@ -136,9 +136,9 @@ function ProposalCard({
 }) {
   return (
     <Card>
-      <CardHeader className="p-2 landscape:p-1.5 md:p-6 pb-1 landscape:pb-0.5 md:pb-3">
+      <CardHeader className="p-2 md:p-6 pb-1 md:pb-3">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1">
-          <Badge className={`${badgeColor} text-[10px] landscape:text-[9px] md:text-xs`}>
+          <Badge className={`${badgeColor} text-[10px] md:text-xs`}>
             {termKey ? (
               <TermTooltip termKey={termKey} className="decoration-current/40">
                 {name}
@@ -154,22 +154,22 @@ function ProposalCard({
         {/* Plain-language sublabel: what this proposal actually does, so a new
             treasurer does not have to decode the badge name. */}
         {sublabel && (
-          <p className="mt-1 text-[9px] landscape:text-[8px] md:text-xs text-muted-foreground leading-snug">
+          <p className="mt-1 text-[9px] md:text-xs text-muted-foreground leading-snug">
             {sublabel}
           </p>
         )}
       </CardHeader>
-      <CardContent className="p-2 landscape:p-1.5 md:p-6 pt-0 md:pt-0 space-y-1.5 landscape:space-y-1 md:space-y-4">
-        <div className="space-y-1 landscape:space-y-0.5 md:grid md:grid-cols-2 md:gap-4 md:space-y-0">
+      <CardContent className="p-2 md:p-6 pt-0 md:pt-0 space-y-1.5 md:space-y-4">
+        <div className="space-y-1 md:grid md:grid-cols-2 md:gap-4 md:space-y-0">
           <div>
-            <p className="text-[9px] landscape:text-[8px] md:text-xs text-muted-foreground">{t('feeCalculator.proposedStd')}</p>
-            <p className="text-sm landscape:text-xs md:text-xl font-bold">{formatARS(proposedStd)}</p>
-            <p className="text-[8px] landscape:text-[7px] md:text-[10px] text-muted-foreground">GL: {formatARS(kpis.projectedGlStd)}</p>
+            <p className="text-[9px] md:text-xs text-muted-foreground">{t('feeCalculator.proposedStd')}</p>
+            <p className="text-sm md:text-xl font-bold">{formatARS(proposedStd)}</p>
+            <p className="text-[8px] md:text-[10px] text-muted-foreground">GL: {formatARS(kpis.projectedGlStd)}</p>
           </div>
           <div>
-            <p className="text-[9px] landscape:text-[8px] md:text-xs text-muted-foreground">{t('feeCalculator.proposedSol')}</p>
-            <p className="text-sm landscape:text-xs md:text-xl font-bold">{formatARS(proposedSol)}</p>
-            <p className="text-[8px] landscape:text-[7px] md:text-[10px] text-muted-foreground">GL: {formatARS(kpis.projectedGlSol)}</p>
+            <p className="text-[9px] md:text-xs text-muted-foreground">{t('feeCalculator.proposedSol')}</p>
+            <p className="text-sm md:text-xl font-bold">{formatARS(proposedSol)}</p>
+            <p className="text-[8px] md:text-[10px] text-muted-foreground">GL: {formatARS(kpis.projectedGlSol)}</p>
           </div>
         </div>
         <Separator />
@@ -595,19 +595,18 @@ export default function FeeCalculator() {
 
   return (
     <TooltipProvider>
-      <div className="space-y-4 landscape:space-y-2 md:space-y-6 animate-fade-in p-4 md:p-6">
+      <div className="space-y-4 md:space-y-6 animate-fade-in p-4 md:p-6">
         {/* Header */}
         <PageHeader
-          className="gap-2 landscape:gap-1 md:gap-4"
+          className="gap-2 md:gap-4"
           title={
             <span className="flex items-center gap-2">
-              <Calculator className="h-5 w-5 landscape:h-4 landscape:w-4 md:h-7 md:w-7 text-primary" />
+              <Calculator className="h-5 w-5 md:h-7 md:w-7 text-primary" />
               {t('feeCalculator.title')}
             </span>
           }
-          titleClassName="text-xl landscape:text-lg md:text-3xl"
+          titleClassName="text-xl md:text-3xl"
           subtitle={t('feeCalculator.subtitle')}
-          subtitleClassName="landscape:hidden"
           hairline
           actions={
             <>
@@ -727,7 +726,7 @@ export default function FeeCalculator() {
         {/* Section 1: Current Reference */}
         <div data-asistente="calc-referencia-actual">
           <h2 className="section-header">{t('feeCalculator.currentReference')}</h2>
-          <div className="grid grid-cols-2 landscape:grid-cols-3 lg:grid-cols-3 gap-2 landscape:gap-1.5 md:gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 md:gap-4">
             <StatCard title={t('feeCalculator.currentStdFee')} value={formatARS(currentStdFee)} />
             <StatCard title={t('feeCalculator.currentSolFee')} value={formatARS(currentSolFee)} />
             <StatCard title={t('feeCalculator.activeStdMembers')} value={stdMemberCount} icon={<Users className="h-5 w-5 text-muted-foreground" />} />
@@ -755,7 +754,7 @@ export default function FeeCalculator() {
               {t('feeCalculator.selectQuarterFirst')}
             </div>
           ) : (
-            <div className="grid grid-cols-3 gap-1.5 landscape:gap-1 md:gap-4">
+            <div className="grid grid-cols-3 gap-1.5 md:gap-4">
               {proposals.map((p, idx) => (
                 <ProposalCard
                   key={idx}

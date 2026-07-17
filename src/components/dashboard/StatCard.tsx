@@ -39,17 +39,17 @@ export function StatCard({
   const content = (
     <div className="flex items-start justify-between">
       <div className="flex-1 min-w-0">
-        <p className="stat-label text-xs landscape:text-xs md:text-sm">{title}</p>
+        <p className="stat-label text-xs md:text-sm">{title}</p>
         <p
           className={cn(
-            'stat-value mt-1 text-lg landscape:text-base md:text-2xl truncate font-mono',
+            'stat-value mt-1 text-lg md:text-2xl truncate font-mono',
             valueStyles[variant],
           )}
         >
           {value}
         </p>
         {subtitle && (
-          <p className="text-xs landscape:text-xs md:text-sm text-muted-foreground mt-1 break-words whitespace-pre-line">
+          <p className="text-xs md:text-sm text-muted-foreground mt-1 break-words whitespace-pre-line">
             {subtitle}
           </p>
         )}
@@ -63,7 +63,7 @@ export function StatCard({
   );
 
   const cardClass = cn(
-    'stat-card landscape:p-3',
+    'stat-card',
     variantStyles[variant],
     to && 'stat-card-interactive block',
     className,

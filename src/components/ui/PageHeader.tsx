@@ -29,7 +29,7 @@ interface PageHeaderProps {
   className?: string;
   /** Extra classes for the h1 (e.g. responsive size overrides). */
   titleClassName?: string;
-  /** Extra classes for the subtitle paragraph (e.g. landscape:hidden). */
+  /** Extra classes for the subtitle paragraph (responsive overrides). */
   subtitleClassName?: string;
 }
 
