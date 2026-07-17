@@ -495,7 +495,6 @@ export default {
       absoluteModeLabel: 'Valores',
       baseMonthLabel: 'Mes base',
       cvsQuarterLabel: 'Trimestre CVS (según el mes base)',
-      deltaVsGl: '{{pct}}% vs aumento GL',
       custom: 'Escenario personalizado',
       customStdFee: 'Cápita estándar personalizada',
       customSolFee: 'Cápita solidaria personalizada',

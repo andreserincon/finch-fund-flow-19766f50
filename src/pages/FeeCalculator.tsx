@@ -29,81 +29,128 @@ const formatPct = (n: number) => `${n >= 0 ? '+' : ''}${n.toFixed(1)}%`;
 
 interface ProposalKPIs {
   totalMonthlyIncome: number;
-  glTotalCost: number;
-  netMonthlyIncome: number;
+  // GL-derived figures are null when there is no GL on file for the period.
+  glTotalCost: number | null;
+  netMonthlyIncome: number | null;
   ourFeeIncrease: number;
   glFeeIncrease: number;
-  delta: number;
+  delta: number | null;
   deltaVsGlYearAgo: number | null;
   yoyFeeVariation: number | null;
   yoyAccumulatedIndex: number;
-  projectedGlStd: number;
-  projectedGlSol: number;
+  projectedGlStd: number | null;
+  projectedGlSol: number | null;
 }
 
-function KPIList({ kpis, t, noGlData, baselineKpis }: { kpis: ProposalKPIs; t: (key: string) => string; noGlData?: boolean; baselineKpis?: ProposalKPIs }) {
-  const isDelta = !!baselineKpis;
+type ReadMode = 'absolute' | 'delta';
 
-  const formatDelta = (val: number) => `${val >= 0 ? '+' : ''}${formatARS(val)}`;
-  const formatDeltaPct = (val: number) => `${val >= 0 ? '+' : ''}${val.toFixed(1)}%`;
+// The stable identity of a scenario is its key, never its array index and never
+// its translated name.
+type ScenarioKey = 'actual' | 'ratio' | 'base' | 'gl65' | 'custom';
 
-  const rows: { label: string; value: string; color: string; term?: string }[] = isDelta ? [
-    { label: t('feeCalculator.totalMonthlyIncome'), value: formatDelta(kpis.totalMonthlyIncome - baselineKpis.totalMonthlyIncome), color: kpis.totalMonthlyIncome >= baselineKpis.totalMonthlyIncome ? 'text-success' : 'text-destructive' },
-    { label: t('feeCalculator.delta'), value: `${(kpis.delta - baselineKpis.delta).toFixed(1)}pp`, color: '', term: 'glPctCapita' },
-  ] : [
-    { label: t('feeCalculator.totalMonthlyIncome'), value: formatARS(kpis.totalMonthlyIncome), color: '' },
-    { label: t('feeCalculator.glTotalCost'), value: formatARS(kpis.glTotalCost), color: '' },
-    {
-      label: t('feeCalculator.netMonthlyIncome'),
-      value: formatARS(kpis.netMonthlyIncome),
-      color: kpis.netMonthlyIncome > 0 ? 'text-success' : 'text-overdue',
-    },
-    { label: t('feeCalculator.ourFeeIncrease'), value: formatPct(kpis.ourFeeIncrease), color: '', term: 'incrementoPropio' },
-    {
-      label: t('feeCalculator.delta'),
-      value: `${kpis.delta.toFixed(1)}%`,
-      color: '',
-      term: 'glPctCapita',
-    },
-    {
-      label: t('feeCalculator.deltaVsGlYearAgo'),
-      value: kpis.deltaVsGlYearAgo !== null ? `${kpis.deltaVsGlYearAgo.toFixed(1)}%` : t('feeCalculator.noYoyData'),
-      color: 'text-muted-foreground',
-      term: 'glPctCapita',
-    },
-    {
-      label: t('feeCalculator.yoyFeeVariation'),
-      value: kpis.yoyFeeVariation !== null ? formatPct(kpis.yoyFeeVariation) : t('feeCalculator.noYoyData'),
-      color: '',
-    },
-    {
-      label: t('feeCalculator.yoyIndexRef'),
-      value: `${kpis.yoyAccumulatedIndex.toFixed(1)}%`,
-      color: 'text-muted-foreground',
-      term: 'indiceAnual',
-    },
+interface Scenario {
+  key: ScenarioKey;
+  name: string;
+  sublabel?: string;
+  termKey?: string;
+  proposedStd: number;
+  proposedSol: number;
+  kpis: ProposalKPIs;
+}
+
+// One descriptor per metric. The same list renders in both modes: mode changes
+// only how each row renders its value, never which rows exist, so the row count
+// is identical in Valores and Diferencia vs Actual.
+interface MetricRow {
+  key: string;
+  label: string;
+  termKey?: string;
+  kind: 'currency' | 'percent' | 'ratio'; // ratio = an unsigned level like 54,3%
+  get: (k: ProposalKPIs) => number | null;
+  // Scenario-invariant: computeKPIs derives it from the GL cost model or a
+  // page-level constant, never from proposedStd/proposedSol, so it is identical
+  // in every column. In delta mode it reads "Igual en todas", never a signed zero.
+  invariant?: boolean;
+  dim?: boolean; // a muted reference row
+  tone?: (v: number) => string; // sign colouring, absolute mode only
+}
+
+function KPIList({
+  kpis,
+  baselineKpis,
+  mode,
+  isBaseline,
+  t,
+  noGlData,
+}: {
+  kpis: ProposalKPIs;
+  baselineKpis: ProposalKPIs;
+  mode: ReadMode;
+  isBaseline: boolean;
+  t: (key: string) => string;
+  noGlData?: boolean;
+}) {
+  const nd = t('feeCalculator.noYoyData'); // 'N/D'
+
+  const rows: MetricRow[] = [
+    { key: 'totalMonthlyIncome', label: t('feeCalculator.totalMonthlyIncome'), kind: 'currency', get: (k) => k.totalMonthlyIncome },
+    { key: 'glTotalCost', label: t('feeCalculator.glTotalCost'), kind: 'currency', get: (k) => k.glTotalCost, invariant: true },
+    { key: 'netMonthlyIncome', label: t('feeCalculator.netMonthlyIncome'), kind: 'currency', get: (k) => k.netMonthlyIncome, tone: (v) => (v > 0 ? 'text-success' : 'text-overdue') },
+    { key: 'ourFeeIncrease', label: t('feeCalculator.ourFeeIncrease'), termKey: 'incrementoPropio', kind: 'percent', get: (k) => k.ourFeeIncrease },
+    { key: 'delta', label: t('feeCalculator.delta'), termKey: 'glPctCapita', kind: 'ratio', get: (k) => k.delta },
+    { key: 'deltaVsGlYearAgo', label: t('feeCalculator.deltaVsGlYearAgo'), termKey: 'glPctCapita', kind: 'ratio', get: (k) => k.deltaVsGlYearAgo, dim: true, invariant: true },
+    { key: 'yoyFeeVariation', label: t('feeCalculator.yoyFeeVariation'), kind: 'percent', get: (k) => k.yoyFeeVariation },
+    { key: 'yoyIndexRef', label: t('feeCalculator.yoyIndexRef'), termKey: 'indiceAnual', kind: 'ratio', get: (k) => k.yoyAccumulatedIndex, dim: true, invariant: true },
   ];
+
+  const formatAbs = (v: number, kind: MetricRow['kind']) => {
+    if (kind === 'currency') return formatARS(v);
+    if (kind === 'percent') return `${v >= 0 ? '+' : ''}${v.toFixed(1)}%`;
+    return `${v.toFixed(1)}%`; // ratio: unsigned level
+  };
+  const formatDeltaCell = (v: number, kind: MetricRow['kind']) => {
+    if (kind === 'currency') return `${v >= 0 ? '+' : ''}${formatARS(v)}`;
+    // A difference of two percentages is expressed in percentage points.
+    return `${v >= 0 ? '+' : ''}${v.toFixed(1).replace('.', ',')}pp`;
+  };
+
+  const muted = 'text-muted-foreground';
+  const renderCell = (row: MetricRow): { text: string; className: string } => {
+    const kv = row.get(kpis);
+    if (mode === 'absolute') {
+      if (kv === null) return { text: nd, className: muted };
+      if (row.dim) return { text: formatAbs(kv, row.kind), className: muted };
+      return { text: formatAbs(kv, row.kind), className: row.tone ? row.tone(kv) : '' };
+    }
+    // Diferencia vs Actual
+    if (isBaseline) return { text: 'Referencia', className: muted };
+    if (kv === null) return { text: nd, className: muted };
+    if (row.invariant) return { text: 'Igual en todas', className: muted };
+    const bv = row.get(baselineKpis);
+    if (bv === null) return { text: nd, className: muted };
+    return { text: formatDeltaCell(kv - bv, row.kind), className: '' };
+  };
 
   return (
     <div className="space-y-1 md:space-y-2">
-      {noGlData && !isDelta && (
+      {noGlData && mode === 'absolute' && (
         <p className="text-[9px] md:text-xs text-muted-foreground italic mb-1 md:mb-2">{t('feeCalculator.enterGlFees')}</p>
       )}
-      {isDelta && (
-        <p className="text-[9px] md:text-xs text-muted-foreground italic mb-1 md:mb-2">{t('feeCalculator.vsBaseline')}</p>
-      )}
-      {rows.map((row) => (
-        <div key={row.label} className="flex items-center justify-between text-[10px] md:text-sm">
-          {row.term ? (
-            <TermTooltip termKey={row.term} className="text-muted-foreground truncate mr-1">
-              {row.label}
-            </TermTooltip>
-          ) : (
-            <span className="text-muted-foreground truncate mr-1">{row.label}</span>
-          )}
-          <span className={`font-medium whitespace-nowrap ${row.color}`}>{row.value}</span>
-        </div>
-      ))}
+      {rows.map((row) => {
+        const cell = renderCell(row);
+        return (
+          <div key={row.key} className="flex items-center justify-between text-[10px] md:text-sm">
+            {row.termKey ? (
+              <TermTooltip termKey={row.termKey} className="text-muted-foreground truncate mr-1">
+                {row.label}
+              </TermTooltip>
+            ) : (
+              <span className="text-muted-foreground truncate mr-1">{row.label}</span>
+            )}
+            <span className={`font-medium whitespace-nowrap ${cell.className}`}>{cell.text}</span>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -112,34 +159,33 @@ function ProposalCard({
   name,
   sublabel,
   termKey,
-  badgeColor,
-  bufferPct,
   proposedStd,
   proposedSol,
   kpis,
   t,
   noGlData,
-  isVariant,
   baselineKpis,
+  mode,
+  isBaseline,
 }: {
   name: string;
   sublabel?: string;
   termKey?: string;
-  badgeColor: string;
-  bufferPct: number;
   proposedStd: number;
   proposedSol: number;
   kpis: ProposalKPIs;
-  t: (key: string, opts?: Record<string, unknown>) => string;
+  t: (key: string) => string;
   noGlData?: boolean;
-  isVariant?: boolean;
-  baselineKpis?: ProposalKPIs;
+  baselineKpis: ProposalKPIs;
+  mode: ReadMode;
+  isBaseline: boolean;
 }) {
+  const nd = t('feeCalculator.noYoyData');
   return (
     <Card>
       <CardHeader className="p-2 md:p-6 pb-1 md:pb-3">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1">
-          <Badge className={`${badgeColor} text-[10px] md:text-xs`}>
+          <Badge variant="secondary" className="text-[10px] md:text-xs">
             {termKey ? (
               <TermTooltip termKey={termKey} className="decoration-current/40">
                 {name}
@@ -148,9 +194,6 @@ function ProposalCard({
               name
             )}
           </Badge>
-          <span className="text-[9px] md:text-xs text-muted-foreground hidden sm:inline">
-            {t('feeCalculator.deltaVsGl', { pct: bufferPct })}
-          </span>
         </div>
         {/* Plain-language sublabel: what this proposal actually does, so a new
             treasurer does not have to decode the badge name. */}
@@ -165,16 +208,16 @@ function ProposalCard({
           <div>
             <p className="text-[9px] md:text-xs text-muted-foreground">{t('feeCalculator.proposedStd')}</p>
             <p className="text-sm md:text-xl font-bold">{formatARS(proposedStd)}</p>
-            <p className="text-[8px] md:text-[10px] text-muted-foreground">GL: {formatARS(kpis.projectedGlStd)}</p>
+            <p className="text-[8px] md:text-[10px] text-muted-foreground">GL: {kpis.projectedGlStd !== null ? formatARS(kpis.projectedGlStd) : nd}</p>
           </div>
           <div>
             <p className="text-[9px] md:text-xs text-muted-foreground">{t('feeCalculator.proposedSol')}</p>
             <p className="text-sm md:text-xl font-bold">{formatARS(proposedSol)}</p>
-            <p className="text-[8px] md:text-[10px] text-muted-foreground">GL: {formatARS(kpis.projectedGlSol)}</p>
+            <p className="text-[8px] md:text-[10px] text-muted-foreground">GL: {kpis.projectedGlSol !== null ? formatARS(kpis.projectedGlSol) : nd}</p>
           </div>
         </div>
         <Separator />
-        <KPIList kpis={kpis} t={t} noGlData={noGlData} baselineKpis={baselineKpis} />
+        <KPIList kpis={kpis} baselineKpis={baselineKpis} mode={mode} isBaseline={isBaseline} t={t} noGlData={noGlData} />
       </CardContent>
     </Card>
   );
@@ -188,8 +231,7 @@ export default function FeeCalculator() {
 
   const [selectedBaseMonth, setSelectedBaseMonth] = useState<string>('');
   const [manualCvs, setManualCvs] = useState<string>('');
-  const [manualGlStd, setManualGlStd] = useState<string>('');
-  const [manualGlSol, setManualGlSol] = useState<string>('');
+  const [mode, setMode] = useState<ReadMode>('absolute');
   const customStdField = useCommittedNumber(0);
   const customSolField = useCommittedNumber(0);
 
@@ -268,9 +310,11 @@ export default function FeeCalculator() {
       const baseMonthLabel = availableFeeMonths.find(m => m.value === selectedBaseMonth)?.label ?? selectedBaseMonth ?? '';
       const quarterLabel = selectedQuarter?.quarterLabel ?? 'Manual';
 
-      const lowP = proposals.find(p => p.buffer === -2);
-      const baseP = proposals.find(p => p.buffer === 0);
-      const highP = proposals.find(p => p.buffer === 2);
+      // Minimal bridge so the export keeps compiling. S5 rebuilds the workbook
+      // to mirror the live column model by construction.
+      const lowP = scenarios.find((s) => s.key === 'ratio');
+      const baseP = scenarios.find((s) => s.key === 'base');
+      const highP = scenarios.find((s) => s.key === 'gl65');
       const getKpiVal = (p: typeof lowP, key: keyof ProposalKPIs) => p ? p.kpis[key] : '-';
       const getCustomVal = (key: keyof ProposalKPIs) => customKPIs ? customKPIs[key] : '-';
 
@@ -457,9 +501,12 @@ export default function FeeCalculator() {
     };
   }, [monthlyFees, selectedBaseMonth]);
 
-  const glStdNum = glFromDb ? glFromDb.standard : (parseFloat(manualGlStd) || 0);
-  const glSolNum = glFromDb ? glFromDb.solidarity : (parseFloat(manualGlSol) || 0);
-  const noGlData = glStdNum === 0 && glSolNum === 0;
+  // GL is nullable: null when there is no GL on file for the period. The DB is
+  // the only source at this slice; R14 (S7) adds a committed manual GL input as
+  // an alternate source via useCommittedNumber.
+  const glStdNum: number | null = glFromDb ? glFromDb.standard : null;
+  const glSolNum: number | null = glFromDb ? glFromDb.solidarity : null;
+  const noGlData = glStdNum === null;
 
   const { stdMemberCount, solMemberCount } = useMemo(() => {
     const active = memberBalances.filter((m) => m.is_active);
@@ -483,7 +530,6 @@ export default function FeeCalculator() {
     const prev4 = quarterly.slice(cvsIdx, cvsIdx + 4);
     if (prev4.length < 4) return 0;
     const result = (prev4.reduce((acc, q) => acc * (1 + q.cvs / 100), 1) - 1) * 100;
-    console.log('[YoY Index]', { selectedQuarterId, quarters: prev4.map(q => `${q.quarterId}: ${q.cvs}%`), accumulated: result.toFixed(2) + '%' });
     return result;
   }, [quarterly, selectedQuarterId]);
 
@@ -495,14 +541,9 @@ export default function FeeCalculator() {
   }, [selectedQuarter, monthly]);
 
   const computeKPIs = (proposedStd: number, proposedSol: number): ProposalKPIs => {
-    const projectedGlStd = Math.round(glStdNum * (1 + selectedCVS / 100));
-    const projectedGlSol = Math.round(glSolNum * (1 + selectedCVS / 100));
-    const glTotalCost = projectedGlStd * stdMemberCount + projectedGlSol * solMemberCount;
     const totalMonthlyIncome = stdMemberCount * proposedStd + solMemberCount * proposedSol;
-    const netMonthlyIncome = totalMonthlyIncome - glTotalCost;
     const ourFeeIncrease = currentStdFee > 0 ? ((proposedStd - currentStdFee) / currentStdFee) * 100 : 0;
     const glFeeIncrease = selectedCVS;
-    const delta = proposedStd > 0 ? (projectedGlStd / proposedStd) * 100 : 0;
     const yoyFeeVariation =
       feeOneYearAgoStd !== null && feeOneYearAgoStd > 0
         ? ((proposedStd - feeOneYearAgoStd) / feeOneYearAgoStd) * 100
@@ -512,6 +553,22 @@ export default function FeeCalculator() {
       feeOneYearAgoStd !== null && glStdOneYearAgo !== null && feeOneYearAgoStd > 0
         ? (glStdOneYearAgo / feeOneYearAgoStd) * 100
         : null;
+
+    // GL-derived figures. In JS `null * n === 0`, which would launder a missing
+    // GL into a silent $ 0, so each is guarded explicitly and stays null when
+    // there is no GL on file.
+    let projectedGlStd: number | null = null;
+    let projectedGlSol: number | null = null;
+    let glTotalCost: number | null = null;
+    let netMonthlyIncome: number | null = null;
+    let delta: number | null = null;
+    if (glStdNum !== null) {
+      projectedGlStd = Math.round(glStdNum * (1 + selectedCVS / 100));
+      projectedGlSol = Math.round((glSolNum ?? 0) * (1 + selectedCVS / 100));
+      glTotalCost = projectedGlStd * stdMemberCount + projectedGlSol * solMemberCount;
+      netMonthlyIncome = totalMonthlyIncome - glTotalCost;
+      delta = proposedStd > 0 ? (projectedGlStd / proposedStd) * 100 : 0;
+    }
 
     return {
       totalMonthlyIncome,
@@ -528,51 +585,74 @@ export default function FeeCalculator() {
     };
   };
 
-  const proposals = useMemo(() => {
-    if (!hasCvs) return [];
+  const scenarios = useMemo<Scenario[]>(() => {
     const round500 = (n: number) => Math.round(n / 500) * 500;
+    const ceil500 = (n: number) => Math.ceil(n / 500) * 500;
+
+    // "Actual": the true do-nothing baseline. It holds the cápita flat while GL
+    // still rises with CVS (computeKPIs projects GL internally). Every other
+    // column's delta is measured against this.
+    const actual: Scenario = {
+      key: 'actual',
+      name: 'Actual',
+      proposedStd: currentStdFee,
+      proposedSol: currentSolFee,
+      kpis: computeKPIs(currentStdFee, currentSolFee),
+    };
+    // The presets need a CVS; Actual (and Tu escenario) do not, so the reduced
+    // column set still shows them. Tu escenario keeps its own card at this slice.
+    if (!hasCvs) return [actual];
+
     const baseStd = round500(currentStdFee * (1 + selectedCVS / 100));
     const baseSol = round500(currentSolFee * (1 + selectedCVS / 100));
+    const projGlStd = glStdNum === null ? null : Math.round(glStdNum * (1 + selectedCVS / 100));
+    const projGlSol = glSolNum === null ? null : Math.round(glSolNum * (1 + selectedCVS / 100));
+    // "Ratio GL": proposedStd such that GL % of cápita equals GL % of cápita a
+    // year ago. Without a GL on file this cannot be derived, so it falls back to
+    // the Base cápita rather than to a laundered zero.
+    const targetDelta =
+      feeOneYearAgoStd !== null && glStdOneYearAgo !== null && feeOneYearAgoStd > 0
+        ? (glStdOneYearAgo / feeOneYearAgoStd) * 100
+        : null;
+    const ratioStd = targetDelta !== null && targetDelta > 0 && projGlStd !== null ? ceil500(projGlStd / (targetDelta / 100)) : baseStd;
+    const ratioSol = targetDelta !== null && targetDelta > 0 && projGlSol !== null ? ceil500(projGlSol / (targetDelta / 100)) : baseSol;
+    const gl65Std = projGlStd !== null ? ceil500(projGlStd / 0.65) : baseStd;
+    const gl65Sol = projGlSol !== null ? ceil500(projGlSol / 0.65) : baseSol;
 
-    // "Ratio GL" proposal: proposedStd such that GL% of Capita = GL% of Capita 1 year ago
-    const projectedGlStd = Math.round(glStdNum * (1 + selectedCVS / 100));
-    const projectedGlSol = Math.round(glSolNum * (1 + selectedCVS / 100));
-    const targetDelta = feeOneYearAgoStd !== null && glStdOneYearAgo !== null && feeOneYearAgoStd > 0
-      ? (glStdOneYearAgo / feeOneYearAgoStd) * 100
-      : null;
-    const ceil500 = (n: number) => Math.ceil(n / 500) * 500;
-    const ratioStd = targetDelta && targetDelta > 0 ? ceil500(projectedGlStd / (targetDelta / 100)) : baseStd;
-    const ratioSol = targetDelta && targetDelta > 0 ? ceil500(projectedGlSol / (targetDelta / 100)) : baseSol;
-
-    type ProposalItem = {
-      name: string; sublabel: string; termKey?: string; color: string; isVariant: boolean;
-      proposedStd: number; proposedSol: number; kpis: ProposalKPIs;
-      baselineKpis?: ProposalKPIs; buffer: number;
+    const ratio: Scenario = {
+      key: 'ratio',
+      name: t('feeCalculator.presets.ratio.name'),
+      sublabel: t('feeCalculator.presets.ratio.sublabel'),
+      termKey: 'ratioGl',
+      proposedStd: ratioStd,
+      proposedSol: ratioSol,
+      kpis: computeKPIs(ratioStd, ratioSol),
+    };
+    const base: Scenario = {
+      key: 'base',
+      name: t('feeCalculator.presets.base.name'),
+      sublabel: t('feeCalculator.presets.base.sublabel'),
+      proposedStd: baseStd,
+      proposedSol: baseSol,
+      kpis: computeKPIs(baseStd, baseSol),
+    };
+    const gl65: Scenario = {
+      key: 'gl65',
+      name: t('feeCalculator.presets.gl65.name'),
+      sublabel: t('feeCalculator.presets.gl65.sublabel'),
+      termKey: 'gl65',
+      proposedStd: gl65Std,
+      proposedSol: gl65Sol,
+      kpis: computeKPIs(gl65Std, gl65Sol),
     };
 
-    const items: ProposalItem[] = [
-      {
-        buffer: 0, name: t('feeCalculator.presets.ratio.name'), sublabel: t('feeCalculator.presets.ratio.sublabel'), termKey: 'ratioGl', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-        isVariant: false, proposedStd: ratioStd, proposedSol: ratioSol,
-        kpis: computeKPIs(ratioStd, ratioSol),
-      },
-      {
-        buffer: 0, name: t('feeCalculator.presets.base.name'), sublabel: t('feeCalculator.presets.base.sublabel'), color: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200',
-        isVariant: false, proposedStd: baseStd, proposedSol: baseSol,
-        kpis: computeKPIs(baseStd, baseSol),
-      },
-      {
-        buffer: 0, name: t('feeCalculator.presets.gl65.name'), sublabel: t('feeCalculator.presets.gl65.sublabel'), termKey: 'gl65', color: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
-        isVariant: false,
-        proposedStd: ceil500(projectedGlStd / 0.65),
-        proposedSol: ceil500(projectedGlSol / 0.65),
-        kpis: computeKPIs(ceil500(projectedGlStd / 0.65), ceil500(projectedGlSol / 0.65)),
-      },
-    ];
-
-    return items;
+    return [actual, ratio, base, gl65];
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasCvs, selectedCVS, currentStdFee, currentSolFee, stdMemberCount, solMemberCount, glStdNum, glSolNum, yoyAccumulated, feeOneYearAgoStd, glStdOneYearAgo, t]);
+
+  // The bench baseline is Actual, selected by key (never by index or name) and
+  // passed to every column including the custom one.
+  const baselineKpis = (scenarios.find((s) => s.key === 'actual') ?? scenarios[0]).kpis;
 
   const customStdNum = customStdField.committed;
   const customSolNum = customSolField.committed;
@@ -749,30 +829,49 @@ export default function FeeCalculator() {
 
         {/* Section 4: Proposals */}
         <div data-asistente="calc-propuestas">
-          <h2 className="section-header">{t('feeCalculator.proposals')}</h2>
-          {!hasCvs ? (
-            <div className="rounded-lg border border-dashed p-8 text-center text-muted-foreground">
-              {t('feeCalculator.selectQuarterFirst')}
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="section-header">{t('feeCalculator.proposals')}</h2>
+            <div
+              role="group"
+              aria-label="Modo de lectura de las cifras"
+              className="inline-flex overflow-hidden rounded-md border border-border text-xs"
+            >
+              <button
+                type="button"
+                aria-pressed={mode === 'absolute'}
+                onClick={() => setMode('absolute')}
+                className={`px-3 py-1.5 transition-colors ${mode === 'absolute' ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground hover:text-foreground'}`}
+              >
+                {t('feeCalculator.absoluteModeLabel')}
+              </button>
+              <button
+                type="button"
+                aria-pressed={mode === 'delta'}
+                onClick={() => setMode('delta')}
+                className={`border-l border-border px-3 py-1.5 transition-colors ${mode === 'delta' ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground hover:text-foreground'}`}
+              >
+                {t('feeCalculator.deltaModeLabel')}
+              </button>
             </div>
-          ) : (
-            <div className="grid grid-cols-3 gap-1.5 md:gap-4">
-              {proposals.map((p, idx) => (
-                <ProposalCard
-                  key={idx}
-                  name={p.name}
-                  sublabel={p.sublabel}
-                  termKey={p.termKey}
-                  badgeColor={p.color}
-                  bufferPct={p.buffer}
-                  proposedStd={p.proposedStd}
-                  proposedSol={p.proposedSol}
-                  kpis={p.kpis}
-                  t={t}
-                  noGlData={noGlData}
-                />
-              ))}
-            </div>
-          )}
+          </div>
+          <div className="mt-2 grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-4">
+            {scenarios.map((s) => (
+              <ProposalCard
+                key={s.key}
+                name={s.name}
+                sublabel={s.sublabel}
+                termKey={s.termKey}
+                proposedStd={s.proposedStd}
+                proposedSol={s.proposedSol}
+                kpis={s.kpis}
+                t={t}
+                noGlData={noGlData}
+                baselineKpis={baselineKpis}
+                mode={mode}
+                isBaseline={s.key === 'actual'}
+              />
+            ))}
+          </div>
         </div>
 
         {/* Section 5: Custom Scenario */}
@@ -815,7 +914,7 @@ export default function FeeCalculator() {
             </p>
             <Separator />
             {customKPIs ? (
-              <KPIList kpis={customKPIs} t={t} noGlData={noGlData} />
+              <KPIList kpis={customKPIs} baselineKpis={baselineKpis} mode={mode} isBaseline={false} t={t} noGlData={noGlData} />
             ) : (
               <div className="text-center text-sm text-muted-foreground py-4">-</div>
             )}
