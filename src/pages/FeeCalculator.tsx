@@ -1,13 +1,11 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Calculator, Users, Sparkles, AlertTriangle, RefreshCw, Download } from 'lucide-react';
+import { Calculator, Users, AlertTriangle, RefreshCw, Download } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { toast } from 'sonner';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { TermTooltip } from '@/components/ui/TermTooltip';
 import { Button } from '@/components/ui/button';
@@ -20,12 +18,10 @@ import { useCVSIndex, QuarterlyIndex } from '@/hooks/useCVSIndex';
 import { useCommittedNumber } from '@/hooks/useCommittedNumber';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Link } from 'react-router-dom';
-import { parseLocalDate } from '@/lib/utils';
+import { cn, parseLocalDate, formatPercent } from '@/lib/utils';
 
 const formatARS = (n: number) =>
   new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(n);
-
-const formatPct = (n: number) => `${n >= 0 ? '+' : ''}${n.toFixed(1)}%`;
 
 interface ProposalKPIs {
   totalMonthlyIncome: number;
@@ -58,6 +54,10 @@ interface Scenario {
   kpis: ProposalKPIs;
 }
 
+// The bench reads each column from its scenario kpis plus the two proposed
+// cápitas, which live on the Scenario, not in ProposalKPIs.
+type CellData = ProposalKPIs & { proposedStd: number; proposedSol: number };
+
 // One descriptor per metric. The same list renders in both modes: mode changes
 // only how each row renders its value, never which rows exist, so the row count
 // is identical in Valores and Diferencia vs Actual.
@@ -66,162 +66,94 @@ interface MetricRow {
   label: string;
   termKey?: string;
   kind: 'currency' | 'percent' | 'ratio'; // ratio = an unsigned level like 54,3%
-  get: (k: ProposalKPIs) => number | null;
+  get: (k: CellData) => number | null;
+  // Label prominence. `headline` = the proposed cápita (the number the treasurer
+  // copies); `normal` = a decision row (net income, GL % de cápita); `dim` =
+  // supporting evidence. Governs the label weight, not the figure colour.
+  emphasis?: 'headline' | 'normal' | 'dim';
   // Scenario-invariant: computeKPIs derives it from the GL cost model or a
   // page-level constant, never from proposedStd/proposedSol, so it is identical
   // in every column. In delta mode it reads "Igual en todas", never a signed zero.
   invariant?: boolean;
-  dim?: boolean; // a muted reference row
+  // A GL projected sub-row rendered under a headline row: smaller, muted.
+  subRow?: boolean;
   tone?: (v: number) => string; // sign colouring, absolute mode only
 }
 
-function KPIList({
-  kpis,
-  baselineKpis,
-  mode,
-  isBaseline,
-  t,
-  noGlData,
-}: {
-  kpis: ProposalKPIs;
-  baselineKpis: ProposalKPIs;
-  mode: ReadMode;
-  isBaseline: boolean;
-  t: (key: string) => string;
-  noGlData?: boolean;
-}) {
-  const nd = t('feeCalculator.noYoyData'); // 'N/D'
+// The bench body defined ONCE: the single source of truth for what renders and
+// for every count. 8 body rows plus 2 GL projected sub-rows = 10 descriptor
+// entries per column, identical in both read modes. Parity is asserted against
+// this array's length, never a hardcoded integer.
+const buildBenchRows = (t: (key: string) => string): MetricRow[] => [
+  { key: 'proposedStd', label: t('feeCalculator.proposedStd'), kind: 'currency', get: (k) => k.proposedStd, emphasis: 'headline' },
+  { key: 'projectedGlStd', label: 'Cápita GL estándar proyectada', kind: 'currency', get: (k) => k.projectedGlStd, subRow: true, invariant: true },
+  { key: 'proposedSol', label: t('feeCalculator.proposedSol'), kind: 'currency', get: (k) => k.proposedSol, emphasis: 'headline' },
+  { key: 'projectedGlSol', label: 'Cápita GL solidaria proyectada', kind: 'currency', get: (k) => k.projectedGlSol, subRow: true, invariant: true },
+  { key: 'totalMonthlyIncome', label: t('feeCalculator.totalMonthlyIncome'), kind: 'currency', get: (k) => k.totalMonthlyIncome, emphasis: 'dim' },
+  { key: 'glTotalCost', label: t('feeCalculator.glTotalCost'), kind: 'currency', get: (k) => k.glTotalCost, emphasis: 'dim', invariant: true },
+  { key: 'netMonthlyIncome', label: t('feeCalculator.netMonthlyIncome'), kind: 'currency', get: (k) => k.netMonthlyIncome, emphasis: 'normal', tone: (v) => (v > 0 ? 'text-success' : 'text-overdue') },
+  { key: 'ourFeeIncrease', label: t('feeCalculator.ourFeeIncrease'), termKey: 'incrementoPropio', kind: 'percent', get: (k) => k.ourFeeIncrease, emphasis: 'dim' },
+  { key: 'delta', label: t('feeCalculator.delta'), termKey: 'glPctCapita', kind: 'ratio', get: (k) => k.delta, emphasis: 'normal' },
+  { key: 'yoyFeeVariation', label: t('feeCalculator.yoyFeeVariation'), kind: 'percent', get: (k) => k.yoyFeeVariation, emphasis: 'dim' },
+];
 
-  const rows: MetricRow[] = [
-    { key: 'totalMonthlyIncome', label: t('feeCalculator.totalMonthlyIncome'), kind: 'currency', get: (k) => k.totalMonthlyIncome },
-    { key: 'glTotalCost', label: t('feeCalculator.glTotalCost'), kind: 'currency', get: (k) => k.glTotalCost, invariant: true },
-    { key: 'netMonthlyIncome', label: t('feeCalculator.netMonthlyIncome'), kind: 'currency', get: (k) => k.netMonthlyIncome, tone: (v) => (v > 0 ? 'text-success' : 'text-overdue') },
-    { key: 'ourFeeIncrease', label: t('feeCalculator.ourFeeIncrease'), termKey: 'incrementoPropio', kind: 'percent', get: (k) => k.ourFeeIncrease },
-    { key: 'delta', label: t('feeCalculator.delta'), termKey: 'glPctCapita', kind: 'ratio', get: (k) => k.delta },
-    { key: 'deltaVsGlYearAgo', label: t('feeCalculator.deltaVsGlYearAgo'), termKey: 'glPctCapita', kind: 'ratio', get: (k) => k.deltaVsGlYearAgo, dim: true, invariant: true },
-    { key: 'yoyFeeVariation', label: t('feeCalculator.yoyFeeVariation'), kind: 'percent', get: (k) => k.yoyFeeVariation },
-    { key: 'yoyIndexRef', label: t('feeCalculator.yoyIndexRef'), termKey: 'indiceAnual', kind: 'ratio', get: (k) => k.yoyAccumulatedIndex, dim: true, invariant: true },
-  ];
+const formatAbs = (v: number, kind: MetricRow['kind']): string => {
+  if (kind === 'currency') return formatARS(v);
+  if (kind === 'percent') return formatPercent(v, { signed: true });
+  return formatPercent(v); // ratio: unsigned level
+};
 
-  const formatAbs = (v: number, kind: MetricRow['kind']) => {
-    if (kind === 'currency') return formatARS(v);
-    if (kind === 'percent') return `${v >= 0 ? '+' : ''}${v.toFixed(1)}%`;
-    return `${v.toFixed(1)}%`; // ratio: unsigned level
-  };
-  const formatDeltaCell = (v: number, kind: MetricRow['kind']) => {
-    if (kind === 'currency') return `${v >= 0 ? '+' : ''}${formatARS(v)}`;
-    // A difference of two percentages is expressed in percentage points.
-    return `${v >= 0 ? '+' : ''}${v.toFixed(1).replace('.', ',')}pp`;
-  };
+const formatDeltaCell = (v: number, kind: MetricRow['kind']): string => {
+  if (kind === 'currency') return `${v >= 0 ? '+' : ''}${formatARS(v)}`;
+  // A difference of two percentages is expressed in percentage points.
+  return formatPercent(v, { signed: true, unit: 'pp' });
+};
 
+const toCellData = (s: Scenario): CellData => ({ ...s.kpis, proposedStd: s.proposedStd, proposedSol: s.proposedSol });
+
+// The label class carries prominence without relying on colour alone: normal and
+// dim differ in both weight and foreground, so the distinction survives grayscale.
+const benchLabelClass = (row: MetricRow): string => {
+  if (row.subRow) return 'text-xs text-muted-foreground';
+  if (row.emphasis === 'headline') return 'text-sm font-semibold text-foreground';
+  if (row.emphasis === 'normal') return 'text-sm font-medium text-foreground';
+  return 'text-sm text-muted-foreground';
+};
+
+// Every figure is in the JetBrains Mono numeral face with tabular-nums (R9). The
+// headline caps at 24px (text-2xl) and never grows on desktop: the five-column
+// bench overflows the measured 1073px budget at a 30px headline (D8).
+const benchFigureClass = (row: MetricRow): string => {
+  if (row.subRow) return 'font-mono tabular-nums text-xs';
+  if (row.emphasis === 'headline') return 'font-mono tabular-nums text-2xl font-semibold';
+  return 'font-mono tabular-nums text-sm';
+};
+
+// One render path, one row list. `mode` changes only how a cell renders, never
+// which rows exist. This is the S4a-verified engine, transposed to a table cell.
+const renderBenchCell = (
+  row: MetricRow,
+  colData: CellData,
+  opts: { mode: ReadMode; baselineCell: CellData; isBaselineCol: boolean; isEmptyCustom: boolean; nd: string },
+): { text: string; className: string } => {
   const muted = 'text-muted-foreground';
-  const renderCell = (row: MetricRow): { text: string; className: string } => {
-    const kv = row.get(kpis);
-    if (mode === 'absolute') {
-      if (kv === null) return { text: nd, className: muted };
-      if (row.dim) return { text: formatAbs(kv, row.kind), className: muted };
-      return { text: formatAbs(kv, row.kind), className: row.tone ? row.tone(kv) : '' };
-    }
-    // Diferencia vs Actual
-    if (isBaseline) return { text: 'Referencia', className: muted };
+  const { mode, baselineCell, isBaselineCol, isEmptyCustom, nd } = opts;
+  // A custom column with nothing committed shows a muted placeholder, not a zero.
+  if (isEmptyCustom) return { text: 'Sin valor', className: muted };
+  const kv = row.get(colData);
+  if (mode === 'absolute') {
     if (kv === null) return { text: nd, className: muted };
-    if (row.invariant) return { text: 'Igual en todas', className: muted };
-    const bv = row.get(baselineKpis);
-    if (bv === null) return { text: nd, className: muted };
-    return { text: formatDeltaCell(kv - bv, row.kind), className: '' };
-  };
-
-  return (
-    <div className="space-y-1 md:space-y-2">
-      {noGlData && mode === 'absolute' && (
-        <p className="text-[9px] md:text-xs text-muted-foreground italic mb-1 md:mb-2">{t('feeCalculator.enterGlFees')}</p>
-      )}
-      {rows.map((row) => {
-        const cell = renderCell(row);
-        return (
-          <div key={row.key} className="flex items-center justify-between text-[10px] md:text-sm">
-            {row.termKey ? (
-              <TermTooltip termKey={row.termKey} className="text-muted-foreground truncate mr-1">
-                {row.label}
-              </TermTooltip>
-            ) : (
-              <span className="text-muted-foreground truncate mr-1">{row.label}</span>
-            )}
-            <span className={`font-medium whitespace-nowrap ${cell.className}`}>{cell.text}</span>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-function ProposalCard({
-  name,
-  sublabel,
-  termKey,
-  proposedStd,
-  proposedSol,
-  kpis,
-  t,
-  noGlData,
-  baselineKpis,
-  mode,
-  isBaseline,
-}: {
-  name: string;
-  sublabel?: string;
-  termKey?: string;
-  proposedStd: number;
-  proposedSol: number;
-  kpis: ProposalKPIs;
-  t: (key: string) => string;
-  noGlData?: boolean;
-  baselineKpis: ProposalKPIs;
-  mode: ReadMode;
-  isBaseline: boolean;
-}) {
-  const nd = t('feeCalculator.noYoyData');
-  return (
-    <Card>
-      <CardHeader className="p-2 md:p-6 pb-1 md:pb-3">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1">
-          <Badge variant="secondary" className="text-[10px] md:text-xs">
-            {termKey ? (
-              <TermTooltip termKey={termKey} className="decoration-current/40">
-                {name}
-              </TermTooltip>
-            ) : (
-              name
-            )}
-          </Badge>
-        </div>
-        {/* Plain-language sublabel: what this proposal actually does, so a new
-            treasurer does not have to decode the badge name. */}
-        {sublabel && (
-          <p className="mt-1 text-[9px] md:text-xs text-muted-foreground leading-snug">
-            {sublabel}
-          </p>
-        )}
-      </CardHeader>
-      <CardContent className="p-2 md:p-6 pt-0 md:pt-0 space-y-1.5 md:space-y-4">
-        <div className="space-y-1 md:grid md:grid-cols-2 md:gap-4 md:space-y-0">
-          <div>
-            <p className="text-[9px] md:text-xs text-muted-foreground">{t('feeCalculator.proposedStd')}</p>
-            <p className="text-sm md:text-xl font-bold">{formatARS(proposedStd)}</p>
-            <p className="text-[8px] md:text-[10px] text-muted-foreground">GL: {kpis.projectedGlStd !== null ? formatARS(kpis.projectedGlStd) : nd}</p>
-          </div>
-          <div>
-            <p className="text-[9px] md:text-xs text-muted-foreground">{t('feeCalculator.proposedSol')}</p>
-            <p className="text-sm md:text-xl font-bold">{formatARS(proposedSol)}</p>
-            <p className="text-[8px] md:text-[10px] text-muted-foreground">GL: {kpis.projectedGlSol !== null ? formatARS(kpis.projectedGlSol) : nd}</p>
-          </div>
-        </div>
-        <Separator />
-        <KPIList kpis={kpis} baselineKpis={baselineKpis} mode={mode} isBaseline={isBaseline} t={t} noGlData={noGlData} />
-      </CardContent>
-    </Card>
-  );
-}
+    if (row.invariant || row.subRow) return { text: formatAbs(kv, row.kind), className: muted };
+    return { text: formatAbs(kv, row.kind), className: row.tone ? row.tone(kv) : '' };
+  }
+  // Diferencia vs Actual
+  if (isBaselineCol) return { text: 'Referencia', className: muted };
+  if (kv === null) return { text: nd, className: muted };
+  if (row.invariant) return { text: 'Igual en todas', className: muted };
+  const bv = row.get(baselineCell);
+  if (bv === null) return { text: nd, className: muted };
+  return { text: formatDeltaCell(kv - bv, row.kind), className: '' };
+};
 
 export default function FeeCalculator() {
   const { t } = useTranslation();
@@ -599,8 +531,9 @@ export default function FeeCalculator() {
       proposedSol: currentSolFee,
       kpis: computeKPIs(currentStdFee, currentSolFee),
     };
-    // The presets need a CVS; Actual (and Tu escenario) do not, so the reduced
-    // column set still shows them. Tu escenario keeps its own card at this slice.
+    // The presets need a CVS; Actual does not. Without a CVS the memo returns
+    // just [actual]; the custom column is appended in the render, outside this
+    // branch, so the treasurer's own scenario never vanishes.
     if (!hasCvs) return [actual];
 
     const baseStd = round500(currentStdFee * (1 + selectedCVS / 100));
@@ -650,10 +583,6 @@ export default function FeeCalculator() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasCvs, selectedCVS, currentStdFee, currentSolFee, stdMemberCount, solMemberCount, glStdNum, glSolNum, yoyAccumulated, feeOneYearAgoStd, glStdOneYearAgo, t]);
 
-  // The bench baseline is Actual, selected by key (never by index or name) and
-  // passed to every column including the custom one.
-  const baselineKpis = (scenarios.find((s) => s.key === 'actual') ?? scenarios[0]).kpis;
-
   const customStdNum = customStdField.committed;
   const customSolNum = customSolField.committed;
   const customKPIs = useMemo(
@@ -661,6 +590,33 @@ export default function FeeCalculator() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [customStdNum, customSolNum, stdMemberCount, solMemberCount, glStdNum, glSolNum, selectedCVS, yoyAccumulated, currentStdFee, feeOneYearAgoStd, glStdOneYearAgo]
   );
+
+  // Tu escenario is a peer column, not an appendix: it sits OUTSIDE the !hasCvs
+  // branch, so it never disappears (regression the board flagged). When nothing
+  // is committed its cells read "Sin valor"; the placeholder kpis are never shown.
+  const hasCustomValue = customKPIs !== null;
+  const customScenario: Scenario = {
+    key: 'custom',
+    name: 'Tu escenario',
+    proposedStd: customStdNum,
+    proposedSol: customSolNum,
+    kpis: customKPIs ?? scenarios[0].kpis,
+  };
+  // columns = hasCvs ? [actual, ratio, base, gl65, custom] : [actual, custom].
+  // scenarios already branches on hasCvs; custom is appended in both states.
+  const columns: Scenario[] = [...scenarios, customScenario];
+  const benchRows = buildBenchRows(t);
+  const baselineCell = toCellData(scenarios[0]); // Actual, the do-nothing anchor
+  const nd = t('feeCalculator.noYoyData');
+
+  // Page-level ratios stated once in the Referencia grid, not per scenario. Both
+  // operands are guarded: glStdNum is nullable, and null / x * 100 would render a
+  // false 0,0%, the silent zero this build exists to kill.
+  const glPctToday = currentStdFee > 0 && glStdNum !== null ? (glStdNum / currentStdFee) * 100 : null;
+  const glPctYearAgo =
+    feeOneYearAgoStd !== null && glStdOneYearAgo !== null && feeOneYearAgoStd > 0
+      ? (glStdOneYearAgo / feeOneYearAgoStd) * 100
+      : null;
 
   if (isLoading) {
     return (
@@ -750,7 +706,7 @@ export default function FeeCalculator() {
             </Label>
             {!fetchError && selectedQuarter ? (
               <div className="h-10 flex items-center px-3 rounded-md border border-input bg-muted/50 text-sm w-[260px]">
-                {selectedQuarter.quarterLabel}, CVS: <span className="font-semibold ml-1">{formatPct(selectedQuarter.cvs)}</span>
+                {selectedQuarter.quarterLabel}, CVS: <span className="font-semibold ml-1 font-mono tabular-nums">{formatPercent(selectedQuarter.cvs, { signed: true })}</span>
               </div>
             ) : !fetchError && cvsLoading ? (
               <Skeleton className="h-10 w-[260px]" />
@@ -781,17 +737,17 @@ export default function FeeCalculator() {
           <div className="rounded-lg bg-muted/50 px-4 py-2.5 -mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
             {quarterMonthlyBreakdown.map((p) => (
               <span key={p.monthKey}>
-                {p.monthLabel}: <span className="font-medium text-foreground">{formatPct(p.variation)}</span>
+                {p.monthLabel}: <span className="font-medium text-foreground font-mono tabular-nums">{formatPercent(p.variation, { signed: true })}</span>
               </span>
             ))}
             {selectedQuarter && (
               <span className="font-bold text-foreground">
-                {selectedQuarter.quarterLabel}: {formatPct(selectedQuarter.cvs)}
+                {selectedQuarter.quarterLabel}: <span className="font-mono tabular-nums">{formatPercent(selectedQuarter.cvs, { signed: true })}</span>
               </span>
             )}
             {monthly.length >= 12 && (
               <span>
-                Acum. 12m: <span className="font-medium text-foreground">{formatPct(yoyAccumulated)}</span>
+                Acum. 12m: <span className="font-medium text-foreground font-mono tabular-nums">{formatPercent(yoyAccumulated, { signed: true })}</span>
               </span>
             )}
           </div>
@@ -807,20 +763,30 @@ export default function FeeCalculator() {
         {/* Section 1: Current Reference */}
         <div data-asistente="calc-referencia-actual">
           <h2 className="section-header">{t('feeCalculator.currentReference')}</h2>
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 md:gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-4">
             <StatCard title={t('feeCalculator.currentStdFee')} value={formatARS(currentStdFee)} />
             <StatCard title={t('feeCalculator.currentSolFee')} value={formatARS(currentSolFee)} />
             <StatCard title={t('feeCalculator.activeStdMembers')} value={stdMemberCount} icon={<Users className="h-5 w-5 text-muted-foreground" />} />
             <StatCard title={t('feeCalculator.activeSolMembers')} value={solMemberCount} icon={<Users className="h-5 w-5 text-muted-foreground" />} />
             <StatCard
               title={t('feeCalculator.glStdFee')}
-              value={glStdNum > 0 ? formatARS(glStdNum) : '-'}
-              subtitle={glStdNum > 0 && hasCvs ? `Proyectado: ${formatARS(Math.round(glStdNum * (1 + selectedCVS / 100)))}` : undefined}
+              value={glStdNum !== null && glStdNum > 0 ? formatARS(glStdNum) : '-'}
+              subtitle={glStdNum !== null && glStdNum > 0 && hasCvs ? `Proyectado: ${formatARS(Math.round(glStdNum * (1 + selectedCVS / 100)))}` : undefined}
             />
             <StatCard
               title={t('feeCalculator.glSolFee')}
-              value={glSolNum > 0 ? formatARS(glSolNum) : '-'}
-              subtitle={glSolNum > 0 && hasCvs ? `Proyectado: ${formatARS(Math.round(glSolNum * (1 + selectedCVS / 100)))}` : undefined}
+              value={glSolNum !== null && glSolNum > 0 ? formatARS(glSolNum) : '-'}
+              subtitle={glSolNum !== null && glSolNum > 0 && hasCvs ? `Proyectado: ${formatARS(Math.round(glSolNum * (1 + selectedCVS / 100)))}` : undefined}
+            />
+            {/* GL % de cápita stated once, page-level. Both operands guarded: a
+                null GL renders N/D, never a false 0,0%. */}
+            <StatCard
+              title={`${t('feeCalculator.delta')} (hoy)`}
+              value={glPctToday !== null ? formatPercent(glPctToday) : nd}
+            />
+            <StatCard
+              title={t('feeCalculator.deltaVsGlYearAgo')}
+              value={glPctYearAgo !== null ? formatPercent(glPctYearAgo) : nd}
             />
           </div>
         </div>
@@ -854,72 +820,147 @@ export default function FeeCalculator() {
               </button>
             </div>
           </div>
-          <div className="mt-2 grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-4">
-            {scenarios.map((s) => (
-              <ProposalCard
-                key={s.key}
-                name={s.name}
-                sublabel={s.sublabel}
-                termKey={s.termKey}
-                proposedStd={s.proposedStd}
-                proposedSol={s.proposedSol}
-                kpis={s.kpis}
-                t={t}
-                noGlData={noGlData}
-                baselineKpis={baselineKpis}
-                mode={mode}
-                isBaseline={s.key === 'actual'}
-              />
-            ))}
+          {noGlData && mode === 'absolute' && (
+            <p className="mt-2 text-xs text-muted-foreground italic">{t('feeCalculator.enterGlFees')}</p>
+          )}
+
+          {/* The bench: metrics down the left, scenarios across as columns. The
+              table scrolls horizontally inside its own container while the page
+              body never scrolls sideways. min-width 920px is the measured budget
+              (D8); the table is w-full so at desktop it simply fills 1073px. */}
+          <div className="mt-3 rounded-lg border border-border bg-card overflow-hidden shadow-sm">
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse" style={{ minWidth: '920px' }}>
+                <thead>
+                  <tr>
+                    <th scope="col" className="text-left align-top p-3 bg-muted/40 border-b border-border">
+                      <span className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground">Métrica</span>
+                    </th>
+                    {columns.map((col) => {
+                      const isCustom = col.key === 'custom';
+                      const subtext = col.sublabel ?? (col.key === 'actual' ? 'Si no cambiás nada.' : undefined);
+                      return (
+                        <th
+                          key={col.key}
+                          scope="col"
+                          className={cn(
+                            'text-left align-top p-3 bg-muted/40 border-b border-border min-w-[9rem]',
+                            isCustom && 'bg-accent/50',
+                          )}
+                        >
+                          {isCustom ? (
+                            <div className="flex flex-col gap-2">
+                              {/* A real h2 so the section enters the heading
+                                  outline; the peer column carries no border
+                                  decoration, no glyph, no pill. */}
+                              <h2 className="section-header mb-0 text-base">{col.name}</h2>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                <div className="flex flex-col gap-1">
+                                  <Label htmlFor="custom-std" className="text-[11px] text-muted-foreground">Estándar</Label>
+                                  <Input
+                                    id="custom-std"
+                                    type="number"
+                                    step="1"
+                                    inputMode="numeric"
+                                    placeholder="0"
+                                    className={cn('h-8 text-right font-mono tabular-nums text-xs', customStdField.pending && 'border-warning')}
+                                    {...customStdField.inputProps}
+                                    data-asistente="calc-escenario-personalizado"
+                                  />
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                  <Label htmlFor="custom-sol" className="text-[11px] text-muted-foreground">Solidaria</Label>
+                                  <Input
+                                    id="custom-sol"
+                                    type="number"
+                                    step="1"
+                                    inputMode="numeric"
+                                    placeholder="0"
+                                    className={cn('h-8 text-right font-mono tabular-nums text-xs', customSolField.pending && 'border-warning')}
+                                    {...customSolField.inputProps}
+                                  />
+                                </div>
+                              </div>
+                              {/* Reserved-height hint so committing never injects layout. */}
+                              <p className="min-h-[2rem] text-[11px] leading-snug text-muted-foreground font-normal">
+                                {hasCustomValue
+                                  ? customStdField.pending || customSolField.pending
+                                    ? t('feeCalculator.customPending')
+                                    : t('feeCalculator.customCommitted')
+                                  : 'Ingresá una cápita estándar o solidaria para ver cómo queda tu escenario frente a las propuestas.'}
+                              </p>
+                            </div>
+                          ) : (
+                            <div className="flex flex-col gap-1.5">
+                              <Badge variant="secondary" className="w-fit text-xs font-medium">
+                                {col.termKey ? (
+                                  <TermTooltip termKey={col.termKey} className="decoration-current/40">
+                                    {col.name}
+                                  </TermTooltip>
+                                ) : (
+                                  col.name
+                                )}
+                              </Badge>
+                              {subtext && (
+                                <span className="text-[11px] leading-snug text-muted-foreground font-normal max-w-[15rem]">
+                                  {subtext}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </th>
+                      );
+                    })}
+                  </tr>
+                </thead>
+                <tbody>
+                  {benchRows.map((row) => (
+                    <tr key={row.key} className="border-b border-border/60">
+                      <th scope="row" className="text-left align-middle font-normal p-3">
+                        {row.termKey ? (
+                          <TermTooltip termKey={row.termKey} className={cn(benchLabelClass(row), 'mr-1')}>
+                            {row.label}
+                          </TermTooltip>
+                        ) : (
+                          <span className={cn(benchLabelClass(row), 'mr-1')}>{row.label}</span>
+                        )}
+                      </th>
+                      {columns.map((col) => {
+                        const cell = renderBenchCell(row, toCellData(col), {
+                          mode,
+                          baselineCell,
+                          isBaselineCol: col.key === 'actual',
+                          isEmptyCustom: col.key === 'custom' && !hasCustomValue,
+                          nd,
+                        });
+                        return (
+                          <td
+                            key={col.key}
+                            className={cn(
+                              'text-right whitespace-nowrap align-middle p-3',
+                              benchFigureClass(row),
+                              cell.className,
+                              col.key === 'custom' && 'bg-accent/20',
+                            )}
+                          >
+                            {cell.text}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {/* Estimates-only footnote: everything on the bench is a projection. */}
+            <div className="flex items-start gap-2 p-3 bg-muted/30 text-xs text-muted-foreground leading-relaxed">
+              <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5 opacity-70" aria-hidden="true" />
+              <span>
+                Todas las cifras son estimaciones. Surgen de proyectar los valores del período base contra el CVS del trimestre y no comprometen a nadie. La calculadora no escribe nada: para aplicar una propuesta, copiá el valor a mano en Cápitas Mensuales.
+              </span>
+            </div>
           </div>
         </div>
-
-        {/* Section 5: Custom Scenario */}
-        <Card className="border-dashed">
-          <CardHeader className="pb-3">
-            <Badge variant="outline" className="border-dashed w-fit">
-              <Sparkles className="h-3 w-3 mr-1" />
-              {t('feeCalculator.custom')}
-            </Badge>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label>{t('feeCalculator.customStdFee')}</Label>
-                <Input
-                  type="number"
-                  step="1"
-                  placeholder="0"
-                  className={customStdField.pending ? 'border-warning' : undefined}
-                  {...customStdField.inputProps}
-                  data-asistente="calc-escenario-personalizado"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label>{t('feeCalculator.customSolFee')}</Label>
-                <Input
-                  type="number"
-                  step="1"
-                  placeholder="0"
-                  className={customSolField.pending ? 'border-warning' : undefined}
-                  {...customSolField.inputProps}
-                />
-              </div>
-            </div>
-            {/* Reserved-height hint so committing a value never injects layout. */}
-            <p className="min-h-[1.25rem] text-xs text-muted-foreground">
-              {customStdField.pending || customSolField.pending
-                ? t('feeCalculator.customPending')
-                : t('feeCalculator.customCommitted')}
-            </p>
-            <Separator />
-            {customKPIs ? (
-              <KPIList kpis={customKPIs} baselineKpis={baselineKpis} mode={mode} isBaseline={false} t={t} noGlData={noGlData} />
-            ) : (
-              <div className="text-center text-sm text-muted-foreground py-4">-</div>
-            )}
-          </CardContent>
-        </Card>
       </div>
     </TooltipProvider>
   );

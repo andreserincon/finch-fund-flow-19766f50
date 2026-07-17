@@ -49,6 +49,22 @@ export function formatCurrencyCompact(amount: number, currency: Currency = 'ARS'
   }).format(amount);
 }
 
+/**
+ * Format a percentage for the es-AR UI: comma decimal, one digit, no space
+ * before the sign. `signed` prepends a `+` on non-negative values (the minus
+ * comes from the locale on negatives); `unit` switches `%` for `pp` when the
+ * figure is a difference of two percentages (percentage points).
+ *
+ * Not `style: 'percent'`: that multiplies by 100 and es-AR inserts a space
+ * before the sign ("38,5 %"), which does not match the "+8,5%" the screen uses.
+ */
+export function formatPercent(n: number, opts?: { signed?: boolean; unit?: '%' | 'pp' }): string {
+  const unit = opts?.unit ?? '%';
+  const sign = opts?.signed && n >= 0 ? '+' : '';
+  const body = new Intl.NumberFormat('es-AR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(n);
+  return `${sign}${body}${unit}`;
+}
+
 /** Determine the display currency based on the account type */
 export function getCurrencyForAccount(account: string): Currency {
   return account === 'savings' ? 'USD' : 'ARS';
