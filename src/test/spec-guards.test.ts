@@ -54,3 +54,89 @@ describe('landscape: variant guard (R1 / P0.1)', () => {
     expect(offenders).toEqual([]);
   });
 });
+
+/**
+ * Accent guard (R2 / P1.4). "cápita" was spelled unaccented across the
+ * calculator's copy. A grep cannot express this: it either matches the glossary
+ * identifier `glPctCapita` and the export filename template (both legitimate) or
+ * misses the capital-C plural that is the actual defect. So it is a text scan
+ * that reads only the user-visible copy: the feeCalculator i18n block, its nav
+ * label, and the export label cells in the page.
+ */
+
+// Matches an unaccented "Capita" / "capita" / "Capitas" / "capitas" at a word
+// boundary. "Cápita" does not match: the accented a is a different codepoint.
+const UNACCENTED_CAPITA = /[Cc]apitas?\b/;
+
+// Legitimate carriers of the bare token. Not user-visible copy.
+const CAPITA_ALLOWED = [
+  'glPctCapita', // a glossary termKey / identifier, consumed by asistenteKb.ts
+  'capitas-', // the export filename template `capitas-${...}.xlsx`; ASCII is right in a filename
+];
+
+function stripAllowed(line: string): string {
+  let out = line;
+  for (const tok of CAPITA_ALLOWED) out = out.split(tok).join('');
+  return out;
+}
+
+// Pull the body of a named object block, brace-matched, from source text.
+function extractBlock(text: string, marker: string): string {
+  const start = text.indexOf(marker);
+  if (start === -1) throw new Error(`block marker not found: ${marker}`);
+  let depth = 0;
+  let i = text.indexOf('{', start);
+  const from = i;
+  for (; i < text.length; i++) {
+    if (text[i] === '{') depth++;
+    else if (text[i] === '}' && --depth === 0) return text.slice(from, i + 1);
+  }
+  throw new Error(`unbalanced braces after ${marker}`);
+}
+
+describe('cápita accent guard (R2 / P1.4)', () => {
+  const esText = readFileSync(join(SRC, 'i18n', 'locales', 'es.ts'), 'utf8');
+
+  it('the feeCalculator i18n block spells cápita with its accent', () => {
+    const block = extractBlock(esText, 'feeCalculator: {');
+    const offenders = block
+      .split('\n')
+      .map((line, i) => ({ line, i }))
+      .filter(({ line }) => UNACCENTED_CAPITA.test(stripAllowed(line)))
+      .map(({ i }) => `feeCalculator block line +${i}: matched unaccented capita`);
+    expect(offenders).toEqual([]);
+  });
+
+  it('the nav label reads "Calculadora de Cápitas"', () => {
+    expect(esText).toMatch(/feeCalculator:\s*'Calculadora de Cápitas'/);
+    expect(esText).not.toMatch(/feeCalculator:\s*'Calculadora de Capitas'/);
+  });
+
+  it('the calculator page carries no unaccented capita in user-visible copy', () => {
+    const pageText = readFileSync(join(SRC, 'pages', 'FeeCalculator.tsx'), 'utf8');
+    const offenders = pageText
+      .split('\n')
+      .map((line, i) => ({ line, i }))
+      // only quoted string literals are user-visible copy; skip comments
+      .filter(({ line }) => /['"`]/.test(line) && !line.trimStart().startsWith('//'))
+      .filter(({ line }) => UNACCENTED_CAPITA.test(stripAllowed(line)))
+      .map(({ line, i }) => `FeeCalculator.tsx:${i + 1}: ${line.trim().slice(0, 60)}`);
+    expect(offenders).toEqual([]);
+  });
+
+  it('the dead preset keys are gone', () => {
+    const block = extractBlock(esText, 'feeCalculator: {');
+    expect(block).not.toMatch(/\blow:\s*'/);
+    expect(block).not.toMatch(/\bhigh:\s*'/);
+    expect(block).not.toMatch(/\bbaseline:\s*'/);
+    expect(block).not.toMatch(/\bvsBaseline:\s*'/);
+  });
+
+  it('the primer names the shipped presets, not the retired ones', () => {
+    const block = extractBlock(esText, 'feeCalculator: {');
+    expect(block).toMatch(/Ratio GL/);
+    expect(block).toMatch(/GL 65%/);
+    expect(block).not.toMatch(/conservadora/);
+    expect(block).not.toMatch(/agresiva/);
+  });
+});

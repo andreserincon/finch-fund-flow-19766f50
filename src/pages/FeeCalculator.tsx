@@ -295,7 +295,7 @@ export default function FeeCalculator() {
         ['Costo Total GL', getKpiVal(lowP, 'glTotalCost'), getKpiVal(baseP, 'glTotalCost'), getKpiVal(highP, 'glTotalCost'), getCustomVal('glTotalCost')],
         ['Ingreso Neto Mensual', getKpiVal(lowP, 'netMonthlyIncome'), getKpiVal(baseP, 'netMonthlyIncome'), getKpiVal(highP, 'netMonthlyIncome'), getCustomVal('netMonthlyIncome')],
         ['Incremento Propio %', getKpiVal(lowP, 'ourFeeIncrease'), getKpiVal(baseP, 'ourFeeIncrease'), getKpiVal(highP, 'ourFeeIncrease'), getCustomVal('ourFeeIncrease')],
-        ['GL % de Capita', getKpiVal(lowP, 'delta'), getKpiVal(baseP, 'delta'), getKpiVal(highP, 'delta'), getCustomVal('delta')],
+        ['GL % de cápita', getKpiVal(lowP, 'delta'), getKpiVal(baseP, 'delta'), getKpiVal(highP, 'delta'), getCustomVal('delta')],
         ['Variación Interanual Cápita %', lowP?.kpis.yoyFeeVariation ?? 'N/D', baseP?.kpis.yoyFeeVariation ?? 'N/D', highP?.kpis.yoyFeeVariation ?? 'N/D', customKPIs?.yoyFeeVariation ?? 'N/D'],
         ['Índice Acumulado YoY (ref.)', getKpiVal(lowP, 'yoyAccumulatedIndex'), getKpiVal(baseP, 'yoyAccumulatedIndex'), getKpiVal(highP, 'yoyAccumulatedIndex'), getCustomVal('yoyAccumulatedIndex')],
       ];
@@ -551,17 +551,17 @@ export default function FeeCalculator() {
 
     const items: ProposalItem[] = [
       {
-        buffer: 0, name: 'Ratio GL', sublabel: 'Mantiene la proporción con la Gran Logia', termKey: 'ratioGl', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+        buffer: 0, name: t('feeCalculator.presets.ratio.name'), sublabel: t('feeCalculator.presets.ratio.sublabel'), termKey: 'ratioGl', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
         isVariant: false, proposedStd: ratioStd, proposedSol: ratioSol,
         kpis: computeKPIs(ratioStd, ratioSol),
       },
       {
-        buffer: 0, name: t('feeCalculator.baseline'), sublabel: 'Sigue la inflación (CVS)', color: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200',
+        buffer: 0, name: t('feeCalculator.presets.base.name'), sublabel: t('feeCalculator.presets.base.sublabel'), color: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200',
         isVariant: false, proposedStd: baseStd, proposedSol: baseSol,
         kpis: computeKPIs(baseStd, baseSol),
       },
       {
-        buffer: 0, name: 'GL 65%', sublabel: 'La Gran Logia al 65% de la cápita', termKey: 'gl65', color: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
+        buffer: 0, name: t('feeCalculator.presets.gl65.name'), sublabel: t('feeCalculator.presets.gl65.sublabel'), termKey: 'gl65', color: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
         isVariant: false,
         proposedStd: ceil500(projectedGlStd / 0.65),
         proposedSol: ceil500(projectedGlSol / 0.65),
@@ -648,10 +648,10 @@ export default function FeeCalculator() {
         {/* Filters row: Month + Quarter side by side */}
         <div className="flex flex-wrap items-end gap-4 -mt-2">
           <div className="flex flex-col gap-1">
-            <Label className="text-xs text-muted-foreground">Mes base</Label>
+            <Label className="text-xs text-muted-foreground">{t('feeCalculator.baseMonthLabel')}</Label>
             <Select value={selectedBaseMonth} onValueChange={setSelectedBaseMonth}>
               <SelectTrigger className="w-[200px]" data-asistente="calc-mes-base">
-                <SelectValue placeholder="Mes base" />
+                <SelectValue placeholder={t('feeCalculator.baseMonthLabel')} />
               </SelectTrigger>
               <SelectContent>
                 {availableFeeMonths.map((m) => (
