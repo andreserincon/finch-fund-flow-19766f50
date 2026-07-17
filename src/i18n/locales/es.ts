@@ -499,6 +499,8 @@ export default {
       custom: 'Escenario personalizado',
       customStdFee: 'Cápita estándar personalizada',
       customSolFee: 'Cápita solidaria personalizada',
+      customPending: 'Sin confirmar. Enter o salí del campo para calcular.',
+      customCommitted: 'Se calcula al salir del campo o con Enter.',
       proposedStd: 'Cápita estándar propuesta',
       proposedSol: 'Cápita solidaria propuesta',
       totalMonthlyIncome: 'Ingreso mensual total',

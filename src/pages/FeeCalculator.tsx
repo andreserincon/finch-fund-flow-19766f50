@@ -17,6 +17,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { useMonthlyFees } from '@/hooks/useMonthlyFees';
 import { useMembers } from '@/hooks/useMembers';
 import { useCVSIndex, QuarterlyIndex } from '@/hooks/useCVSIndex';
+import { useCommittedNumber } from '@/hooks/useCommittedNumber';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Link } from 'react-router-dom';
 import { parseLocalDate } from '@/lib/utils';
@@ -189,8 +190,8 @@ export default function FeeCalculator() {
   const [manualCvs, setManualCvs] = useState<string>('');
   const [manualGlStd, setManualGlStd] = useState<string>('');
   const [manualGlSol, setManualGlSol] = useState<string>('');
-  const [customStd, setCustomStd] = useState<string>('');
-  const [customSol, setCustomSol] = useState<string>('');
+  const customStdField = useCommittedNumber(0);
+  const customSolField = useCommittedNumber(0);
 
   const isLoading = feesLoading || membersLoading;
   const fetchError = cvsData?.fetchError ?? false;
@@ -573,8 +574,8 @@ export default function FeeCalculator() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasCvs, selectedCVS, currentStdFee, currentSolFee, stdMemberCount, solMemberCount, glStdNum, glSolNum, yoyAccumulated, feeOneYearAgoStd, glStdOneYearAgo, t]);
 
-  const customStdNum = parseFloat(customStd) || 0;
-  const customSolNum = parseFloat(customSol) || 0;
+  const customStdNum = customStdField.committed;
+  const customSolNum = customSolField.committed;
   const customKPIs = useMemo(
     () => (customStdNum > 0 || customSolNum > 0 ? computeKPIs(customStdNum, customSolNum) : null),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -786,13 +787,32 @@ export default function FeeCalculator() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label>{t('feeCalculator.customStdFee')}</Label>
-                <Input type="number" step="1" placeholder="0" value={customStd} onChange={(e) => setCustomStd(e.target.value)} data-asistente="calc-escenario-personalizado" />
+                <Input
+                  type="number"
+                  step="1"
+                  placeholder="0"
+                  className={customStdField.pending ? 'border-warning' : undefined}
+                  {...customStdField.inputProps}
+                  data-asistente="calc-escenario-personalizado"
+                />
               </div>
               <div className="space-y-1.5">
                 <Label>{t('feeCalculator.customSolFee')}</Label>
-                <Input type="number" step="1" placeholder="0" value={customSol} onChange={(e) => setCustomSol(e.target.value)} />
+                <Input
+                  type="number"
+                  step="1"
+                  placeholder="0"
+                  className={customSolField.pending ? 'border-warning' : undefined}
+                  {...customSolField.inputProps}
+                />
               </div>
             </div>
+            {/* Reserved-height hint so committing a value never injects layout. */}
+            <p className="min-h-[1.25rem] text-xs text-muted-foreground">
+              {customStdField.pending || customSolField.pending
+                ? t('feeCalculator.customPending')
+                : t('feeCalculator.customCommitted')}
+            </p>
             <Separator />
             {customKPIs ? (
               <KPIList kpis={customKPIs} t={t} noGlData={noGlData} />

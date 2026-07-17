@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useMonthlyFees } from '@/hooks/useMonthlyFees';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -35,7 +35,7 @@ import { cn } from '@/lib/utils';
 import { format, startOfMonth, isFuture, startOfDay, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { CalendarIcon, PlusCircle, Clock, Calculator } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { FEE_TYPE_LABELS, FeeType } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 
@@ -118,6 +118,24 @@ export default function MonthlyFees() {
   const { isAdmin } = useIsAdmin();
   const [addDialogOpen, setAddDialogOpen] = useState(false);
 
+  // Prefill bridge from the Calculadora de Cápitas: a link carries the chosen
+  // cápitas as ?std=&sol=. Only non-negative finite numbers seed the dialog; the
+  // values are copied into the form, never written to the database here.
+  const [searchParams] = useSearchParams();
+  const readPrefill = (key: string): string | undefined => {
+    const raw = searchParams.get(key);
+    if (raw === null) return undefined;
+    const n = parseFloat(raw);
+    return Number.isFinite(n) && n >= 0 ? String(n) : undefined;
+  };
+  const prefillStd = readPrefill('std');
+  const prefillSol = readPrefill('sol');
+
+  // Open the add dialog when a valid prefill arrives, once per param change.
+  useEffect(() => {
+    if (prefillStd !== undefined || prefillSol !== undefined) setAddDialogOpen(true);
+  }, [prefillStd, prefillSol]);
+
   // Group fees by month
   const feesByMonth = monthlyFees.reduce((acc, fee) => {
     const month = fee.year_month;
@@ -199,6 +217,8 @@ export default function MonthlyFees() {
               onOpenChange={setAddDialogOpen}
               onSave={upsertMonthlyFee.mutateAsync}
               existingMonths={sortedMonths}
+              initialStd={prefillStd}
+              initialSol={prefillSol}
             />
           )}
         </div>
@@ -359,15 +379,27 @@ function AddMonthlyFeeDialog({
   onOpenChange,
   onSave,
   existingMonths,
+  initialStd,
+  initialSol,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSave: (fee: { year_month: string; fee_type: FeeType; amount: number; gl_standard_amount?: number | null; gl_solidarity_amount?: number | null }) => Promise<unknown>;
   existingMonths: string[];
+  initialStd?: string;
+  initialSol?: string;
 }) {
   const [selectedDate, setSelectedDate] = useState<Date>(startOfMonth(new Date()));
   const [standardAmount, setStandardAmount] = useState('');
   const [solidarityAmount, setSolidarityAmount] = useState('');
+
+  // Seed the amounts from a calculator prefill when the dialog opens. Undefined
+  // props leave the fields untouched, so a normal Add via the button is unaffected.
+  useEffect(() => {
+    if (!open) return;
+    if (initialStd !== undefined) setStandardAmount(initialStd);
+    if (initialSol !== undefined) setSolidarityAmount(initialSol);
+  }, [open, initialStd, initialSol]);
   const [glStandardAmount, setGlStandardAmount] = useState('');
   const [glSolidarityAmount, setGlSolidarityAmount] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
