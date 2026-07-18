@@ -474,7 +474,6 @@ export default {
       indecLink: 'Datos CVS (INDEC) ↗',
       currentReference: 'Referencia del período actual',
       cvsSelection: 'Selección de trimestre CVS',
-      selectQuarter: 'Seleccionar Trimestre CVS',
       yoyAutoCalc: 'Índice acumulado anual (calculado automáticamente)',
       glFees: 'Cápitas Gran Logia',
       glStdFee: 'Cápita GL estándar (período anterior)',
@@ -482,7 +481,8 @@ export default {
       projectedGlFees: 'Cápitas GL proyectadas',
       glAutoLoaded: 'Cargado automáticamente desde {{month}}',
       proposals: 'Propuestas de cápitas',
-      selectQuarterFirst: 'Seleccioná un trimestre CVS para generar propuestas.',
+      enterCvsFirst: 'Ingresá el CVS trimestral para generar las propuestas.',
+      noCvsForQuarter: 'No tenemos el CVS del trimestre que corresponde a este mes base. Probá con otro mes base.',
       // Keyed preset list: the single source of truth for scenario names and
       // sublabels. The bench columns, the primer and the export all map over
       // this, keyed by 'ratio' | 'base' | 'gl65', never by array index or name.

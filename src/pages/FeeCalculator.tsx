@@ -129,6 +129,21 @@ const benchFigureClass = (row: MetricRow): string => {
   return 'font-mono tabular-nums text-sm';
 };
 
+// The skeleton bench is the SAME table driven by a loading flag: each figure is
+// swapped for a Skeleton sized to the text's own box, so the row heights match
+// the loaded bench and the content does not jump on arrival (R12). The headline
+// box is the text-2xl line height (h-8), so the two headline rows do not shift.
+const skeletonFigureClass = (row: MetricRow): string => {
+  if (row.subRow) return 'h-3.5 w-16';
+  if (row.emphasis === 'headline') return 'h-8 w-24';
+  return 'h-4 w-20';
+};
+
+// The skeleton bench always mirrors state 4 (five columns): hasCvs is the normal
+// outcome, so reflowing 5 to 2 on the error paths beats reflowing 2 to 5 on every
+// healthy load (R12). The keys drive the header shape; the figures are masked.
+const SKELETON_COLUMN_KEYS: ScenarioKey[] = ['actual', 'ratio', 'base', 'gl65', 'custom'];
+
 // One render path, one row list. `mode` changes only how a cell renders, never
 // which rows exist. This is the S4a-verified engine, transposed to a table cell.
 const renderBenchCell = (
@@ -661,6 +676,20 @@ export default function FeeCalculator() {
   const baselineCell = toCellData(scenarios[0]); // Actual, the do-nothing anchor
   const nd = t('feeCalculator.noYoyData');
 
+  // The five gated states, in order (R11). State 0 (isLoading) skeletons the tiles
+  // AND the bench; state 1 (cvsLoading, tiles resolved) skeletons the bench only.
+  // The skeleton bench always renders the five state-4 columns; the live two-column
+  // bench appears with a message above it in the no-CVS states 2 and 3.
+  const benchLoading = isLoading || cvsLoading;
+  const benchColumns: Scenario[] = benchLoading
+    ? SKELETON_COLUMN_KEYS.map((key) => ({ key, name: '', proposedStd: 0, proposedSol: 0, kpis: scenarios[0].kpis }))
+    : columns;
+  // State 2: the fetch failed, so the treasurer types a CVS. State 3: the derived
+  // quarter is not in the data, so the fix is a different Mes base. Both render the
+  // message ABOVE a reduced two-column bench, never in place of it.
+  const showEnterCvs = !benchLoading && fetchError && !hasCvs;
+  const showNoCvsForQuarter = !benchLoading && !fetchError && !hasCvs;
+
   // Page-level ratios stated once in the Referencia grid, not per scenario. Both
   // operands are guarded: glStdNum is nullable, and null / x * 100 would render a
   // false 0,0%, the silent zero this build exists to kill.
@@ -670,21 +699,9 @@ export default function FeeCalculator() {
       ? (glStdOneYearAgo / feeOneYearAgoStd) * 100
       : null;
 
-  if (isLoading) {
-    return (
-      <div className="space-y-6 animate-fade-in p-4 md:p-6">
-        <Skeleton className="h-8 w-64" />
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-24" />)}
-        </div>
-        <Skeleton className="h-48" />
-      </div>
-    );
-  }
-
   return (
     <TooltipProvider>
-      <div className="space-y-4 md:space-y-6 animate-fade-in p-4 md:p-6">
+      <div className="space-y-4 md:space-y-6 p-4 md:p-6">
         {/* Header */}
         <PageHeader
           className="gap-2 md:gap-4"
@@ -754,7 +771,7 @@ export default function FeeCalculator() {
 
         <div className="flex flex-col gap-1" data-asistente="calc-trimestre-cvs">
             <Label className="text-xs text-muted-foreground">
-              Trimestre <TermTooltip termKey="cvs">CVS</TermTooltip>
+              {t('feeCalculator.cvsQuarterLabel')}
             </Label>
             {!fetchError && selectedQuarter ? (
               <div className="h-10 flex items-center px-3 rounded-md border border-input bg-muted/50 text-sm w-[260px]">
@@ -805,8 +822,8 @@ export default function FeeCalculator() {
           </div>
         )}
 
-        {/* Warning if no fees */}
-        {currentStdFee === 0 && (
+        {/* Warning if no fees (never while the fees query is still loading) */}
+        {!isLoading && currentStdFee === 0 && (
           <div className="rounded-lg border border-warning/30 bg-warning/10 p-4 text-sm text-warning">
             {t('feeCalculator.noCurrentFees')}
           </div>
@@ -816,30 +833,40 @@ export default function FeeCalculator() {
         <div data-asistente="calc-referencia-actual">
           <h2 className="section-header">{t('feeCalculator.currentReference')}</h2>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-4">
-            <StatCard title={t('feeCalculator.currentStdFee')} value={formatARS(currentStdFee)} />
-            <StatCard title={t('feeCalculator.currentSolFee')} value={formatARS(currentSolFee)} />
-            <StatCard title={t('feeCalculator.activeStdMembers')} value={stdMemberCount} icon={<Users className="h-5 w-5 text-muted-foreground" />} />
-            <StatCard title={t('feeCalculator.activeSolMembers')} value={solMemberCount} icon={<Users className="h-5 w-5 text-muted-foreground" />} />
-            <StatCard
-              title={t('feeCalculator.glStdFee')}
-              value={glStdNum !== null && glStdNum > 0 ? formatARS(glStdNum) : '-'}
-              subtitle={glStdNum !== null && glStdNum > 0 && hasCvs ? `Proyectado: ${formatARS(Math.round(glStdNum * (1 + selectedCVS / 100)))}` : undefined}
-            />
-            <StatCard
-              title={t('feeCalculator.glSolFee')}
-              value={glSolNum !== null && glSolNum > 0 ? formatARS(glSolNum) : '-'}
-              subtitle={glSolNum !== null && glSolNum > 0 && hasCvs ? `Proyectado: ${formatARS(Math.round(glSolNum * (1 + selectedCVS / 100)))}` : undefined}
-            />
-            {/* GL % de cápita stated once, page-level. Both operands guarded: a
-                null GL renders N/D, never a false 0,0%. */}
-            <StatCard
-              title={`${t('feeCalculator.delta')} (hoy)`}
-              value={glPctToday !== null ? formatPercent(glPctToday) : nd}
-            />
-            <StatCard
-              title={t('feeCalculator.deltaVsGlYearAgo')}
-              value={glPctYearAgo !== null ? formatPercent(glPctYearAgo) : nd}
-            />
+            {isLoading ? (
+              // State 0: the tile data has not resolved, so the eight reference
+              // tiles are skeletons in the exact loaded grid (same count, same ramp).
+              Array.from({ length: 8 }).map((_, i) => (
+                <Skeleton key={i} className="h-24 motion-reduce:animate-none" />
+              ))
+            ) : (
+              <>
+                <StatCard title={t('feeCalculator.currentStdFee')} value={formatARS(currentStdFee)} />
+                <StatCard title={t('feeCalculator.currentSolFee')} value={formatARS(currentSolFee)} />
+                <StatCard title={t('feeCalculator.activeStdMembers')} value={stdMemberCount} icon={<Users className="h-5 w-5 text-muted-foreground" />} />
+                <StatCard title={t('feeCalculator.activeSolMembers')} value={solMemberCount} icon={<Users className="h-5 w-5 text-muted-foreground" />} />
+                <StatCard
+                  title={t('feeCalculator.glStdFee')}
+                  value={glStdNum !== null && glStdNum > 0 ? formatARS(glStdNum) : '-'}
+                  subtitle={glStdNum !== null && glStdNum > 0 && hasCvs ? `Proyectado: ${formatARS(Math.round(glStdNum * (1 + selectedCVS / 100)))}` : undefined}
+                />
+                <StatCard
+                  title={t('feeCalculator.glSolFee')}
+                  value={glSolNum !== null && glSolNum > 0 ? formatARS(glSolNum) : '-'}
+                  subtitle={glSolNum !== null && glSolNum > 0 && hasCvs ? `Proyectado: ${formatARS(Math.round(glSolNum * (1 + selectedCVS / 100)))}` : undefined}
+                />
+                {/* GL % de cápita stated once, page-level. Both operands guarded: a
+                    null GL renders N/D, never a false 0,0%. */}
+                <StatCard
+                  title={`${t('feeCalculator.delta')} (hoy)`}
+                  value={glPctToday !== null ? formatPercent(glPctToday) : nd}
+                />
+                <StatCard
+                  title={t('feeCalculator.deltaVsGlYearAgo')}
+                  value={glPctYearAgo !== null ? formatPercent(glPctYearAgo) : nd}
+                />
+              </>
+            )}
           </div>
         </div>
 
@@ -872,8 +899,21 @@ export default function FeeCalculator() {
               </button>
             </div>
           </div>
-          {noGlData && mode === 'absolute' && (
+          {!benchLoading && noGlData && mode === 'absolute' && (
             <p className="mt-2 text-xs text-muted-foreground italic">{t('feeCalculator.enterGlFees')}</p>
+          )}
+
+          {/* States 2 and 3: the message renders ABOVE the two-column bench, never
+              in place of it. Actual and Tu escenario still render below. */}
+          {showEnterCvs && (
+            <p className="mt-3 rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+              {t('feeCalculator.enterCvsFirst')}
+            </p>
+          )}
+          {showNoCvsForQuarter && (
+            <p className="mt-3 rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+              {t('feeCalculator.noCvsForQuarter')}
+            </p>
           )}
 
           {/* The bench: metrics down the left, scenarios across as columns. The
@@ -888,7 +928,7 @@ export default function FeeCalculator() {
                     <th scope="col" className="text-left align-top p-3 bg-muted/40 border-b border-border">
                       <span className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground">Métrica</span>
                     </th>
-                    {columns.map((col) => {
+                    {benchColumns.map((col) => {
                       const isCustom = col.key === 'custom';
                       const subtext = col.sublabel ?? (col.key === 'actual' ? 'Si no cambiás nada.' : undefined);
                       return (
@@ -900,7 +940,25 @@ export default function FeeCalculator() {
                             isCustom && 'bg-accent/50',
                           )}
                         >
-                          {isCustom ? (
+                          {benchLoading ? (
+                            isCustom ? (
+                              // Reserves the tallest header cell's height (h2 + two
+                              // inputs + hint) so the row does not shift on arrival.
+                              <div className="flex flex-col gap-2">
+                                <Skeleton className="h-6 w-24 motion-reduce:animate-none" />
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                  <Skeleton className="h-8 motion-reduce:animate-none" />
+                                  <Skeleton className="h-8 motion-reduce:animate-none" />
+                                </div>
+                                <Skeleton className="h-8 w-full motion-reduce:animate-none" />
+                              </div>
+                            ) : (
+                              <div className="flex flex-col gap-1.5">
+                                <Skeleton className="h-5 w-20 motion-reduce:animate-none" />
+                                <Skeleton className="h-3 w-32 motion-reduce:animate-none" />
+                              </div>
+                            )
+                          ) : isCustom ? (
                             <div className="flex flex-col gap-2">
                               {/* A real h2 so the section enters the heading
                                   outline; the peer column carries no border
@@ -977,7 +1035,22 @@ export default function FeeCalculator() {
                           <span className={cn(benchLabelClass(row), 'mr-1')}>{row.label}</span>
                         )}
                       </th>
-                      {columns.map((col) => {
+                      {benchColumns.map((col) => {
+                        if (benchLoading) {
+                          // Each figure is swapped for a Skeleton at the text's own
+                          // box height (headline rows keep the text-2xl line box).
+                          return (
+                            <td
+                              key={col.key}
+                              className={cn(
+                                'text-right whitespace-nowrap align-middle p-3',
+                                col.key === 'custom' && 'bg-accent/20',
+                              )}
+                            >
+                              <Skeleton className={cn('ml-auto motion-reduce:animate-none', skeletonFigureClass(row))} />
+                            </td>
+                          );
+                        }
                         const cell = renderBenchCell(row, toCellData(col), {
                           mode,
                           baselineCell,
@@ -1004,13 +1077,16 @@ export default function FeeCalculator() {
                 </tbody>
               </table>
             </div>
-            {/* Estimates-only footnote: everything on the bench is a projection. */}
-            <div className="flex items-start gap-2 p-3 bg-muted/30 text-xs text-muted-foreground leading-relaxed">
-              <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5 opacity-70" aria-hidden="true" />
-              <span>
-                Todas las cifras son estimaciones. Surgen de proyectar los valores del período base contra el CVS del trimestre y no comprometen a nadie. La calculadora no escribe nada: para aplicar una propuesta, copiá el valor a mano en Cápitas Mensuales.
-              </span>
-            </div>
+            {/* Estimates-only footnote: everything on the bench is a projection.
+                Hidden while the bench is a skeleton so no words appear on load. */}
+            {!benchLoading && (
+              <div className="flex items-start gap-2 p-3 bg-muted/30 text-xs text-muted-foreground leading-relaxed">
+                <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5 opacity-70" aria-hidden="true" />
+                <span>
+                  Todas las cifras son estimaciones. Surgen de proyectar los valores del período base contra el CVS del trimestre y no comprometen a nadie. La calculadora no escribe nada: para aplicar una propuesta, copiá el valor a mano en Cápitas Mensuales.
+                </span>
+              </div>
+            )}
           </div>
         </div>
       </div>
