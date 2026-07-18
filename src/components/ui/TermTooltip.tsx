@@ -29,6 +29,12 @@ interface TermTooltipProps {
   className?: string;
   /** Hide the small info icon, keeping only the dotted underline cue. */
   hideIcon?: boolean;
+  /**
+   * Which side the popover opens toward. Defaults to "top" so every existing
+   * call site is unchanged; a column header inside a horizontally scrolling
+   * container passes "bottom" so the popover is not clipped by the scroll box.
+   */
+  side?: 'top' | 'right' | 'bottom' | 'left';
 }
 
 export function TermTooltip({
@@ -37,6 +43,7 @@ export function TermTooltip({
   children,
   className,
   hideIcon = false,
+  side = 'top',
 }: TermTooltipProps) {
   const { t } = useTranslation();
   const text = definition ?? (termKey ? t(`glossary.${termKey}`) : '');
@@ -89,7 +96,7 @@ export function TermTooltip({
         </button>
       </PopoverTrigger>
       <PopoverContent
-        side="top"
+        side={side}
         align="start"
         className="w-64 p-3 text-xs leading-relaxed text-popover-foreground motion-reduce:animate-none"
         // Keep it open while the pointer is over the content; close shortly

@@ -818,28 +818,44 @@ export default function FeeCalculator() {
           actions={
             <>
               <Tooltip>
+                {/* The trigger wraps the button in a focusable span so the
+                    tooltip still fires when the button is disabled (the button
+                    carries disabled:pointer-events-none, which would otherwise
+                    swallow the hover on its only text). */}
                 <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={exportCvsToExcel}
-                    disabled={!monthly.length}
-                    className="h-8 w-8"
-                    data-asistente="calc-exportar"
-                  >
-                    <Download className="h-4 w-4" />
-                  </Button>
+                  <span tabIndex={0} className="inline-flex">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={exportCvsToExcel}
+                      disabled={!monthly.length}
+                      aria-label="Exportar planilla Excel"
+                      className="h-8 w-8"
+                      data-asistente="calc-exportar"
+                    >
+                      <Download className="h-4 w-4" />
+                    </Button>
+                  </span>
                 </TooltipTrigger>
-                <TooltipContent>Exportar planilla Excel (.xlsx)</TooltipContent>
+                {/* Copy states the real reason the button is disabled (no
+                    cápitas loaded), not the missing-CVS condition, which never
+                    gates this export. */}
+                <TooltipContent>
+                  {monthly.length ? 'Exportar planilla Excel (.xlsx)' : 'Sin cápitas cargadas para exportar'}
+                </TooltipContent>
               </Tooltip>
+              {/* Fetching is signalled by aria-busy plus the spin, not by
+                  disabled, so the button does not dim to 50% while it refreshes.
+                  A pointer-events-none class blocks a second click mid-fetch. */}
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => refetchCvs()}
-                disabled={cvsFetching}
-                className="h-8 w-8"
+                aria-busy={cvsFetching}
+                aria-label="Actualizar índice CVS"
+                className={`h-8 w-8 ${cvsFetching ? 'pointer-events-none' : ''}`}
               >
-                <RefreshCw className={`h-4 w-4 ${cvsFetching ? 'animate-spin' : ''}`} />
+                <RefreshCw className={`h-4 w-4 motion-reduce:animate-none ${cvsFetching ? 'animate-spin' : ''}`} />
               </Button>
             </>
           }
@@ -855,9 +871,11 @@ export default function FeeCalculator() {
         {/* Filters row: Month + Quarter side by side */}
         <div className="flex flex-wrap items-end gap-4 -mt-2">
           <div className="flex flex-col gap-1">
-            <Label className="text-xs text-muted-foreground">{t('feeCalculator.baseMonthLabel')}</Label>
+            <Label id="mes-base-label" className="text-xs text-muted-foreground">{t('feeCalculator.baseMonthLabel')}</Label>
             <Select value={selectedBaseMonth} onValueChange={setSelectedBaseMonth}>
-              <SelectTrigger className="w-[200px]" data-asistente="calc-mes-base">
+              {/* aria-labelledby (not htmlFor): label[for] to a role=combobox
+                  button is not reliably mapped, so relate the two by id. */}
+              <SelectTrigger id="mes-base-select" aria-labelledby="mes-base-label" className="w-[200px]" data-asistente="calc-mes-base">
                 <SelectValue placeholder={t('feeCalculator.baseMonthLabel')} />
               </SelectTrigger>
               <SelectContent>
@@ -1215,9 +1233,12 @@ export default function FeeCalculator() {
                                   {t('feeCalculator.recommendedBadge')}
                                 </Badge>
                               )}
-                              <Badge variant="secondary" className="w-fit text-xs font-medium">
+                              <Badge variant="scenario" className="w-fit text-xs font-medium">
                                 {col.termKey ? (
-                                  <TermTooltip termKey={col.termKey} className="decoration-current/40">
+                                  // Column header inside the horizontally
+                                  // scrolling bench: open the popover downward so
+                                  // it is not clipped by the scroll container.
+                                  <TermTooltip termKey={col.termKey} side="bottom" className="decoration-current/40">
                                     {col.name}
                                   </TermTooltip>
                                 ) : (

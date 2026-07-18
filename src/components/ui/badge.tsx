@@ -12,6 +12,9 @@ const badgeVariants = cva(
         secondary: "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80",
         destructive: "border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80",
         outline: "text-foreground",
+        // A named identity for scenario/column chips so no caller can hand-paint
+        // one and inherit the default variant's hover repaint. No hover rule.
+        scenario: "border-border bg-muted text-foreground",
       },
     },
     defaultVariants: {
