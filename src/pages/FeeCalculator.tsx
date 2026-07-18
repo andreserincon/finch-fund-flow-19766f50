@@ -23,6 +23,11 @@ import { cn, parseLocalDate, formatPercent } from '@/lib/utils';
 const formatARS = (n: number) =>
   new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(n);
 
+// es-AR day-month-year for the provenance line (R13.b). Long month so the string
+// is deterministic across engines and reads plainly: "18 de julio de 2026".
+const formatFecha = (ms: number) =>
+  new Date(ms).toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' });
+
 interface ProposalKPIs {
   totalMonthlyIncome: number;
   // GL-derived figures are null when there is no GL on file for the period.
@@ -58,6 +63,14 @@ interface Scenario {
 // cápitas, which live on the Scenario, not in ProposalKPIs.
 type CellData = ProposalKPIs & { proposedStd: number; proposedSol: number };
 
+// R13.a provenance vocabulary: where a figure came from. The union member IS the
+// rendered chip label; there is no translation layer, so a chip can never fall
+// out of sync with the value it attributes.
+type Source = 'INDEC' | 'Cápitas Mensuales' | 'Miembros' | 'Derivado' | 'A mano';
+// Whether the CVS was hand-typed and whether the GL came from R14's manual input,
+// so INDEC-sourced rows can flip to 'A mano' when the number was typed from memory.
+type SourceCtx = { cvsIsManual: boolean; glIsManual: boolean };
+
 // One descriptor per metric. The same list renders in both modes: mode changes
 // only how each row renders its value, never which rows exist, so the row count
 // is identical in Valores and Diferencia vs Actual.
@@ -78,24 +91,50 @@ interface MetricRow {
   // A GL projected sub-row rendered under a headline row: smaller, muted.
   subRow?: boolean;
   tone?: (v: number) => string; // sign colouring, absolute mode only
+  // R13.a: where the row's number came from. A plain array for fixed provenance,
+  // or a function so an INDEC / GL row can flip to 'A mano' when the CVS or the GL
+  // was hand-typed. Costo total GL carries two sources (INDEC + Miembros).
+  source: Source[] | ((ctx: SourceCtx) => Source[]);
 }
 
 // The bench body defined ONCE: the single source of truth for what renders and
 // for every count. 8 body rows plus 2 GL projected sub-rows = 10 descriptor
 // entries per column, identical in both read modes. Parity is asserted against
 // this array's length, never a hardcoded integer.
+// GL projected sub-rows are INDEC-sourced, but flip to 'A mano' when the CVS was
+// hand-typed or R14's manual GL is in play: the projection is only as trustworthy
+// as its inputs.
+const glProjectedSource = (ctx: SourceCtx): Source[] => [ctx.cvsIsManual || ctx.glIsManual ? 'A mano' : 'INDEC'];
+
 const buildBenchRows = (t: (key: string) => string): MetricRow[] => [
-  { key: 'proposedStd', label: t('feeCalculator.proposedStd'), kind: 'currency', get: (k) => k.proposedStd, emphasis: 'headline' },
-  { key: 'projectedGlStd', label: 'Cápita GL estándar proyectada', kind: 'currency', get: (k) => k.projectedGlStd, subRow: true, invariant: true },
-  { key: 'proposedSol', label: t('feeCalculator.proposedSol'), kind: 'currency', get: (k) => k.proposedSol, emphasis: 'headline' },
-  { key: 'projectedGlSol', label: 'Cápita GL solidaria proyectada', kind: 'currency', get: (k) => k.projectedGlSol, subRow: true, invariant: true },
-  { key: 'totalMonthlyIncome', label: t('feeCalculator.totalMonthlyIncome'), kind: 'currency', get: (k) => k.totalMonthlyIncome, emphasis: 'dim' },
-  { key: 'glTotalCost', label: t('feeCalculator.glTotalCost'), kind: 'currency', get: (k) => k.glTotalCost, emphasis: 'dim', invariant: true },
-  { key: 'netMonthlyIncome', label: t('feeCalculator.netMonthlyIncome'), kind: 'currency', get: (k) => k.netMonthlyIncome, emphasis: 'normal', tone: (v) => (v > 0 ? 'text-success' : 'text-overdue') },
-  { key: 'ourFeeIncrease', label: t('feeCalculator.ourFeeIncrease'), termKey: 'incrementoPropio', kind: 'percent', get: (k) => k.ourFeeIncrease, emphasis: 'dim' },
-  { key: 'delta', label: t('feeCalculator.delta'), termKey: 'glPctCapita', kind: 'ratio', get: (k) => k.delta, emphasis: 'normal' },
-  { key: 'yoyFeeVariation', label: t('feeCalculator.yoyFeeVariation'), kind: 'percent', get: (k) => k.yoyFeeVariation, emphasis: 'dim' },
+  { key: 'proposedStd', label: t('feeCalculator.proposedStd'), kind: 'currency', get: (k) => k.proposedStd, emphasis: 'headline', source: ['Derivado'] },
+  { key: 'projectedGlStd', label: 'Cápita GL estándar proyectada', kind: 'currency', get: (k) => k.projectedGlStd, subRow: true, invariant: true, source: glProjectedSource },
+  { key: 'proposedSol', label: t('feeCalculator.proposedSol'), kind: 'currency', get: (k) => k.proposedSol, emphasis: 'headline', source: ['Derivado'] },
+  { key: 'projectedGlSol', label: 'Cápita GL solidaria proyectada', kind: 'currency', get: (k) => k.projectedGlSol, subRow: true, invariant: true, source: glProjectedSource },
+  { key: 'totalMonthlyIncome', label: t('feeCalculator.totalMonthlyIncome'), kind: 'currency', get: (k) => k.totalMonthlyIncome, emphasis: 'dim', source: ['Miembros'] },
+  { key: 'glTotalCost', label: t('feeCalculator.glTotalCost'), kind: 'currency', get: (k) => k.glTotalCost, emphasis: 'dim', invariant: true, source: (ctx) => [ctx.cvsIsManual || ctx.glIsManual ? 'A mano' : 'INDEC', 'Miembros'] },
+  { key: 'netMonthlyIncome', label: t('feeCalculator.netMonthlyIncome'), kind: 'currency', get: (k) => k.netMonthlyIncome, emphasis: 'normal', tone: (v) => (v > 0 ? 'text-success' : 'text-overdue'), source: ['Derivado'] },
+  { key: 'ourFeeIncrease', label: t('feeCalculator.ourFeeIncrease'), termKey: 'incrementoPropio', kind: 'percent', get: (k) => k.ourFeeIncrease, emphasis: 'dim', source: ['Cápitas Mensuales'] },
+  { key: 'delta', label: t('feeCalculator.delta'), termKey: 'glPctCapita', kind: 'ratio', get: (k) => k.delta, emphasis: 'normal', source: ['Derivado'] },
+  { key: 'yoyFeeVariation', label: t('feeCalculator.yoyFeeVariation'), kind: 'percent', get: (k) => k.yoyFeeVariation, emphasis: 'dim', source: ['Cápitas Mensuales'] },
 ];
+
+// R13.a: resolve a row's source to an array of chips, and paint each chip. INDEC
+// is tinted --info and 'A mano' is tinted --warning; the rest are neutral. These
+// are the only two uses of the status palette this screen introduces, and both
+// are provenance, not judgement. Each chip is width-bounded (text-[10px] mono,
+// max-width, truncate-with-title) so it never widens the frozen bench label
+// column: two chips on one row wrap within the column rather than growing it.
+const resolveSource = (source: MetricRow['source'], ctx: SourceCtx): Source[] =>
+  typeof source === 'function' ? source(ctx) : source;
+
+const sourceChipClass = (s: Source): string => {
+  const base =
+    'inline-block max-w-[7rem] truncate rounded-[3px] border px-1 font-mono text-[10px] font-medium uppercase leading-tight tracking-wider';
+  if (s === 'INDEC') return cn(base, 'border-info/40 text-info');
+  if (s === 'A mano') return cn(base, 'border-warning/50 bg-warning/10 text-warning');
+  return cn(base, 'border-border text-muted-foreground');
+};
 
 const formatAbs = (v: number, kind: MetricRow['kind']): string => {
   if (kind === 'currency') return formatARS(v);
@@ -174,13 +213,20 @@ export default function FeeCalculator() {
   const { t } = useTranslation();
   const { monthlyFees, isLoading: feesLoading } = useMonthlyFees();
   const { memberBalances, isLoading: membersLoading } = useMembers();
-  const { data: cvsData, isLoading: cvsLoading, refetch: refetchCvs, isFetching: cvsFetching } = useCVSIndex();
+  // dataUpdatedAt is when OUR fetch last succeeded (R13.b); the hook returns the
+  // raw useQuery result, so it is available here with no hook change.
+  const { data: cvsData, isLoading: cvsLoading, refetch: refetchCvs, isFetching: cvsFetching, dataUpdatedAt } = useCVSIndex();
 
   const [selectedBaseMonth, setSelectedBaseMonth] = useState<string>('');
   const [manualCvs, setManualCvs] = useState<string>('');
   const [mode, setMode] = useState<ReadMode>('absolute');
   const customStdField = useCommittedNumber(0);
   const customSolField = useCommittedNumber(0);
+  // R14: the two GL reference tiles become committed-number inputs when there is
+  // no GL on file. Same hook as the custom column, so the blur/Enter/clamp/pending
+  // contract is not reimplemented.
+  const manualGlStdField = useCommittedNumber(0);
+  const manualGlSolField = useCommittedNumber(0);
 
   const isLoading = feesLoading || membersLoading;
   const fetchError = cvsData?.fetchError ?? false;
@@ -220,7 +266,8 @@ export default function FeeCalculator() {
         [],
         ['Índice Acumulado Anual (12 meses)', null, yoyAccumulated > 0 ? yoyAccumulated : 'N/D'],
         [],
-        ['Fuente: Ministerio de Economía: datos.gob.ar / INDEC', null, null],
+        // R13.d: the source cell can never credit INDEC for a hand-typed figure.
+        [cvsIsManual ? 'Fuente: CVS ingresado a mano por el tesorero. No verificado contra INDEC.' : 'Fuente: Ministerio de Economía: datos.gob.ar / INDEC', null, null],
         ['Para insertar gráfico: seleccioná las columnas A y C → Insertar → Gráfico de líneas', null, null],
       ];
       const ws1 = XLSX.utils.aoa_to_sheet(s1Data);
@@ -265,6 +312,14 @@ export default function FeeCalculator() {
       const s3Cell = (c: Scenario, value: number | null): string | number =>
         c.key === 'custom' && !hasCustomValue ? '-' : (value ?? 'N/D');
 
+      // R13.d: a Fuente cell per column, so the sheet declares where each column's
+      // numbers came from and never lets a hand-typed CVS pass as INDEC.
+      const s3Fuente = (c: Scenario): string => {
+        if (c.key === 'actual') return 'Cápitas Mensuales (período base)';
+        if (c.key === 'custom') return 'Ingresado por el tesorero';
+        return cvsIsManual ? 'CVS ingresado a mano. No verificado contra INDEC.' : 'INDEC: Índice de Salarios';
+      };
+
       const s3Preamble: (string | number | null)[][] = [
         ['Propuestas de Cápitas: Calculadora de Cápitas'],
         [],
@@ -284,6 +339,7 @@ export default function FeeCalculator() {
       const s3Data: (string | number | null)[][] = [
         ...s3Preamble,
         ['', ...columns.map((c) => c.name)],
+        ['Fuente', ...columns.map((c) => s3Fuente(c))],
         ['Cápita estándar propuesta', ...columns.map((c) => s3Cell(c, c.proposedStd))],
         ['Cápita solidaria propuesta', ...columns.map((c) => s3Cell(c, c.proposedSol))],
         ['GL estándar proyectado', ...columns.map((c) => s3Cell(c, c.kpis.projectedGlStd))],
@@ -500,11 +556,11 @@ export default function FeeCalculator() {
     };
   }, [monthlyFees, selectedBaseMonth]);
 
-  // GL is nullable: null when there is no GL on file for the period. The DB is
-  // the only source at this slice; R14 (S7) adds a committed manual GL input as
-  // an alternate source via useCommittedNumber.
-  const glStdNum: number | null = glFromDb ? glFromDb.standard : null;
-  const glSolNum: number | null = glFromDb ? glFromDb.solidarity : null;
+  // GL is nullable: null when there is no GL on file for the period. The second
+  // source (R14) is the treasurer's committed manual value; an empty field (or a
+  // clamped-to-zero one) stays null so no KPI computes off a silent zero.
+  const glStdNum: number | null = glFromDb ? glFromDb.standard : manualGlStdField.committed > 0 ? manualGlStdField.committed : null;
+  const glSolNum: number | null = glFromDb ? glFromDb.solidarity : manualGlSolField.committed > 0 ? manualGlSolField.committed : null;
   const noGlData = glStdNum === null;
 
   const { stdMemberCount, solMemberCount } = useMemo(() => {
@@ -519,6 +575,16 @@ export default function FeeCalculator() {
   const selectedQuarter: QuarterlyIndex | undefined = quarterly.find((q) => q.quarterId === selectedQuarterId);
   const selectedCVS = selectedQuarter ? selectedQuarter.cvs : (parseFloat(manualCvs) || 0);
   const hasCvs = selectedCVS > 0;
+  // Provenance context (R13.a): the CVS is hand-typed when it did not come from a
+  // fetched quarter; the GL is hand-typed when there is no row on file and the
+  // treasurer committed a manual value. Both flip INDEC-sourced rows to 'A mano'.
+  const cvsIsManual = hasCvs && !selectedQuarter;
+  const glIsManual = glFromDb === null && glStdNum !== null;
+  const sourceCtx: SourceCtx = { cvsIsManual, glIsManual };
+  // The manual CVS input shows when the fetch failed or no quarter resolved (and
+  // we are not still loading). Its label reads a percentage prompt, not a quarter
+  // prompt (R13.f), and the fetch error renders as visible text below it (R13.e).
+  const showManualCvsInput = fetchError || (!selectedQuarter && !cvsLoading);
 
   // YoY: compound the selected CVS quarter + 3 prior quarters (4 total)
   const yoyAccumulated = useMemo(() => {
@@ -771,7 +837,7 @@ export default function FeeCalculator() {
 
         <div className="flex flex-col gap-1" data-asistente="calc-trimestre-cvs">
             <Label className="text-xs text-muted-foreground">
-              {t('feeCalculator.cvsQuarterLabel')}
+              {showManualCvsInput ? t('feeCalculator.cvsManualLabel') : t('feeCalculator.cvsQuarterLabel')}
             </Label>
             {!fetchError && selectedQuarter ? (
               <div className="h-10 flex items-center px-3 rounded-md border border-input bg-muted/50 text-sm w-[260px]">
@@ -780,14 +846,22 @@ export default function FeeCalculator() {
             ) : !fetchError && cvsLoading ? (
               <Skeleton className="h-10 w-[260px]" />
             ) : (
-              <Input
-                type="number"
-                step="0.1"
-                placeholder="CVS %"
-                value={manualCvs}
-                onChange={(e) => setManualCvs(e.target.value)}
-                className="w-[120px]"
-              />
+              <>
+                <Input
+                  type="number"
+                  step="0.1"
+                  placeholder="CVS %"
+                  value={manualCvs}
+                  onChange={(e) => setManualCvs(e.target.value)}
+                  className="w-[120px]"
+                />
+                {/* R13.e: the error is visible text, not only a tooltip. */}
+                {fetchError && (
+                  <p className="mt-1 max-w-[16rem] text-[11px] leading-snug text-warning">
+                    {t('feeCalculator.fetchError')}
+                  </p>
+                )}
+              </>
             )}
           </div>
 
@@ -799,6 +873,29 @@ export default function FeeCalculator() {
               <TooltipContent>{t('feeCalculator.fetchError')}</TooltipContent>
             </Tooltip>
           )}
+        </div>
+
+        {/* R13.b: the source-and-as-of line, always rendered with a reserved
+            height (min-h-[1.125rem]) so its skeleton-to-text resolution never
+            injects layout and nothing below jumps. Live path names INDEC and the
+            date OUR fetch succeeded ("consultado el"); the manual path attributes
+            the figure to the treasurer. The banned freshness verb never appears
+            here: it would credit INDEC with the timing of our cache, not of their
+            publication. */}
+        <div className="-mt-2 flex min-h-[1.125rem] flex-wrap items-center gap-2 font-mono text-[11px] leading-snug text-muted-foreground">
+          {cvsLoading ? (
+            <Skeleton className="h-3 w-56 motion-reduce:animate-none" />
+          ) : cvsIsManual ? (
+            <>
+              <span className={sourceChipClass('A mano')} title="A mano">A mano</span>
+              <span>{t('feeCalculator.cvsProvenanceManual', { fecha: formatFecha(Date.now()) })}</span>
+            </>
+          ) : dataUpdatedAt ? (
+            <>
+              <span className={sourceChipClass('INDEC')} title="INDEC">INDEC</span>
+              <span>{t('feeCalculator.cvsProvenanceLive', { fecha: formatFecha(dataUpdatedAt) })}</span>
+            </>
+          ) : null}
         </div>
 
         {/* Monthly breakdown & YoY below header */}
@@ -845,16 +942,62 @@ export default function FeeCalculator() {
                 <StatCard title={t('feeCalculator.currentSolFee')} value={formatARS(currentSolFee)} />
                 <StatCard title={t('feeCalculator.activeStdMembers')} value={stdMemberCount} icon={<Users className="h-5 w-5 text-muted-foreground" />} />
                 <StatCard title={t('feeCalculator.activeSolMembers')} value={solMemberCount} icon={<Users className="h-5 w-5 text-muted-foreground" />} />
-                <StatCard
-                  title={t('feeCalculator.glStdFee')}
-                  value={glStdNum !== null && glStdNum > 0 ? formatARS(glStdNum) : '-'}
-                  subtitle={glStdNum !== null && glStdNum > 0 && hasCvs ? `Proyectado: ${formatARS(Math.round(glStdNum * (1 + selectedCVS / 100)))}` : undefined}
-                />
-                <StatCard
-                  title={t('feeCalculator.glSolFee')}
-                  value={glSolNum !== null && glSolNum > 0 ? formatARS(glSolNum) : '-'}
-                  subtitle={glSolNum !== null && glSolNum > 0 && hasCvs ? `Proyectado: ${formatARS(Math.round(glSolNum * (1 + selectedCVS / 100)))}` : undefined}
-                />
+                {/* R14: when there is no GL on file the two GL tiles become
+                    committed-number inputs (same hook as the custom column) so the
+                    instruction "Ingresá las cápitas GL" finally names a control
+                    that exists. The tile is warning-tinted and carries an 'A mano'
+                    chip; nothing computes until the value is committed, and an
+                    empty field keeps glStdNum null so no KPI reads a silent zero. */}
+                {glFromDb === null ? (
+                  <>
+                    <div className="stat-card border-warning/30 bg-warning/10">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <p className="stat-label text-xs md:text-sm">{t('feeCalculator.glStdFee')}</p>
+                        <span className={sourceChipClass('A mano')} title="A mano">A mano</span>
+                      </div>
+                      <Input
+                        type="number"
+                        step="1"
+                        inputMode="numeric"
+                        placeholder="0"
+                        aria-label={t('feeCalculator.glStdFee')}
+                        className={cn('mt-1 h-9 text-right font-mono tabular-nums', manualGlStdField.pending && 'border-warning')}
+                        {...manualGlStdField.inputProps}
+                        data-asistente="calc-gl-manual-std"
+                      />
+                      <p className="mt-1 text-xs md:text-sm text-muted-foreground">{t('feeCalculator.glManualSubtitle')}</p>
+                    </div>
+                    <div className="stat-card border-warning/30 bg-warning/10">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <p className="stat-label text-xs md:text-sm">{t('feeCalculator.glSolFee')}</p>
+                        <span className={sourceChipClass('A mano')} title="A mano">A mano</span>
+                      </div>
+                      <Input
+                        type="number"
+                        step="1"
+                        inputMode="numeric"
+                        placeholder="0"
+                        aria-label={t('feeCalculator.glSolFee')}
+                        className={cn('mt-1 h-9 text-right font-mono tabular-nums', manualGlSolField.pending && 'border-warning')}
+                        {...manualGlSolField.inputProps}
+                      />
+                      <p className="mt-1 text-xs md:text-sm text-muted-foreground">{t('feeCalculator.glManualSubtitle')}</p>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <StatCard
+                      title={t('feeCalculator.glStdFee')}
+                      value={glStdNum !== null && glStdNum > 0 ? formatARS(glStdNum) : '-'}
+                      subtitle={glStdNum !== null && glStdNum > 0 && hasCvs ? `Proyectado: ${formatARS(Math.round(glStdNum * (1 + selectedCVS / 100)))}` : undefined}
+                    />
+                    <StatCard
+                      title={t('feeCalculator.glSolFee')}
+                      value={glSolNum !== null && glSolNum > 0 ? formatARS(glSolNum) : '-'}
+                      subtitle={glSolNum !== null && glSolNum > 0 && hasCvs ? `Proyectado: ${formatARS(Math.round(glSolNum * (1 + selectedCVS / 100)))}` : undefined}
+                    />
+                  </>
+                )}
                 {/* GL % de cápita stated once, page-level. Both operands guarded: a
                     null GL renders N/D, never a false 0,0%. */}
                 <StatCard
@@ -875,7 +1018,18 @@ export default function FeeCalculator() {
         {/* Section 4: Proposals */}
         <div data-asistente="calc-propuestas">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="section-header">{t('feeCalculator.proposals')}</h2>
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="section-header mb-0">{t('feeCalculator.proposals')}</h2>
+              {/* R13.c: a persistent amber marker, not a transient icon, so the
+                  hand-typed provenance stays visible while the treasurer reads the
+                  bench the CVS produced. */}
+              {fetchError && cvsIsManual && (
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-warning/45 bg-warning/10 px-2 py-0.5 text-[11px] font-medium text-warning">
+                  <AlertTriangle className="h-3 w-3 shrink-0" aria-hidden="true" />
+                  {t('feeCalculator.manualCvsMarker')}
+                </span>
+              )}
+            </div>
             <div
               role="group"
               aria-label="Modo de lectura de las cifras"
@@ -1027,13 +1181,24 @@ export default function FeeCalculator() {
                   {benchRows.map((row) => (
                     <tr key={row.key} className="border-b border-border/60">
                       <th scope="row" className="text-left align-middle font-normal p-3">
-                        {row.termKey ? (
-                          <TermTooltip termKey={row.termKey} className={cn(benchLabelClass(row), 'mr-1')}>
-                            {row.label}
-                          </TermTooltip>
-                        ) : (
-                          <span className={cn(benchLabelClass(row), 'mr-1')}>{row.label}</span>
-                        )}
+                        {/* Label + provenance chips (R13.a). flex-wrap lets the
+                            chips fall below the label under width pressure, so a
+                            two-chip row wraps within the column instead of widening
+                            the frozen bench (each chip is width-bounded). */}
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                          {row.termKey ? (
+                            <TermTooltip termKey={row.termKey} className={benchLabelClass(row)}>
+                              {row.label}
+                            </TermTooltip>
+                          ) : (
+                            <span className={benchLabelClass(row)}>{row.label}</span>
+                          )}
+                          {resolveSource(row.source, sourceCtx).map((s) => (
+                            <span key={s} className={sourceChipClass(s)} title={s}>
+                              {s}
+                            </span>
+                          ))}
+                        </div>
                       </th>
                       {benchColumns.map((col) => {
                         if (benchLoading) {

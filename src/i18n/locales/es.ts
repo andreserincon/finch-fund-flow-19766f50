@@ -495,6 +495,20 @@ export default {
       absoluteModeLabel: 'Valores',
       baseMonthLabel: 'Mes base',
       cvsQuarterLabel: 'Trimestre CVS (según el mes base)',
+      // R13.f: the label swaps to this when the manual CVS input renders, because
+      // 'Trimestre CVS' contradicts a field that takes a percentage.
+      cvsManualLabel: 'CVS trimestral (%)',
+      // R13.b provenance: the source-and-as-of line under the CVS controls. The
+      // word 'actualizado' is banned here on purpose: dataUpdatedAt is when our
+      // fetch last succeeded, not when INDEC published, so 'consultado el' is the
+      // honest verb. The chip supplies the INDEC / A mano token; this is the rest.
+      cvsProvenanceLive: 'Índice de Salarios · consultado el {{fecha}}',
+      cvsProvenanceManual: 'Sin conexión con INDEC. Valor ingresado por el tesorero el {{fecha}}.',
+      // R13.c: the persistent amber marker on the Propuestas header while a
+      // hand-typed CVS is in play, so provenance travels with the numbers.
+      manualCvsMarker: 'CVS ingresado a mano, no verificado contra INDEC',
+      // R14: the subtitle on the manual GL input tiles when there is no GL on file.
+      glManualSubtitle: 'Sin dato en la base. Ingresado por el tesorero.',
       custom: 'Escenario personalizado',
       customStdFee: 'Cápita estándar personalizada',
       customSolFee: 'Cápita solidaria personalizada',
