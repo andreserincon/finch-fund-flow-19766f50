@@ -892,7 +892,7 @@ export default function FeeCalculator() {
                 />
                 {/* R13.e: the error is visible text, not only a tooltip. */}
                 {fetchError && (
-                  <p className="mt-1 max-w-[16rem] text-[11px] leading-snug text-warning">
+                  <p className="mt-1 max-w-[16rem] text-xs leading-snug text-warning">
                     {t('feeCalculator.fetchError')}
                   </p>
                 )}
@@ -917,7 +917,7 @@ export default function FeeCalculator() {
             the figure to the treasurer. The banned freshness verb never appears
             here: it would credit INDEC with the timing of our cache, not of their
             publication. */}
-        <div className="-mt-2 flex min-h-[1.125rem] flex-wrap items-center gap-2 font-mono text-[11px] leading-snug text-muted-foreground">
+        <div className="-mt-2 flex min-h-[1.125rem] flex-wrap items-center gap-2 font-mono text-xs leading-snug text-muted-foreground">
           {cvsLoading ? (
             <Skeleton className="h-3 w-56 motion-reduce:animate-none" />
           ) : cvsIsManual ? (
@@ -1059,7 +1059,7 @@ export default function FeeCalculator() {
                   hand-typed provenance stays visible while the treasurer reads the
                   bench the CVS produced. */}
               {fetchError && cvsIsManual && (
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-warning/45 bg-warning/10 px-2 py-0.5 text-[11px] font-medium text-warning">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-warning/45 bg-warning/10 px-2 py-0.5 text-xs font-medium text-warning">
                   <AlertTriangle className="h-3 w-3 shrink-0" aria-hidden="true" />
                   {t('feeCalculator.manualCvsMarker')}
                 </span>
@@ -1127,7 +1127,7 @@ export default function FeeCalculator() {
                 <thead>
                   <tr>
                     <th scope="col" className="text-left align-top p-3 bg-muted/40 border-b border-border">
-                      <span className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground">Métrica</span>
+                      <span className="text-xs font-mono uppercase tracking-wider text-muted-foreground">Métrica</span>
                     </th>
                     {benchColumns.map((col) => {
                       const isCustom = col.key === 'custom';
@@ -1172,7 +1172,7 @@ export default function FeeCalculator() {
                               <h2 className="section-header mb-0 text-base">{col.name}</h2>
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                 <div className="flex flex-col gap-1">
-                                  <Label htmlFor="custom-std" className="text-[11px] text-muted-foreground">Estándar</Label>
+                                  <Label htmlFor="custom-std" className="text-xs text-muted-foreground">Estándar</Label>
                                   <Input
                                     id="custom-std"
                                     type="number"
@@ -1185,7 +1185,7 @@ export default function FeeCalculator() {
                                   />
                                 </div>
                                 <div className="flex flex-col gap-1">
-                                  <Label htmlFor="custom-sol" className="text-[11px] text-muted-foreground">Solidaria</Label>
+                                  <Label htmlFor="custom-sol" className="text-xs text-muted-foreground">Solidaria</Label>
                                   <Input
                                     id="custom-sol"
                                     type="number"
@@ -1198,7 +1198,7 @@ export default function FeeCalculator() {
                                 </div>
                               </div>
                               {/* Reserved-height hint so committing never injects layout. */}
-                              <p className="min-h-[2rem] text-[11px] leading-snug text-muted-foreground font-normal">
+                              <p className="min-h-[2rem] text-xs leading-snug text-muted-foreground font-normal">
                                 {hasCustomValue
                                   ? customStdField.pending || customSolField.pending
                                     ? t('feeCalculator.customPending')
@@ -1225,7 +1225,7 @@ export default function FeeCalculator() {
                                 )}
                               </Badge>
                               {subtext && (
-                                <span className="text-[11px] leading-snug text-muted-foreground font-normal max-w-[15rem]">
+                                <span className="text-xs leading-snug text-muted-foreground font-normal max-w-[15rem]">
                                   {subtext}
                                 </span>
                               )}
