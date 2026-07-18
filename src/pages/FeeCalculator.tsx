@@ -57,6 +57,9 @@ interface Scenario {
   proposedStd: number;
   proposedSol: number;
   kpis: ProposalKPIs;
+  // R15: the house recommendation. Exactly one column carries this. It is not a
+  // computed ranking; it marks the convention the lodge holds (see recommendedKey).
+  recommended?: boolean;
 }
 
 // The bench reads each column from its scenario kpis plus the two proposed
@@ -735,9 +738,23 @@ export default function FeeCalculator() {
     proposedSol: customSolNum,
     kpis: customKPIs ?? scenarios[0].kpis,
   };
+  // R15: the house recommendation is a policy, not a computed ranking. Ratio GL
+  // keeps the same proportion with the Gran Logia the lodge held a year ago. When
+  // that year-ago ratio is null (no history) or <= 0 (glStdOneYearAgo === 0 with
+  // history present), Ratio GL degenerates into Base at the ratioStd fallback, so
+  // Base becomes the recommendation and the prose says the two give the same
+  // number. deltaVsGlYearAgo is that year-ago ratio and is scenario-invariant, so
+  // Actual's value is the canonical targetDelta with no extra computation.
+  const targetDelta = scenarios[0].kpis.deltaVsGlYearAgo;
+  const recommendedKey: ScenarioKey = targetDelta !== null && targetDelta > 0 ? 'ratio' : 'base';
   // columns = hasCvs ? [actual, ratio, base, gl65, custom] : [actual, custom].
-  // scenarios already branches on hasCvs; custom is appended in both states.
-  const columns: Scenario[] = [...scenarios, customScenario];
+  // scenarios already branches on hasCvs; custom is appended in both states. The
+  // recommended flag is set only when there are presets to compare (hasCvs); the
+  // recommendedKey (ratio | base) only exists as a column in that state.
+  const columns: Scenario[] = [...scenarios, customScenario].map((s) => ({
+    ...s,
+    recommended: hasCvs && s.key === recommendedKey,
+  }));
   const benchRows = buildBenchRows(t);
   const baselineCell = toCellData(scenarios[0]); // Actual, the do-nothing anchor
   const nd = t('feeCalculator.noYoyData');
@@ -764,6 +781,24 @@ export default function FeeCalculator() {
     feeOneYearAgoStd !== null && glStdOneYearAgo !== null && feeOneYearAgoStd > 0
       ? (glStdOneYearAgo / feeOneYearAgoStd) * 100
       : null;
+
+  // R16.b: copy a column's cápitas to the clipboard as a courtesy. Navigation is
+  // handled by the <Link> on the button, which carries both amounts in the URL, so
+  // the values apply even if the clipboard rejects. Nothing here writes to the
+  // database: the receiver only prefills the dialog, and only the treasurer's own
+  // submit persists. async so a synchronous throw (navigator.clipboard undefined in
+  // an insecure context) is caught alongside a rejected writeText, and we still
+  // navigate anyway via the Link.
+  const copyCapitas = async (col: Scenario) => {
+    const std = formatARS(col.proposedStd);
+    const sol = formatARS(col.proposedSol);
+    try {
+      await navigator.clipboard.writeText(`Estándar: ${std} · Solidaria: ${sol}`);
+      toast.success(`Cápitas copiadas: estándar ${std}, solidaria ${sol}.`);
+    } catch {
+      toast.error('No se pudo copiar. Los valores van igual en el enlace.');
+    }
+  };
 
   return (
     <TooltipProvider>
@@ -1070,6 +1105,18 @@ export default function FeeCalculator() {
             </p>
           )}
 
+          {/* R15: one recommendation, stated as house convention above the bench.
+              Only shown when there are presets to compare (hasCvs and not loading).
+              The primary text names Ratio GL; the fallback names Base, for the three
+              degenerate states where Ratio GL and Base give the same number. */}
+          {!benchLoading && hasCvs && (
+            <p className="mt-3 max-w-3xl text-sm leading-relaxed text-foreground">
+              {recommendedKey === 'ratio'
+                ? t('feeCalculator.recommendationRatio')
+                : t('feeCalculator.recommendationBase')}
+            </p>
+          )}
+
           {/* The bench: metrics down the left, scenarios across as columns. The
               table scrolls horizontally inside its own container while the page
               body never scrolls sideways. min-width 920px is the measured budget
@@ -1089,9 +1136,14 @@ export default function FeeCalculator() {
                         <th
                           key={col.key}
                           scope="col"
+                          data-recommended={col.recommended ? 'true' : undefined}
                           className={cn(
                             'text-left align-top p-3 bg-muted/40 border-b border-border min-w-[9rem]',
                             isCustom && 'bg-accent/50',
+                            // R15: the recommended column carries a gold ring; no
+                            // other column does, so gold on this screen only ever
+                            // marks the recommendation, never a status.
+                            col.recommended && 'border-primary/60 ring-1 ring-primary/20',
                           )}
                         >
                           {benchLoading ? (
@@ -1156,6 +1208,13 @@ export default function FeeCalculator() {
                             </div>
                           ) : (
                             <div className="flex flex-col gap-1.5">
+                              {/* R15: the gold Recomendada badge, on the one
+                                  recommended column only (variant default = bg-primary). */}
+                              {col.recommended && (
+                                <Badge variant="default" className="w-fit text-xs font-medium">
+                                  {t('feeCalculator.recommendedBadge')}
+                                </Badge>
+                              )}
                               <Badge variant="secondary" className="w-fit text-xs font-medium">
                                 {col.termKey ? (
                                   <TermTooltip termKey={col.termKey} className="decoration-current/40">
@@ -1240,6 +1299,48 @@ export default function FeeCalculator() {
                     </tr>
                   ))}
                 </tbody>
+                {/* R16.b: the action row. One "Usar esta cápita" button per
+                    scenario column that has a value to apply. The recommended
+                    column's button is filled gold (default variant); every other
+                    scenario is ghost, so the row spends the single gold accent
+                    once. Actual has nothing to apply, and an empty custom column
+                    has no committed value, so neither gets a button. Each button
+                    navigates via a <Link> that carries both amounts in the URL;
+                    copyCapitas puts them on the clipboard as a courtesy. The tool
+                    stays read-only: neither the clipboard nor the URL is the
+                    database, and only the treasurer's own submit in Cápitas
+                    Mensuales writes anything. */}
+                {!benchLoading && (
+                  <tfoot>
+                    <tr className="border-t border-border">
+                      <td className="p-3 align-top" />
+                      {benchColumns.map((col) => {
+                        const noAction =
+                          col.key === 'actual' || (col.key === 'custom' && !hasCustomValue);
+                        return (
+                          <td
+                            key={col.key}
+                            className={cn('p-3 align-top', col.key === 'custom' && 'bg-accent/20')}
+                          >
+                            {!noAction && (
+                              <Button
+                                asChild
+                                size="sm"
+                                variant={col.recommended ? 'default' : 'ghost'}
+                                className="press w-full focus-visible:ring-2 focus-visible:ring-ring"
+                                onClick={() => copyCapitas(col)}
+                              >
+                                <Link to={`/monthly-fees?std=${col.proposedStd}&sol=${col.proposedSol}`}>
+                                  {t('feeCalculator.useThisFee')}
+                                </Link>
+                              </Button>
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  </tfoot>
+                )}
               </table>
             </div>
             {/* Estimates-only footnote: everything on the bench is a projection.

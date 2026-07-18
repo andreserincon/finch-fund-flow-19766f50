@@ -470,7 +470,7 @@ export default {
     feeCalculator: {
       title: 'Calculadora de Cápitas',
       subtitle: 'Proyectá nuevas cápitas trimestrales usando el índice CVS',
-      howToUse: 'Cómo usar: esta herramienta proyecta nuevas cápitas a partir del índice CVS y compara tres propuestas (Ratio GL, Base y GL 65%) contra tu propio escenario. No se guarda nada: para aplicar un valor, copialo a mano en Cápitas Mensuales.',
+      howToUse: 'Cómo usar: esta herramienta proyecta nuevas cápitas a partir del índice CVS y compara tres propuestas (Ratio GL, Base y GL 65%) contra tu propio escenario. No se guarda nada: para aplicar un valor, usá el botón de la propuesta o copialo a mano en Cápitas Mensuales.',
       indecLink: 'Datos CVS (INDEC) ↗',
       currentReference: 'Referencia del período actual',
       cvsSelection: 'Selección de trimestre CVS',
@@ -493,6 +493,17 @@ export default {
       },
       deltaModeLabel: 'Diferencia vs Actual',
       absoluteModeLabel: 'Valores',
+      // R15: the house recommendation. One column is marked, and this sentence
+      // above the bench states plainly that the pick is a convention, not a
+      // computed verdict. The primary text shows when Ratio GL is the pick; the
+      // fallback when Ratio GL degenerates into Base (the two give the same number).
+      recommendedBadge: 'Recomendada',
+      recommendationRatio: 'Recomendamos Ratio GL. Es la convención de la casa, no un cálculo que ordena las opciones: mantiene con la Gran Logia la misma proporción que la logia sostuvo el año pasado. Las demás columnas están para compararla, no para descartarla.',
+      recommendationBase: 'Recomendamos Base, que sigue el CVS del trimestre. Es la convención de la casa, no un cálculo que ordena las opciones: en este período Ratio GL y Base dan el mismo número.',
+      // R16.b: the per-column action button that carries a cápita to Cápitas
+      // Mensuales. Key uses the file's English term "Fee" for cápita (as in
+      // glStdFee, currentStdFee) so the accent guard on the key name stays green.
+      useThisFee: 'Usar esta cápita',
       baseMonthLabel: 'Mes base',
       cvsQuarterLabel: 'Trimestre CVS (según el mes base)',
       // R13.f: the label swaps to this when the manual CVS input renders, because
