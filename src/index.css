@@ -170,7 +170,7 @@
 
 @layer components {
   .stat-card {
-    @apply bg-card rounded-xl border border-border p-6 shadow-sm;
+    @apply bg-card rounded-lg border border-border p-6 shadow-sm;
     transition-property: box-shadow, border-color;
     transition-duration: var(--dur-base);
     transition-timing-function: var(--ease-soft);
@@ -284,6 +284,13 @@
     height: 1px;
     margin-top: 0.375rem;
     background: hsl(var(--primary) / 0.55);
+  }
+
+  /* Screens that already carry the gold hairline on the h1 use this so the
+     signature fires once per page instead of once per h2. A local variant,
+     so the global .section-header::after (5 other files) is untouched. */
+  .section-header-plain::after {
+    content: none;
   }
 }
 

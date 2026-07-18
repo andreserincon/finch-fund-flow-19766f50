@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Calculator, Users, AlertTriangle, RefreshCw, Download } from 'lucide-react';
+import { Calculator, AlertTriangle, RefreshCw, Download } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
@@ -812,7 +812,6 @@ export default function FeeCalculator() {
               {t('feeCalculator.title')}
             </span>
           }
-          titleClassName="text-xl md:text-3xl"
           subtitle={t('feeCalculator.subtitle')}
           hairline
           actions={
@@ -864,12 +863,12 @@ export default function FeeCalculator() {
         {/* Cómo usar: a short primer so a new treasurer knows what this tool
             does and that it never writes anything until a value is copied into
             Cápitas Mensuales. */}
-        <div className="rounded-lg border border-border bg-muted/40 px-4 py-3 text-xs md:text-sm text-muted-foreground -mt-2">
+        <div className="rounded-lg border border-border bg-muted/40 px-4 py-3 text-xs md:text-sm text-muted-foreground">
           {t('feeCalculator.howToUse')}
         </div>
 
         {/* Filters row: Month + Quarter side by side */}
-        <div className="flex flex-wrap items-end gap-4 -mt-2">
+        <div className="flex flex-wrap items-end gap-4">
           <div className="flex flex-col gap-1">
             <Label id="mes-base-label" className="text-xs text-muted-foreground">{t('feeCalculator.baseMonthLabel')}</Label>
             <Select value={selectedBaseMonth} onValueChange={setSelectedBaseMonth}>
@@ -893,7 +892,7 @@ export default function FeeCalculator() {
               {showManualCvsInput ? t('feeCalculator.cvsManualLabel') : t('feeCalculator.cvsQuarterLabel')}
             </Label>
             {!fetchError && selectedQuarter ? (
-              <div className="h-10 flex items-center px-3 rounded-md border border-input bg-muted/50 text-sm w-[260px]">
+              <div className="h-10 flex items-center px-3 rounded-md bg-muted/50 text-sm w-[260px]">
                 {selectedQuarter.quarterLabel}, CVS: <span className="font-semibold ml-1 font-mono tabular-nums">{formatPercent(selectedQuarter.cvs, { signed: true })}</span>
               </div>
             ) : !fetchError && cvsLoading ? (
@@ -906,7 +905,7 @@ export default function FeeCalculator() {
                   placeholder="CVS %"
                   value={manualCvs}
                   onChange={(e) => setManualCvs(e.target.value)}
-                  className="w-[120px]"
+                  className="w-[260px]"
                 />
                 {/* R13.e: the error is visible text, not only a tooltip. */}
                 {fetchError && (
@@ -935,7 +934,7 @@ export default function FeeCalculator() {
             the figure to the treasurer. The banned freshness verb never appears
             here: it would credit INDEC with the timing of our cache, not of their
             publication. */}
-        <div className="-mt-2 flex min-h-[1.125rem] flex-wrap items-center gap-2 font-mono text-xs leading-snug text-muted-foreground">
+        <div className="flex min-h-[1.125rem] flex-wrap items-center gap-2 font-mono text-xs leading-snug text-muted-foreground">
           {cvsLoading ? (
             <Skeleton className="h-3 w-56 motion-reduce:animate-none" />
           ) : cvsIsManual ? (
@@ -953,7 +952,7 @@ export default function FeeCalculator() {
 
         {/* Monthly breakdown & YoY below header */}
         {quarterMonthlyBreakdown && quarterMonthlyBreakdown.length > 0 && (
-          <div className="rounded-lg bg-muted/50 px-4 py-2.5 -mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+          <div className="rounded-lg bg-muted/50 px-4 py-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
             {quarterMonthlyBreakdown.map((p) => (
               <span key={p.monthKey}>
                 {p.monthLabel}: <span className="font-medium text-foreground font-mono tabular-nums">{formatPercent(p.variation, { signed: true })}</span>
@@ -966,7 +965,7 @@ export default function FeeCalculator() {
             )}
             {monthly.length >= 12 && (
               <span>
-                Acum. 12m: <span className="font-medium text-foreground font-mono tabular-nums">{formatPercent(yoyAccumulated, { signed: true })}</span>
+                Acumulado 12 meses: <span className="font-medium text-foreground font-mono tabular-nums">{formatPercent(yoyAccumulated, { signed: true })}</span>
               </span>
             )}
           </div>
@@ -981,7 +980,7 @@ export default function FeeCalculator() {
 
         {/* Section 1: Current Reference */}
         <div data-asistente="calc-referencia-actual">
-          <h2 className="section-header">{t('feeCalculator.currentReference')}</h2>
+          <h2 className="section-header section-header-plain">{t('feeCalculator.currentReference')}</h2>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-4">
             {isLoading ? (
               // State 0: the tile data has not resolved, so the eight reference
@@ -993,8 +992,8 @@ export default function FeeCalculator() {
               <>
                 <StatCard title={t('feeCalculator.currentStdFee')} value={formatARS(currentStdFee)} />
                 <StatCard title={t('feeCalculator.currentSolFee')} value={formatARS(currentSolFee)} />
-                <StatCard title={t('feeCalculator.activeStdMembers')} value={stdMemberCount} icon={<Users className="h-5 w-5 text-muted-foreground" />} />
-                <StatCard title={t('feeCalculator.activeSolMembers')} value={solMemberCount} icon={<Users className="h-5 w-5 text-muted-foreground" />} />
+                <StatCard title={t('feeCalculator.activeStdMembers')} value={stdMemberCount} />
+                <StatCard title={t('feeCalculator.activeSolMembers')} value={solMemberCount} />
                 {/* R14: when there is no GL on file the two GL tiles become
                     committed-number inputs (same hook as the custom column) so the
                     instruction "Ingresá las cápitas GL" finally names a control
@@ -1042,12 +1041,12 @@ export default function FeeCalculator() {
                     <StatCard
                       title={t('feeCalculator.glStdFee')}
                       value={glStdNum !== null && glStdNum > 0 ? formatARS(glStdNum) : '-'}
-                      subtitle={glStdNum !== null && glStdNum > 0 && hasCvs ? `Proyectado: ${formatARS(Math.round(glStdNum * (1 + selectedCVS / 100)))}` : undefined}
+                      subtitle={glFromDb?.month ? t('feeCalculator.glAutoLoaded', { month: glFromDb.month }) : undefined}
                     />
                     <StatCard
                       title={t('feeCalculator.glSolFee')}
                       value={glSolNum !== null && glSolNum > 0 ? formatARS(glSolNum) : '-'}
-                      subtitle={glSolNum !== null && glSolNum > 0 && hasCvs ? `Proyectado: ${formatARS(Math.round(glSolNum * (1 + selectedCVS / 100)))}` : undefined}
+                      subtitle={glFromDb?.month ? t('feeCalculator.glAutoLoaded', { month: glFromDb.month }) : undefined}
                     />
                   </>
                 )}
@@ -1072,7 +1071,7 @@ export default function FeeCalculator() {
         <div data-asistente="calc-propuestas">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex flex-wrap items-center gap-2">
-              <h2 className="section-header mb-0">{t('feeCalculator.proposals')}</h2>
+              <h2 className="section-header section-header-plain mb-0">{t('feeCalculator.proposals')}</h2>
               {/* R13.c: a persistent amber marker, not a transient icon, so the
                   hand-typed provenance stays visible while the treasurer reads the
                   bench the CVS produced. */}
@@ -1187,7 +1186,7 @@ export default function FeeCalculator() {
                               {/* A real h2 so the section enters the heading
                                   outline; the peer column carries no border
                                   decoration, no glyph, no pill. */}
-                              <h2 className="section-header mb-0 text-base">{col.name}</h2>
+                              <h2 className="section-header section-header-plain mb-0 text-base">{col.name}</h2>
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                 <div className="flex flex-col gap-1">
                                   <Label htmlFor="custom-std" className="text-xs text-muted-foreground">Estándar</Label>
