@@ -1692,7 +1692,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
           <h3 style="margin: 0 0 8px 0; font-size: 14px; break-after: avoid; page-break-after: avoid;">${ev.event_name}</h3>
           <div class="grid">
             <div class="stat-card">
-              <div class="stat-label">Ingresos por Cápita (mes)</div>
+              <div class="stat-label">Ingresos por Cuota (mes)</div>
               <div class="stat-value positive">${cuotaDisplay}</div>
             </div>
             <div class="stat-card">
