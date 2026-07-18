@@ -1362,9 +1362,9 @@ const MASTHEAD_STYLE = `
     .verdict-hero .verdict-support { font-size: 10px; color: #6b6b6b; margin-top: 5px; }
     .verdict-hero .verdict-support strong { color: #1a1a1a; font-weight: 600; }
     .verdict-hero .verdict-support span { margin-right: 18px; }
-    .signatures { display: flex; justify-content: space-around; gap: 40px; margin-top: 40px; page-break-inside: avoid; }
+    .signatures { display: flex; justify-content: space-around; gap: 40px; margin-top: 16px; page-break-inside: avoid; }
     .signatures .sig { flex: 1; max-width: 45%; text-align: center; }
-    .signatures .sig-line { border-top: 1px solid #1a1a1a; margin-top: 44px; padding-top: 6px; }
+    .signatures .sig-line { border-top: 1px solid #1a1a1a; margin-top: 26px; padding-top: 6px; }
     .signatures .sig-name { font-weight: bold; font-size: 12px; color: #1a1a1a; }
     .signatures .sig-role { font-size: 10px; color: #555; text-transform: uppercase; letter-spacing: 0.6px; margin-top: 1px; }
     /* Keep each stat-card grid intact across page breaks (Chromium honors
@@ -1939,7 +1939,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
   ` : `
     /* Comprehensive report - full styling */
     @media print {
-      body { margin: 0; padding: 10px; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
+      body { margin: 0; padding: 0; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
       .page-break { page-break-before: always; }
       .no-print { display: none; }
       @page { margin: 15mm 15mm; size: A4; }
@@ -1954,7 +1954,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
     
     body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      line-height: 1.5;
+      line-height: 1.3;
       color: #1a1a1a;
       max-width: 210mm;
       margin: 0 auto;
@@ -2039,7 +2039,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
        stat cards) and each table row (tr) keep-together, so no visual is split
        mid-block. This reclaims the large blank areas that appeared when a whole
        section refused to share a page and ejected to the next one. */
-    .section { margin-bottom: 15px; page-break-inside: auto; }
+    .section { margin-bottom: 9px; page-break-inside: auto; }
     
     .section-title {
       background: #000;
@@ -2060,7 +2060,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
     .stat-card {
       background: #f9f9f9;
       border-radius: 4px;
-      padding: 8px 10px;
+      padding: 6px 9px;
       border-left: 4px solid #333;
       border: 1px solid #ddd;
     }
@@ -2086,7 +2086,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
     
     th, td {
       border: 1px solid #999;
-      padding: 8px;
+      padding: 3px 6px;
       text-align: left;
     }
     
@@ -2143,7 +2143,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
     }
     
     .subsection-title {
-      margin: 12px 0 6px;
+      margin: 8px 0 4px;
       color: #1a1a1a;
       font-size: 12px;
       font-weight: 600;
