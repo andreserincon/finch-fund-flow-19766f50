@@ -206,7 +206,7 @@ export default function FeeCalculator() {
         ['Índice Acumulado Anual (12 meses)', null, yoyAccumulated > 0 ? yoyAccumulated : 'N/D'],
         [],
         ['Fuente: Ministerio de Economía: datos.gob.ar / INDEC', null, null],
-        ['💡 Para insertar gráfico: seleccioná las columnas A y C → Insertar → Gráfico de líneas', null, null],
+        ['Para insertar gráfico: seleccioná las columnas A y C → Insertar → Gráfico de líneas', null, null],
       ];
       const ws1 = XLSX.utils.aoa_to_sheet(s1Data);
       ws1['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 2 } }];
@@ -242,16 +242,16 @@ export default function FeeCalculator() {
       const baseMonthLabel = availableFeeMonths.find(m => m.value === selectedBaseMonth)?.label ?? selectedBaseMonth ?? '';
       const quarterLabel = selectedQuarter?.quarterLabel ?? 'Manual';
 
-      // Minimal bridge so the export keeps compiling. S5 rebuilds the workbook
-      // to mirror the live column model by construction.
-      const lowP = scenarios.find((s) => s.key === 'ratio');
-      const baseP = scenarios.find((s) => s.key === 'base');
-      const highP = scenarios.find((s) => s.key === 'gl65');
-      const getKpiVal = (p: typeof lowP, key: keyof ProposalKPIs) => p ? p.kpis[key] : '-';
-      const getCustomVal = (key: keyof ProposalKPIs) => customKPIs ? customKPIs[key] : '-';
+      // Sheet 3 mirrors the live bench by construction: the header and every data
+      // row are built by mapping the same `columns` array the screen renders, so
+      // no column can carry another scenario's numbers under the wrong heading.
+      // A custom column with nothing committed emits '-' per cell; a null KPI
+      // (no GL on file) emits 'N/D', never a laundered 0.
+      const s3Cell = (c: Scenario, value: number | null): string | number =>
+        c.key === 'custom' && !hasCustomValue ? '-' : (value ?? 'N/D');
 
-      const s3Data: (string | number | null)[][] = [
-        ['Propuestas de Cápitas: Calculadora de Cápitas', null, null, null, null, null, null],
+      const s3Preamble: (string | number | null)[][] = [
+        ['Propuestas de Cápitas: Calculadora de Cápitas'],
         [],
         ['Período Base:', baseMonthLabel],
         ['Trimestre CVS:', quarterLabel],
@@ -262,28 +262,43 @@ export default function FeeCalculator() {
         ['Miembros Estándar activos:', stdMemberCount],
         ['Miembros Solidaridad activos:', solMemberCount],
         [],
-        ['', 'Conservador', 'Base CVS', 'Alto', 'Personalizado'],
-        ['Cápita Estándar Propuesta', lowP?.proposedStd ?? '-', baseP?.proposedStd ?? '-', highP?.proposedStd ?? '-', customKPIs ? customStdNum : '-'],
-        ['Cápita Solidaria Propuesta', lowP?.proposedSol ?? '-', baseP?.proposedSol ?? '-', highP?.proposedSol ?? '-', customKPIs ? customSolNum : '-'],
-        ['GL Estándar Proyectado', getKpiVal(lowP, 'projectedGlStd'), getKpiVal(baseP, 'projectedGlStd'), getKpiVal(highP, 'projectedGlStd'), getCustomVal('projectedGlStd')],
-        ['GL Solidaridad Proyectado', getKpiVal(lowP, 'projectedGlSol'), getKpiVal(baseP, 'projectedGlSol'), getKpiVal(highP, 'projectedGlSol'), getCustomVal('projectedGlSol')],
+      ];
+      // The header immediately follows the preamble; the index is derived so the
+      // merge, frozen split and column widths track any preamble change.
+      const s3HeaderRowIndex = s3Preamble.length;
+      const s3Data: (string | number | null)[][] = [
+        ...s3Preamble,
+        ['', ...columns.map((c) => c.name)],
+        ['Cápita estándar propuesta', ...columns.map((c) => s3Cell(c, c.proposedStd))],
+        ['Cápita solidaria propuesta', ...columns.map((c) => s3Cell(c, c.proposedSol))],
+        ['GL estándar proyectado', ...columns.map((c) => s3Cell(c, c.kpis.projectedGlStd))],
+        ['GL solidaria proyectado', ...columns.map((c) => s3Cell(c, c.kpis.projectedGlSol))],
         [],
-        ['Ingreso Mensual Total', getKpiVal(lowP, 'totalMonthlyIncome'), getKpiVal(baseP, 'totalMonthlyIncome'), getKpiVal(highP, 'totalMonthlyIncome'), getCustomVal('totalMonthlyIncome')],
-        ['Costo Total GL', getKpiVal(lowP, 'glTotalCost'), getKpiVal(baseP, 'glTotalCost'), getKpiVal(highP, 'glTotalCost'), getCustomVal('glTotalCost')],
-        ['Ingreso Neto Mensual', getKpiVal(lowP, 'netMonthlyIncome'), getKpiVal(baseP, 'netMonthlyIncome'), getKpiVal(highP, 'netMonthlyIncome'), getCustomVal('netMonthlyIncome')],
-        ['Incremento Propio %', getKpiVal(lowP, 'ourFeeIncrease'), getKpiVal(baseP, 'ourFeeIncrease'), getKpiVal(highP, 'ourFeeIncrease'), getCustomVal('ourFeeIncrease')],
-        ['GL % de cápita', getKpiVal(lowP, 'delta'), getKpiVal(baseP, 'delta'), getKpiVal(highP, 'delta'), getCustomVal('delta')],
-        ['Variación Interanual Cápita %', lowP?.kpis.yoyFeeVariation ?? 'N/D', baseP?.kpis.yoyFeeVariation ?? 'N/D', highP?.kpis.yoyFeeVariation ?? 'N/D', customKPIs?.yoyFeeVariation ?? 'N/D'],
-        ['Índice Acumulado YoY (ref.)', getKpiVal(lowP, 'yoyAccumulatedIndex'), getKpiVal(baseP, 'yoyAccumulatedIndex'), getKpiVal(highP, 'yoyAccumulatedIndex'), getCustomVal('yoyAccumulatedIndex')],
+        ['Ingreso mensual total', ...columns.map((c) => s3Cell(c, c.kpis.totalMonthlyIncome))],
+        ['Costo total GL', ...columns.map((c) => s3Cell(c, c.kpis.glTotalCost))],
+        ['Ingreso neto mensual', ...columns.map((c) => s3Cell(c, c.kpis.netMonthlyIncome))],
+        ['Incremento propio %', ...columns.map((c) => s3Cell(c, c.kpis.ourFeeIncrease))],
+        ['GL % de cápita', ...columns.map((c) => s3Cell(c, c.kpis.delta))],
+        ['Variación interanual cápita %', ...columns.map((c) => s3Cell(c, c.kpis.yoyFeeVariation))],
+        ['Índice acumulado YoY ref', ...columns.map((c) => s3Cell(c, c.kpis.yoyAccumulatedIndex))],
       ];
       const ws3 = XLSX.utils.aoa_to_sheet(s3Data);
-      ws3['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 6 } }];
-      ws3['!cols'] = [{ wch: 32 }, { wch: 20 }, { wch: 20 }, { wch: 20 }, { wch: 20 }];
+      ws3['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: columns.length } }];
+      ws3['!cols'] = [{ wch: 32 }, ...columns.map(() => ({ wch: 20 }))];
       if (!ws3['!views']) ws3['!views'] = [{}];
-      (ws3['!views'] as any[])[0] = { state: 'frozen', ySplit: 12 };
+      (ws3['!views'] as any[])[0] = { state: 'frozen', ySplit: s3HeaderRowIndex + 1 };
       XLSX.utils.book_append_sheet(wb, ws3, 'Propuestas de Cápitas');
 
       // ========== Sheet 4: Mi Calculadora ==========
+      // GL is scenario-invariant, so Actual's already-rounded projected GL is the
+      // value the bench shows in every column. Costo GL Total is re-based onto it
+      // (projected GL x members), matching the bench's glTotalCost exactly. When
+      // there is no GL on file, glStdNum is null: the GL rows, the projected rows,
+      // Costo GL Total and Ingreso Neto Mensual export 'N/D' (static text), never
+      // a formula that would evaluate to #VALUE! or a laundered 0.
+      const glMissing = glStdNum === null;
+      const projGlStdRef = scenarios[0].kpis.projectedGlStd;
+      const projGlSolRef = scenarios[0].kpis.projectedGlSol;
       const s4Data: (string | number | null | { f: string })[][] = [
         ['Mi Calculadora: Espacio de Trabajo', null, null, null, null, null],
         [],
@@ -295,8 +310,10 @@ export default function FeeCalculator() {
         ['Índice YoY Acumulado %', yoyAccumulated],
         ['Cápita Estándar Actual', currentStdFee],
         ['Cápita Solidaria Actual', currentSolFee],
-        ['GL Estándar', glStdNum],
-        ['GL Solidaridad', glSolNum],
+        ['GL Estándar', glMissing ? 'N/D' : glStdNum],
+        ['GL Solidaridad', glMissing ? 'N/D' : glSolNum],
+        ['GL Estándar Proyectado', glMissing ? 'N/D' : projGlStdRef],
+        ['GL Solidaridad Proyectado', glMissing ? 'N/D' : projGlSolRef],
         ['Miembros Estándar', stdMemberCount],
         ['Miembros Solidaridad', solMemberCount],
         [],
@@ -312,19 +329,54 @@ export default function FeeCalculator() {
       ws4['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 5 } }];
       ws4['!cols'] = [{ wch: 30 }, { wch: 20 }, { wch: 20 }];
 
-      // Add formula rows
-      const formulaRows: [string, string][] = [
-        ['Ingreso Mensual Estándar', '=B13*B17'],
-        ['Ingreso Mensual Solidaridad', '=B14*B18'],
-        ['Ingreso Total Mensual', '=B23+B24'],
-        ['Costo GL Total', '=(B11*B13)+(B12*B14)'],
-        ['Ingreso Neto Mensual', '=B25-B26'],
+      // Named 1-based cell-row map, derived from the construction above. Every
+      // formula interpolates from R and no B-literal is hand-written, so inserting
+      // a reference row (the two projected-GL rows this slice adds) cannot silently
+      // corrupt a formula. The reference rows are fixed by the literal above; the
+      // auto-calc and comparison rows follow from formulaStartRow.
+      const formulaStartRow = s4Data.length; // 0-based index of the first auto-calc row
+      const R = {
+        cvs: 7,
+        yoy: 8,
+        feeStd: 9,
+        feeSol: 10,
+        glStd: 11,
+        glSol: 12,
+        glStdProj: 13,
+        glSolProj: 14,
+        memStd: 15,
+        memSol: 16,
+        myFeeStd: 19,
+        myFeeSol: 20,
+        incStd: formulaStartRow + 1,
+        incSol: formulaStartRow + 2,
+        incTotal: formulaStartRow + 3,
+        costGl: formulaStartRow + 4,
+        netIncome: formulaStartRow + 5,
+        incPropio: formulaStartRow + 9,
+        incCvs: formulaStartRow + 10,
+        diffPp: formulaStartRow + 11,
+      };
+
+      // Auto-calc rows. Costo GL Total is projected GL x members (the bench basis),
+      // and Ingreso Neto reads it. Both are static 'N/D' when GL is missing so the
+      // workbook never carries a #VALUE! or a zero for an absent figure.
+      const formulaRows: { label: string; formula: string | null }[] = [
+        { label: 'Ingreso Mensual Estándar', formula: `B${R.memStd}*B${R.myFeeStd}` },
+        { label: 'Ingreso Mensual Solidaridad', formula: `B${R.memSol}*B${R.myFeeSol}` },
+        { label: 'Ingreso Total Mensual', formula: `B${R.incStd}+B${R.incSol}` },
+        { label: 'Costo GL Total', formula: glMissing ? null : `(B${R.glStdProj}*B${R.memStd})+(B${R.glSolProj}*B${R.memSol})` },
+        { label: 'Ingreso Neto Mensual', formula: glMissing ? null : `B${R.incTotal}-B${R.costGl}` },
       ];
-      const formulaStartRow = 22; // 0-indexed
-      formulaRows.forEach(([label, formula], i) => {
+      formulaRows.forEach(({ label, formula }, i) => {
         const r = formulaStartRow + i;
         XLSX.utils.sheet_add_aoa(ws4, [[label]], { origin: { r, c: 0 } });
-        ws4[XLSX.utils.encode_cell({ r, c: 1 })] = { f: formula.slice(1), t: 'n' };
+        const cellRef = XLSX.utils.encode_cell({ r, c: 1 });
+        if (formula === null) {
+          ws4[cellRef] = { t: 's', v: 'N/D' };
+        } else {
+          ws4[cellRef] = { f: formula, t: 'n' };
+        }
       });
 
       // Comparison section
@@ -336,11 +388,11 @@ export default function FeeCalculator() {
         ['Incremento CVS (ref.) %', null],
         ['Diferencia (delta) pp', null],
       ], { origin: { r: compStart, c: 0 } });
-      // Add formulas for comparison
-      const compDataStart = compStart + 1;
-      ws4[XLSX.utils.encode_cell({ r: compDataStart + 1, c: 1 })] = { f: 'IF(B9>0,(B17-B9)/B9*100,0)', t: 'n' };
-      ws4[XLSX.utils.encode_cell({ r: compDataStart + 2, c: 1 })] = { f: 'B7', t: 'n' };
-      ws4[XLSX.utils.encode_cell({ r: compDataStart + 3, c: 1 })] = { f: `B${compDataStart + 2}-B${compDataStart + 3}`, t: 'n' };
+      // Formulas interpolated from R (1-based cell rows); the write position is R - 1
+      // because encode_cell takes a 0-based row.
+      ws4[XLSX.utils.encode_cell({ r: R.incPropio - 1, c: 1 })] = { f: `IF(B${R.feeStd}>0,(B${R.myFeeStd}-B${R.feeStd})/B${R.feeStd}*100,0)`, t: 'n' };
+      ws4[XLSX.utils.encode_cell({ r: R.incCvs - 1, c: 1 })] = { f: `B${R.cvs}`, t: 'n' };
+      ws4[XLSX.utils.encode_cell({ r: R.diffPp - 1, c: 1 })] = { f: `B${R.incPropio}-B${R.incCvs}`, t: 'n' };
 
       XLSX.utils.book_append_sheet(wb, ws4, 'Mi Calculadora');
 
