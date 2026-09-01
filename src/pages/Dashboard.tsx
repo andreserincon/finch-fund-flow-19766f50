@@ -353,6 +353,12 @@ export default function Dashboard() {
   const { monthlyIncomeARS, monthlyIncomeUSD, monthlyExpensesARS, monthlyExpensesUSD } = accountTotals;
   const monthlyIncome = monthlyIncomeARS + (monthlyIncomeUSD * exchangeRate);
   const monthlyExpenses = monthlyExpensesARS + (monthlyExpensesUSD * exchangeRate);
+  // The Flujo Mensual figure folds USD movements into ARS at the official rate,
+  // so it diverges from the monthly report (which keeps ARS and USD in separate
+  // columns) whenever there was USD activity. Flag it so we can label the card
+  // and avoid the "why don't these match?" confusion. Only meaningful when there
+  // actually was USD flow this month.
+  const hasUsdMonthlyFlow = monthlyIncomeUSD !== 0 || monthlyExpensesUSD !== 0;
 
   // Compute adjusted total_paid map for MemberFeeMatrix
   const adjustedTotalPaidMap = useMemo(() => {
@@ -581,7 +587,7 @@ export default function Dashboard() {
             <StatCard
               title={t('dashboard.monthlyFlow')}
               value={formatCurrency(monthlyIncome - monthlyExpenses)}
-              subtitle={`+${formatCurrency(monthlyIncome)} / -${formatCurrency(monthlyExpenses)}`}
+              subtitle={`+${formatCurrency(monthlyIncome)} / -${formatCurrency(monthlyExpenses)}${hasUsdMonthlyFlow ? `\n${t('dashboard.includesUsdAtOfficialRate')}` : ''}`}
               icon={<TrendingUp className="h-8 w-8 text-success/30" />}
               variant={monthlyIncome - monthlyExpenses >= 0 ? 'success' : 'danger'}
             />
