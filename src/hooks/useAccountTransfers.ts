@@ -33,6 +33,7 @@ export function useAccountTransfers() {
     mutationFn: async (transfer: {
       transfer_date: string;
       amount: number;
+      source_amount?: number | null;
       from_account: AccountType;
       to_account: AccountType;
       notes?: string | null;
@@ -63,6 +64,7 @@ export function useAccountTransfers() {
       id: string;
       transfer_date: string;
       amount: number;
+      source_amount?: number | null;
       from_account: AccountType;
       to_account: AccountType;
       notes?: string | null;
@@ -80,6 +82,7 @@ export function useAccountTransfers() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['account_transfers'] });
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard_stats'] });
       toast.success('Transferencia actualizada correctamente');
     },
@@ -96,6 +99,7 @@ export function useAccountTransfers() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['account_transfers'] });
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard_stats'] });
       toast.success('Transferencia eliminada correctamente');
     },

@@ -65,8 +65,13 @@ export function TransferList() {
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="font-mono font-semibold text-lg">
+                  <span className="font-mono font-semibold text-lg text-right">
                     {formatCurrency(transfer.amount, currency)}
+                    {transfer.source_amount != null && (
+                      <span className="block text-xs font-normal text-muted-foreground">
+                        {formatCurrency(transfer.source_amount, getCurrencyForAccount(transfer.from_account))}
+                      </span>
+                    )}
                   </span>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -132,6 +137,11 @@ export function TransferList() {
                   </TableCell>
                   <TableCell className="text-right font-mono font-semibold">
                     {formatCurrency(transfer.amount, currency)}
+                    {transfer.source_amount != null && (
+                      <span className="block text-xs font-normal text-muted-foreground">
+                        {formatCurrency(transfer.source_amount, getCurrencyForAccount(transfer.from_account))}
+                      </span>
+                    )}
                   </TableCell>
                   <TableCell>
                     <DropdownMenu>

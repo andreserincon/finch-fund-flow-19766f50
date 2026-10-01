@@ -178,7 +178,10 @@ export interface Transaction {
 export interface AccountTransfer {
   id: string;
   transfer_date: string;
+  /** Amount credited to to_account (destination currency) */
   amount: number;
+  /** Amount debited from from_account (origin currency); null = same as amount */
+  source_amount: number | null;
   from_account: AccountType;
   to_account: AccountType;
   notes: string | null;

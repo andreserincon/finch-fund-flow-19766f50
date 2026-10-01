@@ -22,18 +22,25 @@ import {
 } from '@/components/ui/select';
 import { useAccountTransfers } from '@/hooks/useAccountTransfers';
 import { AccountTransfer, AccountType, ACCOUNT_LABELS } from '@/lib/types';
-import { formatCurrency, getCurrencyForAccount } from '@/lib/utils';
-import { ArrowRight } from 'lucide-react';
+import { getCurrencyForAccount } from '@/lib/utils';
 
 const transferSchema = z.object({
   transfer_date: z.string().min(1, 'La fecha es obligatoria'),
   amount: z.number().positive('El monto debe ser positivo'),
+  // Origin-currency amount; only used (and required) on cross-currency transfers
+  source_amount: z.number().optional(),
   from_account: z.enum(['bank', 'great_lodge', 'savings']),
   to_account: z.enum(['bank', 'great_lodge', 'savings']),
   notes: z.string().max(500).optional(),
 }).refine(data => data.from_account !== data.to_account, {
   message: 'Las cuentas de origen y destino deben ser distintas',
   path: ['to_account'],
+}).refine(data => {
+  const cross = getCurrencyForAccount(data.from_account) !== getCurrencyForAccount(data.to_account);
+  return !cross || (typeof data.source_amount === 'number' && data.source_amount > 0);
+}, {
+  message: 'Ingresá el monto que sale de la cuenta de origen',
+  path: ['source_amount'],
 });
 
 type TransferFormData = z.infer<typeof transferSchema>;
@@ -63,6 +70,7 @@ export function EditTransferDialog({
     defaultValues: {
       transfer_date: transfer.transfer_date,
       amount: transfer.amount,
+      source_amount: transfer.source_amount ?? undefined,
       from_account: transfer.from_account,
       to_account: transfer.to_account,
       notes: transfer.notes || '',
@@ -74,6 +82,7 @@ export function EditTransferDialog({
       reset({
         transfer_date: transfer.transfer_date,
         amount: transfer.amount,
+        source_amount: transfer.source_amount ?? undefined,
         from_account: transfer.from_account,
         to_account: transfer.to_account,
         notes: transfer.notes || '',
@@ -92,6 +101,7 @@ export function EditTransferDialog({
       id: transfer.id,
       transfer_date: data.transfer_date,
       amount: data.amount,
+      source_amount: isCrossCurrency ? data.source_amount ?? null : null,
       from_account: data.from_account,
       to_account: data.to_account,
       notes: data.notes || null,
@@ -164,9 +174,27 @@ export function EditTransferDialog({
             )}
           </div>
 
+          {isCrossCurrency && (
+            <div className="space-y-2">
+              <Label htmlFor="source_amount">Monto que sale ({fromCurrency})</Label>
+              <Input
+                id="source_amount"
+                type="number"
+                step="0.01"
+                {...register('source_amount', {
+                  setValueAs: (v) => (v === '' || v === null ? undefined : Number(v)),
+                })}
+                placeholder="0.00"
+              />
+              {errors.source_amount && (
+                <p className="text-sm text-destructive">{errors.source_amount.message}</p>
+              )}
+            </div>
+          )}
+
           <div className="space-y-2">
             <Label htmlFor="amount">
-              Monto {isCrossCurrency ? `(${toCurrency})` : `(${fromCurrency})`}
+              {isCrossCurrency ? `Monto que llega (${toCurrency})` : `Monto (${fromCurrency})`}
             </Label>
             <Input
               id="amount"
@@ -177,11 +205,6 @@ export function EditTransferDialog({
             />
             {errors.amount && (
               <p className="text-sm text-destructive">{errors.amount.message}</p>
-            )}
-            {isCrossCurrency && (
-              <p className="text-xs text-muted-foreground">
-                Para transferencias entre monedas, ingresá el monto de destino ({toCurrency})
-              </p>
             )}
           </div>
 

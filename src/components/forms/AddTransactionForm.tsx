@@ -238,7 +238,7 @@ export function AddTransactionForm({ defaultType = 'income', triggerLabel = 'Reg
         const conv = `Convertido ${formatCurrency(source, fromCurrency)} a ${formatCurrency(dest, toCurrency)}`;
         notes = notes ? `${conv}. ${notes}` : conv;
       }
-      await addTransfer.mutateAsync({ transfer_date: tDate, amount, from_account: tFrom, to_account: tTo, notes: notes || null });
+      await addTransfer.mutateAsync({ transfer_date: tDate, amount, source_amount: isCross ? source : null, from_account: tFrom, to_account: tTo, notes: notes || null });
       finishOrReset(resetTransfer);
     } finally {
       setTSubmitting(false);

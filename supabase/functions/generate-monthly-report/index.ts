@@ -338,14 +338,18 @@ Deno.serve(async (req) => {
       else if (t.account === 'savings') savingsBalance += amount;
     });
 
+    // `amount` arrives in to_account; `source_amount` (origin currency) leaves
+    // from_account — they differ on pesos <-> dólares transfers.
     (allTransfers || []).forEach((t: any) => {
-      if (t.from_account === 'bank') bankBalance -= t.amount;
-      else if (t.from_account === 'great_lodge') greatLodgeBalance -= t.amount;
-      else if (t.from_account === 'savings') savingsBalance -= t.amount;
+      const outAmt = Number(t.source_amount ?? t.amount);
+      const inAmt = Number(t.amount);
+      if (t.from_account === 'bank') bankBalance -= outAmt;
+      else if (t.from_account === 'great_lodge') greatLodgeBalance -= outAmt;
+      else if (t.from_account === 'savings') savingsBalance -= outAmt;
 
-      if (t.to_account === 'bank') bankBalance += t.amount;
-      else if (t.to_account === 'great_lodge') greatLodgeBalance += t.amount;
-      else if (t.to_account === 'savings') savingsBalance += t.amount;
+      if (t.to_account === 'bank') bankBalance += inAmt;
+      else if (t.to_account === 'great_lodge') greatLodgeBalance += inAmt;
+      else if (t.to_account === 'savings') savingsBalance += inAmt;
     });
 
     // Resolve the TC Oficial as of the report's month-end. For a CLOSED month
@@ -738,13 +742,14 @@ Deno.serve(async (req) => {
     });
     
     preMonthTransfers.forEach((t: any) => {
-      const amt = Number(t.amount);
-      if (t.from_account === 'bank') initialBankBalance -= amt;
-      else if (t.from_account === 'great_lodge') initialGLBalance -= amt;
-      else if (t.from_account === 'savings') initialSavingsBalance -= amt;
-      if (t.to_account === 'bank') initialBankBalance += amt;
-      else if (t.to_account === 'great_lodge') initialGLBalance += amt;
-      else if (t.to_account === 'savings') initialSavingsBalance += amt;
+      const outAmt = Number(t.source_amount ?? t.amount);
+      const inAmt = Number(t.amount);
+      if (t.from_account === 'bank') initialBankBalance -= outAmt;
+      else if (t.from_account === 'great_lodge') initialGLBalance -= outAmt;
+      else if (t.from_account === 'savings') initialSavingsBalance -= outAmt;
+      if (t.to_account === 'bank') initialBankBalance += inAmt;
+      else if (t.to_account === 'great_lodge') initialGLBalance += inAmt;
+      else if (t.to_account === 'savings') initialSavingsBalance += inAmt;
     });
     
     const initialARS = initialBankBalance + initialGLBalance;
