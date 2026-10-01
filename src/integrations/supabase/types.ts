@@ -21,6 +21,7 @@ export type Database = {
           from_account: Database["public"]["Enums"]["account_type"]
           id: string
           notes: string | null
+          source_amount: number | null
           to_account: Database["public"]["Enums"]["account_type"]
           transfer_date: string
           updated_at: string
@@ -31,6 +32,7 @@ export type Database = {
           from_account: Database["public"]["Enums"]["account_type"]
           id?: string
           notes?: string | null
+          source_amount?: number | null
           to_account: Database["public"]["Enums"]["account_type"]
           transfer_date?: string
           updated_at?: string
@@ -41,6 +43,7 @@ export type Database = {
           from_account?: Database["public"]["Enums"]["account_type"]
           id?: string
           notes?: string | null
+          source_amount?: number | null
           to_account?: Database["public"]["Enums"]["account_type"]
           transfer_date?: string
           updated_at?: string

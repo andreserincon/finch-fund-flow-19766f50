@@ -34,6 +34,7 @@ import {
   BookOpen, UserCog, FileText, Receipt, HandCoins as LoanIcon, LayoutDashboard,
 } from 'lucide-react';
 import type { AccountType } from '@/lib/types';
+import { transferDeltaFor } from '@/lib/transfers';
 
 export default function Home() {
   const navigate = useNavigate();
@@ -62,8 +63,7 @@ export default function Home() {
     transactions
       .filter((t) => (acc === 'bank' ? t.account === 'bank' || !t.account : t.account === acc))
       .reduce((s, t) => s + (t.transaction_type === 'income' ? t.amount : -t.amount), 0)
-    - transfers.filter((t) => t.from_account === acc).reduce((s, t) => s + t.amount, 0)
-    + transfers.filter((t) => t.to_account === acc).reduce((s, t) => s + t.amount, 0);
+    + transfers.reduce((s, t) => s + transferDeltaFor(t, acc), 0);
 
   const bankBalance = balanceFor('bank');
   const greatLodgeBalance = balanceFor('great_lodge');

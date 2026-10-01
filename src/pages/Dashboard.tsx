@@ -48,6 +48,7 @@ import { useMemberEventTotals } from '@/hooks/useMemberEventTotals';
 import { es } from 'date-fns/locale';
 import { Link } from 'react-router-dom';
 import { FeeType } from '@/lib/types';
+import { transferDeltaFor } from '@/lib/transfers';
 
 
 export default function Dashboard() {
@@ -284,12 +285,9 @@ export default function Dashboard() {
 
     let bankTr = 0, glTr = 0, savTr = 0;
     for (const tr of filteredTransfers) {
-      if (tr.from_account === 'bank') bankTr -= tr.amount;
-      if (tr.to_account === 'bank') bankTr += tr.amount;
-      if (tr.from_account === 'great_lodge') glTr -= tr.amount;
-      if (tr.to_account === 'great_lodge') glTr += tr.amount;
-      if (tr.from_account === 'savings') savTr -= tr.amount;
-      if (tr.to_account === 'savings') savTr += tr.amount;
+      bankTr += transferDeltaFor(tr, 'bank');
+      glTr += transferDeltaFor(tr, 'great_lodge');
+      savTr += transferDeltaFor(tr, 'savings');
     }
 
     return {

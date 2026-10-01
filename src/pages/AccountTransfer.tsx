@@ -95,6 +95,8 @@ export default function AccountTransfer() {
     await addTransfer.mutateAsync({
       transfer_date: data.transfer_date,
       amount: transferAmount,
+      // What leaves the origin account, in its own currency
+      source_amount: isCrossCurrencyTransfer ? data.source_amount : null,
       from_account: data.from_account,
       to_account: data.to_account,
       notes: notes || null,
