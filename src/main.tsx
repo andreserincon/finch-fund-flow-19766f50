@@ -1,98 +1,44 @@
 /**
  * @file main.tsx
- * @description Application entry point. Handles React root mounting and
- *   Progressive Web App (PWA) service-worker registration.
+ * @description Application entry point. Mounts the React root.
  *
- * In the Lovable preview environment, service workers and caches are
- * forcefully cleared so the latest code changes are always visible.
- * In production, we register the SW with an aggressive update strategy.
+ * The app no longer uses an offline service worker: stale cached copies
+ * repeatedly caused blank screens on installed phones. It stays installable
+ * via public/manifest.json. Any leftover app worker is unregistered here,
+ * and public/sw.js is a kill-switch that evicts old installs.
  */
 
 import { createRoot } from "react-dom/client";
-import { registerSW } from "virtual:pwa-register";
 import App from "./App.tsx";
 import "./index.css";
 import "./i18n";
 
 /* ------------------------------------------------------------------ */
-/*  Service-worker handling (preview vs production)                   */
+/*  Remove any leftover app service worker + its caches               */
 /* ------------------------------------------------------------------ */
 
-/** Detect whether we're running inside any Lovable preview/editor iframe */
-const isInIframe = (() => {
-  try {
-    return window.self !== window.top;
-  } catch {
-    return true;
-  }
-})();
-
-const isLovablePreview =
-  window.location.hostname.includes("id-preview--") ||
-  window.location.hostname.includes("lovableproject.com") ||
-  isInIframe;
-
-if (isLovablePreview && "serviceWorker" in navigator) {
-  // ── Preview mode: unregister all SWs and flush caches so the UI
-  //    always reflects the latest code changes instantly. If an older SW
-  //    was controlling the page, reload once after cleanup to escape it.
+if ("serviceWorker" in navigator) {
   void (async () => {
-    const registrations = await navigator.serviceWorker.getRegistrations();
-    const hadServiceWorker = registrations.length > 0 || !!navigator.serviceWorker.controller;
+    try {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      // Only touch the app-shell worker (sw.js); leave any messaging workers alone.
+      const appRegs = registrations.filter((r) => {
+        const url = r.active?.scriptURL || r.waiting?.scriptURL || r.installing?.scriptURL || "";
+        return url.endsWith("/sw.js") || url.endsWith("/service-worker.js");
+      });
+      await Promise.all(appRegs.map((r) => r.unregister()));
 
-    await Promise.all(registrations.map((registration) => registration.unregister()));
-
-    if ("caches" in window) {
-      const keys = await window.caches.keys();
-      await Promise.all(keys.map((key) => window.caches.delete(key)));
-    }
-
-    if (hadServiceWorker && sessionStorage.getItem("preview-sw-cleaned") !== "true") {
-      sessionStorage.setItem("preview-sw-cleaned", "true");
-      window.location.reload();
+      if ("caches" in window) {
+        const keys = await window.caches.keys();
+        const appCaches = keys.filter(
+          (k) => k.startsWith("workbox-") || ["html-cache", "google-fonts-cache", "gstatic-fonts-cache"].includes(k),
+        );
+        await Promise.all(appCaches.map((k) => window.caches.delete(k)));
+      }
+    } catch {
+      /* ignore: cleanup is best-effort */
     }
   })();
-} else if ("serviceWorker" in navigator) {
-  // ── Production mode: register the SW with auto-update behaviour.
-
-  /** Guard against multiple reload loops */
-  let refreshing = false;
-
-  // Reload the page when a new SW takes control (e.g. after skipWaiting)
-  navigator.serviceWorker.addEventListener("controllerchange", () => {
-    if (refreshing) return;
-    refreshing = true;
-    window.location.reload();
-  });
-
-  /**
-   * Register the SW via vite-plugin-pwa helper.
-   * - `immediate: true` → install right away on first visit
-   * - `onNeedRefresh`   → auto-accept new version (skip user prompt)
-   * - `onRegisteredSW`  → set up periodic + visibility-based update checks
-   */
-  const updateSW = registerSW({
-    immediate: true,
-    onNeedRefresh() {
-      // Automatically apply the waiting SW (no user confirmation dialog)
-      updateSW(true);
-    },
-    onRegisteredSW(_swUrl, registration) {
-      if (!registration) return;
-
-      /** Check for an updated SW when the tab becomes visible */
-      const refreshRegistration = () => {
-        if (document.visibilityState === "visible") {
-          registration.update();
-        }
-      };
-
-      // Kick off an initial check, then poll every 60 s
-      registration.update();
-      document.addEventListener("visibilitychange", refreshRegistration);
-      window.setInterval(refreshRegistration, 60_000);
-    },
-  });
 }
 
 /* ------------------------------------------------------------------ */
