@@ -305,11 +305,13 @@ export default function Transactions() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todas las Categorías</SelectItem>
-              {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
-                <SelectItem key={value} value={value}>
-                  {label}
-                </SelectItem>
-              ))}
+              {Object.entries(CATEGORY_LABELS)
+                .filter(([value]) => value !== 'extraordinary_income')
+                .map(([value, label]) => (
+                  <SelectItem key={value} value={value}>
+                    {label}
+                  </SelectItem>
+                ))}
             </SelectContent>
           </Select>
           <Select value={accountFilter} onValueChange={setAccountFilter}>
