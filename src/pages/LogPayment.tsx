@@ -39,7 +39,7 @@ const paymentSchema = z.object({
 type PaymentFormData = z.infer<typeof paymentSchema>;
 
 const incomeCategories: TransactionCategory[] = [
-  'monthly_fee', 'extraordinary_income', 'donation', 'reimbursement', 'other_income', 'account_yield',
+  'monthly_fee', 'donation', 'reimbursement', 'other_income', 'account_yield',
 ];
 
 export default function LogPayment() {

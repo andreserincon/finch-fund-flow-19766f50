@@ -103,7 +103,7 @@ export function AddTransactionForm({ defaultType = 'income', triggerLabel = 'Reg
   /* ================= Ingreso / Gasto (react-hook-form) ================= */
   // Event categories live in the dedicated "Evento" tab, not here.
   const incomeCategories: TransactionCategory[] = [
-    'monthly_fee', 'extraordinary_income', 'donation', 'reimbursement', 'other_income', 'account_yield',
+    'monthly_fee', 'donation', 'reimbursement', 'other_income', 'account_yield',
   ];
   const expenseCategories: TransactionCategory[] = ['parent_organization_fee', 'other_expense'];
 

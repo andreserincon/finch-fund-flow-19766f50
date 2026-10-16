@@ -88,12 +88,17 @@ export function EditTransactionDialog({
 
   const incomeCategories: TransactionCategory[] = [
     'monthly_fee',
-    'extraordinary_income',
     'donation',
     'reimbursement',
     'other_income',
     'event_payment',
     'account_yield',
+    // "Ingreso Extraordinario" ya no se ofrece para movimientos nuevos; se
+    // mantiene como opcion solo cuando se edita uno que ya la tiene, para no
+    // perder el valor existente.
+    ...(transaction.category === 'extraordinary_income'
+      ? (['extraordinary_income'] as TransactionCategory[])
+      : []),
   ];
 
   const expenseCategories: TransactionCategory[] = [

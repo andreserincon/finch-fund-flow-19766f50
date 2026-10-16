@@ -99,6 +99,7 @@ export default function Transactions() {
 
   const filteredTransactions = transactions.filter((transaction) => {
     const matchesSearch =
+      (transaction.expense_summary?.toLowerCase().includes(search.toLowerCase()) ?? false) ||
       (transaction.notes?.toLowerCase().includes(search.toLowerCase()) ?? false) ||
       (transaction.member?.full_name.toLowerCase().includes(search.toLowerCase()) ?? false) ||
       CATEGORY_LABELS[transaction.category].toLowerCase().includes(search.toLowerCase());
@@ -430,7 +431,7 @@ export default function Transactions() {
                 </button>
               </TableHead>
               <TableHead>Miembro / Detalle</TableHead>
-              <TableHead>Notas</TableHead>
+              <TableHead>Resumen</TableHead>
               <TableHead className="text-right">
                 <button onClick={() => handleSort('amount')} className="press ml-auto flex items-center hover:text-foreground">
                   Monto {getSortIcon('amount')}
@@ -471,7 +472,9 @@ export default function Transactions() {
                     )}
                   </TableCell>
                   <TableCell className="max-w-[200px] truncate text-muted-foreground">
-                    {(row.kind === 'transfer' ? row.transfer.notes : row.transaction.notes) || '-'}
+                    {(row.kind === 'transfer'
+                      ? row.transfer.notes
+                      : (row.transaction.expense_summary || row.transaction.notes)) || '-'}
                   </TableCell>
                   <TableCell className="text-right font-mono">
                     <span
