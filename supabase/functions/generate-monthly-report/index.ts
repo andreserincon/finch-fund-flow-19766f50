@@ -1395,12 +1395,12 @@ function buildFlowTable(data: any, formatCurrency: (amount: number, currency?: s
     const eventNameTrunc = truncate(row.event_name, 40);
     let concepto: string;
     if (row.type === 'cuota') {
-      concepto = `Abono Cuota Evento - "${eventNameTrunc}"`;
+      concepto = `Abono Cuota Evento - ${eventNameTrunc}`;
     } else {
       const hasSummary = row.summary && String(row.summary).trim().length > 0;
       concepto = hasSummary
-        ? `Gasto Evento - "${eventNameTrunc}" - ${row.summary}`
-        : `Gasto Evento - "${eventNameTrunc}"`;
+        ? `Gasto Evento - ${eventNameTrunc} - ${row.summary}`
+        : `Gasto Evento - ${eventNameTrunc}`;
     }
     totalIncARS += Number(row.income_ars || 0);
     totalIncUSD += Number(row.income_usd || 0);
