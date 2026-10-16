@@ -1733,7 +1733,6 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
       return `
       <tr>
         <td>${e.event_name}</td>
-        <td class="text-right">${formatCurrency(e.total_amount)}</td>
         <td class="text-right positive">${formatCurrency(e.amount_collected)}</td>
         <td class="text-right negative">${formatCurrency(e.outstanding_amount)}</td>
         <td class="text-right ${expensesArs > 0 ? 'negative' : ''}">${expensesArs > 0 ? formatCurrency(expensesArs) : '-'}</td>
@@ -1745,7 +1744,6 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
     `;
     }).join('');
 
-    const totalEventAmount = data.eventSnapshots.reduce((s: number, e: any) => s + e.total_amount, 0);
     const totalEventCollected = data.eventSnapshots.reduce((s: number, e: any) => s + e.amount_collected, 0);
     const totalEventOutstanding = data.eventSnapshots.reduce((s: number, e: any) => s + e.outstanding_amount, 0);
     const totalEventExpenses = data.eventSnapshots.reduce((s: number, e: any) => s + Number(e.expenses_ars ?? 0), 0);
@@ -1759,7 +1757,6 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
           <thead>
             <tr>
               <th>Evento</th>
-              <th class="text-right">Total Cuota</th>
               <th class="text-right">Cuota Recaudada</th>
               <th class="text-right">Cuota Pendiente</th>
               <th class="text-right">Gastos del Mes</th>
@@ -1773,7 +1770,6 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
             ${eventRows}
             <tr class="summary-row">
               <td class="text-right">Totales</td>
-              <td class="text-right">${formatCurrency(totalEventAmount)}</td>
               <td class="text-right positive">${formatCurrency(totalEventCollected)}</td>
               <td class="text-right negative">${formatCurrency(totalEventOutstanding)}</td>
               <td class="text-right ${totalEventExpenses > 0 ? 'negative' : ''}">${totalEventExpenses > 0 ? formatCurrency(totalEventExpenses) : '-'}</td>
