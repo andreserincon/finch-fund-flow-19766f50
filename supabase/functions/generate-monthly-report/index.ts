@@ -774,13 +774,16 @@ Deno.serve(async (req) => {
     const categoryFlows: Record<string, { incomeARS: number; incomeUSD: number; expenseARS: number; expenseUSD: number }> = {};
     transactions.forEach((t: any) => {
       // event_expense AND event_payment transactions are rendered grouped
-      // per-event below the category table. other_expense is rendered as
-      // individual rows (with expense_summary) right after the event
-      // block. All three are skipped here to avoid double counting.
+      // per-event below the category table. other_expense, other_income and
+      // extraordinary_income are rendered as individual rows (with
+      // expense_summary) so el reporte dice de dónde sale y de dónde viene
+      // la plata. Todas se saltean acá para no contarlas dos veces.
       if (
         t.category === 'event_expense' ||
         t.category === 'event_payment' ||
-        t.category === 'other_expense'
+        t.category === 'other_expense' ||
+        t.category === 'other_income' ||
+        t.category === 'extraordinary_income'
       ) return;
       const cat = t.category as string;
       if (!categoryFlows[cat]) categoryFlows[cat] = { incomeARS: 0, incomeUSD: 0, expenseARS: 0, expenseUSD: 0 };
@@ -804,6 +807,31 @@ Deno.serve(async (req) => {
         summary: (t.expense_summary as string | null) ?? null,
         amount: Number(t.amount),
         currency: t.account === 'savings' ? 'USD' : 'ARS' as 'ARS' | 'USD',
+      }))
+      .sort((a: any, b: any) => a.date.localeCompare(b.date));
+
+    // Filas individuales de ingresos sueltos (Otro Ingreso e Ingreso
+    // Extraordinario), ordenadas por fecha. Espejo de otherExpenseRows: cada
+    // fila lleva su expense_summary al lado del monto para que se sepa de
+    // dónde vino la plata, en vez de un único total agregado por categoría.
+    // A diferencia de los gastos, la fila guarda su category porque dos
+    // etiquetas distintas comparten este mismo arreglo.
+    //
+    // OJO: esta lista repite SUMMARY_CATEGORIES de src/lib/types.ts, que Deno
+    // no puede importar. Si cambiás una, cambiá la otra.
+    // isIncome sale de transaction_type y no de la categoría: no hay ninguna
+    // restricción en la base que ate una cosa a la otra, así que una fila rara
+    // cargada al revés sigue sumando del lado que le corresponde, igual que
+    // hacía la tabla agregada. Itemizar no mueve plata.
+    const otherIncomeRows = transactions
+      .filter((t: any) => t.category === 'other_income' || t.category === 'extraordinary_income')
+      .map((t: any) => ({
+        date: t.transaction_date,
+        category: t.category as string,
+        summary: (t.expense_summary as string | null) ?? null,
+        amount: Number(t.amount),
+        currency: t.account === 'savings' ? 'USD' : 'ARS' as 'ARS' | 'USD',
+        isIncome: t.transaction_type === 'income',
       }))
       .sort((a: any, b: any) => a.date.localeCompare(b.date));
 
@@ -1000,6 +1028,7 @@ Deno.serve(async (req) => {
       categoryLabels,
       eventMovementRows,
       otherExpenseRows,
+      otherIncomeRows,
       perEventDetails,
       initialARS,
       initialUSD,
@@ -1155,7 +1184,8 @@ Deno.serve(async (req) => {
 
 /**
  * Canonical month result. Sums the SAME legs the flujo-del-mes table renders
- * (categoryFlows + eventMovementRows + otherExpenseRows), per currency, so the
+ * (categoryFlows + eventMovementRows + otherExpenseRows + otherIncomeRows),
+ * per currency, so the
  * Completo ledger, its reconciling "Resultado del Mes (equiv. ARS)" row, the
  * Resumen headline, and the persisted net_result all agree by construction.
  * equivArs folds the USD leg at the single per-run exchangeRate (fallback 1200).
@@ -1183,6 +1213,15 @@ function computeMonthResult(data: any): {
   for (const row of (data.otherExpenseRows || [])) {
     if (row.currency === 'USD') expUSD += Number(row.amount || 0);
     else expARS += Number(row.amount || 0);
+  }
+  for (const row of (data.otherIncomeRows || [])) {
+    const amt = Number(row.amount || 0);
+    const isUSD = row.currency === 'USD';
+    if (row.isIncome === false) {
+      if (isUSD) expUSD += amt; else expARS += amt;
+    } else {
+      if (isUSD) incUSD += amt; else incARS += amt;
+    }
   }
   const rate = Number(data.exchangeRate) || 1200;
   const monthARS = incARS - expARS;
@@ -1237,6 +1276,37 @@ function buildFlowTable(data: any, formatCurrency: (amount: number, currency?: s
       + '<td class="text-right">-</td>'
       + '<td class="text-right ' + (!isUSD ? 'negative' : '') + '">' + (!isUSD ? formatCurrency(row.amount) : '-') + '</td>'
       + '<td class="text-right ' + (isUSD ? 'negative' : '') + '">' + (isUSD ? formatCurrency(row.amount, 'USD') : '-') + '</td>'
+      + '</tr>';
+  }).join('');
+
+  // Filas individuales de Otro Ingreso e Ingreso Extraordinario (ordenadas
+  // por fecha), cada una con su resumen al lado del monto. Reemplazan las
+  // filas agregadas que antes salían de categoryFlows. Espejo exacto de
+  // otherExpenseRowsHtml, pero escribiendo las columnas de ingreso.
+  // El total tiene que coincidir con computeMonthResult: si tocás una, tocá
+  // la otra o el Resumen y el Completo dejan de dar lo mismo.
+  const otherIncomeRowsHtml = (data.otherIncomeRows || []).map((row: any) => {
+    const label = data.categoryLabels[row.category] || row.category;
+    const hasSummary = row.summary && String(row.summary).trim().length > 0;
+    const concepto = hasSummary ? `${label} - ${row.summary}` : label;
+    const isUSD = row.currency === 'USD';
+    const amt = Number(row.amount || 0);
+    const isIncome = row.isIncome !== false;
+    if (isIncome) {
+      if (isUSD) totalIncUSD += amt; else totalIncARS += amt;
+    } else {
+      if (isUSD) totalExpUSD += amt; else totalExpARS += amt;
+    }
+    const cell = (show: boolean, cls: string) =>
+      '<td class="text-right ' + (show ? cls : '') + '">'
+      + (show ? formatCurrency(amt, isUSD ? 'USD' : undefined) : '-')
+      + '</td>';
+    return '<tr>'
+      + '<td>' + concepto + '</td>'
+      + cell(isIncome && !isUSD, 'positive')
+      + cell(isIncome && isUSD, 'positive')
+      + cell(!isIncome && !isUSD, 'negative')
+      + cell(!isIncome && isUSD, 'negative')
       + '</tr>';
   }).join('');
 
@@ -1302,6 +1372,7 @@ function buildFlowTable(data: any, formatCurrency: (amount: number, currency?: s
     + '<td class="text-right">-</td>'
     + '</tr>'
     + catRows
+    + otherIncomeRowsHtml
     + eventRows
     + otherExpenseRowsHtml
     + transferRow

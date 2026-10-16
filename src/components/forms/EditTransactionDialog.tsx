@@ -25,7 +25,10 @@ import { useTransactions } from '@/hooks/useTransactions';
 import { useMembers } from '@/hooks/useMembers';
 import { useExtraordinaryExpenses } from '@/hooks/useExtraordinaryExpenses';
 import { useEventMemberPayments } from '@/hooks/useEventMemberPayments';
-import { Transaction, TransactionType, TransactionCategory, CATEGORY_LABELS } from '@/lib/types';
+import {
+  Transaction, TransactionType, TransactionCategory, CATEGORY_LABELS,
+  SUMMARY_CATEGORIES, INCOME_SUMMARY_CATEGORIES,
+} from '@/lib/types';
 
 const EVENT_CATEGORIES: TransactionCategory[] = ['event_expense', 'event_payment'];
 
@@ -145,7 +148,8 @@ export function EditTransactionDialog({
   const isEventCategory = EVENT_CATEGORIES.includes(category);
   const isEventPayment = category === 'event_payment';
   const isEventExpense = category === 'event_expense';
-  const supportsSummary = category === 'event_expense' || category === 'other_expense';
+  const supportsSummary = SUMMARY_CATEGORIES.includes(category);
+  const isIncomeSummary = INCOME_SUMMARY_CATEGORIES.includes(category);
 
   const { payments: eventParticipants } = useEventMemberPayments(
     isEventPayment ? selectedEventId : undefined
@@ -192,7 +196,7 @@ export function EditTransactionDialog({
       member_id: memberIdToSend ?? null,
       event_id: EVENT_CATEGORIES.includes(data.category) ? data.event_id || null : null,
       event_member_payment_id: participantIdToSend,
-      expense_summary: (data.category === 'event_expense' || data.category === 'other_expense')
+      expense_summary: SUMMARY_CATEGORIES.includes(data.category)
         ? data.expense_summary?.trim() || null
         : null,
       notes: data.notes || null,
@@ -333,7 +337,7 @@ export function EditTransactionDialog({
           {supportsSummary && (!isEventExpense || selectedEventId) && (
             <div className="space-y-2">
               <Label htmlFor="expense_summary_edit">
-                Resumen breve del gasto
+                {isIncomeSummary ? 'Resumen breve del ingreso' : 'Resumen breve del gasto'}
                 <span className="text-xs text-muted-foreground ml-1">
                   ({(expenseSummary?.length ?? 0)}/40)
                 </span>
@@ -342,12 +346,18 @@ export function EditTransactionDialog({
                 id="expense_summary_edit"
                 {...register('expense_summary')}
                 maxLength={40}
-                placeholder={isEventExpense ? 'Ej: Catering bebidas y mozo' : 'Ej: Compra papelería oficina'}
+                placeholder={
+                  isIncomeSummary ? 'Ej: Venta de rifas de fin de año'
+                    : isEventExpense ? 'Ej: Catering bebidas y mozo'
+                      : 'Ej: Compra papelería oficina'
+                }
               />
               <p className="text-xs text-muted-foreground">
-                {isEventExpense
-                  ? 'Aparece junto al nombre del evento en el flujo de mes y en el resumen del evento.'
-                  : 'Aparece como detalle del gasto en el flujo de mes del reporte.'}
+                {isIncomeSummary
+                  ? 'Aparece como detalle del ingreso en el flujo de mes del reporte.'
+                  : isEventExpense
+                    ? 'Aparece junto al nombre del evento en el flujo de mes y en el resumen del evento.'
+                    : 'Aparece como detalle del gasto en el flujo de mes del reporte.'}
               </p>
               {errors.expense_summary && (
                 <p className="text-sm text-destructive">{errors.expense_summary.message}</p>
@@ -393,12 +403,18 @@ export function EditTransactionDialog({
 
           <div className="space-y-2">
             <Label htmlFor="notes">
-              {supportsSummary ? 'Descripción detallada del gasto (opcional)' : 'Notas (opcional)'}
+              {isIncomeSummary ? 'Descripción detallada del ingreso (opcional)'
+                : supportsSummary ? 'Descripción detallada del gasto (opcional)'
+                  : 'Notas (opcional)'}
             </Label>
             <Textarea
               id="notes"
               {...register('notes')}
-              placeholder={supportsSummary ? 'Detalle completo del gasto, proveedor, condiciones...' : 'Detalles adicionales...'}
+              placeholder={
+                isIncomeSummary ? 'Detalle completo del ingreso, origen, condiciones...'
+                  : supportsSummary ? 'Detalle completo del gasto, proveedor, condiciones...'
+                    : 'Detalles adicionales...'
+              }
               rows={3}
             />
             {errors.notes && (

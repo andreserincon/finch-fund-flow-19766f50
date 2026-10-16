@@ -33,6 +33,7 @@ import { useLoans } from '@/hooks/useLoans';
 import { useExchangeRate } from '@/hooks/useExchangeRate';
 import {
   TransactionType, TransactionCategory, CATEGORY_LABELS, AccountType, ACCOUNT_LABELS,
+  SUMMARY_CATEGORIES, INCOME_SUMMARY_CATEGORIES,
 } from '@/lib/types';
 import { formatCurrency, getCurrencyForAccount, parseLocalDate, cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -128,7 +129,8 @@ export function AddTransactionForm({ defaultType = 'income', triggerLabel = 'Reg
   const isEventCategory = EVENT_CATEGORIES.includes(category);
   const isEventPayment = category === 'event_payment';
   const isEventExpense = category === 'event_expense';
-  const supportsSummary = category === 'event_expense' || category === 'other_expense';
+  const supportsSummary = SUMMARY_CATEGORIES.includes(category);
+  const isIncomeSummary = INCOME_SUMMARY_CATEGORIES.includes(category);
 
   const { payments: eventParticipants } = useEventMemberPayments(isEventPayment ? selectedEventId : undefined);
 
@@ -198,7 +200,7 @@ export function AddTransactionForm({ defaultType = 'income', triggerLabel = 'Reg
       member_id: memberIdToSend ?? null,
       event_id: EVENT_CATEGORIES.includes(data.category) ? data.event_id || null : null,
       event_member_payment_id: participantIdToSend,
-      expense_summary: (data.category === 'event_expense' || data.category === 'other_expense') ? data.expense_summary?.trim() || null : null,
+      expense_summary: SUMMARY_CATEGORIES.includes(data.category) ? data.expense_summary?.trim() || null : null,
       notes: data.notes || null,
     });
     finishOrReset(() => reset({
@@ -412,11 +414,15 @@ export function AddTransactionForm({ defaultType = 'income', triggerLabel = 'Reg
             {supportsSummary && (!isEventExpense || selectedEventId) && (
               <div className="space-y-2">
                 <Label htmlFor="expense_summary">
-                  Resumen breve del gasto
+                  {isIncomeSummary ? 'Resumen breve del ingreso' : 'Resumen breve del gasto'}
                   <span className="text-xs text-muted-foreground ml-1">({(expenseSummary?.length ?? 0)}/40)</span>
                 </Label>
                 <Input id="expense_summary" data-asistente="mov-resumen" {...register('expense_summary')} maxLength={40}
-                  placeholder={isEventExpense ? 'Ej: Catering bebidas y mozo' : 'Ej: Compra papelería oficina'} />
+                  placeholder={
+                    isIncomeSummary ? 'Ej: Venta de rifas de fin de año'
+                      : isEventExpense ? 'Ej: Catering bebidas y mozo'
+                        : 'Ej: Compra papelería oficina'
+                  } />
                 {errors.expense_summary && <p className="text-sm text-destructive">{errors.expense_summary.message}</p>}
               </div>
             )}
@@ -447,9 +453,17 @@ export function AddTransactionForm({ defaultType = 'income', triggerLabel = 'Reg
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="notes">{supportsSummary ? 'Descripción detallada del gasto (opcional)' : 'Notas (opcional)'}</Label>
+              <Label htmlFor="notes">
+                {isIncomeSummary ? 'Descripción detallada del ingreso (opcional)'
+                  : supportsSummary ? 'Descripción detallada del gasto (opcional)'
+                    : 'Notas (opcional)'}
+              </Label>
               <Textarea id="notes" {...register('notes')} rows={2}
-                placeholder={supportsSummary ? 'Detalle completo del gasto, proveedor, condiciones...' : 'Detalles adicionales...'} />
+                placeholder={
+                  isIncomeSummary ? 'Detalle completo del ingreso, origen, condiciones...'
+                    : supportsSummary ? 'Detalle completo del gasto, proveedor, condiciones...'
+                      : 'Detalles adicionales...'
+                } />
             </div>
 
             {footer(isSubmitting)}

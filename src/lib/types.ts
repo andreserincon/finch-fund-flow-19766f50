@@ -327,6 +327,32 @@ export const CATEGORY_LABELS: Record<TransactionCategory, string> = {
   account_yield: 'Rendimiento de Cuenta',
 };
 
+/**
+ * Categorías cuyo movimiento acepta un resumen breve (expense_summary).
+ * Son las categorías "sueltas": el concepto no se deduce de ningún otro
+ * campo, así que el tesorero escribe de dónde sale o de dónde viene la
+ * plata. La cápita no entra porque el miembro ya identifica el origen.
+ *
+ * El reporte de cierre imprime estas filas una por una, con su resumen al
+ * lado del monto, en vez de un solo total agregado por categoría.
+ *
+ * OJO: la edge function generate-monthly-report corre en Deno y no puede
+ * importar este archivo, así que repite esta lista de forma literal. Si
+ * cambiás una, cambiá la otra.
+ */
+export const SUMMARY_CATEGORIES: TransactionCategory[] = [
+  'event_expense',
+  'other_expense',
+  'other_income',
+  'extraordinary_income',
+];
+
+/** Subconjunto de SUMMARY_CATEGORIES que son ingresos (cambia las etiquetas del formulario). */
+export const INCOME_SUMMARY_CATEGORIES: TransactionCategory[] = [
+  'other_income',
+  'extraordinary_income',
+];
+
 export const FEE_TYPE_LABELS: Record<FeeType, string> = {
   standard: 'Estándar',
   solidarity: 'Solidaria',
