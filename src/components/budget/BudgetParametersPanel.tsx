@@ -13,7 +13,7 @@
  */
 
 import { useEffect, useState } from 'react';
-import { Percent, Save, Sparkles, Users, TrendingUp } from 'lucide-react';
+import { Percent, Save, Sparkles, Users } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -101,14 +101,12 @@ export function BudgetParametersPanel({
             membershipGrowthPercent={
               Number(draft.membership_growth_percent) || 0
             }
-            extraordinaryIncomeMultiplier={
-              Number(draft.extraordinary_income_multiplier) || 1
-            }
+            extraordinaryIncomeMultiplier={1}
           />
         )}
       </div>
 
-      <div className="grid gap-4 p-4 sm:grid-cols-3">
+      <div className="grid gap-4 p-4 sm:grid-cols-2">
         <ParameterField
           icon={<Percent className="h-3 w-3" />}
           label="Inflación anual (%)"
@@ -128,17 +126,6 @@ export function BudgetParametersPanel({
           }
           readOnly={readOnly}
           step="0.01"
-        />
-        <ParameterField
-          icon={<TrendingUp className="h-3 w-3" />}
-          label="Multiplicador ingresos extraord."
-          hint="1.00 = sin cambios; 1.25 = +25%."
-          value={draft.extraordinary_income_multiplier}
-          onChange={(v) =>
-            setDraft((d) => ({ ...d, extraordinary_income_multiplier: v }))
-          }
-          readOnly={readOnly}
-          step="0.0001"
         />
       </div>
 

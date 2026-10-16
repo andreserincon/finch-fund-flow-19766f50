@@ -230,7 +230,7 @@ export default {
       donation: 'Donación',
       reimbursement: 'Reembolso',
       eventExpense: 'Gasto de Evento',
-      parentOrganizationFee: 'Cuota Organización Matriz',
+      parentOrganizationFee: 'Pago GL',
       otherExpense: 'Otro Gasto',
       otherIncome: 'Otro Ingreso',
       eventPayment: 'Pago de Evento',

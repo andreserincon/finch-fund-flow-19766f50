@@ -69,6 +69,11 @@ export function BudgetMatrixEditor({ scenarioId, readOnly = false }: BudgetMatri
       TransactionCategory,
       TransactionType,
     ][]).forEach(([category, type]) => {
+      // "Ingreso Extraordinario" se retiro del presupuesto: no se muestra ni
+      // suma como fila. Las lineas existentes con esa categoria quedan en la
+      // base pero dormidas (no se ven ni entran en los totales, porque los
+      // totales suman solo las categorias mostradas).
+      if (category === 'extraordinary_income') return;
       grouped[type].push(category);
     });
     return grouped;
