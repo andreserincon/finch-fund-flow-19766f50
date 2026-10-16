@@ -1393,15 +1393,14 @@ function buildFlowTable(data: any, formatCurrency: (amount: number, currency?: s
   const truncate = (s: string, n: number) => (s.length > n ? s.slice(0, n - 1) + '…' : s);
   const eventRows = (data.eventMovementRows || []).map((row: any) => {
     const eventNameTrunc = truncate(row.event_name, 40);
-    const inactiveTag = row.inactive ? ' (inactivo)' : '';
     let concepto: string;
     if (row.type === 'cuota') {
-      concepto = `Abono Cuota Evento - "${eventNameTrunc}"${inactiveTag}`;
+      concepto = `Abono Cuota Evento - "${eventNameTrunc}"`;
     } else {
       const hasSummary = row.summary && String(row.summary).trim().length > 0;
       concepto = hasSummary
-        ? `Gasto Evento - "${eventNameTrunc}"${inactiveTag} - ${row.summary}`
-        : `Gasto Evento - "${eventNameTrunc}"${inactiveTag}`;
+        ? `Gasto Evento - "${eventNameTrunc}" - ${row.summary}`
+        : `Gasto Evento - "${eventNameTrunc}"`;
     }
     totalIncARS += Number(row.income_ars || 0);
     totalIncUSD += Number(row.income_usd || 0);
@@ -1731,7 +1730,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
       const balanceClass = balanceHist >= 0 ? 'positive' : 'negative';
       return `
       <tr>
-        <td>${e.event_name}${e.inactive ? ' (inactivo)' : ''}</td>
+        <td>${e.event_name}</td>
         <td class="text-right">${formatCurrency(e.total_amount)}</td>
         <td class="text-right positive">${formatCurrency(e.amount_collected)}</td>
         <td class="text-right negative">${formatCurrency(e.outstanding_amount)}</td>
@@ -1840,7 +1839,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
       const estadoGeneral = balH >= 0 ? 'Superávit' : 'Déficit';
       return `
         <div class="section" style="margin-top: 16px;">
-          <h3 style="margin: 0 0 8px 0; font-size: 14px; break-after: avoid; page-break-after: avoid;">${ev.event_name}${ev.inactive ? ' (inactivo)' : ''}</h3>
+          <h3 style="margin: 0 0 8px 0; font-size: 14px; break-after: avoid; page-break-after: avoid;">${ev.event_name}</h3>
           <div class="grid">
             <div class="stat-card">
               <div class="stat-label">Ingresos por Cuota (mes)</div>
