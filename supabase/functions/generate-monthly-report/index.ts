@@ -196,7 +196,10 @@ Deno.serve(async (req) => {
       // "active as of month end" in app code below using paid_date so that
       // historical reports reflect the snapshot, not today's status.
       supabase.from('loans').select('*, member:members(full_name, phone_number)').lte('loan_date', monthEndStr),
-      supabase.from('extraordinary_expenses').select('*').eq('is_active', true),
+      // All events, including inactive ones. An inactive event stops charging
+      // members (handled below), but its historical gastos still have to appear
+      // in the report with the event name, not as "Evento desconocido".
+      supabase.from('extraordinary_expenses').select('*'),
       supabase.from('event_member_payments').select('*'),
       supabase.from('monthly_fees').select('*').eq('year_month', `${year}-${month.toString().padStart(2, '0')}-01`),
       supabase.from('member_fee_type_history').select('*'),
@@ -283,10 +286,14 @@ Deno.serve(async (req) => {
         )
         .reduce((sum: number, t: any) => sum + Number(t.amount), 0);
 
-      // ── Events (only those whose charge_from_date is null or <= asOfDate) ──
+      // ── Events (active only, whose charge_from_date is null or <= asOfDate) ──
+      // Inactive events stop generating member charges (mirrors the Panel and
+      // Dashboard), so member balances ignore them. The report still shows an
+      // inactive event's historical gastos by name elsewhere; this only governs
+      // what each member is considered to owe or have paid.
       const eligibleEventIds = new Set(
         events
-          .filter((e: any) => !e.charge_from_date || e.charge_from_date <= asOfDate)
+          .filter((e: any) => e.is_active && (!e.charge_from_date || e.charge_from_date <= asOfDate))
           .map((e: any) => e.id)
       );
 
@@ -630,10 +637,24 @@ Deno.serve(async (req) => {
       await supabase.from('report_loan_snapshots').insert(loanSnapshotsForDb);
     }
 
-    // Create event snapshots; exclude events whose charge_from_date is after month end.
-    const eligibleEventsForReport = events.filter(
-      (e: any) => !e.charge_from_date || e.charge_from_date <= monthEndStr
+    // Events that actually moved money (cuota or gasto) this month. Used to
+    // decide whether an INACTIVE event earns a place in the report: an inactive
+    // event is shown only when it had activity this month, so deactivating an
+    // old event still keeps it out of every later report instead of flooding
+    // them.
+    const monthActiveEventIds = new Set(
+      transactions
+        .filter((t: any) => (t.category === 'event_expense' || t.category === 'event_payment') && t.event_id)
+        .map((t: any) => t.event_id as string)
     );
+
+    // Events shown in the report. Active events behave as before (shown once
+    // their charge_from_date has arrived). An inactive event is included only
+    // if it had activity this month, so its gastos still report with its name.
+    const eligibleEventsForReport = events.filter((e: any) => {
+      const chargeStarted = !e.charge_from_date || e.charge_from_date <= monthEndStr;
+      return e.is_active ? chargeStarted : monthActiveEventIds.has(e.id);
+    });
     const eventSnapshots = eligibleEventsForReport.map((event: any) => {
       const eventPaymentsForEvent = eventPayments.filter((ep: any) => ep.event_id === event.id);
       const totalAmount = eventPaymentsForEvent.reduce((sum: number, ep: any) => sum + Number(ep.amount_owed), 0);
@@ -684,6 +705,9 @@ Deno.serve(async (req) => {
         members_included: membersIncluded,
         members_unpaid: membersUnpaid,
         event_status: amountCollected >= totalAmount ? 'settled' : 'pending',
+        // Render-only: lets the HTML tag an inactive event " (inactivo)" while
+        // event_name stays the raw name (it joins the detalle block by name).
+        inactive: !event.is_active,
       };
     });
 
@@ -691,7 +715,7 @@ Deno.serve(async (req) => {
       // expenses_ars and balance_ars are render-only; strip before
       // persisting since report_event_snapshots doesn't have those columns.
       const eventSnapshotsForDb = eventSnapshots.map(
-        ({ expenses_ars, balance_ars, recaudado_historico, gastado_historico, balance_historico, ...rest }: any) => rest
+        ({ expenses_ars, balance_ars, recaudado_historico, gastado_historico, balance_historico, inactive, ...rest }: any) => rest
       );
       await supabase.from('report_event_snapshots').insert(eventSnapshotsForDb);
     }
@@ -840,8 +864,11 @@ Deno.serve(async (req) => {
     //   1. one aggregated "Abono Cuota Evento - <name>" row (if any cuota came in)
     //   2. one row per individual event_expense with date + short summary
     // Events with no event_id (legacy data) bucket under "Sin evento".
-    const eventNameById = new Map<string, string>(
-      eligibleEventsForReport.map((e: any) => [e.id as string, e.name as string])
+    // Name + status for every event (not just the ones shown as snapshots), so
+    // any event with a movement this month resolves its name in the flujo
+    // instead of falling back to "Evento desconocido".
+    const eventInfoById = new Map<string, { name: string; inactive: boolean }>(
+      events.map((e: any) => [e.id as string, { name: e.name as string, inactive: !e.is_active }])
     );
     const SIN_EVENTO_KEY = '__sin_evento__';
     const cuotaByEvent = new Map<string, { ars: number; usd: number }>();
@@ -876,15 +903,20 @@ Deno.serve(async (req) => {
       ...expensesByEvent.keys(),
     ]));
     const eventsSortedByName = allEventKeys
-      .map((id) => ({
-        id,
-        name: id === SIN_EVENTO_KEY ? 'Sin evento' : (eventNameById.get(id) ?? 'Evento desconocido'),
-      }))
+      .map((id) => {
+        const info = id === SIN_EVENTO_KEY ? undefined : eventInfoById.get(id);
+        return {
+          id,
+          name: id === SIN_EVENTO_KEY ? 'Sin evento' : (info?.name ?? 'Evento desconocido'),
+          inactive: info?.inactive ?? false,
+        };
+      })
       .sort((a, b) => a.name.localeCompare(b.name, 'es'));
 
     const eventMovementRows: Array<{
       type: 'cuota' | 'expense';
       event_name: string;
+      inactive: boolean;
       summary: string | null;
       income_ars: number;
       income_usd: number;
@@ -897,6 +929,7 @@ Deno.serve(async (req) => {
         eventMovementRows.push({
           type: 'cuota',
           event_name: ev.name,
+          inactive: ev.inactive,
           summary: null,
           income_ars: cuota.ars,
           income_usd: cuota.usd,
@@ -910,6 +943,7 @@ Deno.serve(async (req) => {
         eventMovementRows.push({
           type: 'expense',
           event_name: ev.name,
+          inactive: ev.inactive,
           summary: ex.summary,
           income_ars: 0,
           income_usd: 0,
@@ -939,6 +973,9 @@ Deno.serve(async (req) => {
         return {
           event_id: event.id,
           event_name: event.name as string,
+          // Render-only: event_name stays raw so snapByName can match the
+          // snapshot; the HTML appends " (inactivo)" from this flag.
+          inactive: !event.is_active,
           cuota_collected_ars: cuotaCollectedARS,
           cuota_collected_usd: cuotaCollectedUSD,
           member_count: memberCount,
@@ -1310,12 +1347,42 @@ function buildFlowTable(data: any, formatCurrency: (amount: number, currency?: s
       + '</tr>';
   }).join('');
 
-  // Transfers between owned accounts (account_transfers) are a wash at
-  // the organization level; same money moving between cuentas. They
-  // shouldn't appear in the category-flow table since they have zero
-  // net impact on total holdings. Per-account balances are still
-  // computed correctly elsewhere using the same transfers data.
-  const transferRow = '';
+  // Cross-currency transfers (peso <-> dólar) shown as Compra / Venta de
+  // Dólares. A same-currency transfer (e.g. Banco -> Gran Logia) is a true
+  // wash and stays out of the table: it nets to zero within its currency. A
+  // cross-currency one is NOT operating income or expense (it does not move the
+  // Resultado del Mes), but it does change how much is held in each currency,
+  // so it renders as a bridge just before the Balance Final, which then
+  // reconciles with the real Saldos de Cuentas. outAmt/inAmt mirror the balance
+  // math exactly (source_amount is the origin currency; amount the destination),
+  // so the final balances match to the peso.
+  let convInARS = 0, convOutARS = 0, convInUSD = 0, convOutUSD = 0;
+  const currencyExchangeRowsHtml = (data.monthTransfers || [])
+    .filter((t: any) => (t.from_account === 'savings') !== (t.to_account === 'savings'))
+    .slice()
+    .sort((a: any, b: any) => String(a.transfer_date).localeCompare(String(b.transfer_date)))
+    .map((t: any) => {
+      const outAmt = Number(t.source_amount ?? t.amount);
+      const inAmt = Number(t.amount);
+      const isCompra = t.to_account === 'savings'; // pesos salen, dólares entran
+      let concepto = 'Venta de Dólares';
+      let incARSc = 0, incUSDc = 0, expARSc = 0, expUSDc = 0;
+      if (isCompra) {
+        concepto = 'Compra de Dólares';
+        expARSc = outAmt; incUSDc = inAmt;
+        convOutARS += outAmt; convInUSD += inAmt;
+      } else {
+        expUSDc = outAmt; incARSc = inAmt;
+        convOutUSD += outAmt; convInARS += inAmt;
+      }
+      return '<tr>'
+        + '<td>' + concepto + '</td>'
+        + '<td class="text-right ' + (incARSc > 0 ? 'positive' : '') + '">' + (incARSc > 0 ? formatCurrency(incARSc) : '-') + '</td>'
+        + '<td class="text-right ' + (incUSDc > 0 ? 'positive' : '') + '">' + (incUSDc > 0 ? formatCurrency(incUSDc, 'USD') : '-') + '</td>'
+        + '<td class="text-right ' + (expARSc > 0 ? 'negative' : '') + '">' + (expARSc > 0 ? formatCurrency(expARSc) : '-') + '</td>'
+        + '<td class="text-right ' + (expUSDc > 0 ? 'negative' : '') + '">' + (expUSDc > 0 ? formatCurrency(expUSDc, 'USD') : '-') + '</td>'
+        + '</tr>';
+    }).join('');
 
   // Per-event movement rows. Each event's cuota aggregate row and its
   // individual gasto rows are grouped together (cuota first, then gastos
@@ -1326,14 +1393,15 @@ function buildFlowTable(data: any, formatCurrency: (amount: number, currency?: s
   const truncate = (s: string, n: number) => (s.length > n ? s.slice(0, n - 1) + '…' : s);
   const eventRows = (data.eventMovementRows || []).map((row: any) => {
     const eventNameTrunc = truncate(row.event_name, 40);
+    const inactiveTag = row.inactive ? ' (inactivo)' : '';
     let concepto: string;
     if (row.type === 'cuota') {
-      concepto = `Abono Cuota Evento - "${eventNameTrunc}"`;
+      concepto = `Abono Cuota Evento - "${eventNameTrunc}"${inactiveTag}`;
     } else {
       const hasSummary = row.summary && String(row.summary).trim().length > 0;
       concepto = hasSummary
-        ? `Gasto Evento - "${eventNameTrunc}" - ${row.summary}`
-        : `Gasto Evento - "${eventNameTrunc}"`;
+        ? `Gasto Evento - "${eventNameTrunc}"${inactiveTag} - ${row.summary}`
+        : `Gasto Evento - "${eventNameTrunc}"${inactiveTag}`;
     }
     totalIncARS += Number(row.income_ars || 0);
     totalIncUSD += Number(row.income_usd || 0);
@@ -1352,8 +1420,11 @@ function buildFlowTable(data: any, formatCurrency: (amount: number, currency?: s
       + '</tr>';
   }).join('');
 
-  const finalARS = data.initialARS + totalIncARS - totalExpARS;
-  const finalUSD = data.initialUSD + totalIncUSD - totalExpUSD;
+  // Balance Final = inicial + resultado operativo + conversión de moneda. The
+  // conversion terms are what keep this equal to the real Saldos de Cuentas when
+  // the month had a compra/venta de dólares.
+  const finalARS = data.initialARS + totalIncARS - totalExpARS + convInARS - convOutARS;
+  const finalUSD = data.initialUSD + totalIncUSD - totalExpUSD + convInUSD - convOutUSD;
 
   return '<table>'
     + '<thead><tr>'
@@ -1375,7 +1446,6 @@ function buildFlowTable(data: any, formatCurrency: (amount: number, currency?: s
     + otherIncomeRowsHtml
     + eventRows
     + otherExpenseRowsHtml
-    + transferRow
     + '<tr class="summary-row">'
     + '<td>Total Movimientos</td>'
     + '<td class="text-right positive">' + formatCurrency(totalIncARS) + '</td>'
@@ -1407,6 +1477,11 @@ function buildFlowTable(data: any, formatCurrency: (amount: number, currency?: s
           + '<td class="text-right ' + (mr.equivArs >= 0 ? 'positive' : 'negative') + '" colspan="4"><strong>' + formatCurrency(mr.equivArs) + '</strong></td>'
           + '</tr>';
       })()
+    // Conversión de moneda: puente entre el Resultado del Mes (operativo) y el
+    // Balance Final. Solo aparece si hubo compra/venta de dólares en el mes.
+    + (currencyExchangeRowsHtml
+        ? '<tr class="summary-row"><td colspan="5" style="padding-top:6px;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#6b6b6b;">Conversión de Moneda</td></tr>' + currencyExchangeRowsHtml
+        : '')
     + '<tr class="summary-row">'
     + '<td><strong>Balance Final</strong></td>'
     + '<td class="text-right ' + (finalARS >= 0 ? 'positive' : 'negative') + '"><strong>' + formatCurrency(finalARS) + '</strong></td>'
@@ -1656,7 +1731,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
       const balanceClass = balanceHist >= 0 ? 'positive' : 'negative';
       return `
       <tr>
-        <td>${e.event_name}</td>
+        <td>${e.event_name}${e.inactive ? ' (inactivo)' : ''}</td>
         <td class="text-right">${formatCurrency(e.total_amount)}</td>
         <td class="text-right positive">${formatCurrency(e.amount_collected)}</td>
         <td class="text-right negative">${formatCurrency(e.outstanding_amount)}</td>
@@ -1765,7 +1840,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
       const estadoGeneral = balH >= 0 ? 'Superávit' : 'Déficit';
       return `
         <div class="section" style="margin-top: 16px;">
-          <h3 style="margin: 0 0 8px 0; font-size: 14px; break-after: avoid; page-break-after: avoid;">${ev.event_name}</h3>
+          <h3 style="margin: 0 0 8px 0; font-size: 14px; break-after: avoid; page-break-after: avoid;">${ev.event_name}${ev.inactive ? ' (inactivo)' : ''}</h3>
           <div class="grid">
             <div class="stat-card">
               <div class="stat-label">Ingresos por Cuota (mes)</div>
