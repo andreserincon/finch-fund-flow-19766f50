@@ -1459,12 +1459,14 @@ function buildFlowTable(data: any, formatCurrency: (amount: number, currency?: s
     + (currencyExchangeRowsHtml
         ? '<tr class="summary-row"><td colspan="5" style="padding-top:6px;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#6b6b6b;">Conversión de Moneda</td></tr>' + currencyExchangeRowsHtml
         : '')
-    // Balance del Mes = ingresos - egresos del mes (sin contar el balance
-    // inicial). Resultado neto del mes; útil para ver si el mes fue
-    // superavitario o deficitario sin tener que restar mentalmente.
+    // Balance del Mes = cambio neto de cada moneda en el mes (sin el balance
+    // inicial): ingresos menos egresos operativos MAS el efecto de la
+    // conversion de moneda. Asi Balance Final = Balance Inicial + Balance del
+    // Mes cuadra por moneda. (El Resultado del Mes en equiv. ARS de abajo sigue
+    // siendo el operativo, sin la conversion, para coincidir con el Resumen.)
     + (() => {
-        const monthBalanceARS = totalIncARS - totalExpARS;
-        const monthBalanceUSD = totalIncUSD - totalExpUSD;
+        const monthBalanceARS = totalIncARS - totalExpARS + convInARS - convOutARS;
+        const monthBalanceUSD = totalIncUSD - totalExpUSD + convInUSD - convOutUSD;
         return '<tr class="summary-row">'
           + '<td>Balance del Mes</td>'
           + '<td class="text-right ' + (monthBalanceARS >= 0 ? 'positive' : 'negative') + '">' + formatCurrency(monthBalanceARS) + '</td>'
