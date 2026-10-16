@@ -1113,7 +1113,7 @@ export default function EventOverview() {
           )}
           <p className="text-sm text-muted-foreground mt-1">
             Cuota por defecto: {formatCurrency(event.default_amount)}
-            {event.is_active ? '' : ' (inactivo)'}
+            {event.is_active ? '' : ' (cerrado)'}
           </p>
         </div>
         <DropdownMenu>

@@ -324,7 +324,7 @@ export default function ExtraordinaryExpenses() {
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
                           <p className="font-semibold">{expense.name}</p>
-                          {!expense.is_active && <Badge variant="outline">Inactivo</Badge>}
+                          {!expense.is_active && <Badge variant="outline">Cerrado</Badge>}
                         </div>
                         {expense.description && (
                           <p className="text-sm text-muted-foreground line-clamp-2 mt-0.5">{expense.description}</p>

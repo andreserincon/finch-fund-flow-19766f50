@@ -1740,7 +1740,7 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
         <td class="text-right ${balanceClass}"><strong>${formatCurrency(balanceHist)}</strong></td>
         <td class="text-center">${e.members_included}</td>
         <td class="text-center">${e.members_unpaid}</td>
-        <td class="text-center">${e.event_status === 'settled' ? '<span class="status-badge status-up_to_date">Saldado</span>' : '<span class="status-badge status-overdue">Pendiente</span>'}</td>
+        <td class="text-center">${e.inactive ? '<span class="status-badge status-ahead">Cerrado</span>' : (e.event_status === 'settled' ? '<span class="status-badge status-up_to_date">Saldado</span>' : '<span class="status-badge status-overdue">Pendiente</span>')}</td>
       </tr>
     `;
     }).join('');
@@ -1889,12 +1889,12 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
         </div>
       `;
     }).join('');
-    perEventDetailsSection = `
-      <div class="section">
-        <h2 class="section-title">${cardSubNum} Detalle por Evento</h2>
-        ${blocks}
-      </div>
-    `;
+    // "Detalle por Evento" se removio del reporte a pedido; el resumen de la
+    // seccion Eventos ya trae recaudado, gastado y el balance resultante de
+    // cada evento.
+    void blocks;
+    void cardSubNum;
+    perEventDetailsSection = '';
   }
 
   // Logo HTML - use base64 if available
