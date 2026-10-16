@@ -1452,6 +1452,13 @@ function buildFlowTable(data: any, formatCurrency: (amount: number, currency?: s
     + '<td class="text-right negative">' + formatCurrency(totalExpARS) + '</td>'
     + '<td class="text-right negative">' + formatCurrency(totalExpUSD, 'USD') + '</td>'
     + '</tr>'
+    // Conversión de moneda: compra/venta de dólares del mes. No es ingreso ni
+    // egreso operativo (queda fuera de Total Movimientos y del Resultado del
+    // Mes), pero mueve el saldo por moneda, así que se refleja en el Balance
+    // Final. Solo aparece si hubo compra/venta de dólares en el mes.
+    + (currencyExchangeRowsHtml
+        ? '<tr class="summary-row"><td colspan="5" style="padding-top:6px;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#6b6b6b;">Conversión de Moneda</td></tr>' + currencyExchangeRowsHtml
+        : '')
     // Balance del Mes = ingresos - egresos del mes (sin contar el balance
     // inicial). Resultado neto del mes; útil para ver si el mes fue
     // superavitario o deficitario sin tener que restar mentalmente.
@@ -1476,11 +1483,6 @@ function buildFlowTable(data: any, formatCurrency: (amount: number, currency?: s
           + '<td class="text-right ' + (mr.equivArs >= 0 ? 'positive' : 'negative') + '" colspan="4"><strong>' + formatCurrency(mr.equivArs) + '</strong></td>'
           + '</tr>';
       })()
-    // Conversión de moneda: puente entre el Resultado del Mes (operativo) y el
-    // Balance Final. Solo aparece si hubo compra/venta de dólares en el mes.
-    + (currencyExchangeRowsHtml
-        ? '<tr class="summary-row"><td colspan="5" style="padding-top:6px;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#6b6b6b;">Conversión de Moneda</td></tr>' + currencyExchangeRowsHtml
-        : '')
     + '<tr class="summary-row">'
     + '<td><strong>Balance Final</strong></td>'
     + '<td class="text-right ' + (finalARS >= 0 ? 'positive' : 'negative') + '"><strong>' + formatCurrency(finalARS) + '</strong></td>'
