@@ -159,8 +159,12 @@ export default function Members() {
     const amount = (value: number) =>
       `<div style="font-size:24px;font-weight:700;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:${value < 0 ? '#dc2626' : '#059669'};margin:5px 0 10px;">${formatCurrency(value)}</div>`;
     const node = document.createElement('div');
+    // Dentro del viewport pero detras de todo (z-index muy negativo): si se
+    // posiciona muy lejos fuera de pantalla, el navegador movil no lo pinta y
+    // html-to-image captura una imagen en blanco.
     node.style.cssText =
-      "position:fixed;left:-99999px;top:0;width:440px;box-sizing:border-box;background:#ffffff;" +
+      "position:fixed;left:0;top:0;z-index:-9999;pointer-events:none;" +
+      "width:440px;box-sizing:border-box;background:#ffffff;" +
       "padding:28px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;color:#1a1a1a;";
     node.innerHTML =
       `<div style="font-size:15px;color:#6b7280;">Mat. ${member.phone_number || '-'}</div>` +
@@ -177,6 +181,9 @@ export default function Members() {
     document.body.appendChild(node);
     try {
       const { toPng } = await import('html-to-image');
+      // Dos frames para que el navegador haga layout y pinte el nodo antes de
+      // capturarlo; si no, la imagen puede salir en blanco.
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => r(null))));
       const dataUrl = await toPng(node, { pixelRatio: 2, backgroundColor: '#ffffff', cacheBust: true });
       const blob = await (await fetch(dataUrl)).blob();
       const fileName = `estado-${member.phone_number || member.member_id}.png`;
