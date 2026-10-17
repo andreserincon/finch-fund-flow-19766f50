@@ -1752,16 +1752,17 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
   let eventsSection = '';
   if (data.eventSnapshots.length > 0) {
     const eventRows = data.eventSnapshots.map((e: any) => {
-      const expensesArs = Number(e.expenses_ars ?? 0);
-      const balanceHist = Number(e.balance_historico ?? 0);
-      const balanceClass = balanceHist >= 0 ? 'positive' : 'negative';
+      const recH = Number(e.recaudado_historico ?? 0);
+      const gasH = Number(e.gastado_historico ?? 0);
+      const balH = Number(e.balance_historico ?? (recH - gasH));
+      const balanceClass = balH >= 0 ? 'positive' : 'negative';
       return `
       <tr>
         <td>${e.event_name}</td>
-        <td class="text-right positive">${formatCurrency(e.amount_collected)}</td>
+        <td class="text-right positive">${formatCurrency(recH)}</td>
+        <td class="text-right ${gasH > 0 ? 'negative' : ''}">${gasH > 0 ? formatCurrency(gasH) : '-'}</td>
+        <td class="text-right ${balanceClass}"><strong>${formatCurrency(balH)}</strong></td>
         <td class="text-right negative">${formatCurrency(e.outstanding_amount)}</td>
-        <td class="text-right ${expensesArs > 0 ? 'negative' : ''}">${expensesArs > 0 ? formatCurrency(expensesArs) : '-'}</td>
-        <td class="text-right ${balanceClass}"><strong>${formatCurrency(balanceHist)}</strong></td>
         <td class="text-center">${e.members_included}</td>
         <td class="text-center">${e.members_unpaid}</td>
         <td class="text-center">${e.inactive ? '<span class="status-badge status-ahead">Cerrado</span>' : (e.event_status === 'settled' ? '<span class="status-badge status-up_to_date">Saldado</span>' : '<span class="status-badge status-overdue">Pendiente</span>')}</td>
@@ -1769,9 +1770,9 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
     `;
     }).join('');
 
-    const totalEventCollected = data.eventSnapshots.reduce((s: number, e: any) => s + e.amount_collected, 0);
+    const totalRecaudado = data.eventSnapshots.reduce((s: number, e: any) => s + Number(e.recaudado_historico ?? 0), 0);
+    const totalGastado = data.eventSnapshots.reduce((s: number, e: any) => s + Number(e.gastado_historico ?? 0), 0);
     const totalEventOutstanding = data.eventSnapshots.reduce((s: number, e: any) => s + e.outstanding_amount, 0);
-    const totalEventExpenses = data.eventSnapshots.reduce((s: number, e: any) => s + Number(e.expenses_ars ?? 0), 0);
     const totalEventBalance = data.eventSnapshots.reduce((s: number, e: any) => s + Number(e.balance_historico ?? 0), 0);
     const totalBalanceClass = totalEventBalance >= 0 ? 'positive' : 'negative';
 
@@ -1782,10 +1783,10 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
           <thead>
             <tr>
               <th>Evento</th>
-              <th class="text-right">Cuota Recaudada</th>
+              <th class="text-right">Recaudado</th>
+              <th class="text-right">Gastado</th>
+              <th class="text-right">Balance</th>
               <th class="text-right">Cuota Pendiente</th>
-              <th class="text-right">Gastos del Mes</th>
-              <th class="text-right">Balance Histórico</th>
               <th class="text-center">Miembros</th>
               <th class="text-center">Sin Pagar</th>
               <th class="text-center">Estado</th>
@@ -1795,10 +1796,10 @@ function generatePDFHTML(data: any, reportType: 'comprehensive' | 'lite' = 'comp
             ${eventRows}
             <tr class="summary-row">
               <td class="text-right">Totales</td>
-              <td class="text-right positive">${formatCurrency(totalEventCollected)}</td>
-              <td class="text-right negative">${formatCurrency(totalEventOutstanding)}</td>
-              <td class="text-right ${totalEventExpenses > 0 ? 'negative' : ''}">${totalEventExpenses > 0 ? formatCurrency(totalEventExpenses) : '-'}</td>
+              <td class="text-right positive">${formatCurrency(totalRecaudado)}</td>
+              <td class="text-right ${totalGastado > 0 ? 'negative' : ''}">${totalGastado > 0 ? formatCurrency(totalGastado) : '-'}</td>
               <td class="text-right ${totalBalanceClass}"><strong>${formatCurrency(totalEventBalance)}</strong></td>
+              <td class="text-right negative">${formatCurrency(totalEventOutstanding)}</td>
               <td colspan="3"></td>
             </tr>
           </tbody>
