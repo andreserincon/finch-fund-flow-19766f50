@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useHiddenMode } from '@/contexts/HiddenModeContext';
 import { useMembers } from '@/hooks/useMembers';
@@ -35,7 +35,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Search, MoreHorizontal, Pencil, Trash2, Filter, X, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { Search, MoreHorizontal, Pencil, Trash2, Filter, X, ArrowUpDown, ArrowUp, ArrowDown, Share2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { FEE_TYPE_LABELS, MASONIC_GRADE_LABELS, MemberBalance, PaymentStatus } from '@/lib/types';
@@ -45,6 +45,7 @@ import { TableSkeleton } from '@/components/ui/loading';
 import { useSearchParams } from 'react-router-dom';
 import { requiresAttention, getMemberCapitaStatus } from '@/lib/attention';
 import { MemberStatusBadge } from '@/components/dashboard/MemberStatusBadge';
+import { toast } from 'sonner';
 
 const STATUS_OPTIONS = [
   { value: 'active', label: 'Activo' },
@@ -82,6 +83,8 @@ export default function Members() {
   const [sortConfig, setSortConfig] = useState<SortConfig>({ column: null, direction: 'asc' });
   const [editMember, setEditMember] = useState<MemberBalance | null>(null);
   const [deleteMember, setDeleteMember] = useState<MemberBalance | null>(null);
+  // Nodos de cada tarjeta de socio, para "compartir estado" como imagen (html-to-image).
+  const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
   const { data: memberEventData = { owed: {}, paid: {} } } = useQuery({
     queryKey: ['member-event-data'],
@@ -132,6 +135,38 @@ export default function Members() {
     setSelectedStatuses(prev => prev.includes(status) ? prev.filter(s => s !== status) : [...prev, status]);
   };
   const clearFilters = () => setSelectedStatuses([]);
+
+  // Comparte el estado de un socio como imagen: snapshotea su tarjeta (sin los
+  // botones de accion) y abre el menu de compartir del telefono (WhatsApp, etc.).
+  // Fallback: descarga la imagen si el dispositivo no soporta compartir archivos.
+  const handleShareStatus = async (member: MemberBalance) => {
+    const node = cardRefs.current.get(member.member_id);
+    if (!node) return;
+    try {
+      const { toPng } = await import('html-to-image');
+      const dataUrl = await toPng(node, {
+        pixelRatio: 2,
+        backgroundColor: '#ffffff',
+        cacheBust: true,
+        filter: (n) => !(n instanceof HTMLElement && n.dataset.noSnapshot === 'true'),
+      });
+      const blob = await (await fetch(dataUrl)).blob();
+      const fileName = `estado-${member.phone_number || member.member_id}.png`;
+      const file = new File([blob], fileName, { type: 'image/png' });
+      if (navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], title: 'Estado del socio', text: `Estado de ${member.full_name}` });
+      } else {
+        const a = document.createElement('a');
+        a.href = dataUrl;
+        a.download = fileName;
+        a.click();
+        toast.info('Tu dispositivo no permite compartir directo. Descargue la imagen para adjuntarla en WhatsApp.');
+      }
+    } catch (err) {
+      if ((err as Error)?.name === 'AbortError') return;
+      toast.error('No se pudo generar la imagen para compartir.');
+    }
+  };
 
   const handleSort = (column: SortColumn) => {
     setSortConfig(prev => ({ column, direction: prev.column === column && prev.direction === 'asc' ? 'desc' : 'asc' }));
@@ -266,7 +301,11 @@ export default function Members() {
           </div>
         ) : (
           sortedMembers.map((member) => (
-            <div key={member.member_id} className="rounded-lg border bg-card p-4 space-y-3">
+            <div
+              key={member.member_id}
+              ref={(el) => { if (el) cardRefs.current.set(member.member_id, el); else cardRefs.current.delete(member.member_id); }}
+              className="rounded-lg border bg-card p-4 space-y-3"
+            >
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
                   {member.phone_number && <p className="text-xs text-muted-foreground">Mat. {member.phone_number}</p>}
@@ -278,8 +317,18 @@ export default function Members() {
                     )}
                   </div>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center gap-2 shrink-0" data-no-snapshot="true">
                   {!member.is_active && <Badge variant="outline">Inactivo</Badge>}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-10 w-10"
+                    onClick={() => handleShareStatus(member)}
+                    aria-label="Compartir estado por WhatsApp"
+                    data-asistente="miembro-compartir"
+                  >
+                    <Share2 className="h-4 w-4" />
+                  </Button>
                   {!isMemberOnly && (
                     <FeeTypeHistoryDialog memberId={member.member_id} memberName={member.full_name} />
                   )}
