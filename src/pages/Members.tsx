@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useHiddenMode } from '@/contexts/HiddenModeContext';
 import { useMembers } from '@/hooks/useMembers';
@@ -47,6 +47,14 @@ import { requiresAttention, getMemberCapitaStatus } from '@/lib/attention';
 import { MemberStatusBadge } from '@/components/dashboard/MemberStatusBadge';
 import { toast } from 'sonner';
 
+/** PaymentStatus -> clave i18n, para el texto del estado en el snapshot. */
+const STATUS_I18N_KEY: Record<PaymentStatus, string> = {
+  al_dia: 'status.alDia',
+  adelantado: 'status.adelantado',
+  impago: 'status.impago',
+  demorado: 'status.demorado',
+};
+
 const STATUS_OPTIONS = [
   { value: 'active', label: 'Activo' },
   { value: 'inactive', label: 'Inactivo' },
@@ -83,8 +91,6 @@ export default function Members() {
   const [sortConfig, setSortConfig] = useState<SortConfig>({ column: null, direction: 'asc' });
   const [editMember, setEditMember] = useState<MemberBalance | null>(null);
   const [deleteMember, setDeleteMember] = useState<MemberBalance | null>(null);
-  // Nodos de cada tarjeta de socio, para "compartir estado" como imagen (html-to-image).
-  const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
   const { data: memberEventData = { owed: {}, paid: {} } } = useQuery({
     queryKey: ['member-event-data'],
@@ -136,26 +142,42 @@ export default function Members() {
   };
   const clearFilters = () => setSelectedStatuses([]);
 
-  // Comparte el estado de un socio como imagen: snapshotea su tarjeta (sin los
-  // botones de accion) y abre el menu de compartir del telefono (WhatsApp, etc.).
-  // Fallback: descarga la imagen si el dispositivo no soporta compartir archivos.
+  // Comparte el estado del socio como imagen. En vez de snapshotear la tarjeta
+  // viva (que daba recortes y lineas de borde), armamos un nodo dedicado, limpio
+  // y con medidas propias, lo snapshoteamos y abrimos el menu de compartir.
   const handleShareStatus = async (member: MemberBalance) => {
-    const node = cardRefs.current.get(member.member_id);
-    if (!node) return;
+    const grade = gradeByMember.get(member.member_id);
+    const capitaBal = getMonthlyBalance(member);
+    const eventoBal = getEventsBalance(member.member_id);
+    const capitaStatus = getPaymentStatus(member);
+    const capitaOk = capitaStatus === 'al_dia' || capitaStatus === 'adelantado';
+    const eventoOk = eventoBal >= 0;
+    const pill = (text: string, ok: boolean) =>
+      `<span style="display:inline-block;font-size:14px;line-height:1;padding:7px 14px;border-radius:999px;background:${ok ? '#dcfce7' : '#fef9c3'};color:${ok ? '#15803d' : '#854d0e'};">${ok ? '&#9679; ' : ''}${text}</span>`;
+    const tag = (text: string, filled: boolean) =>
+      `<span style="display:inline-block;font-size:14px;line-height:1;padding:6px 13px;border-radius:999px;${filled ? 'background:#ece9e1;color:#44403c;' : 'border:1px solid #d6d3d1;color:#44403c;'}">${text}</span>`;
+    const amount = (value: number) =>
+      `<div style="font-size:24px;font-weight:700;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:${value < 0 ? '#dc2626' : '#059669'};margin:5px 0 10px;">${formatCurrency(value)}</div>`;
+    const node = document.createElement('div');
+    node.style.cssText =
+      "position:fixed;left:-99999px;top:0;width:440px;box-sizing:border-box;background:#ffffff;" +
+      "padding:28px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;color:#1a1a1a;";
+    node.innerHTML =
+      `<div style="font-size:15px;color:#6b7280;">Mat. ${member.phone_number || '-'}</div>` +
+      `<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:5px;">` +
+        `<span style="font-size:26px;font-weight:700;">${member.full_name}</span>` +
+        tag(FEE_TYPE_LABELS[member.fee_type], true) +
+      `</div>` +
+      (grade ? `<div style="margin-top:10px;">${tag(MASONIC_GRADE_LABELS[grade], false)}</div>` : '') +
+      `<div style="border-top:1px solid #e5e7eb;margin:20px 0;"></div>` +
+      `<div style="display:flex;gap:32px;">` +
+        `<div style="flex:1;"><div style="font-size:15px;color:#6b7280;">Cápita</div>${amount(capitaBal)}${pill(t(STATUS_I18N_KEY[capitaStatus]), capitaOk)}</div>` +
+        `<div style="flex:1;"><div style="font-size:15px;color:#6b7280;">Evento</div>${amount(eventoBal)}${pill(eventoOk ? 'Al día' : 'Pendiente', eventoOk)}</div>` +
+      `</div>`;
+    document.body.appendChild(node);
     try {
       const { toPng } = await import('html-to-image');
-      // Forzamos ancho/alto enteros con un margen extra abajo: html-to-image a
-      // veces mide el alto con una fraccion de menos y recorta el borde
-      // inferior de la tarjeta (las etiquetas quedan al ras).
-      const rect = node.getBoundingClientRect();
-      const dataUrl = await toPng(node, {
-        pixelRatio: 2,
-        backgroundColor: '#ffffff',
-        cacheBust: true,
-        width: Math.ceil(rect.width),
-        height: Math.ceil(rect.height) + 12,
-        filter: (n) => !(n instanceof HTMLElement && n.dataset.noSnapshot === 'true'),
-      });
+      const dataUrl = await toPng(node, { pixelRatio: 2, backgroundColor: '#ffffff', cacheBust: true });
       const blob = await (await fetch(dataUrl)).blob();
       const fileName = `estado-${member.phone_number || member.member_id}.png`;
       const file = new File([blob], fileName, { type: 'image/png' });
@@ -171,6 +193,8 @@ export default function Members() {
     } catch (err) {
       if ((err as Error)?.name === 'AbortError') return;
       toast.error('No se pudo generar la imagen para compartir.');
+    } finally {
+      node.remove();
     }
   };
 
@@ -307,11 +331,7 @@ export default function Members() {
           </div>
         ) : (
           sortedMembers.map((member) => (
-            <div
-              key={member.member_id}
-              ref={(el) => { if (el) cardRefs.current.set(member.member_id, el); else cardRefs.current.delete(member.member_id); }}
-              className="rounded-lg border bg-card p-4 space-y-3"
-            >
+            <div key={member.member_id} className="rounded-lg border bg-card p-4 space-y-3">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
                   {member.phone_number && <p className="text-xs text-muted-foreground">Mat. {member.phone_number}</p>}
@@ -323,7 +343,7 @@ export default function Members() {
                     )}
                   </div>
                 </div>
-                <div className="flex items-center gap-2 shrink-0" data-no-snapshot="true">
+                <div className="flex items-center gap-2 shrink-0">
                   {!member.is_active && <Badge variant="outline">Inactivo</Badge>}
                   <Button
                     variant="ghost"
