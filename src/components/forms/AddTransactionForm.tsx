@@ -90,7 +90,7 @@ export function AddTransactionForm({ defaultType = 'income', triggerLabel = 'Reg
   const [modo, setModo] = useState<Modo>(defaultType === 'expense' ? 'gasto' : 'ingreso');
   const addAnotherRef = useRef(false);
 
-  const { addTransaction } = useTransactions();
+  const { addTransaction, transactions } = useTransactions();
   const { addTransfer } = useAccountTransfers();
   const { loans, addLoanPayment } = useLoans();
   const { members } = useMembers();
@@ -131,6 +131,13 @@ export function AddTransactionForm({ defaultType = 'income', triggerLabel = 'Reg
   const isEventExpense = category === 'event_expense';
   const supportsSummary = SUMMARY_CATEGORIES.includes(category);
   const isIncomeSummary = INCOME_SUMMARY_CATEGORIES.includes(category);
+  // Sugerencias para el autocompletar del resumen: los resumenes ya usados en
+  // esta misma categoria, para fomentar reusar nombres y que agrupen en el reporte.
+  const summarySuggestions = Array.from(new Set(
+    transactions
+      .filter((tx) => tx.category === category && tx.expense_summary && tx.expense_summary.trim())
+      .map((tx) => (tx.expense_summary as string).trim())
+  )).sort((a, b) => a.localeCompare(b, 'es'));
 
   const { payments: eventParticipants } = useEventMemberPayments(isEventPayment ? selectedEventId : undefined);
 
@@ -418,11 +425,15 @@ export function AddTransactionForm({ defaultType = 'income', triggerLabel = 'Reg
                   <span className="text-xs text-muted-foreground ml-1">({(expenseSummary?.length ?? 0)}/40)</span>
                 </Label>
                 <Input id="expense_summary" data-asistente="mov-resumen" {...register('expense_summary')} maxLength={40}
+                  list="expense-summary-list"
                   placeholder={
                     isIncomeSummary ? 'Ej: Venta de rifas de fin de año'
                       : isEventExpense ? 'Ej: Catering bebidas y mozo'
                         : 'Ej: Compra papelería oficina'
                   } />
+                <datalist id="expense-summary-list">
+                  {summarySuggestions.map((s) => <option key={s} value={s} />)}
+                </datalist>
                 {errors.expense_summary && <p className="text-sm text-destructive">{errors.expense_summary.message}</p>}
               </div>
             )}

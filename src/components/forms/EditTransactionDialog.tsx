@@ -79,7 +79,7 @@ export function EditTransactionDialog({
   open,
   onOpenChange,
 }: EditTransactionDialogProps) {
-  const { updateTransaction } = useTransactions();
+  const { updateTransaction, transactions } = useTransactions();
   const { members } = useMembers();
   const { expenses: events } = useExtraordinaryExpenses();
   const activeEvents = events.filter(
@@ -155,6 +155,12 @@ export function EditTransactionDialog({
   const isEventExpense = category === 'event_expense';
   const supportsSummary = SUMMARY_CATEGORIES.includes(category);
   const isIncomeSummary = INCOME_SUMMARY_CATEGORIES.includes(category);
+  // Resumenes ya usados en esta categoria, para el autocompletar del campo.
+  const summarySuggestions = Array.from(new Set(
+    transactions
+      .filter((tx) => tx.category === category && tx.expense_summary && tx.expense_summary.trim())
+      .map((tx) => (tx.expense_summary as string).trim())
+  )).sort((a, b) => a.localeCompare(b, 'es'));
 
   const { payments: eventParticipants } = useEventMemberPayments(
     isEventPayment ? selectedEventId : undefined
@@ -351,12 +357,16 @@ export function EditTransactionDialog({
                 id="expense_summary_edit"
                 {...register('expense_summary')}
                 maxLength={40}
+                list="expense-summary-list-edit"
                 placeholder={
                   isIncomeSummary ? 'Ej: Venta de rifas de fin de año'
                     : isEventExpense ? 'Ej: Catering bebidas y mozo'
                       : 'Ej: Compra papelería oficina'
                 }
               />
+              <datalist id="expense-summary-list-edit">
+                {summarySuggestions.map((s) => <option key={s} value={s} />)}
+              </datalist>
               <p className="text-xs text-muted-foreground">
                 {isIncomeSummary
                   ? 'Aparece como detalle del ingreso en el flujo de mes del reporte.'
