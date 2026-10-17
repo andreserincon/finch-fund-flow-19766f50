@@ -144,10 +144,16 @@ export default function Members() {
     if (!node) return;
     try {
       const { toPng } = await import('html-to-image');
+      // Forzamos ancho/alto enteros con un margen extra abajo: html-to-image a
+      // veces mide el alto con una fraccion de menos y recorta el borde
+      // inferior de la tarjeta (las etiquetas quedan al ras).
+      const rect = node.getBoundingClientRect();
       const dataUrl = await toPng(node, {
         pixelRatio: 2,
         backgroundColor: '#ffffff',
         cacheBust: true,
+        width: Math.ceil(rect.width),
+        height: Math.ceil(rect.height) + 12,
         filter: (n) => !(n instanceof HTMLElement && n.dataset.noSnapshot === 'true'),
       });
       const blob = await (await fetch(dataUrl)).blob();
