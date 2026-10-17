@@ -1298,12 +1298,20 @@ function buildFlowTable(data: any, formatCurrency: (amount: number, currency?: s
       + '</tr>';
   }).join('');
 
-  // Individual rows for other_expense transactions (sorted by date),
-  // each tagged with its short summary. Replaces the previous aggregated
-  // "Otro Gasto" row.
-  const otherExpenseRowsHtml = (data.otherExpenseRows || []).map((row: any) => {
-    const hasSummary = row.summary && row.summary.trim().length > 0;
-    const concepto = hasSummary ? `Otro Gasto - ${row.summary}` : 'Otro Gasto';
+  // Otro Gasto agrupado: una sola fila por (resumen + moneda), sumando los
+  // movimientos con el mismo nombre. Los que no tienen resumen caen juntos en
+  // "Otro Gasto". Agrupar no cambia el total.
+  const otherExpenseGroups = new Map<string, { summary: string; currency: string; amount: number }>();
+  for (const row of (data.otherExpenseRows || [])) {
+    const summary = (row.summary && String(row.summary).trim()) || '';
+    const currency = row.currency === 'USD' ? 'USD' : 'ARS';
+    const key = summary + '|' + currency;
+    const g = otherExpenseGroups.get(key) || { summary, currency, amount: 0 };
+    g.amount += Number(row.amount || 0);
+    otherExpenseGroups.set(key, g);
+  }
+  const otherExpenseRowsHtml = Array.from(otherExpenseGroups.values()).map((row) => {
+    const concepto = row.summary ? `Otro Gasto - ${row.summary}` : 'Otro Gasto';
     const isUSD = row.currency === 'USD';
     if (isUSD) totalExpUSD += row.amount;
     else totalExpARS += row.amount;
@@ -1322,13 +1330,26 @@ function buildFlowTable(data: any, formatCurrency: (amount: number, currency?: s
   // otherExpenseRowsHtml, pero escribiendo las columnas de ingreso.
   // El total tiene que coincidir con computeMonthResult: si tocás una, tocá
   // la otra o el Resumen y el Completo dejan de dar lo mismo.
-  const otherIncomeRowsHtml = (data.otherIncomeRows || []).map((row: any) => {
+  // Otro Ingreso / Ingreso Extraordinario agrupado: una sola fila por
+  // (categoria + resumen + moneda), sumando los que tienen el mismo nombre.
+  // isIncome entra en la clave por si un movimiento quedara cargado al reves.
+  // Agrupar no cambia el total, asi que Resumen y Completo siguen coincidiendo.
+  const otherIncomeGroups = new Map<string, { category: string; summary: string; currency: string; isIncome: boolean; amount: number }>();
+  for (const row of (data.otherIncomeRows || [])) {
+    const isIncomeRow = row.isIncome !== false;
+    const summary = (row.summary && String(row.summary).trim()) || '';
+    const currency = row.currency === 'USD' ? 'USD' : 'ARS';
+    const key = row.category + '|' + summary + '|' + currency + '|' + isIncomeRow;
+    const g = otherIncomeGroups.get(key) || { category: row.category, summary, currency, isIncome: isIncomeRow, amount: 0 };
+    g.amount += Number(row.amount || 0);
+    otherIncomeGroups.set(key, g);
+  }
+  const otherIncomeRowsHtml = Array.from(otherIncomeGroups.values()).map((row) => {
     const label = data.categoryLabels[row.category] || row.category;
-    const hasSummary = row.summary && String(row.summary).trim().length > 0;
-    const concepto = hasSummary ? `${label} - ${row.summary}` : label;
+    const concepto = row.summary ? `${label} - ${row.summary}` : label;
     const isUSD = row.currency === 'USD';
     const amt = Number(row.amount || 0);
-    const isIncome = row.isIncome !== false;
+    const isIncome = row.isIncome;
     if (isIncome) {
       if (isUSD) totalIncUSD += amt; else totalIncARS += amt;
     } else {
@@ -1357,32 +1378,34 @@ function buildFlowTable(data: any, formatCurrency: (amount: number, currency?: s
   // math exactly (source_amount is the origin currency; amount the destination),
   // so the final balances match to the peso.
   let convInARS = 0, convOutARS = 0, convInUSD = 0, convOutUSD = 0;
-  const currencyExchangeRowsHtml = (data.monthTransfers || [])
-    .filter((t: any) => (t.from_account === 'savings') !== (t.to_account === 'savings'))
-    .slice()
-    .sort((a: any, b: any) => String(a.transfer_date).localeCompare(String(b.transfer_date)))
-    .map((t: any) => {
-      const outAmt = Number(t.source_amount ?? t.amount);
-      const inAmt = Number(t.amount);
-      const isCompra = t.to_account === 'savings'; // pesos salen, dólares entran
-      let concepto = 'Venta de Dólares';
-      let incARSc = 0, incUSDc = 0, expARSc = 0, expUSDc = 0;
-      if (isCompra) {
-        concepto = 'Compra de Dólares';
-        expARSc = outAmt; incUSDc = inAmt;
-        convOutARS += outAmt; convInUSD += inAmt;
-      } else {
-        expUSDc = outAmt; incARSc = inAmt;
-        convOutUSD += outAmt; convInARS += inAmt;
-      }
-      return '<tr>'
-        + '<td>' + concepto + '</td>'
-        + '<td class="text-right ' + (incARSc > 0 ? 'positive' : '') + '">' + (incARSc > 0 ? formatCurrency(incARSc) : '-') + '</td>'
-        + '<td class="text-right ' + (incUSDc > 0 ? 'positive' : '') + '">' + (incUSDc > 0 ? formatCurrency(incUSDc, 'USD') : '-') + '</td>'
-        + '<td class="text-right ' + (expARSc > 0 ? 'negative' : '') + '">' + (expARSc > 0 ? formatCurrency(expARSc) : '-') + '</td>'
-        + '<td class="text-right ' + (expUSDc > 0 ? 'negative' : '') + '">' + (expUSDc > 0 ? formatCurrency(expUSDc, 'USD') : '-') + '</td>'
-        + '</tr>';
-    }).join('');
+  // Compra / Venta de Dólares agrupadas: una sola fila por tipo, sumando todas
+  // las compras y todas las ventas del mes. outAmt/inAmt espejan el calculo de
+  // saldos (source_amount es la moneda de origen; amount, la de destino).
+  const exCompra = { ars: 0, usd: 0 };
+  const exVenta = { ars: 0, usd: 0 };
+  for (const t of (data.monthTransfers || [])) {
+    if ((t.from_account === 'savings') === (t.to_account === 'savings')) continue;
+    const outAmt = Number(t.source_amount ?? t.amount);
+    const inAmt = Number(t.amount);
+    if (t.to_account === 'savings') { // compra: pesos salen, dólares entran
+      exCompra.ars += outAmt; exCompra.usd += inAmt;
+      convOutARS += outAmt; convInUSD += inAmt;
+    } else { // venta: dólares salen, pesos entran
+      exVenta.usd += outAmt; exVenta.ars += inAmt;
+      convOutUSD += outAmt; convInARS += inAmt;
+    }
+  }
+  const exchangeRow = (concepto: string, incARSc: number, incUSDc: number, expARSc: number, expUSDc: number) =>
+    '<tr>'
+    + '<td>' + concepto + '</td>'
+    + '<td class="text-right ' + (incARSc > 0 ? 'positive' : '') + '">' + (incARSc > 0 ? formatCurrency(incARSc) : '-') + '</td>'
+    + '<td class="text-right ' + (incUSDc > 0 ? 'positive' : '') + '">' + (incUSDc > 0 ? formatCurrency(incUSDc, 'USD') : '-') + '</td>'
+    + '<td class="text-right ' + (expARSc > 0 ? 'negative' : '') + '">' + (expARSc > 0 ? formatCurrency(expARSc) : '-') + '</td>'
+    + '<td class="text-right ' + (expUSDc > 0 ? 'negative' : '') + '">' + (expUSDc > 0 ? formatCurrency(expUSDc, 'USD') : '-') + '</td>'
+    + '</tr>';
+  const currencyExchangeRowsHtml =
+    (exCompra.ars > 0 || exCompra.usd > 0 ? exchangeRow('Compra de Dólares', 0, exCompra.usd, exCompra.ars, 0) : '')
+    + (exVenta.ars > 0 || exVenta.usd > 0 ? exchangeRow('Venta de Dólares', exVenta.ars, 0, 0, exVenta.usd) : '');
 
   // Per-event movement rows. Each event's cuota aggregate row and its
   // individual gasto rows are grouped together (cuota first, then gastos
