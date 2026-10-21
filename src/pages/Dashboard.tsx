@@ -36,6 +36,7 @@ import {
   TrendingUp,
   Landmark,
   HandCoins,
+  Coins,
   CalendarDays,
   ChevronDown,
   ChevronRight,
@@ -315,6 +316,14 @@ export default function Dashboard() {
     ? showBank + showGreatLodge + showSavings * exchangeRate
     : totalARSBalance;
 
+  // Activos del taller: la caja total de la tesorería (los tres saldos) más las
+  // cuentas por cobrar de los préstamos (ARS y USD), expresado en ambas monedas
+  // al TC vigente. Los préstamos en USD se convierten a ARS para el total en
+  // pesos; el total en USD se obtiene dividiendo el total en pesos por el TC.
+  const loanReceivablesARS = totalLoansDueARS + totalLoansDueUSD * exchangeRate;
+  const totalAssetsARS = showTotalARS + loanReceivablesARS;
+  const totalAssetsUSD = exchangeRate > 0 ? totalAssetsARS / exchangeRate : 0;
+
   // Account yield (monthly and annual) for the selected month/year
   const { monthlyYieldARS, monthlyYieldUSD, annualYieldARS, annualYieldUSD } = accountTotals;
   const totalMonthlyYield = monthlyYieldARS + (monthlyYieldUSD * exchangeRate);
@@ -569,6 +578,13 @@ export default function Dashboard() {
         </CollapsibleTrigger>
         <CollapsibleContent className="px-3 pb-3 md:px-4 md:pb-4">
           <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+            <StatCard
+              title={t('dashboard.totalAssets')}
+              value={formatCurrency(totalAssetsARS)}
+              subtitle={`USD ${formatCurrency(totalAssetsUSD, 'USD')}\n${t('dashboard.totalAssetsBreakdown')}`}
+              icon={<Coins className="h-8 w-8 text-primary/30" />}
+              variant={totalAssetsARS >= 0 ? 'success' : 'danger'}
+            />
             <StatCard
               title={t('dashboard.accountYield')}
               value={formatCurrency(totalMonthlyYield)}

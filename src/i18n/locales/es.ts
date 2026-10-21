@@ -121,6 +121,8 @@ export default {
       usdSavings: 'Ahorros en USD',
       loansDueUSD: 'Préstamos por Cobrar (USD)',
       activeLoans: '{{count}} préstamo(s) activo(s)',
+      totalAssets: 'Activos del Taller',
+      totalAssetsBreakdown: 'Caja + préstamos por cobrar',
       monthlyFlow: 'Flujo Mensual',
       membersUnpaid: 'Pendiente Capita',
       membersOverdue: 'Pago Demorado',
