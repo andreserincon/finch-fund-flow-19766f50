@@ -541,6 +541,19 @@ export default function Dashboard() {
       {/* Attention banner and the "Miembros que Requieren Atención" list now
           live only on Inicio; the Panel is the financial-detail view. */}
 
+      {/* Total assets headline (treasury cash + loan receivables), above the
+          account balances. Hidden from member-only users, whose RLS-scoped loan
+          rows would make the receivables figure incomplete. */}
+      {!isMemberOnly && (
+        <StatCard
+          title={t('dashboard.totalAssets')}
+          value={formatCurrency(totalAssetsARS)}
+          subtitle={`USD ${formatCurrency(totalAssetsUSD, 'USD')}\n${t('dashboard.totalAssetsBreakdown')}`}
+          icon={<Coins className="h-8 w-8 text-primary/30" />}
+          variant={totalAssetsARS >= 0 ? 'success' : 'danger'}
+        />
+      )}
+
       {/* Primary balances: the three accounts, money at a glance.
           Full-width on phone so large amounts never truncate. */}
       {isMemberOnly && <h2 className="section-header">Tesorería de la logia</h2>}
@@ -578,13 +591,6 @@ export default function Dashboard() {
         </CollapsibleTrigger>
         <CollapsibleContent className="px-3 pb-3 md:px-4 md:pb-4">
           <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
-            <StatCard
-              title={t('dashboard.totalAssets')}
-              value={formatCurrency(totalAssetsARS)}
-              subtitle={`USD ${formatCurrency(totalAssetsUSD, 'USD')}\n${t('dashboard.totalAssetsBreakdown')}`}
-              icon={<Coins className="h-8 w-8 text-primary/30" />}
-              variant={totalAssetsARS >= 0 ? 'success' : 'danger'}
-            />
             <StatCard
               title={t('dashboard.accountYield')}
               value={formatCurrency(totalMonthlyYield)}
