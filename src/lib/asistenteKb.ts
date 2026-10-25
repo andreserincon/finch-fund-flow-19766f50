@@ -316,7 +316,7 @@ export const ASISTENTE_TASKS: KbTask[] = [
       'Elegí el Año y el Mes del período a reportar.',
       'Si el reporte ya existe y querés rehacerlo, marcá la opción de regenerar.',
       'Tocá Generar y esperá; el estado pasa a Generando y luego a Generado.',
-      'Cuando este listo, usá el menú de descarga de la fila para bajar el reporte Completo o el Resumen, o compartirlo si tu dispositivo lo permite.',
+      'Cuando este listo, usá el menú de descarga de la fila para bajar el reporte, o compartirlo si tu dispositivo lo permite.',
     ],
     glossaryTerms: ['capita', 'gl'],
     tour: [
@@ -354,7 +354,7 @@ export const ASISTENTE_TASKS: KbTask[] = [
         route: '/reports',
         anchor: 'reporte-descargar',
         title: 'Descargá o compartí',
-        body: 'Cuando este listo, usá el menú de descarga de la fila para bajar el Reporte Completo o el Resumen, o compartirlo si tu dispositivo lo permite.',
+        body: 'Cuando este listo, usá el menú de descarga de la fila para bajar el reporte, o compartirlo si tu dispositivo lo permite.',
       },
     ],
   },

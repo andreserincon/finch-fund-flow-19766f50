@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FileText, Download, RefreshCw, Calendar, CheckCircle, Clock, AlertCircle, FileDown, Share2 } from 'lucide-react';
+import { FileText, Download, RefreshCw, Calendar, CheckCircle, Clock, AlertCircle, Share2 } from 'lucide-react';
 import { useMonthlyReports } from '@/hooks/useMonthlyReports';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { useExchangeRate } from '@/hooks/useExchangeRate';
@@ -305,31 +305,13 @@ export default function Reports() {
                               <FileText className="h-4 w-4 mr-2" />
                               {t('reports.downloadComprehensive')}
                             </DropdownMenuItem>
-                            {report.lite_pdf_path && (
-                              <DropdownMenuItem
-                                onSelect={() => handleDownloadReport(report.lite_pdf_path!, report.report_year, report.report_month)}
-                              >
-                                <FileDown className="h-4 w-4 mr-2" />
-                                {t('reports.downloadLite')}
-                              </DropdownMenuItem>
-                            )}
                             {canShare && (
-                              <>
-                                <DropdownMenuItem
-                                  onSelect={() => handleShareReport(report.pdf_path!, report.report_year, report.report_month, false)}
-                                >
-                                  <Share2 className="h-4 w-4 mr-2" />
-                                  {t('reports.shareComprehensive')}
-                                </DropdownMenuItem>
-                                {report.lite_pdf_path && (
-                                  <DropdownMenuItem
-                                    onSelect={() => handleShareReport(report.lite_pdf_path!, report.report_year, report.report_month, true)}
-                                  >
-                                    <Share2 className="h-4 w-4 mr-2" />
-                                    {t('reports.shareLite')}
-                                  </DropdownMenuItem>
-                                )}
-                              </>
+                              <DropdownMenuItem
+                                onSelect={() => handleShareReport(report.pdf_path!, report.report_year, report.report_month, false)}
+                              >
+                                <Share2 className="h-4 w-4 mr-2" />
+                                {t('reports.shareComprehensive')}
+                              </DropdownMenuItem>
                             )}
                           </DropdownMenuContent>
                         </DropdownMenu>

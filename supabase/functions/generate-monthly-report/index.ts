@@ -1095,11 +1095,9 @@ Deno.serve(async (req) => {
       console.warn('Failed to load logo:', e);
     }
 
-    // Generate comprehensive report
+    // Generate comprehensive report. The Resumen (lite) report was removed to
+    // halve PDFSHIFT usage per month; only the Completo report is produced now.
     const pdfContent = generatePDFHTML(reportData, 'comprehensive', logoBase64);
-    
-    // Generate lite report
-    const liteContent = generatePDFHTML(reportData, 'lite', logoBase64);
 
     // Running header & footer rendered by PDFShift on every page (page 1
     // skips the running header; the big main header already lives there).
@@ -1122,51 +1120,28 @@ Deno.serve(async (req) => {
       </div>
     `;
 
-    // Convert HTML to PDF via PDFShift. Both reports in parallel.
-    const [comprehensivePdf, litePdf] = await Promise.all([
-      convertHtmlToPdf({
-        html: pdfContent,
-        headerHtml: runningHeaderHtml,
-        footerHtml: runningFooterHtml,
-      }),
-      // Lite is single-page; no running header needed but keep a small footer
-      // for a page identifier if it ever spills.
-      convertHtmlToPdf({
-        html: liteContent,
-        footerHtml: runningFooterHtml,
-        marginTopMm: 8,
-      }),
-    ]);
+    // Convert HTML to PDF via PDFShift. Only the Completo report is produced.
+    const comprehensivePdf = await convertHtmlToPdf({
+      html: pdfContent,
+      headerHtml: runningHeaderHtml,
+      footerHtml: runningFooterHtml,
+    });
 
-    // Upload PDFs to storage. Filenames mirror the <title> convention so
-    // the signed URL surface a sensible default download name.
+    // Upload PDF to storage. Filename mirrors the <title> convention so
+    // the signed URL surfaces a sensible default download name.
     const monthPad = month.toString().padStart(2, '0');
     const pdfPath = `${year}/${monthPad}/RLSB646_Reporte_Mensual_${year}-${monthPad}_${monthName}_Completo.pdf`;
-    const litePdfPath = `${year}/${monthPad}/RLSB646_Reporte_Mensual_${year}-${monthPad}_${monthName}_Resumen.pdf`;
 
-    const [uploadResult, liteUploadResult] = await Promise.all([
-      supabase.storage
-        .from('reports')
-        .upload(pdfPath, comprehensivePdf, {
-          contentType: 'application/pdf',
-          upsert: true,
-        }),
-      supabase.storage
-        .from('reports')
-        .upload(litePdfPath, litePdf, {
-          contentType: 'application/pdf',
-          upsert: true,
-        }),
-    ]);
+    const uploadResult = await supabase.storage
+      .from('reports')
+      .upload(pdfPath, comprehensivePdf, {
+        contentType: 'application/pdf',
+        upsert: true,
+      });
 
     if (uploadResult.error) {
       console.error('Upload error (comprehensive):', uploadResult.error);
       throw uploadResult.error;
-    }
-
-    if (liteUploadResult.error) {
-      console.error('Upload error (lite):', liteUploadResult.error);
-      throw liteUploadResult.error;
     }
 
     // Update report with both PDF paths and mark as generated
@@ -1180,7 +1155,9 @@ Deno.serve(async (req) => {
         status: 'generated',
         generated_at: new Date().toISOString(),
         pdf_path: pdfPath,
-        lite_pdf_path: litePdfPath,
+        // Resumen report removed: clear any stale pointer from an earlier run so
+        // the app stops offering a Resumen download for a regenerated month.
+        lite_pdf_path: null,
         total_inflows: canonicalMonthResult.ingresosEquiv,
         total_outflows: canonicalMonthResult.egresosEquiv,
         net_result: canonicalMonthResult.equivArs,
@@ -1199,12 +1176,11 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
+      JSON.stringify({
+        success: true,
         reportId,
         pdfPath,
-        litePdfPath,
-        message: `Reporte generado para ${monthName} ${year}` 
+        message: `Reporte generado para ${monthName} ${year}`
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
