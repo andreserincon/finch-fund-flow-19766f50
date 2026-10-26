@@ -6,8 +6,8 @@
  *   The open gestion's start date will anchor the closed-period lock in Fase 2.
  */
 import { useState } from 'react';
-import { CalendarClock, Plus, CheckCircle, Lock, RefreshCw } from 'lucide-react';
-import { useGestiones } from '@/hooks/useGestiones';
+import { CalendarClock, Plus, CheckCircle, Lock, RefreshCw, Pencil } from 'lucide-react';
+import { useGestiones, type Gestion } from '@/hooks/useGestiones';
 import { useMembers } from '@/hooks/useMembers';
 import { useUserRoles } from '@/hooks/useUserRoles';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -33,7 +33,7 @@ function formatDate(iso: string | null): string {
 }
 
 export default function Gestiones() {
-  const { gestiones, currentGestion, isLoading, createGestion } = useGestiones();
+  const { gestiones, currentGestion, isLoading, createGestion, editGestion } = useGestiones();
   const { members } = useMembers();
   const { users } = useUserRoles();
 
@@ -56,6 +56,13 @@ export default function Gestiones() {
   const [tesoreroId, setTesoreroId] = useState<string>(NONE);
   const [vmId, setVmId] = useState<string>(NONE);
 
+  const [editingGestion, setEditingGestion] = useState<Gestion | null>(null);
+  const [eNombre, setENombre] = useState('');
+  const [eInicio, setEInicio] = useState('');
+  const [eFin, setEFin] = useState('');
+  const [eTesorero, setETesorero] = useState<string>(NONE);
+  const [eVm, setEVm] = useState<string>(NONE);
+
   const resetForm = () => {
     setNombre('');
     setFechaInicio('');
@@ -74,6 +81,33 @@ export default function Gestiones() {
     });
     setIsDialogOpen(false);
     resetForm();
+  };
+
+  const openEdit = (g: Gestion) => {
+    setEditingGestion(g);
+    setENombre(g.nombre);
+    setEInicio(g.fecha_inicio);
+    setEFin(g.fecha_fin ?? '');
+    setETesorero(g.tesorero_member_id ?? NONE);
+    setEVm(g.vm_member_id ?? NONE);
+  };
+
+  const canEdit = eNombre.trim().length > 0 && eInicio.length > 0 && !editGestion.isPending;
+
+  const handleEdit = async () => {
+    if (!editingGestion) return;
+    await editGestion.mutateAsync({
+      id: editingGestion.id,
+      isOpen: editingGestion.estado === 'abierta',
+      nombre: eNombre.trim(),
+      fecha_inicio: eInicio,
+      fecha_fin: eFin || null,
+      tesorero_member_id: eTesorero === NONE ? null : eTesorero,
+      vm_member_id: eVm === NONE ? null : eVm,
+      prevTesoreroMemberId: editingGestion.tesorero_member_id,
+      prevVmMemberId: editingGestion.vm_member_id,
+    });
+    setEditingGestion(null);
   };
 
   return (
@@ -203,6 +237,7 @@ export default function Gestiones() {
                   <TableHead className="hidden md:table-cell">Tesorero</TableHead>
                   <TableHead className="hidden md:table-cell">Venerable</TableHead>
                   <TableHead className="text-right">Estado</TableHead>
+                  <TableHead className="w-10"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -226,6 +261,17 @@ export default function Gestiones() {
                         </Badge>
                       )}
                     </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => openEdit(g)}
+                        aria-label="Editar gestión"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -233,6 +279,81 @@ export default function Gestiones() {
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={!!editingGestion} onOpenChange={(o) => { if (!o) setEditingGestion(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar gestión</DialogTitle>
+            <DialogDescription>
+              {editingGestion?.estado === 'abierta'
+                ? 'Al guardar, el Tesorero y el Venerable elegidos reciben su rol de acceso; si reemplazás a uno, el saliente pierde ese rol.'
+                : 'Editás los datos de una gestión cerrada. No se cambian roles de acceso (los roles reflejan la gestión abierta).'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-nombre">Nombre</Label>
+              <Input id="edit-nombre" value={eNombre} onChange={(e) => setENombre(e.target.value)} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-inicio">Fecha de inicio</Label>
+                <Input id="edit-inicio" type="date" value={eInicio} onChange={(e) => setEInicio(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-fin">Fecha de fin</Label>
+                <Input id="edit-fin" type="date" value={eFin} onChange={(e) => setEFin(e.target.value)} />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Tesorero</Label>
+              <Select value={eTesorero} onValueChange={setETesorero}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Sin asignar" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NONE}>Sin asignar</SelectItem>
+                  {officerOptions.map((o) => (
+                    <SelectItem key={o.member_id} value={o.member_id}>{o.member_name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Venerable</Label>
+              <Select value={eVm} onValueChange={setEVm}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Sin asignar" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NONE}>Sin asignar</SelectItem>
+                  {officerOptions.map((o) => (
+                    <SelectItem key={o.member_id} value={o.member_id}>{o.member_name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Solo aparecen miembros con usuario. Si falta alguien, creá su usuario en Accesos y Roles.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingGestion(null)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleEdit} disabled={!canEdit}>
+              {editGestion.isPending ? (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  Guardando
+                </>
+              ) : (
+                'Guardar cambios'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

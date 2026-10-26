@@ -217,21 +217,56 @@ export function useGestiones() {
     },
   });
 
-  /** Edit an existing gestion (dates or officers). */
-  const updateGestion = useMutation({
-    mutationFn: async ({ id, ...updates }: Partial<Gestion> & { id: string }) => {
-      const { data, error } = await supabase
+  /**
+   * Edit an existing gestion (name, dates, officers). When editing the OPEN
+   * gestion, the app roles are reconciled too (the new Tesorero/Venerable get
+   * their role, a replaced officer loses it), via the same add/remove logic as
+   * creating one. Editing a closed gestion only updates the record.
+   */
+  const editGestion = useMutation({
+    mutationFn: async (input: {
+      id: string;
+      isOpen: boolean;
+      nombre: string;
+      fecha_inicio: string;
+      fecha_fin: string | null;
+      tesorero_member_id: string | null;
+      vm_member_id: string | null;
+      prevTesoreroMemberId: string | null;
+      prevVmMemberId: string | null;
+    }) => {
+      const { error } = await supabase
         .from('gestiones')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single();
+        .update({
+          nombre: input.nombre,
+          fecha_inicio: input.fecha_inicio,
+          fecha_fin: input.fecha_fin,
+          tesorero_member_id: input.tesorero_member_id,
+          vm_member_id: input.vm_member_id,
+        })
+        .eq('id', input.id);
       if (error) throw error;
-      return data;
+
+      let roleWarnings: string[] = [];
+      if (input.isOpen) {
+        roleWarnings = await reconcileGestionRoles({
+          newTesoreroMemberId: input.tesorero_member_id,
+          newVmMemberId: input.vm_member_id,
+          prevTesoreroMemberId: input.prevTesoreroMemberId,
+          prevVmMemberId: input.prevVmMemberId,
+        });
+      }
+      return roleWarnings;
     },
-    onSuccess: () => {
+    onSuccess: (roleWarnings) => {
       queryClient.invalidateQueries({ queryKey: ['gestiones'] });
-      toast.success('Gestion actualizada.');
+      queryClient.invalidateQueries({ queryKey: ['users-with-roles'] });
+      queryClient.invalidateQueries({ queryKey: ['members'] });
+      if (roleWarnings.length > 0) {
+        toast.warning(`Gestion actualizada, revisá los accesos: ${roleWarnings[0]}`);
+      } else {
+        toast.success('Gestion actualizada.');
+      }
     },
     onError: (error: Error) => {
       toast.error(`Error al actualizar la gestion: ${error.message}`);
@@ -244,6 +279,6 @@ export function useGestiones() {
     isLoading: gestionesQuery.isLoading,
     error: gestionesQuery.error,
     createGestion,
-    updateGestion,
+    editGestion,
   };
 }
