@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useTransactions } from '@/hooks/useTransactions';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
+import { useCanManageUsers } from '@/hooks/useCanManageUsers';
+import { useGestiones } from '@/hooks/useGestiones';
 import { EditTransactionDialog } from '@/components/forms/EditTransactionDialog';
 import { DeleteTransactionDialog } from '@/components/forms/DeleteTransactionDialog';
 import { EditTransferDialog } from '@/components/forms/EditTransferDialog';
@@ -31,7 +33,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Search, TrendingUp, TrendingDown, MoreHorizontal, Pencil, Trash2, ArrowUpDown, ArrowUp, ArrowDown, ArrowLeftRight } from 'lucide-react';
+import { Search, TrendingUp, TrendingDown, MoreHorizontal, Pencil, Trash2, ArrowUpDown, ArrowUp, ArrowDown, ArrowLeftRight, Lock } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn, formatCurrency, getCurrencyForAccount, parseLocalDate } from '@/lib/utils';
@@ -58,6 +60,14 @@ export default function Transactions() {
   const { transfers, isLoading: transfersLoading } = useAccountTransfers();
   const isLoading = transactionsLoading || transfersLoading;
   const { isAdmin } = useIsAdmin();
+  const { canManageUsers } = useCanManageUsers();
+  const { currentGestion } = useGestiones();
+  // Periodo cerrado: una fecha anterior al inicio de la gestion abierta solo la
+  // pueden ajustar Admin o Venerable (canManageUsers). Para el Tesorero, editar
+  // y borrar esas filas queda deshabilitado aca (la RLS lo garantiza igual en
+  // el servidor). Sin gestion abierta, nada esta bloqueado.
+  const lockBoundary = currentGestion?.fecha_inicio ?? null;
+  const isRowLocked = (row: MovementRow) => !!lockBoundary && row.date < lockBoundary && !canManageUsers;
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
@@ -384,17 +394,26 @@ export default function Transactions() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="bg-popover">
-                        <DropdownMenuItem onClick={() => handleEdit(row)}>
-                          <Pencil className="mr-2 h-4 w-4" />
-                          Editar
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          onClick={() => handleDelete(row)}
-                          className="text-destructive focus:text-destructive"
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Eliminar
-                        </DropdownMenuItem>
+                        {isRowLocked(row) ? (
+                          <DropdownMenuItem disabled>
+                            <Lock className="mr-2 h-4 w-4" />
+                            Periodo cerrado
+                          </DropdownMenuItem>
+                        ) : (
+                          <>
+                            <DropdownMenuItem onClick={() => handleEdit(row)}>
+                              <Pencil className="mr-2 h-4 w-4" />
+                              Editar
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => handleDelete(row)}
+                              className="text-destructive focus:text-destructive"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Eliminar
+                            </DropdownMenuItem>
+                          </>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   )}
@@ -499,17 +518,26 @@ export default function Transactions() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="bg-popover">
-                          <DropdownMenuItem onClick={() => handleEdit(row)}>
-                            <Pencil className="mr-2 h-4 w-4" />
-                            Editar
-                          </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            onClick={() => handleDelete(row)}
-                            className="text-destructive focus:text-destructive"
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Eliminar
-                          </DropdownMenuItem>
+                          {isRowLocked(row) ? (
+                            <DropdownMenuItem disabled>
+                              <Lock className="mr-2 h-4 w-4" />
+                              Periodo cerrado
+                            </DropdownMenuItem>
+                          ) : (
+                            <>
+                              <DropdownMenuItem onClick={() => handleEdit(row)}>
+                                <Pencil className="mr-2 h-4 w-4" />
+                                Editar
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => handleDelete(row)}
+                                className="text-destructive focus:text-destructive"
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Eliminar
+                              </DropdownMenuItem>
+                            </>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
