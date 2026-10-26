@@ -35,3 +35,11 @@ export const ROLE_OPTIONS: RoleOption[] = [
   { value: 'treasurer', label: 'Tesorero', description: 'Registra pagos, gastos, prestamos y reportes.' },
   { value: 'admin', label: 'Administrador', description: 'Acceso total. Gestiona usuarios, roles y configuracion.' },
 ];
+
+// Roles that can be assigned directly from Accesos y Roles. Tesorero y Venerable
+// NO estan aca: esos dos roles son consecuencia de la gestion (ver Gestiones),
+// asi que se asignan desde ahi, nunca desde los dialogos de usuario. Una sola
+// fuente de verdad para quien es Tesorero y quien Venerable.
+export const ASSIGNABLE_ROLE_OPTIONS: RoleOption[] = ROLE_OPTIONS.filter(
+  (o) => o.value !== 'treasurer' && o.value !== 'vm',
+);

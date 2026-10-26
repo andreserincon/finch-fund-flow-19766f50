@@ -9,6 +9,7 @@ import { useState } from 'react';
 import { CalendarClock, Plus, CheckCircle, Lock, RefreshCw } from 'lucide-react';
 import { useGestiones } from '@/hooks/useGestiones';
 import { useMembers } from '@/hooks/useMembers';
+import { useUserRoles } from '@/hooks/useUserRoles';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { LodgeLoader } from '@/components/lodge/LodgeLoader';
 import { Button } from '@/components/ui/button';
@@ -32,10 +33,20 @@ function formatDate(iso: string | null): string {
 }
 
 export default function Gestiones() {
-  const { gestiones, currentGestion, isLoading, createGestion } = useGestiones();
+  const { gestiones, currentGestion, isLoading, createGestion, syncRoles } = useGestiones();
   const { members } = useMembers();
+  const { users } = useUserRoles();
 
-  const activeMembers = members.filter((m) => m.is_active);
+  // Un oficial debe tener usuario: el selector lista solo miembros vinculados a
+  // un usuario (dedup por miembro, por si un miembro tuviera mas de un usuario).
+  const officerOptions = Array.from(
+    new Map(
+      (users ?? [])
+        .filter((u) => u.member_id && u.member_name)
+        .map((u) => [u.member_id as string, u.member_name as string]),
+    ).entries(),
+  ).map(([member_id, member_name]) => ({ member_id, member_name }));
+
   const memberName = (id: string | null) =>
     id ? members.find((m) => m.id === id)?.full_name ?? 'Miembro eliminado' : '-';
 
@@ -85,6 +96,7 @@ export default function Gestiones() {
                 <DialogDescription>
                   Al crearla, la gestión abierta actual queda cerrada y su fecha de fin se fija en el día
                   anterior al inicio de esta. El inicio de la gestión abierta marca el límite del bloqueo.
+                  El Tesorero y el Venerable elegidos reciben ese rol de acceso; el saliente pasa a Miembro.
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
@@ -114,8 +126,8 @@ export default function Gestiones() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value={NONE}>Sin asignar</SelectItem>
-                      {activeMembers.map((m) => (
-                        <SelectItem key={m.id} value={m.id}>{m.full_name}</SelectItem>
+                      {officerOptions.map((o) => (
+                        <SelectItem key={o.member_id} value={o.member_id}>{o.member_name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -128,12 +140,15 @@ export default function Gestiones() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value={NONE}>Sin asignar</SelectItem>
-                      {activeMembers.map((m) => (
-                        <SelectItem key={m.id} value={m.id}>{m.full_name}</SelectItem>
+                      {officerOptions.map((o) => (
+                        <SelectItem key={o.member_id} value={o.member_id}>{o.member_name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
+                <p className="text-xs text-muted-foreground">
+                  Solo aparecen miembros con usuario. Si falta alguien, creá su usuario en Accesos y Roles.
+                </p>
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
@@ -169,6 +184,23 @@ export default function Gestiones() {
               ? `Gestión abierta: ${currentGestion.nombre} (desde ${formatDate(currentGestion.fecha_inicio)})`
               : 'No hay ninguna gestión abierta todavía. Creá la primera para empezar a registrar los periodos.'}
           </CardDescription>
+          {currentGestion && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-2 w-fit"
+              onClick={() =>
+                syncRoles.mutate({
+                  tesorero_member_id: currentGestion.tesorero_member_id,
+                  vm_member_id: currentGestion.vm_member_id,
+                })
+              }
+              disabled={syncRoles.isPending}
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${syncRoles.isPending ? 'animate-spin' : ''}`} />
+              Sincronizar accesos
+            </Button>
+          )}
         </CardHeader>
         <CardContent>
           {isLoading ? (

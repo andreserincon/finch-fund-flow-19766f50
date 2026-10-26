@@ -24,7 +24,7 @@ import {
 } from '@/components/ui/select';
 import { Loader2, Copy, Check, Link2 } from 'lucide-react';
 import { useMembers } from '@/hooks/useMembers';
-import { ROLE_OPTIONS } from '@/lib/roles';
+import { ASSIGNABLE_ROLE_OPTIONS } from '@/lib/roles';
 
 const createUserSchema = z.object({
   email: z.string().trim().email({ message: 'Correo invalido' }),
@@ -50,7 +50,7 @@ export function CreateUserDialog({ open, onOpenChange, excludeMemberIds }: Creat
   const [createdLink, setCreatedLink] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const roleOptions = ROLE_OPTIONS;
+  const roleOptions = ASSIGNABLE_ROLE_OPTIONS;
   const roleDescription = roleOptions.find((o) => o.value === role)?.description ?? '';
 
   const excluded = useMemo(() => new Set(excludeMemberIds), [excludeMemberIds]);

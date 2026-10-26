@@ -104,6 +104,11 @@ export function EditUserDialog({
 
   const activeMembers = members?.filter((m) => m.is_active) || [];
 
+  // Tesorero y Venerable son consecuencia de la gestion: no se editan aca. Si el
+  // usuario ya tiene uno de esos roles, se muestra bloqueado con una nota y al
+  // guardar se conserva (el role sigue siendo currentRole).
+  const roleManagedByGestion = currentRole === 'treasurer' || currentRole === 'vm';
+
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[425px]">
@@ -115,19 +120,34 @@ export function EditUserDialog({
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label>{t('userManagement.role', 'Rol')}</Label>
-              <Select value={role} onValueChange={setRole} disabled={isLoading}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">{t('userManagement.noRole', 'Sin rol')}</SelectItem>
-                  <SelectItem value="treasurer">{t('userManagement.roles.treasurer')}</SelectItem>
-                  <SelectItem value="vm">{t('userManagement.roles.vm')}</SelectItem>
-                  <SelectItem value="member">{t('userManagement.roles.member')}</SelectItem>
-                  <SelectItem value="bibliotecario">{t('userManagement.roles.bibliotecario')}</SelectItem>
-                  <SelectItem value="admin">{t('userManagement.roles.admin')}</SelectItem>
-                </SelectContent>
-              </Select>
+              {roleManagedByGestion ? (
+                <>
+                  <Select value={role} disabled>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="treasurer">{t('userManagement.roles.treasurer')}</SelectItem>
+                      <SelectItem value="vm">{t('userManagement.roles.vm')}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Tesorero y Venerable se gestionan desde Gestiones.
+                  </p>
+                </>
+              ) : (
+                <Select value={role} onValueChange={setRole} disabled={isLoading}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">{t('userManagement.noRole', 'Sin rol')}</SelectItem>
+                    <SelectItem value="member">{t('userManagement.roles.member')}</SelectItem>
+                    <SelectItem value="bibliotecario">{t('userManagement.roles.bibliotecario')}</SelectItem>
+                    <SelectItem value="admin">{t('userManagement.roles.admin')}</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
             </div>
             <div className="grid gap-2">
               <Label>{t('userManagement.associatedMember', 'Miembro Asociado')}</Label>

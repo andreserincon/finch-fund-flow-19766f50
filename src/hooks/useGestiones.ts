@@ -32,6 +32,86 @@ function dayBefore(isoDate: string): string {
   return d.toISOString().slice(0, 10);
 }
 
+interface OfficerUserRow {
+  user_id: string;
+  member_id: string | null;
+  role: string | null;
+}
+
+/**
+ * Make the app roles match a gestion's officers. Assigns `treasurer` to the
+ * Tesorero's user and `vm` to the Venerable's user (through the admin-update-user
+ * edge function, authz admin|vm), and demotes the outgoing officers to `member`.
+ * A member must have a user account to receive a role. Never touches an
+ * Administrator (admin outranks both, and keeps full access). Best effort:
+ * returns a Spanish warning for each step that could not be applied.
+ */
+async function reconcileGestionRoles(params: {
+  newTesoreroMemberId: string | null;
+  newVmMemberId: string | null;
+  prevTesoreroMemberId: string | null;
+  prevVmMemberId: string | null;
+}): Promise<string[]> {
+  const warnings: string[] = [];
+
+  const { data, error } = await supabase.rpc('get_users_with_roles');
+  if (error) {
+    warnings.push('No se pudieron leer los usuarios para asignar los roles.');
+    return warnings;
+  }
+  const list = (data ?? []) as OfficerUserRow[];
+  const userForMember = (mid: string | null) =>
+    mid ? list.find((u) => u.member_id === mid) ?? null : null;
+
+  const setRole = async (userId: string, role: string, memberId: string) => {
+    const { data: res, error: err } = await supabase.functions.invoke('admin-update-user', {
+      body: { userId, role, memberId },
+    });
+    if (err) throw new Error(err.message);
+    if (res?.error) throw new Error(res.error);
+  };
+
+  // Asignar el rol a los oficiales entrantes (salteando admins y los que ya lo tienen).
+  const incoming: Array<[string | null, 'treasurer' | 'vm']> = [
+    [params.newTesoreroMemberId, 'treasurer'],
+    [params.newVmMemberId, 'vm'],
+  ];
+  for (const [mid, role] of incoming) {
+    if (!mid) continue;
+    const u = userForMember(mid);
+    if (!u) {
+      warnings.push('Un oficial elegido no tiene usuario; no se le asigno el rol.');
+      continue;
+    }
+    if (u.role === 'admin') continue; // nunca bajar a un Administrador
+    if (u.role === role) continue; // ya lo tiene
+    try {
+      await setRole(u.user_id, role, mid);
+    } catch {
+      warnings.push('No se pudo asignar el rol a un oficial entrante.');
+    }
+  }
+
+  // Bajar a Miembro a los oficiales salientes que ya no siguen en el cargo.
+  const outgoing: Array<[string | null, 'treasurer' | 'vm', string | null]> = [
+    [params.prevTesoreroMemberId, 'treasurer', params.newTesoreroMemberId],
+    [params.prevVmMemberId, 'vm', params.newVmMemberId],
+  ];
+  for (const [prevMid, role, newMid] of outgoing) {
+    if (!prevMid || prevMid === newMid) continue;
+    const u = userForMember(prevMid);
+    if (!u) continue;
+    if (u.role !== role) continue; // ya no tiene ese rol (o es admin): no tocar
+    try {
+      await setRole(u.user_id, 'member', prevMid);
+    } catch {
+      warnings.push('No se pudo bajar a Miembro a un oficial saliente.');
+    }
+  }
+
+  return warnings;
+}
+
 export function useGestiones() {
   const queryClient = useQueryClient();
 
@@ -92,14 +172,56 @@ export function useGestiones() {
         }
         throw error;
       }
-      return data;
+
+      // Acoplar la asignacion de la gestion a los roles de app: el Tesorero y el
+      // Venerable entrantes reciben su rol; los salientes pasan a Miembro.
+      const roleWarnings = await reconcileGestionRoles({
+        newTesoreroMemberId: input.tesorero_member_id,
+        newVmMemberId: input.vm_member_id,
+        prevTesoreroMemberId: open?.tesorero_member_id ?? null,
+        prevVmMemberId: open?.vm_member_id ?? null,
+      });
+      return { gestion: data, roleWarnings };
     },
-    onSuccess: () => {
+    onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ['gestiones'] });
-      toast.success('Gestion creada. La anterior quedo cerrada.');
+      queryClient.invalidateQueries({ queryKey: ['users-with-roles'] });
+      queryClient.invalidateQueries({ queryKey: ['members'] });
+      if (res.roleWarnings.length > 0) {
+        toast.warning(`Gestion creada, revisá los accesos: ${res.roleWarnings[0]}`);
+      } else {
+        toast.success('Gestion creada. La anterior quedo cerrada y los roles se actualizaron.');
+      }
     },
     onError: (error: Error) => {
       toast.error(`Error al crear la gestion: ${error.message}`);
+    },
+  });
+
+  /**
+   * Reapply the app roles for an existing gestion's officers (assign only, no
+   * demotion). Lets the open gestion created before this coupling push its
+   * officers to the right roles.
+   */
+  const syncRoles = useMutation({
+    mutationFn: async (g: { tesorero_member_id: string | null; vm_member_id: string | null }) =>
+      reconcileGestionRoles({
+        newTesoreroMemberId: g.tesorero_member_id,
+        newVmMemberId: g.vm_member_id,
+        prevTesoreroMemberId: null,
+        prevVmMemberId: null,
+      }),
+    onSuccess: (warnings) => {
+      queryClient.invalidateQueries({ queryKey: ['users-with-roles'] });
+      queryClient.invalidateQueries({ queryKey: ['members'] });
+      if (warnings.length > 0) {
+        toast.warning(`Accesos sincronizados con observaciones: ${warnings[0]}`);
+      } else {
+        toast.success('Accesos sincronizados: Tesorero y Venerable actualizados.');
+      }
+    },
+    onError: (error: Error) => {
+      toast.error(`Error al sincronizar accesos: ${error.message}`);
     },
   });
 
@@ -131,5 +253,6 @@ export function useGestiones() {
     error: gestionesQuery.error,
     createGestion,
     updateGestion,
+    syncRoles,
   };
 }
