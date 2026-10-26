@@ -1355,6 +1355,10 @@ export type Database = {
     Functions: {
       auto_release_overdue_books: { Args: never; Returns: undefined }
       can_view: { Args: { _user_id: string }; Returns: boolean }
+      can_write_period: {
+        Args: { _d: string; _user_id: string }
+        Returns: boolean
+      }
       get_lodge_financials: {
         Args: never
         Returns: {
