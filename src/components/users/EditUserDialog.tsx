@@ -23,13 +23,15 @@ import {
 import { Loader2 } from 'lucide-react';
 import type { AppRole, MasonicGrade } from '@/hooks/useUserRoles';
 import { useMembers } from '@/hooks/useMembers';
+import { ASSIGNABLE_ROLE_OPTIONS, getRoleLabel } from '@/lib/roles';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface EditUserDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   userId: string;
   userEmail: string;
-  currentRole: AppRole | null;
+  currentRoles: AppRole[];
   currentMemberId: string | null;
   currentGrade: MasonicGrade | null;
 }
@@ -39,7 +41,7 @@ export function EditUserDialog({
   onOpenChange,
   userId,
   userEmail,
-  currentRole,
+  currentRoles,
   currentMemberId,
   currentGrade,
 }: EditUserDialogProps) {
@@ -47,17 +49,17 @@ export function EditUserDialog({
   const queryClient = useQueryClient();
   const { members } = useMembers();
   const [isLoading, setIsLoading] = useState(false);
-  const [role, setRole] = useState<string>('none');
+  const [roles, setRoles] = useState<AppRole[]>([]);
   const [memberId, setMemberId] = useState<string>('none');
   const [grade, setGrade] = useState<string>('aprendiz');
 
   useEffect(() => {
     if (open) {
-      setRole(currentRole || 'none');
+      setRoles(currentRoles);
       setMemberId(currentMemberId || 'none');
       setGrade(currentGrade || 'aprendiz');
     }
-  }, [open, currentRole, currentMemberId, currentGrade]);
+  }, [open, currentRoles, currentMemberId, currentGrade]);
 
   // When member changes in the form, load that member's grade
   const handleMemberChange = (newMemberId: string) => {
@@ -82,7 +84,7 @@ export function EditUserDialog({
       const { data, error } = await supabase.functions.invoke('admin-update-user', {
         body: {
           userId,
-          role: role === 'none' ? null : role,
+          roles,
           memberId: memberId === 'none' ? null : memberId,
           masonicGrade: memberId === 'none' ? null : grade,
         },
@@ -104,10 +106,12 @@ export function EditUserDialog({
 
   const activeMembers = members?.filter((m) => m.is_active) || [];
 
-  // Tesorero y Venerable son consecuencia de la gestion: no se editan aca. Si el
-  // usuario ya tiene uno de esos roles, se muestra bloqueado con una nota y al
-  // guardar se conserva (el role sigue siendo currentRole).
-  const roleManagedByGestion = currentRole === 'treasurer' || currentRole === 'vm';
+  const toggleRole = (value: AppRole, checked: boolean) => {
+    setRoles((prev) => (checked ? Array.from(new Set([...prev, value])) : prev.filter((r) => r !== value)));
+  };
+  // Tesorero y Venerable son consecuencia de la gestion: se muestran bloqueados
+  // (no se editan aca) y se conservan al guardar; el resto se marca con checkboxes.
+  const gestionManaged = roles.filter((r) => r === 'treasurer' || r === 'vm');
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -119,35 +123,33 @@ export function EditUserDialog({
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label>{t('userManagement.role', 'Rol')}</Label>
-              {roleManagedByGestion ? (
-                <>
-                  <Select value={role} disabled>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="treasurer">{t('userManagement.roles.treasurer')}</SelectItem>
-                      <SelectItem value="vm">{t('userManagement.roles.vm')}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground">
-                    Tesorero y Venerable se gestionan desde Gestiones.
-                  </p>
-                </>
-              ) : (
-                <Select value={role} onValueChange={setRole} disabled={isLoading}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">{t('userManagement.noRole', 'Sin rol')}</SelectItem>
-                    <SelectItem value="member">{t('userManagement.roles.member')}</SelectItem>
-                    <SelectItem value="bibliotecario">{t('userManagement.roles.bibliotecario')}</SelectItem>
-                    <SelectItem value="admin">{t('userManagement.roles.admin')}</SelectItem>
-                  </SelectContent>
-                </Select>
-              )}
+              <Label>{t('userManagement.role', 'Roles')}</Label>
+              <div className="space-y-2 rounded-md border p-3">
+                {ASSIGNABLE_ROLE_OPTIONS.map((o) => (
+                  <label key={o.value} className="flex items-start gap-2 cursor-pointer">
+                    <Checkbox
+                      checked={roles.includes(o.value)}
+                      onCheckedChange={(c) => toggleRole(o.value, c === true)}
+                      disabled={isLoading}
+                      className="mt-0.5"
+                    />
+                    <span>
+                      <span className="text-sm font-medium">{o.label}</span>
+                      <span className="block text-xs text-muted-foreground">{o.description}</span>
+                    </span>
+                  </label>
+                ))}
+                {gestionManaged.map((r) => (
+                  <label key={r} className="flex items-start gap-2 opacity-70">
+                    <Checkbox checked disabled className="mt-0.5" />
+                    <span>
+                      <span className="text-sm font-medium">{getRoleLabel(r)}</span>
+                      <span className="block text-xs text-muted-foreground">Se gestiona desde Gestiones.</span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">Un usuario puede tener mas de un rol.</p>
             </div>
             <div className="grid gap-2">
               <Label>{t('userManagement.associatedMember', 'Miembro Asociado')}</Label>

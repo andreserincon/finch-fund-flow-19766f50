@@ -25,6 +25,8 @@ import {
 import { Loader2, Copy, Check, Link2 } from 'lucide-react';
 import { useMembers } from '@/hooks/useMembers';
 import { ASSIGNABLE_ROLE_OPTIONS } from '@/lib/roles';
+import { Checkbox } from '@/components/ui/checkbox';
+import type { AppRole } from '@/hooks/useUserRoles';
 
 const createUserSchema = z.object({
   email: z.string().trim().email({ message: 'Correo invalido' }),
@@ -43,7 +45,7 @@ export function CreateUserDialog({ open, onOpenChange, excludeMemberIds }: Creat
   const { members } = useMembers();
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState('');
-  const [role, setRole] = useState<string>('member');
+  const [roles, setRoles] = useState<AppRole[]>(['member']);
   const [memberId, setMemberId] = useState<string>('');
   const [grade, setGrade] = useState<string>('aprendiz');
   const [errors, setErrors] = useState<{ email?: string; member?: string }>({});
@@ -51,7 +53,10 @@ export function CreateUserDialog({ open, onOpenChange, excludeMemberIds }: Creat
   const [copied, setCopied] = useState(false);
 
   const roleOptions = ASSIGNABLE_ROLE_OPTIONS;
-  const roleDescription = roleOptions.find((o) => o.value === role)?.description ?? '';
+
+  const toggleRole = (value: AppRole, checked: boolean) => {
+    setRoles((prev) => (checked ? Array.from(new Set([...prev, value])) : prev.filter((r) => r !== value)));
+  };
 
   const excluded = useMemo(() => new Set(excludeMemberIds), [excludeMemberIds]);
   const availableMembers = useMemo(
@@ -61,7 +66,7 @@ export function CreateUserDialog({ open, onOpenChange, excludeMemberIds }: Creat
 
   const resetForm = () => {
     setEmail('');
-    setRole('member');
+    setRoles(['member']);
     setMemberId('');
     setGrade('aprendiz');
     setErrors({});
@@ -106,7 +111,7 @@ export function CreateUserDialog({ open, onOpenChange, excludeMemberIds }: Creat
       const { data, error } = await supabase.functions.invoke('admin-create-user', {
         body: {
           email: email.trim(),
-          role,
+          roles,
           memberId,
           masonicGrade: grade,
           redirectTo: `${window.location.origin}/auth`,
@@ -217,18 +222,26 @@ export function CreateUserDialog({ open, onOpenChange, excludeMemberIds }: Creat
             </div>
 
             <div className="grid gap-2">
-              <Label>Rol</Label>
-              <Select value={role} onValueChange={setRole} disabled={isLoading}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {roleOptions.map((o) => (
-                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {roleDescription && <p className="text-xs text-muted-foreground">{roleDescription}</p>}
+              <Label>Roles</Label>
+              <div className="space-y-2 rounded-md border p-3">
+                {roleOptions.map((o) => (
+                  <label key={o.value} className="flex items-start gap-2 cursor-pointer">
+                    <Checkbox
+                      checked={roles.includes(o.value)}
+                      onCheckedChange={(c) => toggleRole(o.value, c === true)}
+                      disabled={isLoading}
+                      className="mt-0.5"
+                    />
+                    <span>
+                      <span className="text-sm font-medium">{o.label}</span>
+                      <span className="block text-xs text-muted-foreground">{o.description}</span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Un usuario puede tener mas de un rol. Tesorero y Venerable se asignan desde Gestiones, no aca.
+              </p>
             </div>
 
             <div className="grid gap-2">

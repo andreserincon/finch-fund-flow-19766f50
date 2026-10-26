@@ -6,9 +6,12 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+type AppRole = "treasurer" | "vm" | "member" | "bibliotecario" | "admin";
+
 interface CreateUserRequest {
   email: string;
-  role?: "treasurer" | "vm" | "member" | "bibliotecario" | "admin";
+  role?: AppRole; // legacy single role (still accepted)
+  roles?: AppRole[]; // one or more roles
   memberId?: string;
   masonicGrade?: "aprendiz" | "companero" | "maestro";
   redirectTo?: string;
@@ -64,7 +67,7 @@ serve(async (req: Request) => {
       throw new Error("No autorizado: solo el Administrador o el Venerable pueden crear accesos.");
     }
 
-    const { email, role, memberId, masonicGrade, redirectTo }: CreateUserRequest = await req.json();
+    const { email, role, roles, memberId, masonicGrade, redirectTo }: CreateUserRequest = await req.json();
 
     if (!email) {
       throw new Error("El correo es obligatorio.");
@@ -103,11 +106,12 @@ serve(async (req: Request) => {
 
     const newUserId = newUser.user.id;
 
-    if (role) {
+    const roleSet = (roles && roles.length > 0) ? roles : (role ? [role] : []);
+    if (roleSet.length > 0) {
       const { error: roleError } = await adminClient
         .from("user_roles")
-        .insert({ user_id: newUserId, role });
-      if (roleError) console.error("Error assigning role:", roleError);
+        .insert(roleSet.map((r) => ({ user_id: newUserId, role: r })));
+      if (roleError) console.error("Error assigning roles:", roleError);
     }
 
     const { error: profileError } = await adminClient

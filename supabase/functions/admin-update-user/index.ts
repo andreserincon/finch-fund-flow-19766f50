@@ -6,9 +6,12 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+type AppRole = "treasurer" | "vm" | "member" | "bibliotecario" | "admin";
+
 interface UpdateUserRequest {
   userId: string;
-  role?: "treasurer" | "vm" | "member" | "bibliotecario" | "admin" | null;
+  role?: AppRole | null; // legacy single role (still accepted)
+  roles?: AppRole[]; // full role set to apply (replaces existing)
   memberId?: string | null;
   masonicGrade?: "aprendiz" | "companero" | "maestro" | null;
 }
@@ -54,18 +57,21 @@ serve(async (req: Request) => {
       throw new Error("No autorizado: solo el Administrador o el Venerable pueden editar accesos.");
     }
 
-    const { userId, role, memberId, masonicGrade }: UpdateUserRequest = await req.json();
+    const { userId, role, roles, memberId, masonicGrade }: UpdateUserRequest = await req.json();
     if (!userId) {
       throw new Error("Falta el usuario.");
     }
 
-    // Role: set exactly one role (or none). Replace any existing rows.
+    // Roles: set exactly the provided set (replace any existing rows). A user may
+    // hold more than one role. `roles` takes precedence; `role` is the legacy
+    // single-role form. An explicit empty array clears all roles.
+    const roleSet = (roles !== undefined) ? roles : (role ? [role] : []);
     await adminClient.from("user_roles").delete().eq("user_id", userId);
-    if (role) {
+    if (roleSet.length > 0) {
       const { error: roleError } = await adminClient
         .from("user_roles")
-        .insert({ user_id: userId, role });
-      if (roleError) console.error("Error assigning role:", roleError);
+        .insert(roleSet.map((r) => ({ user_id: userId, role: r })));
+      if (roleError) console.error("Error assigning roles:", roleError);
     }
 
     // Member association.

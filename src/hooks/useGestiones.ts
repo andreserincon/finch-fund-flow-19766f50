@@ -32,19 +32,26 @@ function dayBefore(isoDate: string): string {
   return d.toISOString().slice(0, 10);
 }
 
-interface OfficerUserRow {
+interface UserRoleRow {
   user_id: string;
   member_id: string | null;
   role: string | null;
 }
 
+interface OfficerUser {
+  user_id: string;
+  member_id: string | null;
+  roles: string[];
+}
+
 /**
- * Make the app roles match a gestion's officers. Assigns `treasurer` to the
- * Tesorero's user and `vm` to the Venerable's user (through the admin-update-user
- * edge function, authz admin|vm), and demotes the outgoing officers to `member`.
- * A member must have a user account to receive a role. Never touches an
- * Administrator (admin outranks both, and keeps full access). Best effort:
- * returns a Spanish warning for each step that could not be applied.
+ * Make the app roles match a gestion's officers. A user may hold more than one
+ * role, so the office role is ADDED to / REMOVED from the user's role set
+ * (through the admin-update-user edge function, authz admin|vm) without touching
+ * their other roles. The incoming Tesorero gets `treasurer` and the Venerable
+ * gets `vm`; the outgoing officers lose that office role (and fall back to
+ * `member` when it was their only role). A member must have a user account to
+ * receive a role. Best effort: returns a Spanish warning per step that failed.
  */
 async function reconcileGestionRoles(params: {
   newTesoreroMemberId: string | null;
@@ -59,19 +66,29 @@ async function reconcileGestionRoles(params: {
     warnings.push('No se pudieron leer los usuarios para asignar los roles.');
     return warnings;
   }
-  const list = (data ?? []) as OfficerUserRow[];
+  // Group the one-row-per-role result into one entry per user with a roles array.
+  const byUser = new Map<string, OfficerUser>();
+  for (const r of (data ?? []) as UserRoleRow[]) {
+    const u = byUser.get(r.user_id);
+    if (u) {
+      if (r.role && !u.roles.includes(r.role)) u.roles.push(r.role);
+    } else {
+      byUser.set(r.user_id, { user_id: r.user_id, member_id: r.member_id, roles: r.role ? [r.role] : [] });
+    }
+  }
+  const users = Array.from(byUser.values());
   const userForMember = (mid: string | null) =>
-    mid ? list.find((u) => u.member_id === mid) ?? null : null;
+    mid ? users.find((u) => u.member_id === mid) ?? null : null;
 
-  const setRole = async (userId: string, role: string, memberId: string) => {
+  const setRoles = async (userId: string, newRoles: string[], memberId: string) => {
     const { data: res, error: err } = await supabase.functions.invoke('admin-update-user', {
-      body: { userId, role, memberId },
+      body: { userId, roles: newRoles, memberId },
     });
     if (err) throw new Error(err.message);
     if (res?.error) throw new Error(res.error);
   };
 
-  // Asignar el rol a los oficiales entrantes (salteando admins y los que ya lo tienen).
+  // Agregar el rol de oficina a los entrantes, conservando sus otros roles.
   const incoming: Array<[string | null, 'treasurer' | 'vm']> = [
     [params.newTesoreroMemberId, 'treasurer'],
     [params.newVmMemberId, 'vm'],
@@ -83,16 +100,16 @@ async function reconcileGestionRoles(params: {
       warnings.push('Un oficial elegido no tiene usuario; no se le asigno el rol.');
       continue;
     }
-    if (u.role === 'admin') continue; // nunca bajar a un Administrador
-    if (u.role === role) continue; // ya lo tiene
+    if (u.roles.includes(role)) continue; // ya lo tiene
     try {
-      await setRole(u.user_id, role, mid);
+      await setRoles(u.user_id, [...u.roles, role], mid);
     } catch {
       warnings.push('No se pudo asignar el rol a un oficial entrante.');
     }
   }
 
-  // Bajar a Miembro a los oficiales salientes que ya no siguen en el cargo.
+  // Quitar el rol de oficina a los salientes que ya no siguen (conservando sus
+  // otros roles; si era el unico, quedan como Miembro).
   const outgoing: Array<[string | null, 'treasurer' | 'vm', string | null]> = [
     [params.prevTesoreroMemberId, 'treasurer', params.newTesoreroMemberId],
     [params.prevVmMemberId, 'vm', params.newVmMemberId],
@@ -101,11 +118,13 @@ async function reconcileGestionRoles(params: {
     if (!prevMid || prevMid === newMid) continue;
     const u = userForMember(prevMid);
     if (!u) continue;
-    if (u.role !== role) continue; // ya no tiene ese rol (o es admin): no tocar
+    if (!u.roles.includes(role)) continue;
+    const remaining = u.roles.filter((r) => r !== role);
+    const newRoles = remaining.length > 0 ? remaining : ['member'];
     try {
-      await setRole(u.user_id, 'member', prevMid);
+      await setRoles(u.user_id, newRoles, prevMid);
     } catch {
-      warnings.push('No se pudo bajar a Miembro a un oficial saliente.');
+      warnings.push('No se pudo actualizar el rol de un oficial saliente.');
     }
   }
 

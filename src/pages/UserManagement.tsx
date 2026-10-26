@@ -161,8 +161,10 @@ export default function UserManagement() {
                         onDelete={() => setDeletingUser(user)}
                       />
                     </div>
-                    <div className="flex items-center gap-2 border-t border-border/50 pt-3">
-                      <RoleChip role={user.role} />
+                    <div className="flex items-center flex-wrap gap-2 border-t border-border/50 pt-3">
+                      {user.roles.length > 0
+                        ? user.roles.map((r) => <RoleChip key={r} role={r} />)
+                        : <RoleChip role={null} />}
                       <GradeChip grade={user.masonic_grade} />
                     </div>
                   </div>
@@ -187,7 +189,13 @@ export default function UserManagement() {
                         <TableCell className="font-mono text-sm">{user.email}</TableCell>
                         <TableCell>{user.member_name || <span className="text-muted-foreground text-sm">Sin miembro</span>}</TableCell>
                         <TableCell><GradeChip grade={user.masonic_grade} /></TableCell>
-                        <TableCell><RoleChip role={user.role} /></TableCell>
+                        <TableCell>
+                          <div className="flex flex-wrap gap-1">
+                            {user.roles.length > 0
+                              ? user.roles.map((r) => <RoleChip key={r} role={r} />)
+                              : <RoleChip role={null} />}
+                          </div>
+                        </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end">
                             <UserActions
@@ -220,7 +228,7 @@ export default function UserManagement() {
           onOpenChange={(open) => !open && setEditingUser(null)}
           userId={editingUser.user_id}
           userEmail={editingUser.email}
-          currentRole={editingUser.role}
+          currentRoles={editingUser.roles}
           currentMemberId={editingUser.member_id}
           currentGrade={editingUser.masonic_grade}
         />

@@ -17,8 +17,23 @@ export type AppRole = 'treasurer' | 'vm' | 'member' | 'bibliotecario' | 'admin';
 /** Masonic degree (used for grade display alongside the user) */
 export type MasonicGrade = 'aprendiz' | 'companero' | 'maestro';
 
-/** Denormalised user row returned by the `get_users_with_roles` RPC */
+/**
+ * One user with ALL their roles grouped into an array. The `get_users_with_roles`
+ * RPC returns one row per (user, role); a user can have more than one role, so
+ * we group the rows by user_id into a single entry with a `roles` array.
+ */
 export interface UserWithRole {
+  user_id: string;
+  email: string;
+  roles: AppRole[];
+  role_assigned_at: string | null;
+  member_id: string | null;
+  member_name: string | null;
+  masonic_grade: MasonicGrade | null;
+}
+
+/** Raw row shape returned by the RPC (one per user+role). */
+interface UserRoleRow {
   user_id: string;
   email: string;
   role: AppRole | null;
@@ -38,7 +53,26 @@ export function useUserRoles() {
     queryFn: async () => {
       const { data, error } = await supabase.rpc('get_users_with_roles');
       if (error) throw error;
-      return data as UserWithRole[];
+      // Group the one-row-per-role result into one entry per user with a roles array.
+      const rows = (data ?? []) as UserRoleRow[];
+      const byUser = new Map<string, UserWithRole>();
+      for (const r of rows) {
+        const existing = byUser.get(r.user_id);
+        if (existing) {
+          if (r.role && !existing.roles.includes(r.role)) existing.roles.push(r.role);
+        } else {
+          byUser.set(r.user_id, {
+            user_id: r.user_id,
+            email: r.email,
+            roles: r.role ? [r.role] : [],
+            role_assigned_at: r.role_assigned_at,
+            member_id: r.member_id,
+            member_name: r.member_name,
+            masonic_grade: r.masonic_grade,
+          });
+        }
+      }
+      return Array.from(byUser.values());
     },
   });
 
