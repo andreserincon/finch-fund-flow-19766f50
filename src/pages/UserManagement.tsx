@@ -15,7 +15,18 @@ import { CreateUserDialog } from '@/components/users/CreateUserDialog';
 import { EditUserDialog } from '@/components/users/EditUserDialog';
 import { ResetPasswordDialog } from '@/components/users/ResetPasswordDialog';
 import { ROLE_OPTIONS, getRoleLabel } from '@/lib/roles';
-import { Users, UserPlus, Pencil, KeyRound, MoreHorizontal } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { useAuth } from '@/hooks/useAuth';
+import { Users, UserPlus, Pencil, KeyRound, MoreHorizontal, Trash2 } from 'lucide-react';
 
 // Role chips are NOT payment statuses. The treasurer chip uses a dedicated
 // neutral token (role-chip) so it is no longer coupled to the .status-ahead
@@ -49,7 +60,7 @@ function GradeChip({ grade }: { grade: string | null }) {
   );
 }
 
-function UserActions({ user, onEdit, onReset }: { user: UserWithRole; onEdit: () => void; onReset: () => void }) {
+function UserActions({ user, isSelf, onEdit, onReset, onDelete }: { user: UserWithRole; isSelf: boolean; onEdit: () => void; onReset: () => void; onDelete: () => void }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -64,6 +75,11 @@ function UserActions({ user, onEdit, onReset }: { user: UserWithRole; onEdit: ()
         <DropdownMenuItem onClick={onReset}>
           <KeyRound className="mr-2 h-4 w-4" /> Restablecer acceso
         </DropdownMenuItem>
+        {!isSelf && (
+          <DropdownMenuItem onClick={onDelete} className="text-destructive focus:text-destructive">
+            <Trash2 className="mr-2 h-4 w-4" /> Eliminar cuenta
+          </DropdownMenuItem>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -71,13 +87,15 @@ function UserActions({ user, onEdit, onReset }: { user: UserWithRole; onEdit: ()
 
 export default function UserManagement() {
   const { t } = useTranslation();
-  const { users, isLoading } = useUserRoles();
+  const { users, isLoading, deleteUser } = useUserRoles();
+  const { user: currentUser } = useAuth();
   const membersWithAccount = (users ?? [])
     .map((u) => u.member_id)
     .filter((id): id is string => !!id);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<UserWithRole | null>(null);
   const [resetPasswordEmail, setResetPasswordEmail] = useState<string | null>(null);
+  const [deletingUser, setDeletingUser] = useState<UserWithRole | null>(null);
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -137,8 +155,10 @@ export default function UserManagement() {
                       </div>
                       <UserActions
                         user={user}
+                        isSelf={user.user_id === currentUser?.id}
                         onEdit={() => setEditingUser(user)}
                         onReset={() => setResetPasswordEmail(user.email)}
+                        onDelete={() => setDeletingUser(user)}
                       />
                     </div>
                     <div className="flex items-center gap-2 border-t border-border/50 pt-3">
@@ -172,8 +192,10 @@ export default function UserManagement() {
                           <div className="flex items-center justify-end">
                             <UserActions
                               user={user}
+                              isSelf={user.user_id === currentUser?.id}
                               onEdit={() => setEditingUser(user)}
                               onReset={() => setResetPasswordEmail(user.email)}
+                              onDelete={() => setDeletingUser(user)}
                             />
                           </div>
                         </TableCell>
@@ -208,6 +230,31 @@ export default function UserManagement() {
         onOpenChange={(open) => !open && setResetPasswordEmail(null)}
         userEmail={resetPasswordEmail || ''}
       />
+      <AlertDialog open={!!deletingUser} onOpenChange={(open) => !open && setDeletingUser(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Eliminar cuenta</AlertDialogTitle>
+            <AlertDialogDescription>
+              Vas a eliminar la cuenta {deletingUser?.email}. Es permanente y no se puede deshacer: se borran
+              su acceso y sus roles. El miembro de la logia no se elimina.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (deletingUser) {
+                  deleteUser.mutate(deletingUser.user_id);
+                  setDeletingUser(null);
+                }
+              }}
+            >
+              Eliminar cuenta
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

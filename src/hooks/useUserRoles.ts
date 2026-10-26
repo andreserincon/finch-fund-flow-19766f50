@@ -82,5 +82,24 @@ export function useUserRoles() {
     },
   });
 
-  return { users, isLoading, error, assignRole, removeRole };
+  /** Delete a user account entirely (via the admin-delete-user edge function) */
+  const deleteUser = useMutation({
+    mutationFn: async (userId: string) => {
+      const { data, error } = await supabase.functions.invoke('admin-delete-user', {
+        body: { userId },
+      });
+      if (error) throw new Error(error.message);
+      if (data?.error) throw new Error(data.error);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users-with-roles'] });
+      queryClient.invalidateQueries({ queryKey: ['members'] });
+      toast.success('Cuenta eliminada.');
+    },
+    onError: (error: Error) => {
+      toast.error(`Error al eliminar la cuenta: ${error.message}`);
+    },
+  });
+
+  return { users, isLoading, error, assignRole, removeRole, deleteUser };
 }
