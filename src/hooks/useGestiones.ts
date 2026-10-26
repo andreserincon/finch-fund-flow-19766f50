@@ -84,7 +84,16 @@ async function reconcileGestionRoles(params: {
     const { data: res, error: err } = await supabase.functions.invoke('admin-update-user', {
       body: { userId, roles: newRoles, memberId },
     });
-    if (err) throw new Error(err.message);
+    if (err) {
+      // Surface the edge function's own error message when available (a non-2xx
+      // otherwise only yields a generic "non-2xx status code" message).
+      let detail = err.message;
+      try {
+        const body = await (err as { context?: Response }).context?.json?.();
+        if (body?.error) detail = body.error;
+      } catch { /* keep the generic message */ }
+      throw new Error(detail);
+    }
     if (res?.error) throw new Error(res.error);
   };
 
@@ -103,8 +112,8 @@ async function reconcileGestionRoles(params: {
     if (u.roles.includes(role)) continue; // ya lo tiene
     try {
       await setRoles(u.user_id, [...u.roles, role], mid);
-    } catch {
-      warnings.push('No se pudo asignar el rol a un oficial entrante.');
+    } catch (e) {
+      warnings.push(`No se pudo asignar el rol a un oficial entrante: ${e instanceof Error ? e.message : 'error'}`);
     }
   }
 
@@ -123,8 +132,8 @@ async function reconcileGestionRoles(params: {
     const newRoles = remaining.length > 0 ? remaining : ['member'];
     try {
       await setRoles(u.user_id, newRoles, prevMid);
-    } catch {
-      warnings.push('No se pudo actualizar el rol de un oficial saliente.');
+    } catch (e) {
+      warnings.push(`No se pudo actualizar el rol de un oficial saliente: ${e instanceof Error ? e.message : 'error'}`);
     }
   }
 
