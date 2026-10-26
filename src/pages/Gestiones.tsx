@@ -33,7 +33,7 @@ function formatDate(iso: string | null): string {
 }
 
 export default function Gestiones() {
-  const { gestiones, currentGestion, isLoading, createGestion, syncRoles } = useGestiones();
+  const { gestiones, currentGestion, isLoading, createGestion } = useGestiones();
   const { members } = useMembers();
   const { users } = useUserRoles();
 
@@ -184,23 +184,6 @@ export default function Gestiones() {
               ? `Gestión abierta: ${currentGestion.nombre} (desde ${formatDate(currentGestion.fecha_inicio)})`
               : 'No hay ninguna gestión abierta todavía. Creá la primera para empezar a registrar los periodos.'}
           </CardDescription>
-          {currentGestion && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="mt-2 w-fit"
-              onClick={() =>
-                syncRoles.mutate({
-                  tesorero_member_id: currentGestion.tesorero_member_id,
-                  vm_member_id: currentGestion.vm_member_id,
-                })
-              }
-              disabled={syncRoles.isPending}
-            >
-              <RefreshCw className={`h-4 w-4 mr-2 ${syncRoles.isPending ? 'animate-spin' : ''}`} />
-              Sincronizar accesos
-            </Button>
-          )}
         </CardHeader>
         <CardContent>
           {isLoading ? (

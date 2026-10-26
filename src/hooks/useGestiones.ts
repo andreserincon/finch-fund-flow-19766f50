@@ -198,33 +198,6 @@ export function useGestiones() {
     },
   });
 
-  /**
-   * Reapply the app roles for an existing gestion's officers (assign only, no
-   * demotion). Lets the open gestion created before this coupling push its
-   * officers to the right roles.
-   */
-  const syncRoles = useMutation({
-    mutationFn: async (g: { tesorero_member_id: string | null; vm_member_id: string | null }) =>
-      reconcileGestionRoles({
-        newTesoreroMemberId: g.tesorero_member_id,
-        newVmMemberId: g.vm_member_id,
-        prevTesoreroMemberId: null,
-        prevVmMemberId: null,
-      }),
-    onSuccess: (warnings) => {
-      queryClient.invalidateQueries({ queryKey: ['users-with-roles'] });
-      queryClient.invalidateQueries({ queryKey: ['members'] });
-      if (warnings.length > 0) {
-        toast.warning(`Accesos sincronizados con observaciones: ${warnings[0]}`);
-      } else {
-        toast.success('Accesos sincronizados: Tesorero y Venerable actualizados.');
-      }
-    },
-    onError: (error: Error) => {
-      toast.error(`Error al sincronizar accesos: ${error.message}`);
-    },
-  });
-
   /** Edit an existing gestion (dates or officers). */
   const updateGestion = useMutation({
     mutationFn: async ({ id, ...updates }: Partial<Gestion> & { id: string }) => {
@@ -253,6 +226,5 @@ export function useGestiones() {
     error: gestionesQuery.error,
     createGestion,
     updateGestion,
-    syncRoles,
   };
 }
