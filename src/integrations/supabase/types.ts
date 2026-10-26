@@ -498,6 +498,60 @@ export type Database = {
         }
         Relationships: []
       }
+      gestiones: {
+        Row: {
+          closed_at: string | null
+          created_at: string
+          estado: string
+          fecha_fin: string | null
+          fecha_inicio: string
+          id: string
+          nombre: string
+          tesorero_member_id: string | null
+          updated_at: string
+          vm_member_id: string | null
+        }
+        Insert: {
+          closed_at?: string | null
+          created_at?: string
+          estado?: string
+          fecha_fin?: string | null
+          fecha_inicio: string
+          id?: string
+          nombre: string
+          tesorero_member_id?: string | null
+          updated_at?: string
+          vm_member_id?: string | null
+        }
+        Update: {
+          closed_at?: string | null
+          created_at?: string
+          estado?: string
+          fecha_fin?: string | null
+          fecha_inicio?: string
+          id?: string
+          nombre?: string
+          tesorero_member_id?: string | null
+          updated_at?: string
+          vm_member_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gestiones_tesorero_member_id_fkey"
+            columns: ["tesorero_member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gestiones_vm_member_id_fkey"
+            columns: ["vm_member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       loan_payments: {
         Row: {
           amount: number

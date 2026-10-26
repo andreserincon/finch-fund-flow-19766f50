@@ -95,6 +95,7 @@ export default {
       bibliotecario: 'Bibliotecario',
       member: 'Miembro',
       userManagement: 'Gestión de Usuarios',
+      gestiones: 'Gestiones',
       feeCalculator: 'Calculadora de Cápitas',
       library: 'Biblioteca',
       administration: 'Administración',

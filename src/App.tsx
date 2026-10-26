@@ -56,6 +56,7 @@ import FeeCalculator from "./pages/FeeCalculator";
 import PaymentReminders from "./pages/PaymentReminders";
 import AccountTransfer from "./pages/AccountTransfer";
 import UserManagement from "./pages/UserManagement";
+import Gestiones from "./pages/Gestiones";
 import MyPayments from "./pages/MyPayments";
 import Reports from "./pages/Reports";
 import Budget from "./pages/Budget";
@@ -387,6 +388,7 @@ const App = () => (
         {/* Super-admin */}
         <Route path="/admin/members" element={<SuperAdminRoute><AdminMembers /></SuperAdminRoute>} />
         <Route path="/user-management" element={<UserAdminRoute><UserManagement /></UserAdminRoute>} />
+        <Route path="/gestiones" element={<UserAdminRoute><Gestiones /></UserAdminRoute>} />
 
         {/* Fallback */}
         <Route path="*" element={<NotFound />} />
