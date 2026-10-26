@@ -540,8 +540,22 @@ export type Database = {
             foreignKeyName: "gestiones_tesorero_member_id_fkey"
             columns: ["tesorero_member_id"]
             isOneToOne: false
+            referencedRelation: "member_balances"
+            referencedColumns: ["member_id"]
+          },
+          {
+            foreignKeyName: "gestiones_tesorero_member_id_fkey"
+            columns: ["tesorero_member_id"]
+            isOneToOne: false
             referencedRelation: "members"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gestiones_vm_member_id_fkey"
+            columns: ["vm_member_id"]
+            isOneToOne: false
+            referencedRelation: "member_balances"
+            referencedColumns: ["member_id"]
           },
           {
             foreignKeyName: "gestiones_vm_member_id_fkey"
@@ -1351,6 +1365,7 @@ export type Database = {
       }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
       is_bibliotecario: { Args: { _user_id: string }; Returns: boolean }
+      is_date_locked: { Args: { _d: string }; Returns: boolean }
       is_staff_or_vm: { Args: { _user_id: string }; Returns: boolean }
       is_treasurer: { Args: { _user_id: string }; Returns: boolean }
     }
