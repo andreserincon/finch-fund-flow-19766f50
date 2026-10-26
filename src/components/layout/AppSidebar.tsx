@@ -24,7 +24,8 @@ import {
   Home,
   PieChart,
   MessageSquare,
-  CalendarClock
+  CalendarClock,
+  ScrollText
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -84,7 +85,7 @@ export function AppSidebar() {
   /** Derive the active module from the current URL path */
   const deriveModule = (): AppModule => {
     if (location.pathname.startsWith('/library')) return 'library';
-    if (location.pathname.startsWith('/user-management') || location.pathname.startsWith('/admin/members') || location.pathname.startsWith('/gestiones')) return 'admin';
+    if (location.pathname.startsWith('/user-management') || location.pathname.startsWith('/admin/members') || location.pathname.startsWith('/gestiones') || location.pathname.startsWith('/bitacora')) return 'admin';
     if (canViewTreasury) return 'treasury';
     return 'library';
   };
@@ -139,6 +140,7 @@ export function AppSidebar() {
   const adminNavItems = [
     { title: t('nav.userManagement'), url: '/user-management', icon: UserCog },
     { title: t('nav.gestiones'), url: '/gestiones', icon: CalendarClock },
+    { title: t('nav.bitacora'), url: '/bitacora', icon: ScrollText },
     ...(isSuperAdmin ? [{ title: t('nav.members'), url: '/admin/members', icon: Users }] : []),
   ];
 

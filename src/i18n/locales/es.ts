@@ -96,6 +96,7 @@ export default {
       member: 'Miembro',
       userManagement: 'Gestión de Usuarios',
       gestiones: 'Gestiones',
+      bitacora: 'Bitácora',
       feeCalculator: 'Calculadora de Cápitas',
       library: 'Biblioteca',
       administration: 'Administración',
