@@ -22,7 +22,7 @@
 
 import type { TourStep } from '@/lib/asistenteTour';
 
-export type KbTaskId = 'T1' | 'T2' | 'T3' | 'T4' | 'T5' | 'T6' | 'T7' | 'T8' | 'T9';
+export type KbTaskId = 'T1' | 'T2' | 'T3' | 'T4' | 'T5' | 'T6' | 'T7' | 'T8' | 'T9' | 'T10';
 
 /**
  * Nivel de acceso de la pantalla de la tarea, segun los guards reales de
@@ -628,6 +628,34 @@ export const ASISTENTE_TASKS: KbTask[] = [
       { route: '/loans', anchor: 'prestamo-crear', title: 'Creá el préstamo', body: 'Tocá Crear préstamo. El recorrido no lo toca: lo creás vos.' },
     ],
   },
+  {
+    id: 'T10',
+    title: 'Fijar las cápitas del mes',
+    screen: 'Cápitas Mensuales',
+    route: '/monthly-fees',
+    nav: 'En escritorio, Cápitas Mensuales esta en Configuración en la barra lateral. En el celular, en la pestaña Más, dentro de Configuración.',
+    // Acceso 'admin': el boton Agregar cápitas y la edicion solo aparecen con isAdmin.
+    access: 'admin',
+    // Stems de intencion: fijar/cargar las cápitas mensuales (distinto de T5 calcular).
+    keywords: ['capita mensual', 'agregar capita', 'cargar capita'],
+    steps: [
+      'En Cápitas Mensuales, tocá Agregar cápitas (arriba a la derecha; solo con acceso de edición).',
+      'Elegí el mes (se cargan desde el primer día del mes).',
+      'Cargá el Monto de la cápita Estándar.',
+      'Cargá el Monto de la cápita Solidaria. Si querés, cargá también las cápitas de la Gran Logia (es opcional).',
+      'Tocá Guardar cápitas.',
+      'Para cambiar una cápita ya cargada, tocá su valor en el Historial de cápitas y editalo.',
+    ],
+    glossaryTerms: ['capita', 'estandar', 'solidaria', 'gl'],
+    tour: [
+      { route: '/monthly-fees', anchor: 'capita-agregar', title: 'Abrí Agregar cápitas', body: 'Tocá Agregar cápitas (arriba a la derecha). Solo aparece con acceso de edición. Se abre el formulario.' },
+      { route: '/monthly-fees', anchor: 'capita-mes', title: 'Elegí el mes', body: 'Elegí el mes de las cápitas. El calendario solo deja elegir el primer día del mes.' },
+      { route: '/monthly-fees', anchor: 'capita-estandar', title: 'Cápita estándar', body: 'Cargá el monto de la cápita estándar (la que paga la mayoría).' },
+      { route: '/monthly-fees', anchor: 'capita-solidaria', title: 'Cápita solidaria', body: 'Cargá el monto de la cápita solidaria. Mas abajo podés cargar las cápitas de la Gran Logia (opcional).' },
+      { route: '/monthly-fees', anchor: 'capita-guardar', title: 'Guardá las cápitas', body: 'Tocá Guardar cápitas. El recorrido no lo toca: lo guardás vos.' },
+      { route: '/monthly-fees', title: 'Editar una cápita ya cargada', body: 'En el Historial de cápitas, tocá cualquier valor para editarlo en el momento.' },
+    ],
+  },
 ];
 
 /**
@@ -645,6 +673,7 @@ export const CHIP_QUESTIONS: Record<KbTaskId, string> = {
   T7: '¿Cómo doy de alta un miembro?',
   T8: '¿Cómo creo o gestiono un evento?',
   T9: '¿Cómo registro un préstamo nuevo?',
+  T10: '¿Cómo fijo la cápita mensual?',
 };
 
 /**
