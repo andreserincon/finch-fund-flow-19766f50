@@ -22,7 +22,7 @@
 
 import type { TourStep } from '@/lib/asistenteTour';
 
-export type KbTaskId = 'T1' | 'T2' | 'T3' | 'T4' | 'T5' | 'T6' | 'T7' | 'T8' | 'T9' | 'T10' | 'T11';
+export type KbTaskId = 'T1' | 'T2' | 'T3' | 'T4' | 'T5' | 'T6' | 'T7' | 'T8' | 'T9' | 'T10' | 'T11' | 'T12';
 
 /**
  * Nivel de acceso de la pantalla de la tarea, segun los guards reales de
@@ -685,6 +685,33 @@ export const ASISTENTE_TASKS: KbTask[] = [
       { route: '/gestiones', anchor: 'gestion-crear', title: 'Creá la gestión', body: 'Tocá Crear gestión. El recorrido no lo toca: la creás vos. Cierra la anterior y asigna los roles.' },
     ],
   },
+  {
+    id: 'T12',
+    title: 'Otorgar acceso a un hermano',
+    screen: 'Accesos y Roles',
+    route: '/user-management',
+    nav: 'En escritorio, Accesos y Roles esta en Administración en la barra lateral. Entra el Administrador o el Venerable.',
+    // Acceso 'admin': /user-management es admin|vm; se usa 'admin' para no sobre-mostrar.
+    access: 'admin',
+    keywords: ['acceso', 'otorgar acceso', 'crear usuario'],
+    steps: [
+      'En Administración → Accesos y Roles, tocá Otorgar acceso.',
+      'Elegí el hermano al que le das acceso (solo aparecen los que no tienen cuenta).',
+      'Cargá su Correo.',
+      'Marcá los Roles. Un usuario puede tener más de un rol; Tesorero y Venerable se asignan desde Gestiones, no acá.',
+      'Confirmá el Grado masónico del hermano.',
+      'Tocá Enviar invitación. Se genera un enlace de un solo uso para que cree su contraseña.',
+    ],
+    glossaryTerms: [],
+    tour: [
+      { route: '/user-management', anchor: 'acceso-otorgar', title: 'Abrí Otorgar acceso', body: 'Tocá Otorgar acceso. Se abre el formulario del nuevo usuario.' },
+      { route: '/user-management', anchor: 'acceso-miembro', title: 'Elegí el hermano', body: 'Seleccioná el hermano. Solo aparecen los que todavía no tienen cuenta.' },
+      { route: '/user-management', anchor: 'acceso-correo', title: 'Cargá el correo', body: 'Escribí el correo del hermano. Ahí le llega el acceso.' },
+      { route: '/user-management', anchor: 'acceso-roles', title: 'Marcá los roles', body: 'Elegí los roles. Tesorero y Venerable se asignan desde Gestiones, no acá.' },
+      { route: '/user-management', anchor: 'acceso-grado', title: 'Grado masónico', body: 'Confirmá el grado del hermano (es el grado, no el rol en la app).' },
+      { route: '/user-management', anchor: 'acceso-enviar', title: 'Enviá la invitación', body: 'Tocá Enviar invitación. El recorrido no lo toca: lo enviás vos. Se genera un enlace de un solo uso.' },
+    ],
+  },
 ];
 
 /**
@@ -704,6 +731,7 @@ export const CHIP_QUESTIONS: Record<KbTaskId, string> = {
   T9: '¿Cómo registro un préstamo nuevo?',
   T10: '¿Cómo fijo la cápita mensual?',
   T11: '¿Cómo creo una gestión nueva?',
+  T12: '¿Cómo otorgo un acceso a un hermano?',
 };
 
 /**

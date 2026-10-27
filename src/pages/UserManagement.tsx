@@ -108,7 +108,7 @@ export default function UserManagement() {
           <div className="rule-gold mt-2" />
           <p className="text-muted-foreground mt-2">Gestión de usuarios con acceso a la aplicación</p>
         </div>
-        <Button className="shrink-0" onClick={() => setIsCreateDialogOpen(true)}>
+        <Button data-asistente="acceso-otorgar" className="shrink-0" onClick={() => setIsCreateDialogOpen(true)}>
           <UserPlus className="h-4 w-4 mr-2" />
           Otorgar acceso
         </Button>
