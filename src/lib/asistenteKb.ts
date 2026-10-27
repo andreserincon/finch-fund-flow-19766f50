@@ -540,6 +540,7 @@ export const ASISTENTE_TASKS: KbTask[] = [
       'Si corresponde, elegí Cobrar a partir de (marca el mes de la primera cuota) y la Fecha límite de pago.',
       'Dejá marcada la opción de Asignar cuota a todos los miembros activos si querés generarles el cargo; la app muestra el total estimado.',
       'Tocá Crear evento. Despues podés activar o desactivar, editar o eliminar cada evento, y tocarlo para ver su resumen completo.',
+      'Para customizar un evento, tocalo para abrir su resumen: ahi podes elegir que hermanos participan, editar la cuota de cada participante y agregar invitados que no son miembros de la logia.',
     ],
     glossaryTerms: ['impago', 'demorado'],
     tour: [
@@ -641,6 +642,41 @@ export const ASISTENTE_GLOSSARY: Record<string, string> = {
 };
 
 /**
+ * Información complementaria de la Gran Logia (normas y procedimientos) para que
+ * el chat pueda responder preguntas sobre el funcionamiento de la GL. Es texto de
+ * referencia (no tareas de la app, por eso no entra en ASISTENTE_TASKS). Se
+ * mantienen FUERA los montos concretos (saldos, valores de cápita, montos de
+ * derechos): esos no los informa el asistente y están en el manual del tesorero.
+ */
+export const ASISTENTE_GL_REFERENCE = `GRAN LOGIA (información complementaria para responder preguntas)
+- Fecha clave: la Gran Logia cierra el mes y debita las obligaciones el día 5 de cada mes (cierre mensual automático). Los fondos tienen que estar acreditados antes del día 5. El pago abarca los 12 meses del año, incluido enero. Conviene depositar a fin del mes anterior.
+- Informar el pago: todo depósito o transferencia a la GL se informa en el Área Reservada de la Gran Logia (sitio web de la GL, menú Tesorería, Informar Pago) con comprobante, fecha, importe y a qué logia o hermano se imputa. Informar un pago no es acreditarlo: la GL lo acredita cuando verifica los fondos.
+- Decreto 8.410: si el día 5 la cuenta queda con saldo positivo (cero o más) la logia está "a plomo" y accede a los beneficios. Beneficio: la GL reintegra automáticamente ciertos derechos ya pagados: Iniciación si estuvo al día 6 meses seguidos del semestre; Aumento de Salario y Exaltación si estuvo al día los 12 meses del año. Si el día 5 queda en saldo negativo, pierde el beneficio y se le cobran punitorios (Tasa Efectiva Mensual del Banco Nación más 1%).
+- Derechos: cuando un hermano se inicia, asciende (aumento de salario) o es exaltado, la logia le cobra un derecho que luego paga a la GL (Pago GL). Como referencia, en múltiplos de cápita: el aumento de salario (paso a Compañero) equivale a 2 cápitas y la exaltación (paso a Maestro) a 3 cápitas; la iniciación es un derecho fijo cuyo valor vigente está en el manual. Estando a plomo, la GL los reintegra por el Decreto 8.410.
+- Ajuste de cápitas (CVS): los aranceles de la GL se actualizan solos cada trimestre según el índice CVS del INDEC, a trimestre vencido. La logia no fija esos valores; se publican cada mes en el Boletín Oficial. En la app, la Calculadora de Cápitas ayuda a proyectarlos.
+- Tipos de cápita de la GL: Cuota Gran Logia (plena), Menores de 25 (automático, cesa a los 25), Estudios Superiores (terciario o grado, hasta los 30, requiere constancia de alumno regular cada año), Locación (logias que alquilan su espacio) y Cápita Social.
+- Cápita social: beneficio excepcional y temporario (vigencia 3 meses, renovable) para un hermano con dificultad económica. La solicita la logia a través del Venerable Maestro ante la Gran Tesorería (Área Reservada o email cobranzas@masoneria-argentina.org.ar) con la planilla completa, firma del VM y del hermano, nota del VM avalando y justificación. Cupo: hasta el 30% de los miembros que capitan al 100%. En la app se refleja poniendo al hermano en cápita Solidaria.`;
+
+/**
+ * Funciones de la app que todavía no tienen una tarea guiada (T1..T8) pero sobre
+ * las que el tesorero puede preguntar. Texto de referencia para el chat, para
+ * cubrir la mayoría de los temas del manual sin inventar pasos.
+ */
+export const ASISTENTE_APP_EXTRA = `OTRAS FUNCIONES DE LA APP (para responder preguntas; sin recorrido guiado)
+- Pago de la cápita a la GL: es un Gasto con categoría Pago GL desde la cuenta de la Gran Logia. Cada mes se registran tres conceptos (el concepto va en la Nota): CMI, Fondo Inmobiliario y la Cápita del mes.
+- Préstamos: en Préstamos ves los préstamos activos y los totales (adeudado, pagado, pendiente). Nuevo Préstamo: elegís el hermano, el monto, las cuotas y la cuenta de origen (cuenta principal en pesos = préstamo en pesos; cuenta de ahorro en dólares = préstamo en dólares). El pago de una cuota se registra desde Registrar movimiento, pestaña Préstamo, eligiendo el préstamo (toma su moneda automáticamente).
+- Gastos de un evento: no se cargan como Otro Gasto; se registran desde Registrar movimiento, pestaña Evento, asociados al evento, para que impacten en el balance del evento.
+- Cápitas Mensuales: fija el valor de la cápita estándar y solidaria de cada mes. Tocás un valor del historial para editarlo, o Agregar cápitas para un mes nuevo. La Calculadora solo proyecta; el valor se carga a mano acá.
+- Gestiones (Administración): registra los períodos de gestión con sus fechas y los oficiales (Tesorero y Venerable). Al crear una gestión nueva se cierra la anterior y los oficiales elegidos reciben el rol de acceso.
+- Bloqueo de periodos: al abrir una gestión nueva, el período anterior queda cerrado. El Tesorero solo edita la gestión abierta; un período cerrado solo lo pueden ajustar el Administrador o el Venerable.
+- Bitácora (Administración): registra quién creó, editó o eliminó cada movimiento y cada parámetro, con la fecha y el detalle del cambio.
+- Accesos y Roles (Administración): crea los usuarios y define sus roles (Tesorero, Venerable, Administrador, Bibliotecario, Miembro). Un usuario puede tener más de un rol. Tesorero y Venerable se asignan desde Gestiones; los demás, acá.
+- Ajustar a un hermano a cápita social: para pasar a un hermano a cápita Solidaria, o volverlo a Estándar, se edita su ficha en Administración, Miembros, con el menú de la fila, Editar, cambiando el Tipo de Cápita. Cada miembro tiene un Historial de tipo de cápita.
+- Alta de un hermano nuevo: en Miembros, Agregar Miembro. Poné la Fecha de Ingreso en el mes siguiente a la iniciación, porque la cápita se paga por adelantado y empieza a correr ese mes.
+- Desactivar un miembro: si un hermano ya no forma parte del taller, editá su ficha en Administración, Miembros, menú de la fila, Editar, y marcalo como inactivo. Desde ese mes deja de generar cápita.
+- Transición y entrega del cargo: al cierre del año se cierra la gestión y se crea la nueva con los oficiales entrantes (reasigna accesos y bloquea el período anterior). Conviene validar que los saldos de las cuentas coincidan con los extractos y revisar el estado de cuenta en el Área Reservada de la GL.`;
+
+/**
  * Renderiza ASISTENTE_TASKS y ASISTENTE_GLOSSARY en un texto plano compacto en
  * espanol. Es la base de conocimiento que Slice 3 envia a la edge function como
  * `kb` en cada consulta, por eso se busca que sea breve y autocontenida.
@@ -673,6 +709,11 @@ export function buildKbText(): string {
   for (const [term, definition] of Object.entries(ASISTENTE_GLOSSARY)) {
     lines.push(`${term}: ${definition}`);
   }
+
+  lines.push('');
+  lines.push(ASISTENTE_GL_REFERENCE.trim());
+  lines.push('');
+  lines.push(ASISTENTE_APP_EXTRA.trim());
 
   return lines.join('\n');
 }
