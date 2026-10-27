@@ -7,6 +7,17 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// Chunked base64: the previous byte-by-byte reduce was O(n^2) and timed out on
+// larger PDFs (a 1.3MB file builds a string of ~1.3M characters one char at a time).
+function toBase64(bytes: Uint8Array): string {
+  let binary = "";
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+  }
+  return btoa(binary);
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -78,11 +89,9 @@ serve(async (req) => {
       });
     }
 
-    // Convert PDF to base64 for the AI model
+    // Convert PDF to base64 for the AI model.
     const arrayBuffer = await fileData.arrayBuffer();
-    const base64 = btoa(
-      new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), "")
-    );
+    const base64 = toBase64(new Uint8Array(arrayBuffer));
 
     // Call Lovable AI with tool calling to extract structured metadata
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
