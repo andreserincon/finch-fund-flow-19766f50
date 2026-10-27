@@ -119,7 +119,7 @@ export default function Gestiones() {
         actions={
           <Dialog open={isDialogOpen} onOpenChange={(o) => { setIsDialogOpen(o); if (!o) resetForm(); }}>
             <DialogTrigger asChild>
-              <Button>
+              <Button data-asistente="gestion-nueva">
                 <Plus className="h-4 w-4 mr-2" />
                 Nueva gestión
               </Button>
@@ -138,6 +138,7 @@ export default function Gestiones() {
                   <Label htmlFor="gestion-nombre">Nombre</Label>
                   <Input
                     id="gestion-nombre"
+                    data-asistente="gestion-nombre"
                     placeholder="Gestión 2027"
                     value={nombre}
                     onChange={(e) => setNombre(e.target.value)}
@@ -148,6 +149,7 @@ export default function Gestiones() {
                   <Input
                     id="gestion-inicio"
                     type="date"
+                    data-asistente="gestion-inicio"
                     value={fechaInicio}
                     onChange={(e) => setFechaInicio(e.target.value)}
                   />
@@ -155,7 +157,7 @@ export default function Gestiones() {
                 <div className="space-y-2">
                   <Label>Tesorero</Label>
                   <Select value={tesoreroId} onValueChange={setTesoreroId}>
-                    <SelectTrigger>
+                    <SelectTrigger data-asistente="gestion-tesorero">
                       <SelectValue placeholder="Sin asignar" />
                     </SelectTrigger>
                     <SelectContent>
@@ -169,7 +171,7 @@ export default function Gestiones() {
                 <div className="space-y-2">
                   <Label>Venerable</Label>
                   <Select value={vmId} onValueChange={setVmId}>
-                    <SelectTrigger>
+                    <SelectTrigger data-asistente="gestion-vm">
                       <SelectValue placeholder="Sin asignar" />
                     </SelectTrigger>
                     <SelectContent>
@@ -188,7 +190,7 @@ export default function Gestiones() {
                 <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
                   Cancelar
                 </Button>
-                <Button onClick={handleCreate} disabled={!canSubmit}>
+                <Button data-asistente="gestion-crear" onClick={handleCreate} disabled={!canSubmit}>
                   {createGestion.isPending ? (
                     <>
                       <RefreshCw className="h-4 w-4 mr-2 animate-spin" />

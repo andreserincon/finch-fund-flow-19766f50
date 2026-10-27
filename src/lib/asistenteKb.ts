@@ -22,7 +22,7 @@
 
 import type { TourStep } from '@/lib/asistenteTour';
 
-export type KbTaskId = 'T1' | 'T2' | 'T3' | 'T4' | 'T5' | 'T6' | 'T7' | 'T8' | 'T9' | 'T10';
+export type KbTaskId = 'T1' | 'T2' | 'T3' | 'T4' | 'T5' | 'T6' | 'T7' | 'T8' | 'T9' | 'T10' | 'T11';
 
 /**
  * Nivel de acceso de la pantalla de la tarea, segun los guards reales de
@@ -656,6 +656,35 @@ export const ASISTENTE_TASKS: KbTask[] = [
       { route: '/monthly-fees', title: 'Editar una cápita ya cargada', body: 'En el Historial de cápitas, tocá cualquier valor para editarlo en el momento.' },
     ],
   },
+  {
+    id: 'T11',
+    title: 'Crear una gestión',
+    screen: 'Gestiones',
+    route: '/gestiones',
+    nav: 'En escritorio, Gestiones esta en Administración en la barra lateral. Entra el Administrador o el Venerable.',
+    // Acceso 'admin': /gestiones es admin|vm; el enum no tiene ese nivel, se usa
+    // 'admin' para no sobre-mostrar (el vm igual tiene el chat).
+    access: 'admin',
+    // Stems de intencion: crear una gestion/periodo. Se evita el stem suelto
+    // "gestion" porque el chip de T8 contiene "gestiono".
+    keywords: ['gestion nueva', 'nueva gestion', 'periodo de gestion'],
+    steps: [
+      'En Administración → Gestiones, tocá Nueva gestión.',
+      'Poné el Nombre del periodo (por ejemplo, Gestión 2027).',
+      'Elegí la Fecha de inicio. Esa fecha marca el límite del bloqueo del periodo anterior.',
+      'Elegí el Tesorero y el Venerable entrantes (solo aparecen hermanos con usuario).',
+      'Tocá Crear gestión. Al crearla, la gestión anterior se cierra y los oficiales elegidos reciben su rol de acceso.',
+    ],
+    glossaryTerms: [],
+    tour: [
+      { route: '/gestiones', anchor: 'gestion-nueva', title: 'Abrí Nueva gestión', body: 'Tocá Nueva gestión. Se abre el formulario del periodo.' },
+      { route: '/gestiones', anchor: 'gestion-nombre', title: 'Nombre del periodo', body: 'Escribí el nombre (por ejemplo, Gestión 2027).' },
+      { route: '/gestiones', anchor: 'gestion-inicio', title: 'Fecha de inicio', body: 'Elegí la fecha de inicio. Marca el límite del bloqueo del periodo anterior.' },
+      { route: '/gestiones', anchor: 'gestion-tesorero', title: 'Elegí el Tesorero', body: 'Seleccioná el Tesorero entrante. Solo aparecen hermanos con usuario.' },
+      { route: '/gestiones', anchor: 'gestion-vm', title: 'Elegí el Venerable', body: 'Seleccioná el Venerable entrante.' },
+      { route: '/gestiones', anchor: 'gestion-crear', title: 'Creá la gestión', body: 'Tocá Crear gestión. El recorrido no lo toca: la creás vos. Cierra la anterior y asigna los roles.' },
+    ],
+  },
 ];
 
 /**
@@ -674,6 +703,7 @@ export const CHIP_QUESTIONS: Record<KbTaskId, string> = {
   T8: '¿Cómo creo o gestiono un evento?',
   T9: '¿Cómo registro un préstamo nuevo?',
   T10: '¿Cómo fijo la cápita mensual?',
+  T11: '¿Cómo creo una gestión nueva?',
 };
 
 /**
