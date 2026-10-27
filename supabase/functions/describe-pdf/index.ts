@@ -43,20 +43,25 @@ serve(async (req) => {
       });
     }
 
-    // Authorization: ensure this user is allowed to read the requested file.
-    // Use the user-scoped client so RLS on digital_books (grade-level + approval) applies.
-    const { data: bookRecord, error: bookErr } = await supabaseUser
-      .from("digital_books")
-      .select("id")
-      .eq("file_path", file_path)
-      .eq("is_approved", true)
-      .maybeSingle();
+    // Authorization: allow analyzing a PDF the user just uploaded to their own
+    // storage folder (the temp_ file created during "Subir PDF"), or an already
+    // approved book they can read. New uploads have no digital_books row yet, so
+    // requiring an approved row here was blocking the analyze-on-upload flow.
+    const ownsFile = file_path.startsWith(`${user.id}/`);
+    if (!ownsFile) {
+      const { data: bookRecord, error: bookErr } = await supabaseUser
+        .from("digital_books")
+        .select("id")
+        .eq("file_path", file_path)
+        .eq("is_approved", true)
+        .maybeSingle();
 
-    if (bookErr || !bookRecord) {
-      return new Response(JSON.stringify({ error: "Forbidden" }), {
-        status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      if (bookErr || !bookRecord) {
+        return new Response(JSON.stringify({ error: "Forbidden" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
     // Download the PDF from storage using service role (auth already enforced above)

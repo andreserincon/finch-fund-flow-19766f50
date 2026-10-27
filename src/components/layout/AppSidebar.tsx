@@ -22,7 +22,6 @@ import {
   ChevronDown,
   Plus,
   Home,
-  PieChart,
   MessageSquare,
   CalendarClock,
   ScrollText
@@ -124,7 +123,8 @@ export function AppSidebar() {
       { title: t('nav.transactions'), url: '/transactions', icon: Receipt },
       { title: t('nav.loans'), url: '/loans', icon: HandCoins },
       { title: t('nav.reports'), url: '/reports', icon: FileText },
-      { title: t('nav.budget'), url: '/budget', icon: PieChart },
+      // Presupuesto: acceso oculto temporalmente.
+      // { title: t('nav.budget'), url: '/budget', icon: PieChart },
     ] : []),
   ];
 
