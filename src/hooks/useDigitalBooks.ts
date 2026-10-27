@@ -74,7 +74,7 @@ export function useDigitalBooks(userGrade: MasonicGrade = 'aprendiz') {
       // Upload the file to the "digital-books" bucket
       const { error: uploadError } = await supabase.storage
         .from('digital-books')
-        .upload(filePath, file, { contentType: 'application/pdf' });
+        .upload(filePath, file, { contentType: file.type || 'application/octet-stream' });
 
       if (uploadError) throw uploadError;
 

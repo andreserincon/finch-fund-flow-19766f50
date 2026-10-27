@@ -8,6 +8,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useDigitalBooks, type DigitalBook } from '@/hooks/useDigitalBooks';
+import { fileTypeLabel } from '@/lib/library-types';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserGrade } from '@/hooks/useUserGrade';
 import { useIsBibliotecario } from '@/hooks/useIsBibliotecario';
@@ -169,7 +170,7 @@ export function DigitalLibraryPanel() {
                     {t(`library.grades.${book.grade_level}`)}
                   </Badge>
                   <span className="text-xs text-muted-foreground">
-                    PDF • {formatFileSize(book.file_size_bytes)}
+                    {fileTypeLabel(book.file_path)} • {formatFileSize(book.file_size_bytes)}
                   </span>
                   {!book.is_approved && (
                     <Badge variant="secondary" className="gap-1">

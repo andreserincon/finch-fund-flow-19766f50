@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Check, X, Clock, FileText, BookOpen } from 'lucide-react';
 import { useTransferRequests } from '@/hooks/useTransferRequests';
 import { useDigitalBooks } from '@/hooks/useDigitalBooks';
+import { fileTypeLabel } from '@/lib/library-types';
 import { useAuth } from '@/hooks/useAuth';
 import { format } from 'date-fns';
 import { LodgeLoader } from '@/components/lodge/LodgeLoader';
@@ -62,7 +63,7 @@ export function PendingRequestsPanel() {
                     <div className="flex items-center gap-2">
                       <FileText className="h-4 w-4 text-destructive/70 shrink-0" />
                       <p className="font-medium text-sm truncate">{book.title}</p>
-                      <Badge variant="secondary" className="text-xs shrink-0">PDF</Badge>
+                      <Badge variant="secondary" className="text-xs shrink-0">{fileTypeLabel(book.file_path)}</Badge>
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
                       {book.author} · {t(`library.grades.${book.grade_level}`)}

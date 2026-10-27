@@ -20,6 +20,8 @@ interface Props {
 }
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
+const ALLOWED_EXT = ['pdf', 'xls', 'xlsx', 'doc', 'docx', 'ppt', 'pptx'];
+const getExt = (name: string) => (name.split('.').pop() || '').toLowerCase();
 
 type Step = 'upload' | 'analyzing' | 'review';
 
@@ -45,7 +47,7 @@ export function UploadDigitalBookDialog({ open, onClose }: Props) {
     const selected = e.target.files?.[0];
     setFileError('');
     if (!selected) return;
-    if (selected.type !== 'application/pdf') {
+    if (!ALLOWED_EXT.includes(getExt(selected.name))) {
       setFileError(t('digitalLibrary.onlyPdf'));
       return;
     }
@@ -58,6 +60,12 @@ export function UploadDigitalBookDialog({ open, onClose }: Props) {
 
   const handleAnalyze = async () => {
     if (!file || !user?.id) return;
+    // Solo el PDF se analiza con IA; los demas formatos van a carga manual.
+    if (getExt(file.name) !== 'pdf') {
+      setTitle(file.name.replace(/\.[^.]+$/, ''));
+      setStep('review');
+      return;
+    }
     setStep('analyzing');
 
     try {
@@ -138,6 +146,7 @@ export function UploadDigitalBookDialog({ open, onClose }: Props) {
     onClose();
   };
 
+  const isPdf = !!file && getExt(file.name) === 'pdf';
   const canSubmit = !!file && !!title.trim() && !!author.trim() && !fileError;
 
   return (
@@ -157,7 +166,7 @@ export function UploadDigitalBookDialog({ open, onClose }: Props) {
               {t('digitalLibrary.uploadStep1')}
             </p>
             <div className="space-y-2">
-              <Label>PDF *</Label>
+              <Label>Archivo *</Label>
               <div
                 className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer hover:border-primary/50 transition-colors"
                 onClick={() => fileRef.current?.click()}
@@ -165,7 +174,7 @@ export function UploadDigitalBookDialog({ open, onClose }: Props) {
                 <input
                   ref={fileRef}
                   type="file"
-                  accept=".pdf"
+                  accept=".pdf,.xls,.xlsx,.doc,.docx,.ppt,.pptx"
                   className="hidden"
                   onChange={handleFileChange}
                 />
@@ -199,8 +208,8 @@ export function UploadDigitalBookDialog({ open, onClose }: Props) {
                 disabled={!file || !!fileError}
                 className="gap-2"
               >
-                <Sparkles className="h-4 w-4" />
-                {t('digitalLibrary.analyzeWithAI')}
+                {isPdf && <Sparkles className="h-4 w-4" />}
+                {isPdf ? t('digitalLibrary.analyzeWithAI') : t('digitalLibrary.continueBtn')}
               </Button>
             </DialogFooter>
           </div>
@@ -220,10 +229,12 @@ export function UploadDigitalBookDialog({ open, onClose }: Props) {
         {/* Step 3: Review metadata */}
         {step === 'review' && (
           <div className="space-y-4">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 rounded-md p-2">
-              <Sparkles className="h-4 w-4 text-primary shrink-0" />
-              {t('digitalLibrary.aiExtracted')}
-            </div>
+            {isPdf && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 rounded-md p-2">
+                <Sparkles className="h-4 w-4 text-primary shrink-0" />
+                {t('digitalLibrary.aiExtracted')}
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label>{t('library.bookTitle')} *</Label>

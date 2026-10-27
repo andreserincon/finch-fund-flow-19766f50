@@ -26,7 +26,7 @@ import { UploadDigitalBookDialog } from '@/components/library/UploadDigitalBookD
 import { QRScannerDialog } from '@/components/library/QRScannerDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import type { Book } from '@/lib/library-types';
+import { fileTypeLabel, type Book } from '@/lib/library-types';
 import { format } from 'date-fns';
 
 const gradeColors: Record<string, string> = {
@@ -337,7 +337,7 @@ export default function Library() {
                         </Badge>
                         <Badge variant="secondary" className="gap-1">
                           <FileText className="h-3 w-3" />
-                          PDF
+                          {fileTypeLabel((item.data as DigitalBook).file_path)}
                         </Badge>
                         <span className="text-xs text-muted-foreground">
                           {formatFileSize((item.data as DigitalBook).file_size_bytes)}

@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Download, FileText } from 'lucide-react';
 import { useDigitalBooks, type DigitalBook } from '@/hooks/useDigitalBooks';
+import { fileTypeLabel } from '@/lib/library-types';
 import { toast } from 'sonner';
 
 const gradeColors: Record<string, string> = {
@@ -68,7 +69,7 @@ export function DigitalBookDetailDrawer({ book, open, onClose }: DigitalBookDeta
               {t(`library.grades.${book.grade_level}`)}
             </Badge>
             <span className="text-xs text-muted-foreground">
-              PDF • {formatFileSize(book.file_size_bytes)}
+              {fileTypeLabel(book.file_path)} • {formatFileSize(book.file_size_bytes)}
             </span>
           </div>
 

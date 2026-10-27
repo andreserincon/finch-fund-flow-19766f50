@@ -14,7 +14,7 @@ import { LodgeLoader } from '@/components/lodge/LodgeLoader';
 import { EditBookDialog } from './EditBookDialog';
 import { DeleteBookDialog } from './DeleteBookDialog';
 import { BookQRLabel } from './BookQRLabel';
-import type { Book, MasonicGrade } from '@/lib/library-types';
+import { fileTypeLabel, type Book, type MasonicGrade } from '@/lib/library-types';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
@@ -159,7 +159,7 @@ export function BookManagementTable() {
                     <TableCell>
                       <Badge variant="secondary" className="gap-1">
                         <FileText className="h-3 w-3" />
-                        PDF
+                        {fileTypeLabel(book.file_path)}
                       </Badge>
                     </TableCell>
                     <TableCell className="font-medium">{book.title}</TableCell>

@@ -9,6 +9,16 @@
 /** Masonic degree level (also used to gate book visibility) */
 export type MasonicGrade = 'profano' | 'aprendiz' | 'companero' | 'maestro';
 
+/** Short label for a digital file's format, derived from its path extension. */
+export function fileTypeLabel(path?: string | null): string {
+  const ext = (path?.split('.').pop() || '').toLowerCase();
+  if (ext === 'pdf') return 'PDF';
+  if (ext === 'xls' || ext === 'xlsx') return 'Excel';
+  if (ext === 'doc' || ext === 'docx') return 'Word';
+  if (ext === 'ppt' || ext === 'pptx') return 'PPT';
+  return ext ? ext.toUpperCase() : 'Archivo';
+}
+
 /** Physical book availability */
 export type BookStatus = 'available' | 'on_loan';
 
