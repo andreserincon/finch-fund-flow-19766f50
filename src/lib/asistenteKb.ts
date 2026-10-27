@@ -22,7 +22,7 @@
 
 import type { TourStep } from '@/lib/asistenteTour';
 
-export type KbTaskId = 'T1' | 'T2' | 'T3' | 'T4' | 'T5' | 'T6' | 'T7' | 'T8';
+export type KbTaskId = 'T1' | 'T2' | 'T3' | 'T4' | 'T5' | 'T6' | 'T7' | 'T8' | 'T9';
 
 /**
  * Nivel de acceso de la pantalla de la tarea, segun los guards reales de
@@ -600,6 +600,34 @@ export const ASISTENTE_TASKS: KbTask[] = [
       },
     ],
   },
+  {
+    id: 'T9',
+    title: 'Registrar un préstamo nuevo',
+    screen: 'Préstamos',
+    route: '/loans',
+    nav: 'En escritorio, Préstamos esta en Resumen en la barra lateral. En el celular, esta en la pestaña Más.',
+    // Acceso 'admin': el boton Nuevo Préstamo solo aparece con isAdmin.
+    access: 'admin',
+    // Stems de intencion: "prestamo" cubre prestamo/prestamos; "prestar" el verbo.
+    keywords: ['prestamo', 'prestar'],
+    steps: [
+      'En Préstamos, tocá Nuevo Préstamo (arriba a la derecha; solo con acceso de edición).',
+      'Elegí el hermano al que le prestás.',
+      'Elegí la Cuenta de origen: Cuenta Bancaria Principal (ARS) o Caja de Ahorro (USD). La cuenta define la moneda del préstamo.',
+      'Confirmá la Fecha.',
+      'Ingresá el Monto; se descuenta de la cuenta elegida.',
+      'Tocá Crear préstamo. Despues, cada préstamo lleva su seguimiento de pagos (Agregar Pago desde el menú de la fila).',
+    ],
+    glossaryTerms: [],
+    tour: [
+      { route: '/loans', anchor: 'prestamo-nuevo', title: 'Abrí Nuevo Préstamo', body: 'Tocá Nuevo Préstamo (arriba a la derecha). Solo aparece con acceso de edición. Se abre el formulario del préstamo.' },
+      { route: '/loans', anchor: 'prestamo-miembro', title: 'Elegí el hermano', body: 'Seleccioná el hermano al que le prestás.' },
+      { route: '/loans', anchor: 'prestamo-cuenta', title: 'Elegí la cuenta de origen', body: 'Cuenta Bancaria Principal (ARS) o Caja de Ahorro (USD). La cuenta define la moneda del préstamo.' },
+      { route: '/loans', anchor: 'prestamo-fecha', title: 'Confirmá la fecha', body: 'Viene la de hoy; cambiala si corresponde.' },
+      { route: '/loans', anchor: 'prestamo-monto', title: 'Ingresá el monto', body: 'El monto se descuenta de la cuenta elegida.' },
+      { route: '/loans', anchor: 'prestamo-crear', title: 'Creá el préstamo', body: 'Tocá Crear préstamo. El recorrido no lo toca: lo creás vos.' },
+    ],
+  },
 ];
 
 /**
@@ -616,6 +644,7 @@ export const CHIP_QUESTIONS: Record<KbTaskId, string> = {
   T6: '¿Cómo reviso y envío los recordatorios?',
   T7: '¿Cómo doy de alta un miembro?',
   T8: '¿Cómo creo o gestiono un evento?',
+  T9: '¿Cómo registro un préstamo nuevo?',
 };
 
 /**

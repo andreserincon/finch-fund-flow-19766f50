@@ -17,7 +17,7 @@ import {
 const MONEY_WRITE_TASK_IDS = ['T1', 'T2', 'T3'] as const;
 
 describe('ASISTENTE_TASKS', () => {
-  it('has exactly the eight ids T1..T8 in order', () => {
+  it('has the expected ids in order', () => {
     expect(ASISTENTE_TASKS.map((t) => t.id)).toEqual([
       'T1',
       'T2',
@@ -27,6 +27,7 @@ describe('ASISTENTE_TASKS', () => {
       'T6',
       'T7',
       'T8',
+      'T9',
     ]);
   });
 

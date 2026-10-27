@@ -93,7 +93,7 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
           <div className="space-y-2">
             <Label>Miembro</Label>
             <Select onValueChange={(value) => setValue('member_id', value)}>
-              <SelectTrigger>
+              <SelectTrigger data-asistente="prestamo-miembro">
                 <SelectValue placeholder="Seleccionar miembro" />
               </SelectTrigger>
               <SelectContent>
@@ -116,7 +116,7 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
                 value={selectedAccount}
                 onValueChange={(value: 'bank' | 'savings') => setValue('account', value)}
               >
-                <SelectTrigger>
+                <SelectTrigger data-asistente="prestamo-cuenta">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -131,6 +131,7 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
               <Input
                 id="loan_date"
                 type="date"
+                data-asistente="prestamo-fecha"
                 {...register('loan_date')}
               />
               {errors.loan_date && (
@@ -145,6 +146,7 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
               id="amount"
               type="number"
               step="0.01"
+              data-asistente="prestamo-monto"
               {...register('amount', { valueAsNumber: true })}
               placeholder="0.00"
             />
@@ -170,7 +172,7 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
             <Button type="button" variant="outline" onClick={handleClose}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={isSubmitting} className="flex-1">
+            <Button type="submit" data-asistente="prestamo-crear" disabled={isSubmitting} className="flex-1">
               {isSubmitting ? 'Creando...' : 'Crear préstamo'}
             </Button>
           </div>
