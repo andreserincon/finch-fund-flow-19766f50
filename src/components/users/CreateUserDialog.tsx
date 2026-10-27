@@ -188,7 +188,7 @@ export function CreateUserDialog({ open, onOpenChange, excludeMemberIds }: Creat
             <div className="grid gap-2">
               <Label>Miembro <span className="text-primary">obligatorio</span></Label>
               <Select value={memberId} onValueChange={handleMemberChange} disabled={isLoading}>
-                <SelectTrigger className={errors.member ? 'border-destructive' : ''}>
+                <SelectTrigger data-asistente="acceso-miembro" className={errors.member ? 'border-destructive' : ''}>
                   <SelectValue placeholder="Seleccionar hermano sin acceso..." />
                 </SelectTrigger>
                 <SelectContent>
@@ -210,6 +210,7 @@ export function CreateUserDialog({ open, onOpenChange, excludeMemberIds }: Creat
               <Label htmlFor="email">Correo</Label>
               <Input
                 id="email"
+                data-asistente="acceso-correo"
                 type="email"
                 inputMode="email"
                 value={email}
@@ -223,7 +224,7 @@ export function CreateUserDialog({ open, onOpenChange, excludeMemberIds }: Creat
 
             <div className="grid gap-2">
               <Label>Roles</Label>
-              <div className="space-y-2 rounded-md border p-3">
+              <div data-asistente="acceso-roles" className="space-y-2 rounded-md border p-3">
                 {roleOptions.map((o) => (
                   <label key={o.value} className="flex items-start gap-2 cursor-pointer">
                     <Checkbox
@@ -247,7 +248,7 @@ export function CreateUserDialog({ open, onOpenChange, excludeMemberIds }: Creat
             <div className="grid gap-2">
               <Label>Grado masonico</Label>
               <Select value={grade} onValueChange={setGrade} disabled={isLoading || !memberId}>
-                <SelectTrigger>
+                <SelectTrigger data-asistente="acceso-grado">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -263,7 +264,7 @@ export function CreateUserDialog({ open, onOpenChange, excludeMemberIds }: Creat
             <Button type="button" variant="outline" onClick={handleClose} disabled={isLoading}>
               {t('common.cancel', 'Cancelar')}
             </Button>
-            <Button type="submit" disabled={isLoading}>
+            <Button type="submit" data-asistente="acceso-enviar" disabled={isLoading}>
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Enviar invitacion
             </Button>

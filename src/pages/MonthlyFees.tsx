@@ -431,7 +431,7 @@ function AddMonthlyFeeDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
-        <Button>
+        <Button data-asistente="capita-agregar">
           <PlusCircle className="mr-2 h-4 w-4" />
           Agregar cápitas
         </Button>
@@ -448,6 +448,7 @@ function AddMonthlyFeeDialog({
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
+                  data-asistente="capita-mes"
                   className={cn("w-full justify-start text-left font-normal", !selectedDate && "text-muted-foreground")}
                 >
                   <CalendarIcon className="mr-2 h-4 w-4" />
@@ -471,11 +472,11 @@ function AddMonthlyFeeDialog({
           </div>
           <div className="space-y-2">
             <Label htmlFor="standard_amount">Monto cápita Estándar</Label>
-            <Input id="standard_amount" type="number" step="0.01" value={standardAmount} onChange={(e) => setStandardAmount(e.target.value)} placeholder="0.00" />
+            <Input id="standard_amount" data-asistente="capita-estandar" type="number" step="0.01" value={standardAmount} onChange={(e) => setStandardAmount(e.target.value)} placeholder="0.00" />
           </div>
           <div className="space-y-2">
             <Label htmlFor="solidarity_amount">Monto cápita Solidaria</Label>
-            <Input id="solidarity_amount" type="number" step="0.01" value={solidarityAmount} onChange={(e) => setSolidarityAmount(e.target.value)} placeholder="0.00" />
+            <Input id="solidarity_amount" data-asistente="capita-solidaria" type="number" step="0.01" value={solidarityAmount} onChange={(e) => setSolidarityAmount(e.target.value)} placeholder="0.00" />
           </div>
           <div className="pt-2 border-t">
             <p className="text-xs font-medium text-muted-foreground mb-3">Cápitas Gran Logia (opcional)</p>
@@ -491,7 +492,7 @@ function AddMonthlyFeeDialog({
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button onClick={handleSubmit} disabled={isSubmitting || alreadyExists}>
+          <Button data-asistente="capita-guardar" onClick={handleSubmit} disabled={isSubmitting || alreadyExists}>
             {isSubmitting ? 'Guardando...' : 'Guardar cápitas'}
           </Button>
         </DialogFooter>

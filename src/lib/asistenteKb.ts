@@ -22,7 +22,7 @@
 
 import type { TourStep } from '@/lib/asistenteTour';
 
-export type KbTaskId = 'T1' | 'T2' | 'T3' | 'T4' | 'T5' | 'T6' | 'T7' | 'T8';
+export type KbTaskId = 'T1' | 'T2' | 'T3' | 'T4' | 'T5' | 'T6' | 'T7' | 'T8' | 'T9' | 'T10' | 'T11' | 'T12' | 'T13';
 
 /**
  * Nivel de acceso de la pantalla de la tarea, segun los guards reales de
@@ -598,6 +598,147 @@ export const ASISTENTE_TASKS: KbTask[] = [
         title: 'Creá el evento',
         body: 'Cuando todo este correcto, tocá Crear evento. (El recorrido no lo toca: lo creás vos.) Despues podés activar, desactivar, editar o eliminar cada evento.',
       },
+      {
+        route: '/expense-categories',
+        title: 'Customizar el evento',
+        body: 'Despues de crearlo, tocá el evento en la lista para ver su resumen: ahi elegís qué hermanos participan, editás la cuota de cada uno y agregás invitados que no son miembros.',
+      },
+    ],
+  },
+  {
+    id: 'T9',
+    title: 'Registrar un préstamo nuevo',
+    screen: 'Préstamos',
+    route: '/loans',
+    nav: 'En escritorio, Préstamos esta en Resumen en la barra lateral. En el celular, esta en la pestaña Más.',
+    // Acceso 'admin': el boton Nuevo Préstamo solo aparece con isAdmin.
+    access: 'admin',
+    // Stems de intencion: "prestamo" cubre prestamo/prestamos; "prestar" el verbo.
+    keywords: ['prestamo', 'prestar'],
+    steps: [
+      'En Préstamos, tocá Nuevo Préstamo (arriba a la derecha; solo con acceso de edición).',
+      'Elegí el hermano al que le prestás.',
+      'Elegí la Cuenta de origen: Cuenta Bancaria Principal (ARS) o Caja de Ahorro (USD). La cuenta define la moneda del préstamo.',
+      'Confirmá la Fecha.',
+      'Ingresá el Monto; se descuenta de la cuenta elegida.',
+      'Tocá Crear préstamo. Despues, cada préstamo lleva su seguimiento de pagos (Agregar Pago desde el menú de la fila).',
+    ],
+    glossaryTerms: [],
+    tour: [
+      { route: '/loans', anchor: 'prestamo-nuevo', title: 'Abrí Nuevo Préstamo', body: 'Tocá Nuevo Préstamo (arriba a la derecha). Solo aparece con acceso de edición. Se abre el formulario del préstamo.' },
+      { route: '/loans', anchor: 'prestamo-miembro', title: 'Elegí el hermano', body: 'Seleccioná el hermano al que le prestás.' },
+      { route: '/loans', anchor: 'prestamo-cuenta', title: 'Elegí la cuenta de origen', body: 'Cuenta Bancaria Principal (ARS) o Caja de Ahorro (USD). La cuenta define la moneda del préstamo.' },
+      { route: '/loans', anchor: 'prestamo-fecha', title: 'Confirmá la fecha', body: 'Viene la de hoy; cambiala si corresponde.' },
+      { route: '/loans', anchor: 'prestamo-monto', title: 'Ingresá el monto', body: 'El monto se descuenta de la cuenta elegida.' },
+      { route: '/loans', anchor: 'prestamo-crear', title: 'Creá el préstamo', body: 'Tocá Crear préstamo. El recorrido no lo toca: lo creás vos.' },
+    ],
+  },
+  {
+    id: 'T10',
+    title: 'Fijar las cápitas del mes',
+    screen: 'Cápitas Mensuales',
+    route: '/monthly-fees',
+    nav: 'En escritorio, Cápitas Mensuales esta en Configuración en la barra lateral. En el celular, en la pestaña Más, dentro de Configuración.',
+    // Acceso 'admin': el boton Agregar cápitas y la edicion solo aparecen con isAdmin.
+    access: 'admin',
+    // Stems de intencion: fijar/cargar las cápitas mensuales (distinto de T5 calcular).
+    keywords: ['capita mensual', 'agregar capita', 'cargar capita'],
+    steps: [
+      'En Cápitas Mensuales, tocá Agregar cápitas (arriba a la derecha; solo con acceso de edición).',
+      'Elegí el mes (se cargan desde el primer día del mes).',
+      'Cargá el Monto de la cápita Estándar.',
+      'Cargá el Monto de la cápita Solidaria. Si querés, cargá también las cápitas de la Gran Logia (es opcional).',
+      'Tocá Guardar cápitas.',
+      'Para cambiar una cápita ya cargada, tocá su valor en el Historial de cápitas y editalo.',
+    ],
+    glossaryTerms: ['capita', 'estandar', 'solidaria', 'gl'],
+    tour: [
+      { route: '/monthly-fees', anchor: 'capita-agregar', title: 'Abrí Agregar cápitas', body: 'Tocá Agregar cápitas (arriba a la derecha). Solo aparece con acceso de edición. Se abre el formulario.' },
+      { route: '/monthly-fees', anchor: 'capita-mes', title: 'Elegí el mes', body: 'Elegí el mes de las cápitas. El calendario solo deja elegir el primer día del mes.' },
+      { route: '/monthly-fees', anchor: 'capita-estandar', title: 'Cápita estándar', body: 'Cargá el monto de la cápita estándar (la que paga la mayoría).' },
+      { route: '/monthly-fees', anchor: 'capita-solidaria', title: 'Cápita solidaria', body: 'Cargá el monto de la cápita solidaria. Mas abajo podés cargar las cápitas de la Gran Logia (opcional).' },
+      { route: '/monthly-fees', anchor: 'capita-guardar', title: 'Guardá las cápitas', body: 'Tocá Guardar cápitas. El recorrido no lo toca: lo guardás vos.' },
+      { route: '/monthly-fees', title: 'Editar una cápita ya cargada', body: 'En el Historial de cápitas, tocá cualquier valor para editarlo en el momento.' },
+    ],
+  },
+  {
+    id: 'T11',
+    title: 'Crear una gestión',
+    screen: 'Gestiones',
+    route: '/gestiones',
+    nav: 'En escritorio, Gestiones esta en Administración en la barra lateral. Entra el Administrador o el Venerable.',
+    // Acceso 'admin': /gestiones es admin|vm; el enum no tiene ese nivel, se usa
+    // 'admin' para no sobre-mostrar (el vm igual tiene el chat).
+    access: 'admin',
+    // Stems de intencion: crear una gestion/periodo. Se evita el stem suelto
+    // "gestion" porque el chip de T8 contiene "gestiono".
+    keywords: ['gestion nueva', 'nueva gestion', 'periodo de gestion'],
+    steps: [
+      'En Administración → Gestiones, tocá Nueva gestión.',
+      'Poné el Nombre del periodo (por ejemplo, Gestión 2027).',
+      'Elegí la Fecha de inicio. Esa fecha marca el límite del bloqueo del periodo anterior.',
+      'Elegí el Tesorero y el Venerable entrantes (solo aparecen hermanos con usuario).',
+      'Tocá Crear gestión. Al crearla, la gestión anterior se cierra y los oficiales elegidos reciben su rol de acceso.',
+    ],
+    glossaryTerms: [],
+    tour: [
+      { route: '/gestiones', anchor: 'gestion-nueva', title: 'Abrí Nueva gestión', body: 'Tocá Nueva gestión. Se abre el formulario del periodo.' },
+      { route: '/gestiones', anchor: 'gestion-nombre', title: 'Nombre del periodo', body: 'Escribí el nombre (por ejemplo, Gestión 2027).' },
+      { route: '/gestiones', anchor: 'gestion-inicio', title: 'Fecha de inicio', body: 'Elegí la fecha de inicio. Marca el límite del bloqueo del periodo anterior.' },
+      { route: '/gestiones', anchor: 'gestion-tesorero', title: 'Elegí el Tesorero', body: 'Seleccioná el Tesorero entrante. Solo aparecen hermanos con usuario.' },
+      { route: '/gestiones', anchor: 'gestion-vm', title: 'Elegí el Venerable', body: 'Seleccioná el Venerable entrante.' },
+      { route: '/gestiones', anchor: 'gestion-crear', title: 'Creá la gestión', body: 'Tocá Crear gestión. El recorrido no lo toca: la creás vos. Cierra la anterior y asigna los roles.' },
+    ],
+  },
+  {
+    id: 'T12',
+    title: 'Otorgar acceso a un hermano',
+    screen: 'Accesos y Roles',
+    route: '/user-management',
+    nav: 'En escritorio, Accesos y Roles esta en Administración en la barra lateral. Entra el Administrador o el Venerable.',
+    // Acceso 'admin': /user-management es admin|vm; se usa 'admin' para no sobre-mostrar.
+    access: 'admin',
+    keywords: ['acceso', 'otorgar acceso', 'crear usuario'],
+    steps: [
+      'En Administración → Accesos y Roles, tocá Otorgar acceso.',
+      'Elegí el hermano al que le das acceso (solo aparecen los que no tienen cuenta).',
+      'Cargá su Correo.',
+      'Marcá los Roles. Un usuario puede tener más de un rol; Tesorero y Venerable se asignan desde Gestiones, no acá.',
+      'Confirmá el Grado masónico del hermano.',
+      'Tocá Enviar invitación. Se genera un enlace de un solo uso para que cree su contraseña.',
+    ],
+    glossaryTerms: [],
+    tour: [
+      { route: '/user-management', anchor: 'acceso-otorgar', title: 'Abrí Otorgar acceso', body: 'Tocá Otorgar acceso. Se abre el formulario del nuevo usuario.' },
+      { route: '/user-management', anchor: 'acceso-miembro', title: 'Elegí el hermano', body: 'Seleccioná el hermano. Solo aparecen los que todavía no tienen cuenta.' },
+      { route: '/user-management', anchor: 'acceso-correo', title: 'Cargá el correo', body: 'Escribí el correo del hermano. Ahí le llega el acceso.' },
+      { route: '/user-management', anchor: 'acceso-roles', title: 'Marcá los roles', body: 'Elegí los roles. Tesorero y Venerable se asignan desde Gestiones, no acá.' },
+      { route: '/user-management', anchor: 'acceso-grado', title: 'Grado masónico', body: 'Confirmá el grado del hermano (es el grado, no el rol en la app).' },
+      { route: '/user-management', anchor: 'acceso-enviar', title: 'Enviá la invitación', body: 'Tocá Enviar invitación. El recorrido no lo toca: lo enviás vos. Se genera un enlace de un solo uso.' },
+    ],
+  },
+  {
+    id: 'T13',
+    title: 'Ajustar la cápita de un hermano o darlo de baja',
+    screen: 'Miembros (Administración)',
+    route: '/admin/members',
+    nav: 'En Administración → Miembros. Entra el Administrador.',
+    access: 'admin',
+    // Stems de intencion: capita social / baja de miembro. Se evita "miembro"
+    // suelto (lo usa T7); el chip usa "hermano" y "capita social".
+    keywords: ['capita social', 'desactivar', 'dar de baja', 'editar la ficha'],
+    steps: [
+      'Entrá a Administración → Miembros.',
+      'En la fila del hermano, abrí el menú (...) y tocá Editar.',
+      'Cápita social: cambiá el Tipo de Cápita a Solidaria. Para volver a la regular, ponelo en Estándar.',
+      'Baja: si el hermano ya no forma parte del taller, marcalo como inactivo. Desde ese mes deja de generar cápita.',
+      'Guardá los cambios. El Historial de tipo de cápita de la fila deja registro de los cambios.',
+    ],
+    glossaryTerms: ['capita', 'estandar', 'solidaria'],
+    tour: [
+      { route: '/admin/members', anchor: 'miembro-admin-menu', title: 'Abrí el menú de la fila', body: 'En la fila del hermano, tocá el menú (...) y elegí Editar para abrir su ficha.' },
+      { route: '/admin/members', title: 'Cápita social', body: 'En la ficha, cambiá el Tipo de Cápita a Solidaria para la cápita social. Para volver a la regular, ponelo en Estándar.' },
+      { route: '/admin/members', title: 'Dar de baja', body: 'Si el hermano ya no forma parte del taller, marcalo como inactivo. Desde ese mes deja de generar cápita.' },
     ],
   },
 ];
@@ -616,6 +757,11 @@ export const CHIP_QUESTIONS: Record<KbTaskId, string> = {
   T6: '¿Cómo reviso y envío los recordatorios?',
   T7: '¿Cómo doy de alta un miembro?',
   T8: '¿Cómo creo o gestiono un evento?',
+  T9: '¿Cómo registro un préstamo nuevo?',
+  T10: '¿Cómo fijo la cápita mensual?',
+  T11: '¿Cómo creo una gestión nueva?',
+  T12: '¿Cómo otorgo un acceso a un hermano?',
+  T13: '¿Cómo pongo a un hermano en cápita social?',
 };
 
 /**
