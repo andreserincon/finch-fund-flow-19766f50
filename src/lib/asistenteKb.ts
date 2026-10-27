@@ -598,6 +598,11 @@ export const ASISTENTE_TASKS: KbTask[] = [
         title: 'Creá el evento',
         body: 'Cuando todo este correcto, tocá Crear evento. (El recorrido no lo toca: lo creás vos.) Despues podés activar, desactivar, editar o eliminar cada evento.',
       },
+      {
+        route: '/expense-categories',
+        title: 'Customizar el evento',
+        body: 'Despues de crearlo, tocá el evento en la lista para ver su resumen: ahi elegís qué hermanos participan, editás la cuota de cada uno y agregás invitados que no son miembros.',
+      },
     ],
   },
   {
