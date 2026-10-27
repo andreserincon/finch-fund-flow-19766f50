@@ -60,8 +60,8 @@ serve(async (req: Request) => {
       .select("role")
       .eq("user_id", requestingUserId);
 
-    const roles = (callerRoles ?? []).map((r: { role: string }) => r.role);
-    const canManage = roles.includes("admin") || roles.includes("vm");
+    const callerRoleNames = (callerRoles ?? []).map((r: { role: string }) => r.role);
+    const canManage = callerRoleNames.includes("admin") || callerRoleNames.includes("vm");
 
     if (!canManage) {
       throw new Error("No autorizado: solo el Administrador o el Venerable pueden crear accesos.");
