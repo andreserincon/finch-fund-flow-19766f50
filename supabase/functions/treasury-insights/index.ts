@@ -62,10 +62,10 @@ serve(async (req) => {
 
     // Parse request body
     const { question, context, language = 'Spanish' } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    const CLAUDE_API_KEY = Deno.env.get("asistente_logia");
 
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
+    if (!CLAUDE_API_KEY) {
+      throw new Error("asistente_logia (Anthropic key) is not configured");
     }
 
     // Input validation: mitigate prompt injection and oversized payloads.
@@ -116,19 +116,19 @@ Keep responses concise and actionable. Use currency formatting appropriate for t
 When mentioning specific numbers, always format them as currency.
 Remember: Always respond in ${safeLanguage}.`;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
+        "x-api-key": CLAUDE_API_KEY,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: question },
-        ],
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 1024,
         stream: true,
+        system: systemPrompt,
+        messages: [{ role: "user", content: question }],
       }),
     });
 
@@ -139,21 +139,53 @@ Remember: Always respond in ${safeLanguage}.`;
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "Payment required, please add funds to your workspace." }), {
-          status: 402,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
       const errorText = await response.text();
-      console.error("AI gateway error:", response.status, errorText);
-      return new Response(JSON.stringify({ error: "AI gateway error" }), {
+      console.error("Anthropic error:", response.status, errorText.slice(0, 300));
+      return new Response(JSON.stringify({ error: "AI error" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    return new Response(response.body, {
+    // Re-emit Claude's SSE as OpenAI-style chunks so the existing client parser
+    // (InsightsAgent: choices[0].delta.content + [DONE]) keeps working unchanged.
+    const encoder = new TextEncoder();
+    const decoder = new TextDecoder();
+    const reader = response.body!.getReader();
+    let buffer = "";
+    const stream = new ReadableStream({
+      async pull(controller) {
+        const { done, value } = await reader.read();
+        if (done) {
+          controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+          controller.close();
+          return;
+        }
+        buffer += decoder.decode(value, { stream: true });
+        let nl: number;
+        while ((nl = buffer.indexOf("\n")) !== -1) {
+          const line = buffer.slice(0, nl).trim();
+          buffer = buffer.slice(nl + 1);
+          if (!line.startsWith("data:")) continue;
+          const payload = line.slice(5).trim();
+          if (!payload || payload === "[DONE]") continue;
+          try {
+            const ev = JSON.parse(payload);
+            if (ev.type === "content_block_delta" && ev.delta?.type === "text_delta" && ev.delta.text) {
+              const out = JSON.stringify({ choices: [{ delta: { content: ev.delta.text } }] });
+              controller.enqueue(encoder.encode(`data: ${out}\n\n`));
+            }
+          } catch {
+            // ignore keepalive / non-JSON events
+          }
+        }
+      },
+      cancel() {
+        reader.cancel();
+      },
+    });
+
+    return new Response(stream, {
       headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
     });
   } catch (error) {

@@ -24,8 +24,8 @@ serve(async (req) => {
   }
 
   try {
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    const CLAUDE_API_KEY = Deno.env.get("asistente_logia");
+    if (!CLAUDE_API_KEY) throw new Error("asistente_logia (Anthropic key) is not configured");
 
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -93,77 +93,40 @@ serve(async (req) => {
     const arrayBuffer = await fileData.arrayBuffer();
     const base64 = toBase64(new Uint8Array(arrayBuffer));
 
-    // Call Lovable AI with tool calling to extract structured metadata
-    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    // Analizar el PDF con Claude Haiku (documento nativo) y pedir la metadata en JSON.
+    const aiResponse = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
+        "x-api-key": CLAUDE_API_KEY,
+        "anthropic-version": "2023-06-01",
+        "anthropic-beta": "pdfs-2024-09-25",
+        "content-type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 512,
+        system:
+          "Sos un bibliotecario experto. Analizás el PDF y devolvés SOLO un objeto JSON con las claves title, author y description (descripción concisa en español, máximo 3 oraciones). Si no podés determinar el autor, usá \"Desconocido\". No agregues texto fuera del JSON.",
         messages: [
-          {
-            role: "system",
-            content:
-              "Eres un bibliotecario experto. Analiza el documento PDF proporcionado y extrae el título, autor y una descripción concisa (máximo 3 oraciones en español). Si no puedes determinar el autor, usa 'Desconocido'.",
-          },
           {
             role: "user",
             content: [
-              {
-                type: "image_url",
-                image_url: {
-                  url: `data:application/pdf;base64,${base64}`,
-                },
-              },
-              {
-                type: "text",
-                text: "Extrae el título, autor y descripción de este documento PDF.",
-              },
+              { type: "document", source: { type: "base64", media_type: "application/pdf", data: base64 } },
+              { type: "text", text: "Extraé el título, autor y descripción de este documento. Devolvé solo el JSON." },
             ],
           },
         ],
-        tools: [
-          {
-            type: "function",
-            function: {
-              name: "extract_book_metadata",
-              description: "Extract title, author and description from a PDF document.",
-              parameters: {
-                type: "object",
-                properties: {
-                  title: { type: "string", description: "The book/document title" },
-                  author: { type: "string", description: "The author name" },
-                  description: {
-                    type: "string",
-                    description: "A concise description in Spanish (max 3 sentences)",
-                  },
-                },
-                required: ["title", "author", "description"],
-                additionalProperties: false,
-              },
-            },
-          },
-        ],
-        tool_choice: { type: "function", function: { name: "extract_book_metadata" } },
       }),
     });
 
     if (!aiResponse.ok) {
       const status = aiResponse.status;
       const body = await aiResponse.text();
-      console.error("AI gateway error:", status, body);
+      console.error("Anthropic error:", status, body.slice(0, 300));
 
       if (status === 429) {
         return new Response(JSON.stringify({ error: "rate_limited" }), {
           status: 429,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      if (status === 402) {
-        return new Response(JSON.stringify({ error: "payment_required" }), {
-          status: 402,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
@@ -175,32 +138,19 @@ serve(async (req) => {
     }
 
     const aiData = await aiResponse.json();
-
-    // Extract from tool call response
-    const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
-    if (toolCall?.function?.arguments) {
-      try {
-        const metadata = JSON.parse(toolCall.function.arguments);
-        return new Response(
-          JSON.stringify({
-            title: metadata.title || "",
-            author: metadata.author || "Desconocido",
-            description: metadata.description || "",
-          }),
-          {
-            status: 200,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          }
-        );
-      } catch {
-        console.error("Failed to parse tool call arguments");
-      }
+    const raw = (aiData.content?.[0]?.text || "").trim();
+    let metadata: { title?: string; author?: string; description?: string } = {};
+    try {
+      metadata = JSON.parse(raw.match(/\{[\s\S]*\}/)?.[0] ?? "{}");
+    } catch {
+      console.error("Failed to parse metadata JSON:", raw.slice(0, 200));
     }
-
-    // Fallback: try to get from message content
-    const content = aiData.choices?.[0]?.message?.content?.trim() || "";
     return new Response(
-      JSON.stringify({ title: "", author: "", description: content }),
+      JSON.stringify({
+        title: metadata.title || "",
+        author: metadata.author || "Desconocido",
+        description: metadata.description || raw || "",
+      }),
       {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
