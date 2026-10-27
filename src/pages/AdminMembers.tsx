@@ -241,7 +241,7 @@ export default function AdminMembers() {
                       {isAdmin && (
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /><span className="sr-only">Abrir menú</span></Button>
+                            <Button data-asistente="miembro-admin-menu" variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /><span className="sr-only">Abrir menú</span></Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="bg-popover">
                             <DropdownMenuItem onClick={() => setEditMember(member)}><Pencil className="mr-2 h-4 w-4" />Editar</DropdownMenuItem>

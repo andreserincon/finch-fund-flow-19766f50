@@ -31,6 +31,7 @@ describe('ASISTENTE_TASKS', () => {
       'T10',
       'T11',
       'T12',
+      'T13',
     ]);
   });
 

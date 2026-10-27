@@ -22,7 +22,7 @@
 
 import type { TourStep } from '@/lib/asistenteTour';
 
-export type KbTaskId = 'T1' | 'T2' | 'T3' | 'T4' | 'T5' | 'T6' | 'T7' | 'T8' | 'T9' | 'T10' | 'T11' | 'T12';
+export type KbTaskId = 'T1' | 'T2' | 'T3' | 'T4' | 'T5' | 'T6' | 'T7' | 'T8' | 'T9' | 'T10' | 'T11' | 'T12' | 'T13';
 
 /**
  * Nivel de acceso de la pantalla de la tarea, segun los guards reales de
@@ -712,6 +712,30 @@ export const ASISTENTE_TASKS: KbTask[] = [
       { route: '/user-management', anchor: 'acceso-enviar', title: 'Enviá la invitación', body: 'Tocá Enviar invitación. El recorrido no lo toca: lo enviás vos. Se genera un enlace de un solo uso.' },
     ],
   },
+  {
+    id: 'T13',
+    title: 'Ajustar la cápita de un hermano o darlo de baja',
+    screen: 'Miembros (Administración)',
+    route: '/admin/members',
+    nav: 'En Administración → Miembros. Entra el Administrador.',
+    access: 'admin',
+    // Stems de intencion: capita social / baja de miembro. Se evita "miembro"
+    // suelto (lo usa T7); el chip usa "hermano" y "capita social".
+    keywords: ['capita social', 'desactivar', 'dar de baja', 'editar la ficha'],
+    steps: [
+      'Entrá a Administración → Miembros.',
+      'En la fila del hermano, abrí el menú (...) y tocá Editar.',
+      'Cápita social: cambiá el Tipo de Cápita a Solidaria. Para volver a la regular, ponelo en Estándar.',
+      'Baja: si el hermano ya no forma parte del taller, marcalo como inactivo. Desde ese mes deja de generar cápita.',
+      'Guardá los cambios. El Historial de tipo de cápita de la fila deja registro de los cambios.',
+    ],
+    glossaryTerms: ['capita', 'estandar', 'solidaria'],
+    tour: [
+      { route: '/admin/members', anchor: 'miembro-admin-menu', title: 'Abrí el menú de la fila', body: 'En la fila del hermano, tocá el menú (...) y elegí Editar para abrir su ficha.' },
+      { route: '/admin/members', title: 'Cápita social', body: 'En la ficha, cambiá el Tipo de Cápita a Solidaria para la cápita social. Para volver a la regular, ponelo en Estándar.' },
+      { route: '/admin/members', title: 'Dar de baja', body: 'Si el hermano ya no forma parte del taller, marcalo como inactivo. Desde ese mes deja de generar cápita.' },
+    ],
+  },
 ];
 
 /**
@@ -732,6 +756,7 @@ export const CHIP_QUESTIONS: Record<KbTaskId, string> = {
   T10: '¿Cómo fijo la cápita mensual?',
   T11: '¿Cómo creo una gestión nueva?',
   T12: '¿Cómo otorgo un acceso a un hermano?',
+  T13: '¿Cómo pongo a un hermano en cápita social?',
 };
 
 /**
