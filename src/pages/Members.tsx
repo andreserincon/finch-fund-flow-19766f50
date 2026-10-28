@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useHiddenMode } from '@/contexts/HiddenModeContext';
 import { useMembers } from '@/hooks/useMembers';
+import { useMemberCharges } from '@/hooks/useMemberCharges';
 import { useMonthlyFees } from '@/hooks/useMonthlyFees';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { useIsMemberOnly } from '@/hooks/useIsMemberOnly';
@@ -40,6 +41,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { FEE_TYPE_LABELS, MASONIC_GRADE_LABELS, MemberBalance, PaymentStatus } from '@/lib/types';
 import { parseLocalDate, formatCurrency } from '@/lib/utils';
+import { chargeBalance } from '@/lib/cobros-types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TableSkeleton } from '@/components/ui/loading';
 import { useSearchParams } from 'react-router-dom';
@@ -75,6 +77,7 @@ interface SortConfig {
 export default function Members() {
   const { t } = useTranslation();
   const { memberBalances, members, isLoading } = useMembers();
+  const { charges } = useMemberCharges();
   // member_balances (the view) does not carry the masonic grade, so map it
   // from the full member rows for display.
   const gradeByMember = new Map(members.map((m) => [m.id, m.masonic_grade] as const));
@@ -116,7 +119,26 @@ export default function Members() {
   const getEventsBalance = (memberId: string) => getEventPaid(memberId) - getEventOwed(memberId);
   const getMonthlyPaid = (member: MemberBalance) => member.total_paid - getEventPaid(member.member_id);
   const getMonthlyBalance = (member: MemberBalance) => getMonthlyPaid(member) - getMonthlyOwed(member);
-  const getOverallBalance = (member: MemberBalance) => getMonthlyBalance(member) + getEventsBalance(member.member_id);
+
+  // Cobros pendientes por miembro (cuentas por cobrar abiertas), separados por
+  // moneda: el total general se lleva en pesos y los cobros en dolares se
+  // muestran aparte (no se convierten sin un tipo de cambio).
+  const chargesByMember = new Map<string, { ars: number; usd: number }>();
+  for (const c of charges) {
+    if (c.status === 'paid' || c.status === 'cancelled') continue;
+    const bal = chargeBalance(c);
+    if (bal <= 0.5) continue;
+    const acc = chargesByMember.get(c.member_id) ?? { ars: 0, usd: 0 };
+    if (c.currency === 'USD') acc.usd += bal; else acc.ars += bal;
+    chargesByMember.set(c.member_id, acc);
+  }
+  const getChargesArs = (memberId: string) => chargesByMember.get(memberId)?.ars ?? 0;
+  const getChargesUsd = (memberId: string) => chargesByMember.get(memberId)?.usd ?? 0;
+
+  // Total de la persona, en pesos: saldo de capita + saldo de eventos menos los
+  // cobros pendientes en pesos. Los cobros en dolares quedan fuera (se ven aparte).
+  const getOverallBalance = (member: MemberBalance) =>
+    getMonthlyBalance(member) + getEventsBalance(member.member_id) - getChargesArs(member.member_id);
 
   /**
    * Capita-only status, classified into the four canonical states via the
@@ -403,6 +425,28 @@ export default function Members() {
                   {member.is_active && getEventStatusBadge(member.member_id)}
                 </div>
               </div>
+              {/* Cobros pendientes + Total de la persona */}
+              <div className="space-y-1.5 border-t border-border/50 pt-3 text-sm">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-muted-foreground text-xs">Cobros pendientes</span>
+                  {getChargesArs(member.member_id) > 0 || getChargesUsd(member.member_id) > 0 ? (
+                    <span className="font-mono text-destructive text-right">
+                      {getChargesArs(member.member_id) > 0 && formatCurrency(-getChargesArs(member.member_id))}
+                      {getChargesUsd(member.member_id) > 0 && (
+                        <span className="block text-xs">-{formatCurrency(getChargesUsd(member.member_id), 'USD')}</span>
+                      )}
+                    </span>
+                  ) : (
+                    <span className="font-mono text-muted-foreground">{formatCurrency(0)}</span>
+                  )}
+                </div>
+                <div className="flex items-center justify-between border-t border-border/50 pt-1.5">
+                  <span className="text-xs font-semibold">Total (pesos)</span>
+                  <span className={`font-mono text-sm font-bold ${getOverallBalance(member) < 0 ? 'text-destructive' : 'text-emerald-600'}`}>
+                    {formatCurrency(getOverallBalance(member))}
+                  </span>
+                </div>
+              </div>
             </div>
           ))
         )}
@@ -426,6 +470,7 @@ export default function Members() {
               <TableHead className="text-right">Cápita Mensual</TableHead>
               <TableHead className="text-right">Saldo Mensual</TableHead>
               <TableHead className="text-right">Saldo Eventos</TableHead>
+              <TableHead className="text-right">Saldo Cobros</TableHead>
               <TableHead className="text-right">Saldo General</TableHead>
               <TableHead>Estado</TableHead>
               <TableHead className="w-[50px]"></TableHead>
@@ -461,6 +506,12 @@ export default function Members() {
                   </TableCell>
                   <TableCell className={`text-right font-mono ${getEventsBalance(member.member_id) < 0 ? 'text-destructive' : ''}`}>
                     {formatCurrency(getEventsBalance(member.member_id))}
+                  </TableCell>
+                  <TableCell className={`text-right font-mono ${getChargesArs(member.member_id) > 0 ? 'text-destructive' : ''}`}>
+                    {getChargesArs(member.member_id) > 0 ? formatCurrency(-getChargesArs(member.member_id)) : formatCurrency(0)}
+                    {getChargesUsd(member.member_id) > 0 && (
+                      <span className="block text-xs text-destructive">-{formatCurrency(getChargesUsd(member.member_id), 'USD')}</span>
+                    )}
                   </TableCell>
                   <TableCell className={`text-right font-mono ${getOverallBalance(member) < 0 ? 'text-destructive' : ''}`}>
                     {formatCurrency(getOverallBalance(member))}
