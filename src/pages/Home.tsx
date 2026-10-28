@@ -26,9 +26,11 @@ import { StatCard } from '@/components/dashboard/StatCard';
 import { AddTransactionForm } from '@/components/forms/AddTransactionForm';
 import { StatGridSkeleton } from '@/components/ui/loading';
 import { Button } from '@/components/ui/button';
-import { cn, formatCurrencyCompact, getNthBusinessDayOfMonth } from '@/lib/utils';
+import { cn, formatCurrency, formatCurrencyCompact, getNthBusinessDayOfMonth } from '@/lib/utils';
 import { getAttentionMembers, attentionTotalOwed, capitaOwed } from '@/lib/attention';
 import { useMemberEventTotals } from '@/hooks/useMemberEventTotals';
+import { useMemberCharges } from '@/hooks/useMemberCharges';
+import { CHARGE_CATEGORY_LABELS, chargeBalance } from '@/lib/cobros-types';
 import {
   Wallet, Landmark, AlertTriangle, HandCoins, MessageSquare, ArrowRight, Users,
   BookOpen, UserCog, FileText, Receipt, HandCoins as LoanIcon, LayoutDashboard,
@@ -73,6 +75,16 @@ export default function Home() {
   const morosos = getAttentionMembers(memberBalances, currentMonthFees, eventTotals);
   const attentionTotal = attentionTotalOwed(morosos, eventTotals);
   const morosTop = morosos.slice(0, 5);
+
+  // Cobros pendientes (cuentas por cobrar: medallas, derechos, etc.). Suelen
+  // ser cobros casi inmediatos, por eso se asoman en el Inicio. Mas nuevos
+  // primero. El nombre se muestra via displayName (respeta el modo oculto).
+  const { charges } = useMemberCharges();
+  const balById = new Map(memberBalances.map((mm) => [mm.member_id, mm]));
+  const openCharges = charges
+    .filter((c) => c.status !== 'paid' && c.status !== 'cancelled' && chargeBalance(c) > 0.5)
+    .sort((a, b) => b.charge_date.localeCompare(a.charge_date));
+  const chargesTop = openCharges.slice(0, 5);
 
   const activeLoans = loans.filter((l) => l.status === 'active');
   const loansDueARS = activeLoans.filter((l) => l.account !== 'savings').reduce((s, l) => s + (l.amount - l.amount_paid), 0);
@@ -280,6 +292,47 @@ export default function Home() {
                     </div>
                   ))}
                 </div>
+              )}
+            </div>
+          )}
+
+          {/* Cobros pendientes list */}
+          {!isMemberOnly && openCharges.length > 0 && (
+            <div className="stat-card">
+              <div className="flex items-center justify-between mb-1">
+                <h2 className="section-header mb-0 font-display">Cobros pendientes</h2>
+                <Link to="/cobros">
+                  <Button variant="ghost" size="sm">
+                    Ver todos <ArrowRight className="ml-1 h-4 w-4" />
+                  </Button>
+                </Link>
+              </div>
+              <p className="text-xs text-muted-foreground mb-3">
+                Importes a cobrar (medallas, derechos y otros), normalmente de cobro inmediato.
+              </p>
+              <div className="space-y-1">
+                {chargesTop.map((c) => {
+                  const mb = balById.get(c.member_id);
+                  const name = mb ? displayName(mb.full_name, mb.phone_number) : (c.member?.full_name ?? 'Hermano');
+                  return (
+                    <div key={c.id} className="flex items-center justify-between gap-3 py-2 border-b border-border/50 last:border-0">
+                      <div className="min-w-0">
+                        <p className="font-medium text-sm truncate">{name}</p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {CHARGE_CATEGORY_LABELS[c.category]}{c.note ? ` · ${c.note}` : ''}
+                        </p>
+                      </div>
+                      <span className="font-mono text-sm font-semibold text-foreground shrink-0">
+                        {formatCurrency(chargeBalance(c), c.currency)}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+              {openCharges.length > chargesTop.length && (
+                <p className="text-xs text-muted-foreground mt-3">
+                  y {openCharges.length - chargesTop.length} cobro(s) más en la lista.
+                </p>
               )}
             </div>
           )}
