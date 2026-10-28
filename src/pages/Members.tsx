@@ -173,6 +173,17 @@ export default function Members() {
     const capitaStatus = getPaymentStatus(member);
     const capitaOk = capitaStatus === 'al_dia' || capitaStatus === 'adelantado';
     const eventoOk = eventoBal >= 0;
+    const cobrosArs = getChargesArs(member.member_id);
+    const cobrosUsd = getChargesUsd(member.member_id);
+    const totalBal = getOverallBalance(member);
+    const money = (v: number, cur?: 'ARS' | 'USD') =>
+      `<span style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;">${formatCurrency(v, cur)}</span>`;
+    const cobrosHtml = (cobrosArs > 0 || cobrosUsd > 0)
+      ? `<span style="color:#dc2626;">`
+        + (cobrosArs > 0 ? money(-cobrosArs) : '')
+        + (cobrosUsd > 0 ? `${cobrosArs > 0 ? '<br>' : ''}-${money(cobrosUsd, 'USD')}` : '')
+        + `</span>`
+      : `<span style="color:#6b7280;">${money(0)}</span>`;
     const pill = (text: string, ok: boolean) =>
       `<span style="display:inline-block;font-size:14px;line-height:1;padding:7px 14px;border-radius:999px;background:${ok ? '#dcfce7' : '#fef9c3'};color:${ok ? '#15803d' : '#854d0e'};">${ok ? '&#9679; ' : ''}${text}</span>`;
     const tag = (text: string, filled: boolean) =>
@@ -198,6 +209,15 @@ export default function Members() {
       `<div style="display:flex;gap:32px;">` +
         `<div style="flex:1;"><div style="font-size:15px;color:#6b7280;">Cápita</div>${amount(capitaBal)}${pill(t(STATUS_I18N_KEY[capitaStatus]), capitaOk)}</div>` +
         `<div style="flex:1;"><div style="font-size:15px;color:#6b7280;">Evento</div>${amount(eventoBal)}${pill(eventoOk ? 'Al día' : 'Pendiente', eventoOk)}</div>` +
+      `</div>` +
+      `<div style="border-top:1px solid #e5e7eb;margin:18px 0;"></div>` +
+      `<div style="display:flex;justify-content:space-between;align-items:center;font-size:17px;margin-bottom:12px;">` +
+        `<span style="color:#6b7280;">Cobros</span>` +
+        cobrosHtml +
+      `</div>` +
+      `<div style="display:flex;justify-content:space-between;align-items:center;font-size:19px;">` +
+        `<span style="font-weight:700;">Total (pesos)</span>` +
+        `<span style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-weight:700;color:${totalBal < 0 ? '#dc2626' : '#059669'};">${formatCurrency(totalBal)}</span>` +
       `</div>`;
     document.body.appendChild(node);
     try {
