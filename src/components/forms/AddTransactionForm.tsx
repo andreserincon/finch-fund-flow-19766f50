@@ -83,10 +83,17 @@ interface AddTransactionFormProps {
   triggerLabel?: string;
   /** Custom trigger element (e.g. the mobile bottom-nav + button). */
   trigger?: ReactNode;
+  /** Controlled open state. When provided, the form renders no trigger of its
+   *  own and is opened/closed by the parent (e.g. the Registrar menu). */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export function AddTransactionForm({ defaultType = 'income', triggerLabel = 'Registrar movimiento', trigger }: AddTransactionFormProps) {
-  const [open, setOpen] = useState(false);
+export function AddTransactionForm({ defaultType = 'income', triggerLabel = 'Registrar movimiento', trigger, open: controlledOpen, onOpenChange }: AddTransactionFormProps) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const controlled = controlledOpen !== undefined;
+  const open = controlled ? controlledOpen : internalOpen;
+  const setOpen = (o: boolean) => { if (controlled) onOpenChange?.(o); else setInternalOpen(o); };
   const [modo, setModo] = useState<Modo>(defaultType === 'expense' ? 'gasto' : 'ingreso');
   const addAnotherRef = useRef(false);
 
@@ -299,14 +306,16 @@ export function AddTransactionForm({ defaultType = 'income', triggerLabel = 'Reg
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {trigger ?? (
-          <Button data-asistente="mov-abrir">
-            <PlusCircle className="mr-2 h-4 w-4" />
-            {triggerLabel}
-          </Button>
-        )}
-      </DialogTrigger>
+      {!controlled && (
+        <DialogTrigger asChild>
+          {trigger ?? (
+            <Button data-asistente="mov-abrir">
+              <PlusCircle className="mr-2 h-4 w-4" />
+              {triggerLabel}
+            </Button>
+          )}
+        </DialogTrigger>
+      )}
       <DialogContent className="sm:max-w-[520px] max-h-[88vh] overflow-y-auto overflow-x-hidden">
         <DialogHeader>
           <DialogTitle className="font-display">Registrar movimiento</DialogTitle>

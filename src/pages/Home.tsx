@@ -23,7 +23,7 @@ import { useAccountTransfers } from '@/hooks/useAccountTransfers';
 import { useExchangeRate } from '@/hooks/useExchangeRate';
 import { useHiddenMode } from '@/contexts/HiddenModeContext';
 import { StatCard } from '@/components/dashboard/StatCard';
-import { AddTransactionForm } from '@/components/forms/AddTransactionForm';
+import { RegistrarMenu } from '@/components/forms/RegistrarMenu';
 import { StatGridSkeleton } from '@/components/ui/loading';
 import { Button } from '@/components/ui/button';
 import { cn, formatCurrency, formatCurrencyCompact, getNthBusinessDayOfMonth } from '@/lib/utils';
@@ -149,7 +149,7 @@ export default function Home() {
           <h1 className="font-display text-2xl md:text-3xl font-bold text-foreground">{greeting}</h1>
           <p className="text-sm text-muted-foreground">Logia Simón Bolívar Nº 646 · {monthLabel}</p>
         </div>
-        {isAdmin && canViewTreasury && <AddTransactionForm triggerLabel="Registrar movimiento" />}
+        {isAdmin && canViewTreasury && <RegistrarMenu triggerLabel="Registrar movimiento" />}
       </div>
 
       {canViewTreasury && !isMemberOnly ? (
