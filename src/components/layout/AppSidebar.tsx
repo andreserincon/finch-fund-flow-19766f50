@@ -16,6 +16,7 @@ import {
   Calculator,
   HandCoins,
   Coins,
+  Medal,
   UserCog,
   FileText,
   BookOpen,
@@ -124,6 +125,7 @@ export function AppSidebar() {
       { title: t('nav.transactions'), url: '/transactions', icon: Receipt },
       { title: t('nav.loans'), url: '/loans', icon: HandCoins },
       { title: 'Cobros pendientes', url: '/cobros', icon: Coins },
+      { title: 'Inventario de medallas', url: '/medallas', icon: Medal },
       { title: t('nav.reports'), url: '/reports', icon: FileText },
       // Presupuesto: acceso oculto temporalmente.
       // { title: t('nav.budget'), url: '/budget', icon: PieChart },
