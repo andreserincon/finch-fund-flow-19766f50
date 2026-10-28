@@ -112,7 +112,6 @@ export default function Members() {
     },
   });
 
-  const getMonthlyFeeForMember = (feeType: 'standard' | 'solidarity') => currentMonthFees[feeType] ?? 0;
   const getEventOwed = (memberId: string) => memberEventData.owed[memberId] || 0;
   const getEventPaid = (memberId: string) => memberEventData.paid[memberId] || 0;
   const getMonthlyOwed = (member: MemberBalance) => member.total_fees_owed - getEventOwed(member.member_id);
@@ -467,11 +466,10 @@ export default function Members() {
                   Tipo de Cápita {getSortIcon('fee_type')}
                 </Button>
               </TableHead>
-              <TableHead className="text-right">Cápita Mensual</TableHead>
-              <TableHead className="text-right">Saldo Mensual</TableHead>
-              <TableHead className="text-right">Saldo Eventos</TableHead>
-              <TableHead className="text-right">Saldo Cobros</TableHead>
-              <TableHead className="text-right">Saldo General</TableHead>
+              <TableHead className="text-right">Cápita</TableHead>
+              <TableHead className="text-right">Eventos</TableHead>
+              <TableHead className="text-right">Cobros</TableHead>
+              <TableHead className="text-right">Total</TableHead>
               <TableHead>Estado</TableHead>
               <TableHead className="w-[50px]"></TableHead>
             </TableRow>
@@ -479,7 +477,7 @@ export default function Members() {
           <TableBody>
             {filteredMembers.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                   {isMemberOnly ? 'Tu usuario aún no está vinculado a una ficha de miembro. Escribile al Tesorero para vincularlo.' : 'No se encontraron miembros'}
                 </TableCell>
               </TableRow>
@@ -497,9 +495,6 @@ export default function Members() {
                   </TableCell>
                   <TableCell>
                     <Badge variant="secondary">{FEE_TYPE_LABELS[member.fee_type]}</Badge>
-                  </TableCell>
-                  <TableCell className="text-right font-mono">
-                    {formatCurrency(getMonthlyFeeForMember(member.fee_type))}
                   </TableCell>
                   <TableCell className={`text-right font-mono ${getMonthlyBalance(member) < 0 ? 'text-destructive' : ''}`}>
                     {formatCurrency(getMonthlyBalance(member))}
