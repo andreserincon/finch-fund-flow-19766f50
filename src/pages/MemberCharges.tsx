@@ -19,7 +19,7 @@ import {
 import { MoreHorizontal, Plus, DollarSign, Ban } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { formatCurrency, parseLocalDate } from '@/lib/utils';
+import { formatCurrency, parseLocalDate, cn } from '@/lib/utils';
 import {
   CHARGE_CATEGORY_LABELS, CHARGE_STATUS_LABELS, chargeBalance, type MemberCharge,
 } from '@/lib/cobros-types';
@@ -43,10 +43,22 @@ export default function MemberCharges() {
   const [addOpen, setAddOpen] = useState(false);
   const [payCharge, setPayCharge] = useState<MemberCharge | null>(null);
   const [cancelTarget, setCancelTarget] = useState<MemberCharge | null>(null);
+  const [filter, setFilter] = useState<'pendientes' | 'pagados' | 'todos'>('pendientes');
 
   const open = charges.filter((c) => c.status === 'pending' || c.status === 'partial');
   const totalArs = open.filter((c) => c.currency === 'ARS').reduce((s, c) => s + chargeBalance(c), 0);
   const totalUsd = open.filter((c) => c.currency === 'USD').reduce((s, c) => s + chargeBalance(c), 0);
+
+  const FILTERS = [
+    { key: 'pendientes', label: 'Pendientes' },
+    { key: 'pagados', label: 'Pagados' },
+    { key: 'todos', label: 'Todos' },
+  ] as const;
+  const visible = charges.filter((c) => {
+    if (filter === 'pendientes') return c.status === 'pending' || c.status === 'partial';
+    if (filter === 'pagados') return c.status === 'paid';
+    return true;
+  });
 
   const fmtDate = (d: string) => format(parseLocalDate(d), 'd MMM yyyy', { locale: es });
 
@@ -75,19 +87,37 @@ export default function MemberCharges() {
         </div>
       </div>
 
+      <div className="inline-flex gap-1 rounded-lg bg-muted p-1">
+        {FILTERS.map((f) => (
+          <button
+            key={f.key}
+            type="button"
+            onClick={() => setFilter(f.key)}
+            className={cn(
+              'press rounded-md px-3 py-1.5 text-xs font-semibold transition-colors',
+              filter === f.key ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
+            )}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
+
       {isLoading ? (
         <div className="space-y-3">
           {[1, 2, 3].map((i) => <Skeleton key={i} className="h-16 w-full rounded-lg" />)}
         </div>
-      ) : charges.length === 0 ? (
+      ) : visible.length === 0 ? (
         <div className="text-center py-10 text-muted-foreground bg-card rounded-lg border">
-          Todavía no hay cobros pendientes. Usá "Nuevo cargo" para registrar el primero.
+          {charges.length === 0
+            ? 'Todavía no hay cobros. Usá "Nuevo cargo" para registrar el primero.'
+            : 'No hay cobros para mostrar con este filtro.'}
         </div>
       ) : (
         <>
           {/* Mobile cards */}
           <div className="md:hidden space-y-3">
-            {charges.map((c) => (
+            {visible.map((c) => (
               <div key={c.id} className="rounded-lg border bg-card p-4 space-y-3">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
@@ -126,7 +156,7 @@ export default function MemberCharges() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {charges.map((c) => (
+                {visible.map((c) => (
                   <TableRow key={c.id}>
                     <TableCell className="font-medium">{c.member?.full_name ?? '-'}</TableCell>
                     <TableCell>
