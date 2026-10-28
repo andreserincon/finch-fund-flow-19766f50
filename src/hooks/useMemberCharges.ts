@@ -103,6 +103,41 @@ export function useMemberCharges() {
     onError: () => toast.error('No se pudo registrar el cobro'),
   });
 
+  const updateCharge = useMutation({
+    mutationFn: async (input: {
+      charge: MemberCharge;
+      member_id: string;
+      category: ChargeCategory;
+      note?: string;
+      amount: number;
+      currency: ChargeCurrency;
+      charge_date: string;
+    }) => {
+      const { charge } = input;
+      const paid = Number(charge.amount_paid);
+      // El monto nuevo puede cambiar el estado; lo recalculamos (no hay trigger
+      // de recalculo sobre member_charges al editar el monto).
+      const status = paid >= input.amount ? 'paid' : paid > 0 ? 'partial' : 'pending';
+      const today = new Date().toISOString().slice(0, 10);
+      const { error } = await db.from('member_charges').update({
+        member_id: input.member_id,
+        category: input.category,
+        note: input.note?.trim() || null,
+        amount: input.amount,
+        currency: input.currency,
+        charge_date: input.charge_date,
+        status,
+        paid_date: status === 'paid' ? (charge.paid_date ?? today) : null,
+      }).eq('id', charge.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['member-charges'] });
+      toast.success('Cargo actualizado');
+    },
+    onError: () => toast.error('No se pudo actualizar el cargo'),
+  });
+
   const cancelCharge = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await db
@@ -123,6 +158,7 @@ export function useMemberCharges() {
     isLoading: chargesQuery.isLoading,
     error: chargesQuery.error,
     createCharge,
+    updateCharge,
     registerPayment,
     cancelCharge,
   };

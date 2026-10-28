@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useMemberCharges } from '@/hooks/useMemberCharges';
 import { useMembers } from '@/hooks/useMembers';
 import { AddChargeDialog } from '@/components/cobros/AddChargeDialog';
+import { EditChargeDialog } from '@/components/cobros/EditChargeDialog';
 import { RegisterPaymentDialog } from '@/components/cobros/RegisterPaymentDialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -16,7 +17,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { MoreHorizontal, Plus, DollarSign, Ban } from 'lucide-react';
+import { MoreHorizontal, Plus, DollarSign, Ban, Pencil } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { formatCurrency, parseLocalDate, cn } from '@/lib/utils';
@@ -33,7 +34,7 @@ function StatusBadge({ status }: { status: MemberCharge['status'] }) {
 }
 
 export default function MemberCharges() {
-  const { charges, isLoading, createCharge, registerPayment, cancelCharge } = useMemberCharges();
+  const { charges, isLoading, createCharge, updateCharge, registerPayment, cancelCharge } = useMemberCharges();
   const { memberBalances } = useMembers();
 
   const activeMembers = memberBalances
@@ -41,6 +42,7 @@ export default function MemberCharges() {
     .map((m) => ({ member_id: m.member_id, full_name: m.full_name }));
 
   const [addOpen, setAddOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState<MemberCharge | null>(null);
   const [payCharge, setPayCharge] = useState<MemberCharge | null>(null);
   const [cancelTarget, setCancelTarget] = useState<MemberCharge | null>(null);
   const [filter, setFilter] = useState<'pendientes' | 'pagados' | 'todos'>('pendientes');
@@ -126,7 +128,7 @@ export default function MemberCharges() {
                       {CHARGE_CATEGORY_LABELS[c.category]}{c.note ? ` · ${c.note}` : ''}
                     </p>
                   </div>
-                  <ChargeActions charge={c} onPay={() => setPayCharge(c)} onCancel={() => setCancelTarget(c)} />
+                  <ChargeActions charge={c} onPay={() => setPayCharge(c)} onEdit={() => setEditTarget(c)} onCancel={() => setCancelTarget(c)} />
                 </div>
                 <div className="flex items-center justify-between text-sm">
                   <StatusBadge status={c.status} />
@@ -168,7 +170,7 @@ export default function MemberCharges() {
                     <TableCell><StatusBadge status={c.status} /></TableCell>
                     <TableCell className="text-muted-foreground">{fmtDate(c.charge_date)}</TableCell>
                     <TableCell>
-                      <ChargeActions charge={c} onPay={() => setPayCharge(c)} onCancel={() => setCancelTarget(c)} />
+                      <ChargeActions charge={c} onPay={() => setPayCharge(c)} onEdit={() => setEditTarget(c)} onCancel={() => setCancelTarget(c)} />
                     </TableCell>
                   </TableRow>
                 ))}
@@ -184,6 +186,13 @@ export default function MemberCharges() {
         members={activeMembers}
         isPending={createCharge.isPending}
         onCreate={(input) => createCharge.mutate(input, { onSuccess: () => setAddOpen(false) })}
+      />
+      <EditChargeDialog
+        charge={editTarget}
+        members={activeMembers}
+        onOpenChange={(o) => !o && setEditTarget(null)}
+        isPending={updateCharge.isPending}
+        onSave={(input) => updateCharge.mutate(input, { onSuccess: () => setEditTarget(null) })}
       />
       <RegisterPaymentDialog
         charge={payCharge}
@@ -217,7 +226,7 @@ export default function MemberCharges() {
   );
 }
 
-function ChargeActions({ charge, onPay, onCancel }: { charge: MemberCharge; onPay: () => void; onCancel: () => void }) {
+function ChargeActions({ charge, onPay, onEdit, onCancel }: { charge: MemberCharge; onPay: () => void; onEdit: () => void; onCancel: () => void }) {
   const canAct = charge.status === 'pending' || charge.status === 'partial';
   if (!canAct) return null;
   return (
@@ -227,6 +236,7 @@ function ChargeActions({ charge, onPay, onCancel }: { charge: MemberCharge; onPa
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="bg-popover">
         <DropdownMenuItem onClick={onPay}><DollarSign className="mr-2 h-4 w-4" />Registrar cobro</DropdownMenuItem>
+        <DropdownMenuItem onClick={onEdit}><Pencil className="mr-2 h-4 w-4" />Editar</DropdownMenuItem>
         <DropdownMenuItem onClick={onCancel} className="text-destructive focus:text-destructive">
           <Ban className="mr-2 h-4 w-4" />Anular
         </DropdownMenuItem>
