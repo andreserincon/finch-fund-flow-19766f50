@@ -10,7 +10,7 @@
 import {
   Home, Users, MessageSquare, BookOpen, Receipt, Plus, MoreHorizontal,
   LayoutDashboard, HandCoins, FileText, Settings, Wallet, Calculator,
-  UserCog,
+  UserCog, Coins, Medal,
 } from 'lucide-react';
 import { ComponentType, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -80,6 +80,8 @@ function MoreSheet() {
     ? [
         { to: '/panel', icon: LayoutDashboard, label: t('nav.financialDetail') },
         { to: '/loans', icon: HandCoins, label: t('nav.loans') },
+        { to: '/cobros', icon: Coins, label: 'Cobros pendientes' },
+        { to: '/medallas', icon: Medal, label: 'Inventario de medallas' },
         { to: '/reports', icon: FileText, label: t('nav.reports') },
         // Presupuesto: acceso oculto temporalmente.
         // { to: '/budget', icon: PieChart, label: t('nav.budget') },
