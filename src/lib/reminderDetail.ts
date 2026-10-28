@@ -17,6 +17,8 @@
 import { format } from 'date-fns';
 import { parseLocalDate } from '@/lib/utils';
 import type { MemberBalance, FeeType } from '@/lib/types';
+import type { MemberCharge } from '@/lib/cobros-types';
+import { CHARGE_CATEGORY_LABELS, chargeBalance } from '@/lib/cobros-types';
 
 export interface MonthlyFeeRow {
   /** 'YYYY-MM-01' */
@@ -37,6 +39,8 @@ export interface DebtLine {
   /** e.g. "la capita de mayo" or "Cena Solsticial (cuota junio)" */
   label: string;
   amount: number;
+  /** Per-line currency code for the message (e.g. 'USD'); defaults to pesos. */
+  currency?: string;
 }
 
 const MONTHS_ES = [
@@ -132,9 +136,27 @@ function fmt(amount: number): string {
   return new Intl.NumberFormat('es-AR', { maximumFractionDigits: 0 }).format(Math.round(amount));
 }
 
+/**
+ * Pending-charge lines (medals, rituals, derechos) for a member, oldest
+ * first. Skips cancelled, paid and fully-covered charges. Carries each
+ * charge's own currency so pesos and USD read correctly in one message.
+ */
+export function chargeLines(charges: MemberCharge[]): DebtLine[] {
+  const lines: DebtLine[] = [];
+  for (const c of charges) {
+    if (c.status === 'cancelled' || c.status === 'paid') continue;
+    const bal = chargeBalance(c);
+    if (bal <= 0.5) continue;
+    const base = CHARGE_CATEGORY_LABELS[c.category].toLowerCase();
+    const label = c.note ? `${base} (${c.note})` : base;
+    lines.push({ label, amount: bal, currency: c.currency === 'USD' ? 'USD' : 'ARP' });
+  }
+  return lines;
+}
+
 /** Join lines into the inline detail string (capitas first, then events). */
 export function joinDetail(lines: DebtLine[], currency = 'ARP'): string {
-  const parts = lines.map((l) => `${fmt(l.amount)} ${currency} de ${l.label}`);
+  const parts = lines.map((l) => `${fmt(l.amount)} ${l.currency ?? currency} de ${l.label}`);
   if (parts.length === 0) return '';
   if (parts.length === 1) return parts[0];
   return `${parts.slice(0, -1).join(', ')} y ${parts[parts.length - 1]}`;

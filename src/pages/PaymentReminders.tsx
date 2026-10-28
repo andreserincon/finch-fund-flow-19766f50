@@ -19,14 +19,17 @@ import { useMonthlyFees } from '@/hooks/useMonthlyFees';
 import { useMemberFeeTypeHistory } from '@/hooks/useMemberFeeTypeHistory';
 import { useMemberEventTotals } from '@/hooks/useMemberEventTotals';
 import { useEventParticipations } from '@/hooks/useEventParticipations';
+import { useMemberCharges } from '@/hooks/useMemberCharges';
 import { useHiddenMode } from '@/contexts/HiddenModeContext';
 import { getAttentionMembers } from '@/lib/attention';
 import {
-  capitaLines, eventLines, joinDetail, buildReminderMessage, firstName, whatsappLink,
+  capitaLines, eventLines, chargeLines, joinDetail, buildReminderMessage, firstName, whatsappLink,
 } from '@/lib/reminderDetail';
+import { chargeBalance } from '@/lib/cobros-types';
 import { TableSkeleton } from '@/components/ui/loading';
 import { toast } from 'sonner';
 import type { MemberBalance } from '@/lib/types';
+import type { MemberCharge } from '@/lib/cobros-types';
 
 interface ReminderItem {
   member: MemberBalance;
@@ -41,8 +44,21 @@ export default function PaymentReminders() {
   const { getFeeTypeForMonth, isLoading: historyLoading } = useMemberFeeTypeHistory();
   const { eventTotals, isLoading: eventsLoading } = useMemberEventTotals();
   const { participations, isLoading: partsLoading } = useEventParticipations();
+  const { charges, isLoading: chargesLoading } = useMemberCharges();
 
-  const isLoading = membersLoading || feesLoading || historyLoading || eventsLoading || partsLoading;
+  const isLoading = membersLoading || feesLoading || historyLoading || eventsLoading || partsLoading || chargesLoading;
+
+  // Open charges (medallas, rituales, derechos) grouped by member, oldest first.
+  const openChargesByMember = useMemo(() => {
+    const map = new Map<string, MemberCharge[]>();
+    for (const c of charges) {
+      if (c.status === 'cancelled' || c.status === 'paid') continue;
+      if (chargeBalance(c) <= 0.5) continue;
+      if (!map.has(c.member_id)) map.set(c.member_id, []);
+      map.get(c.member_id)!.push(c);
+    }
+    return map;
+  }, [charges]);
 
   // WhatsApp number is read from the members table (not the member_balances
   // view), so it works regardless of whether the view exposes the column.
@@ -55,23 +71,32 @@ export default function PaymentReminders() {
   const reminders = useMemo<ReminderItem[]>(() => {
     const today = new Date();
     const attention = getAttentionMembers(memberBalances, currentMonthFees, eventTotals);
-    return attention.map((m) => {
+    const attentionIds = new Set(attention.map((m) => m.member_id));
+    // Active members who only owe a pending charge (no capita attention) still
+    // get a reminder, built from the charge lines alone.
+    const chargeOnly = memberBalances.filter(
+      (m) => m.is_active && !attentionIds.has(m.member_id) && openChargesByMember.has(m.member_id),
+    );
+    const targets = [...attention, ...chargeOnly];
+    return targets.map((m) => {
+      const isAttention = attentionIds.has(m.member_id);
       const eventPaid = eventTotals.paid[m.member_id] || 0;
       const capitaPaid = m.total_paid - eventPaid;
-      const cLines = capitaLines(m, monthlyFees, getFeeTypeForMonth, capitaPaid, today);
+      const cLines = isAttention ? capitaLines(m, monthlyFees, getFeeTypeForMonth, capitaPaid, today) : [];
       const myParts = participations.filter((p) => p.member_id === m.member_id);
-      const eLines = eventLines(myParts, today);
-      const detail = joinDetail([...cLines, ...eLines]);
+      const eLines = isAttention ? eventLines(myParts, today) : [];
+      const chLines = chargeLines(openChargesByMember.get(m.member_id) ?? []);
+      const detail = joinDetail([...cLines, ...eLines, ...chLines]);
       const detailText = detail || 'un saldo pendiente en tesorería';
       const message = buildReminderMessage(firstName(m.full_name), detailText);
       return {
         member: m,
         message,
         link: whatsappLink(whatsappById.get(m.member_id), message),
-        hasDetail: cLines.length + eLines.length > 0,
+        hasDetail: cLines.length + eLines.length + chLines.length > 0,
       };
     });
-  }, [memberBalances, currentMonthFees, eventTotals, monthlyFees, getFeeTypeForMonth, participations, whatsappById]);
+  }, [memberBalances, currentMonthFees, eventTotals, monthlyFees, getFeeTypeForMonth, participations, openChargesByMember, whatsappById]);
 
   return (
     <div className="space-y-6 animate-fade-in">

@@ -13,13 +13,30 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/hooks/useAuth';
 import { useTransactions } from '@/hooks/useTransactions';
+import { useMemberCharges } from '@/hooks/useMemberCharges';
 import { formatCurrency, parseLocalDate } from '@/lib/utils';
 import { CATEGORY_LABELS } from '@/lib/types';
+import { CHARGE_CATEGORY_LABELS, CHARGE_STATUS_LABELS, chargeBalance } from '@/lib/cobros-types';
 
 export default function MyPayments() {
   const { profile } = useAuth();
   const userMemberId = profile?.member_id;
   const { transactions, isLoading } = useTransactions();
+  const { charges } = useMemberCharges();
+
+  // Cobros pendientes del hermano (medallas, rituales, derechos). RLS ya limita
+  // la consulta a los cobros propios; igual filtramos por las dudas.
+  const openCharges = useMemo(
+    () =>
+      (charges ?? []).filter(
+        (c) =>
+          c.member_id === userMemberId &&
+          c.status !== 'paid' &&
+          c.status !== 'cancelled' &&
+          chargeBalance(c) > 0.5,
+      ),
+    [charges, userMemberId],
+  );
 
   const myPayments = useMemo(
     () =>
@@ -56,6 +73,38 @@ export default function MyPayments() {
         <div className="rule-gold mt-2" />
         <p className="text-sm text-muted-foreground mt-2">Tus pagos registrados, del mas reciente al mas antiguo</p>
       </div>
+
+      {userMemberId && openCharges.length > 0 && (
+        <Card className="border-warning/40">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-display">Cobros pendientes</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <p className="text-xs text-muted-foreground mb-3">
+              Importes a cobrar (medallas, derechos y otros) que todavia figuran pendientes.
+            </p>
+            <div className="divide-y divide-border/50">
+              {openCharges.map((c) => (
+                <div key={c.id} className="flex items-center justify-between gap-3 py-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium">{CHARGE_CATEGORY_LABELS[c.category]}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {format(parseLocalDate(c.charge_date), "d 'de' MMMM yyyy", { locale: es })}
+                      {c.note ? ` . ${c.note}` : ''}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="status-badge status-overdue">{CHARGE_STATUS_LABELS[c.status]}</span>
+                    <span className="font-mono tabular-nums text-sm font-semibold">
+                      {formatCurrency(chargeBalance(c), c.currency)}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {isLoading ? (
         <div className="space-y-3">
