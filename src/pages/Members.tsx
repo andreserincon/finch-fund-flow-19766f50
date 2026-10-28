@@ -407,29 +407,30 @@ export default function Members() {
                   )}
                 </div>
               </div>
-              {/* Capita and Evento split: each shows its own balance + status */}
-              <div className="grid grid-cols-2 gap-3 text-sm border-t border-border/50 pt-3">
-                <div className="space-y-1">
-                  <p className="text-muted-foreground text-xs">Capita</p>
-                  <p className={`font-mono text-sm font-semibold ${getMonthlyBalance(member) < 0 ? 'text-destructive' : 'text-emerald-600'}`}>
-                    {formatCurrency(getMonthlyBalance(member))}
-                  </p>
-                  {member.is_active && <MemberStatusBadge status={getPaymentStatus(member)} />}
-                </div>
-                <div className="space-y-1">
-                  <p className="text-muted-foreground text-xs">Evento</p>
-                  <p className={`font-mono text-sm font-semibold ${getEventsBalance(member.member_id) < 0 ? 'text-destructive' : 'text-emerald-600'}`}>
-                    {formatCurrency(getEventsBalance(member.member_id))}
-                  </p>
-                  {member.is_active && getEventStatusBadge(member.member_id)}
-                </div>
-              </div>
-              {/* Cobros pendientes + Total de la persona */}
-              <div className="space-y-1.5 border-t border-border/50 pt-3 text-sm">
+              {/* Cápita, Evento, Cobros y Total: una línea por concepto */}
+              <div className="space-y-2 border-t border-border/50 pt-3 text-sm">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-muted-foreground text-xs">Cobros pendientes</span>
+                  <span className="flex items-center gap-2 min-w-0">
+                    <span className="text-muted-foreground text-xs">Cápita</span>
+                    {member.is_active && <MemberStatusBadge status={getPaymentStatus(member)} />}
+                  </span>
+                  <span className={`font-mono font-semibold ${getMonthlyBalance(member) < 0 ? 'text-destructive' : 'text-emerald-600'}`}>
+                    {formatCurrency(getMonthlyBalance(member))}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="flex items-center gap-2 min-w-0">
+                    <span className="text-muted-foreground text-xs">Evento</span>
+                    {member.is_active && getEventStatusBadge(member.member_id)}
+                  </span>
+                  <span className={`font-mono font-semibold ${getEventsBalance(member.member_id) < 0 ? 'text-destructive' : 'text-emerald-600'}`}>
+                    {formatCurrency(getEventsBalance(member.member_id))}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-muted-foreground text-xs">Cobros</span>
                   {getChargesArs(member.member_id) > 0 || getChargesUsd(member.member_id) > 0 ? (
-                    <span className="font-mono text-destructive text-right">
+                    <span className="font-mono font-semibold text-destructive text-right">
                       {getChargesArs(member.member_id) > 0 && formatCurrency(-getChargesArs(member.member_id))}
                       {getChargesUsd(member.member_id) > 0 && (
                         <span className="block text-xs">-{formatCurrency(getChargesUsd(member.member_id), 'USD')}</span>
@@ -439,9 +440,9 @@ export default function Members() {
                     <span className="font-mono text-muted-foreground">{formatCurrency(0)}</span>
                   )}
                 </div>
-                <div className="flex items-center justify-between border-t border-border/50 pt-1.5">
+                <div className="flex items-center justify-between gap-2 border-t border-border/50 pt-2">
                   <span className="text-xs font-semibold">Total (pesos)</span>
-                  <span className={`font-mono text-sm font-bold ${getOverallBalance(member) < 0 ? 'text-destructive' : 'text-emerald-600'}`}>
+                  <span className={`font-mono font-bold ${getOverallBalance(member) < 0 ? 'text-destructive' : 'text-emerald-600'}`}>
                     {formatCurrency(getOverallBalance(member))}
                   </span>
                 </div>
