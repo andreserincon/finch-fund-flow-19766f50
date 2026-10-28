@@ -724,6 +724,175 @@ export type Database = {
           },
         ]
       }
+      medal_inventory_movements: {
+        Row: {
+          charge_id: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          member_id: string | null
+          movement_date: string
+          movement_type: Database["public"]["Enums"]["medal_movement_type"]
+          note: string | null
+          quantity: number
+          reason: Database["public"]["Enums"]["medal_movement_reason"]
+        }
+        Insert: {
+          charge_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          member_id?: string | null
+          movement_date?: string
+          movement_type: Database["public"]["Enums"]["medal_movement_type"]
+          note?: string | null
+          quantity?: number
+          reason: Database["public"]["Enums"]["medal_movement_reason"]
+        }
+        Update: {
+          charge_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          member_id?: string | null
+          movement_date?: string
+          movement_type?: Database["public"]["Enums"]["medal_movement_type"]
+          note?: string | null
+          quantity?: number
+          reason?: Database["public"]["Enums"]["medal_movement_reason"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "medal_inventory_movements_charge_id_fkey"
+            columns: ["charge_id"]
+            isOneToOne: false
+            referencedRelation: "member_charges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "medal_inventory_movements_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "member_balances"
+            referencedColumns: ["member_id"]
+          },
+          {
+            foreignKeyName: "medal_inventory_movements_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      member_charge_payments: {
+        Row: {
+          amount: number
+          charge_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          payment_date: string
+          transaction_id: string | null
+        }
+        Insert: {
+          amount: number
+          charge_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          payment_date?: string
+          transaction_id?: string | null
+        }
+        Update: {
+          amount?: number
+          charge_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          payment_date?: string
+          transaction_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "member_charge_payments_charge_id_fkey"
+            columns: ["charge_id"]
+            isOneToOne: false
+            referencedRelation: "member_charges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "member_charge_payments_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      member_charges: {
+        Row: {
+          amount: number
+          amount_paid: number
+          category: Database["public"]["Enums"]["charge_category"]
+          charge_date: string
+          created_at: string
+          created_by: string | null
+          currency: Database["public"]["Enums"]["charge_currency"]
+          id: string
+          member_id: string
+          note: string | null
+          paid_date: string | null
+          status: Database["public"]["Enums"]["charge_status"]
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          amount_paid?: number
+          category?: Database["public"]["Enums"]["charge_category"]
+          charge_date?: string
+          created_at?: string
+          created_by?: string | null
+          currency?: Database["public"]["Enums"]["charge_currency"]
+          id?: string
+          member_id: string
+          note?: string | null
+          paid_date?: string | null
+          status?: Database["public"]["Enums"]["charge_status"]
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          amount_paid?: number
+          category?: Database["public"]["Enums"]["charge_category"]
+          charge_date?: string
+          created_at?: string
+          created_by?: string | null
+          currency?: Database["public"]["Enums"]["charge_currency"]
+          id?: string
+          member_id?: string
+          note?: string | null
+          paid_date?: string | null
+          status?: Database["public"]["Enums"]["charge_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "member_charges_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "member_balances"
+            referencedColumns: ["member_id"]
+          },
+          {
+            foreignKeyName: "member_charges_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       member_fee_type_history: {
         Row: {
           created_at: string
@@ -1331,6 +1500,12 @@ export type Database = {
       }
     }
     Views: {
+      medal_stock: {
+        Row: {
+          stock: number | null
+        }
+        Relationships: []
+      }
       member_balances: {
         Row: {
           current_balance: number | null
@@ -1410,9 +1585,25 @@ export type Database = {
       account_type: "bank" | "great_lodge" | "savings"
       app_role: "treasurer" | "vm" | "member" | "bibliotecario" | "admin"
       book_status: "available" | "on_loan"
+      charge_category:
+        | "medalla"
+        | "ritual"
+        | "derecho_iniciacion"
+        | "derecho_exaltacion"
+        | "derecho_aumento"
+        | "otro"
+      charge_currency: "ARS" | "USD"
+      charge_status: "pending" | "partial" | "paid" | "cancelled"
       fee_type: "standard" | "solidarity"
       loan_status: "active" | "paid" | "cancelled"
       masonic_grade: "profano" | "aprendiz" | "companero" | "maestro"
+      medal_movement_reason:
+        | "compra"
+        | "ajuste_entrada"
+        | "entrega_con_cargo"
+        | "iniciacion"
+        | "ajuste_salida"
+      medal_movement_type: "in" | "out"
       reminder_status: "pending_review" | "sent" | "failed" | "dismissed"
       report_status: "generating" | "generated" | "failed"
       transaction_category:
@@ -1560,9 +1751,27 @@ export const Constants = {
       account_type: ["bank", "great_lodge", "savings"],
       app_role: ["treasurer", "vm", "member", "bibliotecario", "admin"],
       book_status: ["available", "on_loan"],
+      charge_category: [
+        "medalla",
+        "ritual",
+        "derecho_iniciacion",
+        "derecho_exaltacion",
+        "derecho_aumento",
+        "otro",
+      ],
+      charge_currency: ["ARS", "USD"],
+      charge_status: ["pending", "partial", "paid", "cancelled"],
       fee_type: ["standard", "solidarity"],
       loan_status: ["active", "paid", "cancelled"],
       masonic_grade: ["profano", "aprendiz", "companero", "maestro"],
+      medal_movement_reason: [
+        "compra",
+        "ajuste_entrada",
+        "entrega_con_cargo",
+        "iniciacion",
+        "ajuste_salida",
+      ],
+      medal_movement_type: ["in", "out"],
       reminder_status: ["pending_review", "sent", "failed", "dismissed"],
       report_status: ["generating", "generated", "failed"],
       transaction_category: [
