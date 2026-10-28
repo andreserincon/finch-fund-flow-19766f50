@@ -23,7 +23,7 @@ import { useCanManageUsers } from '@/hooks/useCanManageUsers';
 import { useCanViewTreasury } from '@/hooks/useCanViewTreasury';
 import { useIsMemberOnly } from '@/hooks/useIsMemberOnly';
 import { usePaymentReminders } from '@/hooks/usePaymentReminders';
-import { RegistrarMenu } from '@/components/forms/RegistrarMenu';
+import { AddTransactionForm } from '@/components/forms/AddTransactionForm';
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger,
 } from '@/components/ui/sheet';
@@ -222,7 +222,7 @@ export function BottomNav() {
 
         {isAdmin && (
           <div className="flex flex-1 items-center justify-center">
-            <RegistrarMenu
+            <AddTransactionForm
               trigger={
                 <button
                   type="button"

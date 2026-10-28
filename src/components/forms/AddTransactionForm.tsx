@@ -31,11 +31,16 @@ import { useEventMemberPayments } from '@/hooks/useEventMemberPayments';
 import { useAccountTransfers } from '@/hooks/useAccountTransfers';
 import { useLoans } from '@/hooks/useLoans';
 import { useExchangeRate } from '@/hooks/useExchangeRate';
+import { useMemberCharges } from '@/hooks/useMemberCharges';
 import {
   TransactionType, TransactionCategory, CATEGORY_LABELS, AccountType, ACCOUNT_LABELS,
   SUMMARY_CATEGORIES, INCOME_SUMMARY_CATEGORIES,
 } from '@/lib/types';
 import { formatCurrency, getCurrencyForAccount, parseLocalDate, cn } from '@/lib/utils';
+import {
+  CHARGE_CATEGORY_OPTIONS, CHARGE_CATEGORY_LABELS, chargeBalance,
+  type ChargeCategory, type ChargeCurrency, type MemberCharge,
+} from '@/lib/cobros-types';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { PlusCircle, ArrowRight } from 'lucide-react';
@@ -43,7 +48,7 @@ import { PlusCircle, ArrowRight } from 'lucide-react';
 const ACCOUNTS: AccountType[] = ['bank', 'great_lodge', 'savings'];
 const today = () => new Date().toISOString().split('T')[0];
 
-type Modo = 'ingreso' | 'gasto' | 'evento' | 'transferencia' | 'prestamo';
+type Modo = 'ingreso' | 'gasto' | 'evento' | 'transferencia' | 'prestamo' | 'cobro';
 
 const MODOS: { key: Modo; label: string }[] = [
   { key: 'ingreso', label: 'Ingreso' },
@@ -51,6 +56,7 @@ const MODOS: { key: Modo; label: string }[] = [
   { key: 'evento', label: 'Evento' },
   { key: 'transferencia', label: 'Transferencia' },
   { key: 'prestamo', label: 'Préstamo' },
+  { key: 'cobro', label: 'Cobro' },
 ];
 
 /* ---- income/expense schema (the original transaction form) ---- */
@@ -83,24 +89,18 @@ interface AddTransactionFormProps {
   triggerLabel?: string;
   /** Custom trigger element (e.g. the mobile bottom-nav + button). */
   trigger?: ReactNode;
-  /** Controlled open state. When provided, the form renders no trigger of its
-   *  own and is opened/closed by the parent (e.g. the Registrar menu). */
-  open?: boolean;
-  onOpenChange?: (open: boolean) => void;
 }
 
-export function AddTransactionForm({ defaultType = 'income', triggerLabel = 'Registrar movimiento', trigger, open: controlledOpen, onOpenChange }: AddTransactionFormProps) {
-  const [internalOpen, setInternalOpen] = useState(false);
-  const controlled = controlledOpen !== undefined;
-  const open = controlled ? controlledOpen : internalOpen;
-  const setOpen = (o: boolean) => { if (controlled) onOpenChange?.(o); else setInternalOpen(o); };
+export function AddTransactionForm({ defaultType = 'income', triggerLabel = 'Registrar movimiento', trigger }: AddTransactionFormProps) {
+  const [open, setOpen] = useState(false);
   const [modo, setModo] = useState<Modo>(defaultType === 'expense' ? 'gasto' : 'ingreso');
   const addAnotherRef = useRef(false);
 
   const { addTransaction, transactions } = useTransactions();
   const { addTransfer } = useAccountTransfers();
   const { loans, addLoanPayment } = useLoans();
-  const { members } = useMembers();
+  const { members, memberBalances } = useMembers();
+  const { charges, createCharge, registerPayment } = useMemberCharges();
   const { currentMonthFees } = useMonthlyFees();
   const { expenses: events } = useExtraordinaryExpenses();
   const { exchangeRate } = useExchangeRate();
@@ -286,36 +286,100 @@ export function AddTransactionForm({ defaultType = 'income', triggerLabel = 'Reg
     }
   };
 
+  /* ===================== Cobro (cuentas por cobrar) ===================== */
+  // Una sola pestaña con dos acciones: agregar un cobro pendiente nuevo, o
+  // registrar el pago de un cobro ya existente (elegido de la lista de abiertos).
+  const activeMembers = memberBalances
+    .filter((mm) => mm.is_active)
+    .map((mm) => ({ member_id: mm.member_id, full_name: mm.full_name }));
+  const openCharges = charges
+    .filter((c) => (c.status === 'pending' || c.status === 'partial') && chargeBalance(c) > 0.5)
+    .sort((a, b) => b.charge_date.localeCompare(a.charge_date));
+
+  const [cobroAccion, setCobroAccion] = useState<'agregar' | 'pago'>('agregar');
+  // Agregar cobro pendiente
+  const [cMemberId, setCMemberId] = useState('');
+  const [cCategory, setCCategory] = useState<ChargeCategory>('medalla');
+  const [cNote, setCNote] = useState('');
+  const [cAmount, setCAmount] = useState('');
+  const [cCurrency, setCCurrency] = useState<ChargeCurrency>('ARS');
+  const [cChargeDate, setCChargeDate] = useState(today());
+  // Registrar pago de un cobro
+  const [cPayChargeId, setCPayChargeId] = useState('');
+  const [cPayAmount, setCPayAmount] = useState('');
+  const [cPayAccount, setCPayAccount] = useState<AccountType>('bank');
+  const [cPayDate, setCPayDate] = useState(today());
+  const selectedPayCharge = openCharges.find((c) => c.id === cPayChargeId) ?? null;
+  const payBalance = selectedPayCharge ? chargeBalance(selectedPayCharge) : 0;
+
+  const resetCobroAgregar = () => {
+    setCMemberId(''); setCCategory('medalla'); setCNote('');
+    setCAmount(''); setCCurrency('ARS'); setCChargeDate(today());
+  };
+  const resetCobroPago = () => {
+    setCPayChargeId(''); setCPayAmount(''); setCPayAccount('bank'); setCPayDate(today());
+  };
+
+  const onPickCharge = (id: string) => {
+    setCPayChargeId(id);
+    const c = openCharges.find((x) => x.id === id);
+    if (c) {
+      setCPayAmount(String(chargeBalance(c)));
+      setCPayAccount(c.currency === 'USD' ? 'savings' : 'bank');
+    }
+  };
+
+  const onSubmitCobro = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      if (cobroAccion === 'agregar') {
+        const amount = parseFloat(cAmount);
+        if (!cMemberId || !(amount > 0)) return;
+        await createCharge.mutateAsync({
+          member_id: cMemberId, category: cCategory, note: cNote || undefined,
+          amount, currency: cCurrency, charge_date: cChargeDate,
+        });
+        finishOrReset(resetCobroAgregar);
+      } else {
+        const c = selectedPayCharge;
+        const amount = parseFloat(cPayAmount);
+        if (!c || !(amount > 0) || amount > payBalance + 0.001) return;
+        await registerPayment.mutateAsync({ charge: c, amount, account: cPayAccount, payment_date: cPayDate });
+        finishOrReset(resetCobroPago);
+      }
+    } catch {
+      /* la mutacion ya muestra el toast de error */
+    }
+  };
+
   /* ---- shared: close the dialog, or reset to log another ---- */
   const finishOrReset = (resetFn: () => void) => {
     if (addAnotherRef.current) resetFn();
     else setOpen(false);
   };
 
-  const footer = (submitting: boolean, disabled = false) => (
+  const footer = (submitting: boolean, disabled = false, submitLabel = 'Registrar movimiento') => (
     <DialogFooter className="flex flex-col-reverse gap-2 sm:flex-row sm:flex-wrap sm:justify-end sm:space-x-0">
       <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
       <Button type="submit" variant="outline" disabled={submitting || disabled} onClick={() => { addAnotherRef.current = true; }}>
         Registrar y agregar otro
       </Button>
       <Button type="submit" data-asistente="mov-guardar" disabled={submitting || disabled} onClick={() => { addAnotherRef.current = false; }}>
-        {submitting ? 'Registrando...' : 'Registrar movimiento'}
+        {submitting ? 'Registrando...' : submitLabel}
       </Button>
     </DialogFooter>
   );
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      {!controlled && (
-        <DialogTrigger asChild>
-          {trigger ?? (
-            <Button data-asistente="mov-abrir">
-              <PlusCircle className="mr-2 h-4 w-4" />
-              {triggerLabel}
-            </Button>
-          )}
-        </DialogTrigger>
-      )}
+      <DialogTrigger asChild>
+        {trigger ?? (
+          <Button data-asistente="mov-abrir">
+            <PlusCircle className="mr-2 h-4 w-4" />
+            {triggerLabel}
+          </Button>
+        )}
+      </DialogTrigger>
       <DialogContent className="sm:max-w-[520px] max-h-[88vh] overflow-y-auto overflow-x-hidden">
         <DialogHeader>
           <DialogTitle className="font-display">Registrar movimiento</DialogTitle>
@@ -323,7 +387,7 @@ export function AddTransactionForm({ defaultType = 'income', triggerLabel = 'Reg
         </DialogHeader>
 
         {/* Tipo de movimiento selector */}
-        <div className="grid grid-cols-3 sm:grid-cols-5 gap-1 rounded-lg bg-muted p-1">
+        <div className="grid grid-cols-3 sm:grid-cols-6 gap-1 rounded-lg bg-muted p-1">
           {MODOS.map((m) => (
             <button
               key={m.key}
@@ -612,6 +676,135 @@ export function AddTransactionForm({ defaultType = 'income', triggerLabel = 'Reg
             </div>
 
             {footer(lSubmitting, !selectedLoan || !lAmount || parseFloat(lAmount) <= 0)}
+          </form>
+        )}
+
+        {/* ---------- Cobro (cuentas por cobrar) ---------- */}
+        {modo === 'cobro' && (
+          <form onSubmit={onSubmitCobro} className="space-y-3">
+            <div className="space-y-2">
+              <Label>Acción</Label>
+              <div className="flex gap-1.5 rounded-lg bg-muted p-1">
+                <button
+                  type="button"
+                  onClick={() => setCobroAccion('agregar')}
+                  className={cn('press flex-1 rounded-md px-2 py-1.5 text-xs font-semibold transition-colors', cobroAccion === 'agregar' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground')}
+                >
+                  Agregar cobro
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCobroAccion('pago')}
+                  className={cn('press flex-1 rounded-md px-2 py-1.5 text-xs font-semibold transition-colors', cobroAccion === 'pago' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground')}
+                >
+                  Registrar pago
+                </button>
+              </div>
+            </div>
+
+            {cobroAccion === 'agregar' ? (
+              <>
+                <div className="space-y-2">
+                  <Label>Hermano</Label>
+                  <Select value={cMemberId} onValueChange={setCMemberId}>
+                    <SelectTrigger><SelectValue placeholder="Seleccionar hermano..." /></SelectTrigger>
+                    <SelectContent>
+                      {activeMembers.map((mm) => <SelectItem key={mm.member_id} value={mm.member_id}>{mm.full_name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label>Concepto</Label>
+                    <Select value={cCategory} onValueChange={(v) => setCCategory(v as ChargeCategory)}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {CHARGE_CATEGORY_OPTIONS.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Moneda</Label>
+                    <Select value={cCurrency} onValueChange={(v) => setCCurrency(v as ChargeCurrency)}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ARS">Pesos (ARS)</SelectItem>
+                        <SelectItem value="USD">Dólares (USD)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label>Monto ({cCurrency})</Label>
+                    <Input type="number" min="0" step="0.01" value={cAmount} onChange={(e) => setCAmount(e.target.value)} placeholder="0.00" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Fecha</Label>
+                    <Input type="date" value={cChargeDate} onChange={(e) => setCChargeDate(e.target.value)} />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Nota (opcional)</Label>
+                  <Textarea value={cNote} onChange={(e) => setCNote(e.target.value)} rows={2} placeholder="Detalle del cargo..." />
+                </div>
+                {footer(createCharge.isPending, !cMemberId || !(parseFloat(cAmount) > 0), 'Registrar cargo')}
+              </>
+            ) : (
+              <>
+                <div className="space-y-2">
+                  <Label>Cobro a registrar</Label>
+                  <Select value={cPayChargeId} onValueChange={onPickCharge}>
+                    <SelectTrigger><SelectValue placeholder="Seleccionar cobro pendiente..." /></SelectTrigger>
+                    <SelectContent>
+                      {openCharges.length === 0 && <div className="px-2 py-1.5 text-sm text-muted-foreground">No hay cobros pendientes.</div>}
+                      {openCharges.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {(c.member?.full_name ?? 'Hermano')} - {CHARGE_CATEGORY_LABELS[c.category]} - saldo {formatCurrency(chargeBalance(c), c.currency)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {selectedPayCharge && (
+                  <>
+                    <div className="rounded-md bg-muted/50 p-3 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Saldo pendiente</span>
+                        <span className="font-semibold">{formatCurrency(payBalance, selectedPayCharge.currency)}</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Al registrar el cobro se genera un Ingreso (Otro Ingreso) en la cuenta elegida.
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="space-y-2">
+                        <Label>Monto a cobrar</Label>
+                        <Input type="number" min="0" step="0.01" value={cPayAmount} onChange={(e) => setCPayAmount(e.target.value)} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Fecha</Label>
+                        <Input type="date" value={cPayDate} onChange={(e) => setCPayDate(e.target.value)} />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Cuenta donde entra</Label>
+                      <Select value={cPayAccount} onValueChange={(v) => setCPayAccount(v as AccountType)}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {ACCOUNTS.map((acc) => <SelectItem key={acc} value={acc}>{ACCOUNT_LABELS[acc]}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {parseFloat(cPayAmount) > payBalance + 0.001 && (
+                      <p className="text-xs text-destructive">El monto no puede superar el saldo pendiente.</p>
+                    )}
+                  </>
+                )}
+                {footer(registerPayment.isPending, !selectedPayCharge || !(parseFloat(cPayAmount) > 0) || parseFloat(cPayAmount) > payBalance + 0.001, 'Registrar cobro')}
+              </>
+            )}
           </form>
         )}
       </DialogContent>
