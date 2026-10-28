@@ -1,4 +1,13 @@
 /**
+ * ============================================================================
+ * NO SE USA / CODIGO MUERTO (verificado 2026-10-28). NO BORRAR SIN CONFIRMAR.
+ * ----------------------------------------------------------------------------
+ * Esta funcion (envio por Twilio) quedo reemplazada por el envio manual con
+ * enlaces whatsapp:// desde la pagina /recordatorios. Solo se la invocaria via
+ * el hook usePaymentReminders (sendReminders), que no se llama en ninguna
+ * pantalla. Ya no se usa Twilio. Se deja en el repo como historial.
+ * ============================================================================
+ *
  * @file send-whatsapp-reminder/index.ts
  * @description Manually-triggered edge function. Sends one or more
  *   queued reminders via Twilio WhatsApp and updates each row's status.

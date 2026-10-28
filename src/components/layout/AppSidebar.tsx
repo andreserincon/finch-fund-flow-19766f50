@@ -75,7 +75,10 @@ export function AppSidebar() {
   const { isMemberOnly } = useIsMemberOnly();
   const location = useLocation();
 
-  // Pending reminders count for the current period (drives the nav dot)
+  // Pending reminders count for the current period (drives the nav dot).
+  // NOTA (2026-10-28): lee la tabla payment_reminders, que esta EN DESUSO y
+  // nunca se llena (ver usePaymentReminders), asi que esto SIEMPRE DA 0 y el
+  // puntito no se enciende. Queda como no-op hasta que se decida quitarlo.
   const reminderNow = new Date();
   const { reminders: periodReminders } = usePaymentReminders({
     year: reminderNow.getFullYear(),

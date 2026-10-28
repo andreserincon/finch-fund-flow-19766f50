@@ -3,6 +3,21 @@
  * @description CRUD + send hook for the payment_reminders queue. The
  *   actual sending happens in the `send-whatsapp-reminder` edge function;
  *   this hook just invokes it and refreshes the cache afterwards.
+ *
+ * ============================================================================
+ * EN DESUSO (verificado 2026-10-28). NO BORRAR SIN CONFIRMAR.
+ * ----------------------------------------------------------------------------
+ * Este hook pertenece al viejo flujo de cola (tabla payment_reminders + edge
+ * functions queue-overdue-reminders / send-whatsapp-reminder), que ya no esta
+ * activo: la cola automatica no tiene cron que la dispare, asi que la tabla
+ * payment_reminders nunca se llena. Sus mutaciones (updateDraft,
+ * dismissReminder, sendReminders, createReminder, buildQueueNow) no se llaman
+ * en ninguna pantalla. La consulta `reminders` solo se usa para un contador en
+ * AppSidebar / BottomNav / Dashboard que, al estar la tabla vacia, SIEMPRE DA 0
+ * (el puntito del menu nunca se enciende). El flujo vivo es /recordatorios
+ * (src/pages/PaymentReminders.tsx), que arma los mensajes en el cliente y no
+ * usa este hook. Se deja como historial.
+ * ============================================================================
  */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';

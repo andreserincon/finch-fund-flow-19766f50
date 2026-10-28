@@ -182,6 +182,8 @@ export function BottomNav() {
   const { canManageUsers } = useCanManageUsers();
 
   const now = new Date();
+  // NOTA (2026-10-28): payment_reminders esta EN DESUSO y nunca se llena (ver
+  // usePaymentReminders), asi que `pending` SIEMPRE ES 0 y el dot no aparece.
   const { reminders } = usePaymentReminders({ year: now.getFullYear(), month: now.getMonth() + 1 });
   const pending = reminders.filter((r) => r.status === 'pending_review').length;
 

@@ -76,7 +76,9 @@ export default function Dashboard() {
   const currentYM = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   const [selectedYM, setSelectedYM] = useState<string>(currentYM);
 
-  // Pending WhatsApp reminders for the current period (surfaced on the dashboard)
+  // Pending WhatsApp reminders for the current period (surfaced on the dashboard).
+  // NOTA (2026-10-28): payment_reminders esta EN DESUSO y nunca se llena (ver
+  // usePaymentReminders), asi que este contador SIEMPRE DA 0.
   const { reminders: currentPeriodReminders } = usePaymentReminders({
     year: now.getFullYear(),
     month: now.getMonth() + 1,

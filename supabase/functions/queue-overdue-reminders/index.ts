@@ -1,4 +1,17 @@
 /**
+ * ============================================================================
+ * NO SE USA / CODIGO MUERTO (verificado 2026-10-28). NO BORRAR SIN CONFIRMAR.
+ * ----------------------------------------------------------------------------
+ * Esta funcion no se ejecuta nunca: no hay ninguna tarea programada que la
+ * dispare (una consulta a cron.job filtrando por 'queue-overdue-reminders'
+ * devuelve 0 filas). Desde el cliente solo se la invocaria via el hook
+ * usePaymentReminders (buildQueueNow), que no se llama en ninguna pantalla.
+ * El flujo VIVO de recordatorios es la pagina /recordatorios
+ * (src/pages/PaymentReminders.tsx): arma los mensajes en el cliente y abre
+ * WhatsApp con enlaces whatsapp://, sin pasar por esta funcion ni por la
+ * tabla payment_reminders. Se deja en el repo como historial.
+ * ============================================================================
+ *
  * @file queue-overdue-reminders/index.ts
  * @description Scheduled edge function that builds the WhatsApp reminder
  *   queue on the 3rd business day of each month. Run it daily; the
