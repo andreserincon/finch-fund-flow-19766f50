@@ -48,14 +48,7 @@ import { useSearchParams } from 'react-router-dom';
 import { requiresAttention, getMemberCapitaStatus } from '@/lib/attention';
 import { MemberStatusBadge } from '@/components/dashboard/MemberStatusBadge';
 import { toast } from 'sonner';
-
-/** PaymentStatus -> clave i18n, para el texto del estado en el snapshot. */
-const STATUS_I18N_KEY: Record<PaymentStatus, string> = {
-  al_dia: 'status.alDia',
-  adelantado: 'status.adelantado',
-  impago: 'status.impago',
-  demorado: 'status.demorado',
-};
+import { shareMemberStatus, type MemberHeaderInfo, type MemberBalanceInfo } from '@/lib/memberImage';
 
 const STATUS_OPTIONS = [
   { value: 'active', label: 'Activo' },
@@ -163,116 +156,27 @@ export default function Members() {
   };
   const clearFilters = () => setSelectedStatuses([]);
 
-  // Comparte el estado del socio como imagen. En vez de snapshotear la tarjeta
-  // viva (que daba recortes y lineas de borde), armamos un nodo dedicado, limpio
-  // y con medidas propias, lo snapshoteamos y abrimos el menu de compartir.
+  // Comparte el estado del socio como imagen. La construccion vive en el util
+  // compartido memberImage (mismo nodo que usa el comprobante de pago).
   const handleShareStatus = async (member: MemberBalance) => {
-    const grade = gradeByMember.get(member.member_id);
-    const capitaBal = getMonthlyBalance(member);
     const eventoBal = getEventsBalance(member.member_id);
-    const capitaStatus = getPaymentStatus(member);
-    const eventoOk = eventoBal >= 0;
-    const cobrosArs = getChargesArs(member.member_id);
-    const cobrosUsd = getChargesUsd(member.member_id);
-    const totalBal = getOverallBalance(member);
-    // Colores de estado, alineados con los tokens de la app (success/info/
-    // warning/overdue) para que el pill del snapshot se vea como el de la
-    // tarjeta: verde al dia, azul adelantado, ambar impago, rojo demorado.
-    const STATUS_COLORS: Record<PaymentStatus, { bg: string; fg: string }> = {
-      al_dia: { bg: '#dcf7ea', fg: '#15803d' },
-      adelantado: { bg: '#dbeafe', fg: '#1d4ed8' },
-      impago: { bg: '#fbebc6', fg: '#92700e' },
-      demorado: { bg: '#fde2e2', fg: '#b91c1c' },
+    const header: MemberHeaderInfo = {
+      matricula: member.phone_number,
+      fullName: member.full_name,
+      feeType: member.fee_type,
+      grade: gradeByMember.get(member.member_id) ?? null,
+      isActive: member.is_active,
     };
-    const statusPill = (text: string, kind: PaymentStatus, withDot: boolean) => {
-      const c = STATUS_COLORS[kind];
-      return `<span style="display:inline-flex;align-items:center;gap:6px;font-size:13px;line-height:1;`
-        + `padding:5px 11px;border-radius:999px;font-weight:500;background:${c.bg};color:${c.fg};">`
-        + (withDot ? `<span style="width:6px;height:6px;border-radius:999px;background:currentColor;"></span>` : '')
-        + `${text}</span>`;
+    const balance: MemberBalanceInfo = {
+      capitaBal: getMonthlyBalance(member),
+      capitaStatus: getPaymentStatus(member),
+      eventoBal,
+      eventoOk: eventoBal >= 0,
+      cobrosArs: getChargesArs(member.member_id),
+      cobrosUsd: getChargesUsd(member.member_id),
+      totalBal: getOverallBalance(member),
     };
-    const tag = (text: string, filled: boolean) =>
-      `<span style="display:inline-block;font-size:13px;line-height:1;padding:6px 12px;border-radius:999px;`
-      + `${filled ? 'background:#ece9e1;color:#1c1c22;' : 'border:1px solid #d6d3d1;color:#1c1c22;'}">${text}</span>`;
-    const amt = (value: number, bold: boolean) =>
-      `<span style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:18px;`
-      + `font-weight:${bold ? 700 : 600};color:${value < 0 ? '#dc2626' : '#059669'};">${formatCurrency(value)}</span>`;
-    const cobrosVal = (cobrosArs > 0 || cobrosUsd > 0)
-      ? `<span style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:18px;font-weight:600;color:#dc2626;">`
-        + (cobrosArs > 0 ? formatCurrency(-cobrosArs) : '')
-        + (cobrosUsd > 0 ? `<span style="display:block;font-size:13px;">-${formatCurrency(cobrosUsd, 'USD')}</span>` : '')
-        + `</span>`
-      : `<span style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:18px;color:#6b7280;">${formatCurrency(0)}</span>`;
-    // Una fila por concepto: etiqueta (y su estado) a la izquierda, monto a la
-    // derecha. Copia la tarjeta de la vista movil de Miembros.
-    const rowStart = (topBorder: boolean) =>
-      `<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;`
-      + `${topBorder ? 'border-top:1px solid #eae7e1;margin-top:12px;padding-top:12px;' : 'margin-top:10px;'}">`;
-    const node = document.createElement('div');
-    // Dentro del viewport pero detras de todo (z-index muy negativo): si se
-    // posiciona muy lejos fuera de pantalla, el navegador movil no lo pinta y
-    // html-to-image captura una imagen en blanco.
-    node.style.cssText =
-      "position:fixed;left:0;top:0;z-index:-9999;pointer-events:none;" +
-      "width:440px;box-sizing:border-box;background:#ffffff;" +
-      "padding:26px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;color:#15151a;";
-    node.innerHTML =
-      `<div style="font-size:14px;color:#6b7280;">Mat. ${member.phone_number || '-'}</div>` +
-      `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:4px;">` +
-        `<span style="font-size:22px;font-weight:700;">${member.full_name}</span>` +
-        tag(FEE_TYPE_LABELS[member.fee_type], true) +
-        (grade ? tag(MASONIC_GRADE_LABELS[grade], false) : '') +
-        (member.is_active ? '' : tag('Inactivo', false)) +
-      `</div>` +
-      `<div style="margin-top:10px;">` +
-        rowStart(true) +
-          `<span style="display:flex;align-items:center;gap:8px;min-width:0;">` +
-            `<span style="font-size:15px;color:#6b7280;">Cápita</span>` +
-            (member.is_active ? statusPill(t(STATUS_I18N_KEY[capitaStatus]), capitaStatus, true) : '') +
-          `</span>` +
-          amt(capitaBal, false) +
-        `</div>` +
-        rowStart(false) +
-          `<span style="display:flex;align-items:center;gap:8px;min-width:0;">` +
-            `<span style="font-size:15px;color:#6b7280;">Evento</span>` +
-            (member.is_active ? statusPill(eventoOk ? 'Al día' : 'Pendiente', eventoOk ? 'al_dia' : 'impago', false) : '') +
-          `</span>` +
-          amt(eventoBal, false) +
-        `</div>` +
-        rowStart(false) +
-          `<span style="font-size:15px;color:#6b7280;">Cobros</span>` +
-          cobrosVal +
-        `</div>` +
-        rowStart(true) +
-          `<span style="font-size:15px;font-weight:700;">Total (pesos)</span>` +
-          `<span style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:18px;font-weight:700;color:${totalBal < 0 ? '#dc2626' : '#059669'};">${formatCurrency(totalBal)}</span>` +
-        `</div>` +
-      `</div>`;
-    document.body.appendChild(node);
-    try {
-      const { toPng } = await import('html-to-image');
-      // Dos frames para que el navegador haga layout y pinte el nodo antes de
-      // capturarlo; si no, la imagen puede salir en blanco.
-      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => r(null))));
-      const dataUrl = await toPng(node, { pixelRatio: 2, backgroundColor: '#ffffff', cacheBust: true });
-      const blob = await (await fetch(dataUrl)).blob();
-      const fileName = `estado-${member.phone_number || member.member_id}.png`;
-      const file = new File([blob], fileName, { type: 'image/png' });
-      if (navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ files: [file], title: 'Estado del socio', text: `Estado de ${member.full_name}` });
-      } else {
-        const a = document.createElement('a');
-        a.href = dataUrl;
-        a.download = fileName;
-        a.click();
-        toast.info('Tu dispositivo no permite compartir directo. Descargue la imagen para adjuntarla en WhatsApp.');
-      }
-    } catch (err) {
-      if ((err as Error)?.name === 'AbortError') return;
-      toast.error('No se pudo generar la imagen para compartir.');
-    } finally {
-      node.remove();
-    }
+    await shareMemberStatus(header, balance, t);
   };
 
   const handleSort = (column: SortColumn) => {
