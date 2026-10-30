@@ -243,9 +243,10 @@ export async function shareImages(
   return shareFiles(files, title, text);
 }
 
-/** HTML del estado del hermano (saldo actual, con pills, colores y tags). */
-export function buildStatusHtml(header: MemberHeaderInfo, balance: MemberBalanceInfo, t: Translate): string {
-  return renderMemberHeader(header) + renderBalanceRows(balance, t, undefined, header.isActive);
+/** HTML del estado del hermano (saldo actual, con colores y tags). showPills
+ *  controla las etiquetas de estado al lado de Cápita y Evento. */
+export function buildStatusHtml(header: MemberHeaderInfo, balance: MemberBalanceInfo, t: Translate, showPills = true): string {
+  return renderMemberHeader(header) + renderBalanceRows(balance, t, undefined, showPills && header.isActive);
 }
 
 /** Comparte el estado del hermano (saldo actual) como imagen. */

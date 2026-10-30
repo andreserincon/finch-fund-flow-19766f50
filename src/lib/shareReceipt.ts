@@ -158,7 +158,7 @@ export async function buildAndShareReceipt(tx: ReceiptSource, onShared?: () => v
   const result = await shareImages(
     [
       { html: buildReceiptHtml(estado.header, payment, { lodge: LODGE_NAME, tesorero }), fileName: `comprobante-${key}.png` },
-      { html: buildStatusHtml(estado.header, estado.balance, noI18n), fileName: `estado-${key}.png` },
+      { html: buildStatusHtml(estado.header, estado.balance, noI18n, false), fileName: `estado-${key}.png` },
     ],
     'Comprobante y estado',
     `Comprobante de ${estado.header.fullName}`,
