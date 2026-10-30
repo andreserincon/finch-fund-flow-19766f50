@@ -125,7 +125,7 @@ function renderMemberHeader(h: MemberHeaderInfo, showTags = true): string {
  * la tarjeta de la vista movil de Miembros. `heading`, si viene, se muestra
  * arriba (por ejemplo "Saldo al 5 ene 2026").
  */
-function renderBalanceRows(b: MemberBalanceInfo, t: Translate, heading?: string, showPills = true, colored = true): string {
+function renderBalanceRows(b: MemberBalanceInfo, t: Translate, heading?: string, showPills = true, colored = true, cobrosLabel = 'Cobros', subheading?: string): string {
   // Cobros pendientes: se muestran en pesos Y en dolares si hay de los dos.
   const cobrosColor = colored ? '#dc2626' : '#1c1c22';
   const cobrosVal = (b.cobrosArs > 0 || b.cobrosUsd > 0)
@@ -135,8 +135,13 @@ function renderBalanceRows(b: MemberBalanceInfo, t: Translate, heading?: string,
       + `</span>`
     : `<span style="font-family:${MONO};font-size:18px;color:#6b7280;">${formatCurrency(0)}</span>`;
   return (
-    (heading ? `<div style="font-size:14px;color:#6b7280;margin-top:16px;">${heading}</div>` : '') +
-    `<div style="margin-top:${heading ? 6 : 10}px;">` +
+    (heading
+      ? `<div style="margin-top:28px;border-top:2px solid #d6d3d1;padding-top:16px;">`
+        + `<div style="font-size:18px;font-weight:700;color:#1c1c22;">${heading}</div>`
+        + (subheading ? `<div style="font-size:13px;color:#6b7280;margin-top:2px;">${subheading}</div>` : '')
+        + `</div>`
+      : '') +
+    `<div style="margin-top:${heading ? 4 : 10}px;">` +
       rowStart(true) +
         `<span style="display:flex;align-items:center;gap:8px;min-width:0;">` +
           `<span style="font-size:15px;color:#6b7280;">Cápita</span>` +
@@ -152,7 +157,7 @@ function renderBalanceRows(b: MemberBalanceInfo, t: Translate, heading?: string,
         amt(b.eventoBal, false, colored) +
       `</div>` +
       rowStart(false) +
-        `<span style="font-size:15px;color:#6b7280;">Cobros</span>` +
+        `<span style="font-size:15px;color:#6b7280;">${cobrosLabel}</span>` +
         cobrosVal +
       `</div>` +
       rowStart(true) +
@@ -248,8 +253,9 @@ export async function shareMemberReceipt(
       noteLine +
       line('Monto', payment.amountText, true) +
     `</div>`;
-  // Sin pills ni colores en el comprobante: solo los montos del saldo a la fecha.
-  const footer = renderBalanceRows(balance, t, `Saldo al ${payment.dateText}`, false, false);
+  // Seccion aparte "Balance con el tesoro" (header propio, sin pills ni colores),
+  // separada visualmente del comprobante del pago. Cobros se rotula "Otros cobros".
+  const footer = renderBalanceRows(balance, t, 'Balance con el tesoro', false, false, 'Otros cobros', `al ${payment.dateText}`);
   // Firma del tesorero al pie, con la abreviatura Tes.
   const sign = institution.tesorero
     ? `<div style="margin-top:28px;display:flex;justify-content:center;">`
