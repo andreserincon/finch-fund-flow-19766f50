@@ -1412,6 +1412,7 @@ export type Database = {
           id: string
           member_id: string | null
           notes: string | null
+          receipt_shared_at: string | null
           transaction_date: string
           transaction_type: Database["public"]["Enums"]["transaction_type"]
           updated_at: string
@@ -1427,6 +1428,7 @@ export type Database = {
           id?: string
           member_id?: string | null
           notes?: string | null
+          receipt_shared_at?: string | null
           transaction_date?: string
           transaction_type: Database["public"]["Enums"]["transaction_type"]
           updated_at?: string
@@ -1442,6 +1444,7 @@ export type Database = {
           id?: string
           member_id?: string | null
           notes?: string | null
+          receipt_shared_at?: string | null
           transaction_date?: string
           transaction_type?: Database["public"]["Enums"]["transaction_type"]
           updated_at?: string
@@ -1589,6 +1592,10 @@ export type Database = {
       is_date_locked: { Args: { _d: string }; Returns: boolean }
       is_staff_or_vm: { Args: { _user_id: string }; Returns: boolean }
       is_treasurer: { Args: { _user_id: string }; Returns: boolean }
+      mark_receipt_shared: {
+        Args: { _transaction_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       account_type: "bank" | "great_lodge" | "savings"
