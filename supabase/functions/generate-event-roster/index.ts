@@ -207,14 +207,15 @@ Deno.serve(async (req) => {
     }
 
     // Only staff (treasurer, admin, or the Venerable) may generate the roster.
-    const { data: roleData } = await supabase
+    // A user may hold several roles, so fetch rows instead of maybeSingle().
+    const { data: roleRows } = await supabase
       .from('user_roles')
       .select('role')
       .eq('user_id', user.id)
       .in('role', ['treasurer', 'admin', 'vm'])
-      .maybeSingle();
+      .limit(1);
 
-    if (!roleData) {
+    if (!roleRows || roleRows.length === 0) {
       return new Response(JSON.stringify({ error: 'No autorizado para generar el reporte.' }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
