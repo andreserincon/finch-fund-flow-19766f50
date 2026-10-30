@@ -64,7 +64,7 @@ export function canShareReceipt(tx: ReceiptSource): boolean {
 }
 
 /** Arma el comprobante de la transaccion y abre el menu de compartir. */
-export async function buildAndShareReceipt(tx: ReceiptSource): Promise<void> {
+export async function buildAndShareReceipt(tx: ReceiptSource, onShared?: () => void): Promise<void> {
   if (!tx.member_id) {
     toast.error('Este movimiento no tiene un hermano asociado.');
     return;
@@ -125,21 +125,33 @@ export async function buildAndShareReceipt(tx: ReceiptSource): Promise<void> {
     note,
     amountText: `+${moneyText(tx.amount, getCurrencyForAccount(tx.account))}`,
   };
-  await shareMemberReceipt(header, payment, balance, { lodge: LODGE_NAME, tesorero }, noI18n);
+  const result = await shareMemberReceipt(header, payment, balance, { lodge: LODGE_NAME, tesorero }, noI18n);
+  if (result === 'shared') {
+    // Marca la transaccion como "comprobante compartido". No bloquea el compartir
+    // si falla (p. ej. la funcion SQL aun no esta en la base).
+    try {
+      const { error: markErr } = await (supabase as unknown as {
+        rpc: (fn: string, args: Record<string, unknown>) => Promise<{ error: unknown }>;
+      }).rpc('mark_receipt_shared', { _transaction_id: tx.id });
+      if (!markErr) onShared?.();
+    } catch {
+      /* el comprobante ya se compartio; el marcado es secundario */
+    }
+  }
 }
 
 /**
  * Burbuja que ofrece compartir el comprobante recien registrado. Solo aparece
  * para un ingreso de un hermano; en otro caso no hace nada.
  */
-export function promptShareReceipt(tx: ReceiptSource): void {
+export function promptShareReceipt(tx: ReceiptSource, onShared?: () => void): void {
   if (!canShareReceipt(tx)) return;
   toast('Pago registrado', {
     description: '¿Querés compartir el comprobante?',
     duration: 8000,
     action: {
       label: 'Compartir',
-      onClick: () => { void buildAndShareReceipt(tx); },
+      onClick: () => { void buildAndShareReceipt(tx, onShared); },
     },
   });
 }

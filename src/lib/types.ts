@@ -170,6 +170,8 @@ export interface Transaction {
   account: AccountType;
   created_at: string;
   updated_at: string;
+  /** Fecha de la ultima vez que se compartio el comprobante de este pago; null = nunca. */
+  receipt_shared_at: string | null;
   /** Joined member data (optional, populated by queries) */
   member?: Member;
 }

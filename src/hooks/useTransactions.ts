@@ -113,7 +113,7 @@ export function useTransactions() {
       invalidateRelated();
       toast.success('Transacción registrada correctamente');
       // Ofrecer el comprobante si el movimiento es un ingreso de un hermano.
-      promptShareReceipt(data as ReceiptSource);
+      promptShareReceipt(data as ReceiptSource, () => queryClient.invalidateQueries({ queryKey: ['transactions'] }));
     },
     onError: (error: Error) => {
       toast.error(`Error al registrar transacción: ${error.message}`);

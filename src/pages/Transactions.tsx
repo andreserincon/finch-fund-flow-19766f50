@@ -33,7 +33,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Search, TrendingUp, TrendingDown, MoreHorizontal, Pencil, Trash2, ArrowUpDown, ArrowUp, ArrowDown, ArrowLeftRight, Lock, Share2 } from 'lucide-react';
+import { Search, TrendingUp, TrendingDown, MoreHorizontal, Pencil, Trash2, ArrowUpDown, ArrowUp, ArrowDown, ArrowLeftRight, Lock, Share2, Check } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn, formatCurrency, getCurrencyForAccount, parseLocalDate } from '@/lib/utils';
@@ -42,6 +42,7 @@ import { useTranslation } from 'react-i18next';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TableSkeleton } from '@/components/ui/loading';
 import { AddTransactionForm } from '@/components/forms/AddTransactionForm';
+import { useQueryClient } from '@tanstack/react-query';
 import { buildAndShareReceipt } from '@/lib/shareReceipt';
 
 /**
@@ -63,6 +64,7 @@ export default function Transactions() {
   const { isAdmin } = useIsAdmin();
   const { canManageUsers } = useCanManageUsers();
   const { currentGestion } = useGestiones();
+  const queryClient = useQueryClient();
   // Periodo cerrado: una fecha anterior al inicio de la gestion abierta solo la
   // pueden ajustar Admin o Venerable (canManageUsers). Para el Tesorero, editar
   // y borrar esas filas queda deshabilitado aca (la RLS lo garantiza igual en
@@ -184,7 +186,12 @@ export default function Transactions() {
     row.kind === 'transaction' && row.transaction.transaction_type === 'income' && !!row.transaction.member_id;
 
   // El armado del comprobante vive en el util compartido (lo reusan los formularios).
-  const handleShareReceipt = (tx: Transaction) => { void buildAndShareReceipt(tx); };
+  // Al compartir con exito, la fila queda marcada y refrescamos la lista.
+  const handleShareReceipt = (tx: Transaction) =>
+    void buildAndShareReceipt(tx, () => queryClient.invalidateQueries({ queryKey: ['transactions'] }));
+  // Si ya se compartio el comprobante de esta transaccion.
+  const receiptShared = (row: MovementRow) =>
+    row.kind === 'transaction' && !!row.transaction.receipt_shared_at;
 
   const badgeClass = (row: MovementRow) =>
     row.kind === 'transfer'
@@ -375,10 +382,17 @@ export default function Transactions() {
             <div key={row.key} className="rounded-lg border bg-card p-4 space-y-3">
               <div className="flex items-start justify-between">
                 <div className="space-y-1">
-                  <Badge variant="outline" className={cn('border-transparent', badgeClass(row))}>
-                    {row.kind === 'transfer' && <ArrowLeftRight className="mr-1 h-3 w-3" />}
-                    {row.label}
-                  </Badge>
+                  <div className="flex items-center gap-1">
+                    <Badge variant="outline" className={cn('border-transparent', badgeClass(row))}>
+                      {row.kind === 'transfer' && <ArrowLeftRight className="mr-1 h-3 w-3" />}
+                      {row.label}
+                    </Badge>
+                    {receiptShared(row) && (
+                      <span title="Comprobante compartido" className="inline-flex text-success">
+                        <Check className="h-3.5 w-3.5" />
+                      </span>
+                    )}
+                  </div>
                   <p className="text-xs text-muted-foreground">
                     {format(parseLocalDate(row.date), 'd MMM yyyy', { locale: es })}
                     {' • '}{ACCOUNT_LABELS[row.account] || 'Cuenta Bancaria Principal'}
@@ -405,7 +419,7 @@ export default function Transactions() {
                         {canShareReceipt(row) && (
                           <DropdownMenuItem onClick={() => row.kind === 'transaction' && handleShareReceipt(row.transaction)}>
                             <Share2 className="mr-2 h-4 w-4" />
-                            Compartir comprobante
+                            {receiptShared(row) ? 'Compartir de nuevo' : 'Compartir comprobante'}
                           </DropdownMenuItem>
                         )}
                         {isRowLocked(row) ? (
@@ -498,6 +512,11 @@ export default function Transactions() {
                       {row.kind === 'transfer' && <ArrowLeftRight className="mr-1 h-3 w-3" />}
                       {row.label}
                     </Badge>
+                    {receiptShared(row) && (
+                      <span title="Comprobante compartido" className="ml-1 inline-flex align-middle text-success">
+                        <Check className="h-3.5 w-3.5" />
+                      </span>
+                    )}
                   </TableCell>
                   <TableCell>
                     {row.kind === 'transfer' ? (
@@ -535,7 +554,7 @@ export default function Transactions() {
                           {canShareReceipt(row) && (
                             <DropdownMenuItem onClick={() => row.kind === 'transaction' && handleShareReceipt(row.transaction)}>
                               <Share2 className="mr-2 h-4 w-4" />
-                              Compartir comprobante
+                              {receiptShared(row) ? 'Compartir de nuevo' : 'Compartir comprobante'}
                             </DropdownMenuItem>
                           )}
                           {isRowLocked(row) ? (

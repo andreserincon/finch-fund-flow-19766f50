@@ -17,6 +17,9 @@ import { FEE_TYPE_LABELS, MASONIC_GRADE_LABELS, type FeeType, type PaymentStatus
 /** Traductor i18n (solo se usa para las etiquetas de estado de capita). */
 type Translate = (key: string) => string;
 
+/** Resultado de compartir: compartido/descargado, cancelado por el usuario, o error. */
+export type ShareResult = 'shared' | 'cancelled' | 'error';
+
 /** Datos de identidad del hermano para el encabezado de la imagen. */
 export interface MemberHeaderInfo {
   matricula: string | null;
@@ -166,7 +169,7 @@ function renderBalanceRows(b: MemberBalanceInfo, t: Translate, heading?: string,
  * si se lo posiciona lejos fuera de pantalla, el navegador movil no lo pinta y la
  * captura sale en blanco.
  */
-async function captureAndShare(innerHtml: string, fileName: string, title: string, text: string): Promise<void> {
+async function captureAndShare(innerHtml: string, fileName: string, title: string, text: string): Promise<ShareResult> {
   const node = document.createElement('div');
   node.style.cssText =
     'position:fixed;left:0;top:0;z-index:-9999;pointer-events:none;' +
@@ -190,18 +193,20 @@ async function captureAndShare(innerHtml: string, fileName: string, title: strin
       a.click();
       toast.info('Tu dispositivo no permite compartir directo. Descargue la imagen para adjuntarla en WhatsApp.');
     }
+    return 'shared';
   } catch (err) {
-    if ((err as Error)?.name === 'AbortError') return;
+    if ((err as Error)?.name === 'AbortError') return 'cancelled';
     toast.error('No se pudo generar la imagen para compartir.');
+    return 'error';
   } finally {
     node.remove();
   }
 }
 
 /** Comparte el estado del hermano (saldo actual) como imagen. */
-export async function shareMemberStatus(header: MemberHeaderInfo, balance: MemberBalanceInfo, t: Translate): Promise<void> {
+export async function shareMemberStatus(header: MemberHeaderInfo, balance: MemberBalanceInfo, t: Translate): Promise<ShareResult> {
   const html = renderMemberHeader(header) + renderBalanceRows(balance, t, undefined, header.isActive);
-  await captureAndShare(
+  return captureAndShare(
     html,
     `estado-${header.matricula || header.fullName}.png`,
     'Estado del socio',
@@ -219,7 +224,7 @@ export async function shareMemberReceipt(
   balance: MemberBalanceInfo,
   institution: InstitutionInfo,
   t: Translate,
-): Promise<void> {
+): Promise<ShareResult> {
   const institutionalHeader =
     `<div style="text-align:center;padding-bottom:16px;border-bottom:2px solid #c8a24b;">` +
       `<div style="font-family:Georgia,'Times New Roman',serif;font-size:17px;font-weight:700;color:#1c1c22;">${institution.lodge}</div>` +
@@ -252,7 +257,7 @@ export async function shareMemberReceipt(
       + `</div>`
     : '';
   const html = institutionalHeader + title + member + paymentBlock + footer + sign;
-  await captureAndShare(
+  return captureAndShare(
     html,
     `comprobante-${header.matricula || header.fullName}.png`,
     'Comprobante de pago',

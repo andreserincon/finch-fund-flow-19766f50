@@ -112,7 +112,7 @@ export function useMemberCharges() {
       queryClient.invalidateQueries({ queryKey: ['member-charges'] });
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       toast.success('Cobro registrado');
-      promptShareReceipt(src);
+      promptShareReceipt(src, () => queryClient.invalidateQueries({ queryKey: ['transactions'] }));
     },
     onError: () => toast.error('No se pudo registrar el cobro'),
   });
