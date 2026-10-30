@@ -1542,6 +1542,15 @@ export type Database = {
           savings_balance: number
         }[]
       }
+      get_member_balance_asof: {
+        Args: { _as_of: string; _member_id: string }
+        Returns: {
+          capita_balance: number
+          cobros_ars: number
+          cobros_usd: number
+          event_balance: number
+        }[]
+      }
       get_member_fee_type_for_month: {
         Args: { p_member_id: string; p_month: string }
         Returns: Database["public"]["Enums"]["fee_type"]
