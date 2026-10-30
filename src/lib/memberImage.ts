@@ -168,19 +168,21 @@ function renderBalanceRows(b: MemberBalanceInfo, t: Translate, heading?: string,
   );
 }
 
+/** Estilos del nodo que se captura (contenedor de 460px, fondo blanco). */
+const NODE_CSS =
+  'position:fixed;left:0;top:0;z-index:-9999;pointer-events:none;' +
+  'width:460px;box-sizing:border-box;background:#ffffff;' +
+  `padding:26px;font-family:${SANS};color:#15151a;`;
+
 /**
- * Captura el HTML como PNG y abre el menu de compartir, con respaldo a descarga.
- * Se arma el nodo dentro del viewport pero detras de todo (z-index muy negativo):
- * si se lo posiciona lejos fuera de pantalla, el navegador movil no lo pinta y la
- * captura sale en blanco.
+ * Captura un HTML como archivo PNG. Se arma el nodo dentro del viewport pero
+ * detras de todo (z-index muy negativo): si se lo posiciona lejos fuera de
+ * pantalla, el navegador movil no lo pinta y la captura sale en blanco.
  */
-async function captureAndShare(innerHtml: string, fileName: string, title: string, text: string): Promise<ShareResult> {
+async function htmlToPngFile(html: string, fileName: string): Promise<File | null> {
   const node = document.createElement('div');
-  node.style.cssText =
-    'position:fixed;left:0;top:0;z-index:-9999;pointer-events:none;' +
-    'width:460px;box-sizing:border-box;background:#ffffff;' +
-    `padding:26px;font-family:${SANS};color:#15151a;`;
-  node.innerHTML = innerHtml;
+  node.style.cssText = NODE_CSS;
+  node.innerHTML = html;
   document.body.appendChild(node);
   try {
     const { toPng } = await import('html-to-image');
@@ -188,48 +190,79 @@ async function captureAndShare(innerHtml: string, fileName: string, title: strin
     await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => r(null))));
     const dataUrl = await toPng(node, { pixelRatio: 2, backgroundColor: '#ffffff', cacheBust: true });
     const blob = await (await fetch(dataUrl)).blob();
-    const file = new File([blob], fileName, { type: 'image/png' });
-    if (navigator.canShare?.({ files: [file] })) {
-      await navigator.share({ files: [file], title, text });
-    } else {
-      const a = document.createElement('a');
-      a.href = dataUrl;
-      a.download = fileName;
-      a.click();
-      toast.info('Tu dispositivo no permite compartir directo. Descargue la imagen para adjuntarla en WhatsApp.');
-    }
-    return 'shared';
-  } catch (err) {
-    if ((err as Error)?.name === 'AbortError') return 'cancelled';
-    toast.error('No se pudo generar la imagen para compartir.');
-    return 'error';
+    return new File([blob], fileName, { type: 'image/png' });
+  } catch {
+    return null;
   } finally {
     node.remove();
   }
 }
 
+/** Comparte uno o varios archivos juntos, con respaldo a descarga. */
+async function shareFiles(files: File[], title: string, text: string): Promise<ShareResult> {
+  try {
+    if (navigator.canShare?.({ files })) {
+      await navigator.share({ files, title, text });
+      return 'shared';
+    }
+    // Respaldo (p. ej. escritorio): descargar cada imagen.
+    for (const f of files) {
+      const url = URL.createObjectURL(f);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = f.name;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+    toast.info(files.length > 1
+      ? 'Tu dispositivo no permite compartir directo. Se descargaron las imagenes para adjuntarlas en WhatsApp.'
+      : 'Tu dispositivo no permite compartir directo. Descargue la imagen para adjuntarla en WhatsApp.');
+    return 'shared';
+  } catch (err) {
+    if ((err as Error)?.name === 'AbortError') return 'cancelled';
+    toast.error('No se pudo compartir.');
+    return 'error';
+  }
+}
+
+/** Captura cada item (html + nombre de archivo) y comparte todos juntos. */
+export async function shareImages(
+  items: { html: string; fileName: string }[],
+  title: string,
+  text: string,
+): Promise<ShareResult> {
+  const files: File[] = [];
+  for (const it of items) {
+    const f = await htmlToPngFile(it.html, it.fileName);
+    if (f) files.push(f);
+  }
+  if (files.length === 0) {
+    toast.error('No se pudo generar la imagen para compartir.');
+    return 'error';
+  }
+  return shareFiles(files, title, text);
+}
+
+/** HTML del estado del hermano (saldo actual, con pills, colores y tags). */
+export function buildStatusHtml(header: MemberHeaderInfo, balance: MemberBalanceInfo, t: Translate): string {
+  return renderMemberHeader(header) + renderBalanceRows(balance, t, undefined, header.isActive);
+}
+
 /** Comparte el estado del hermano (saldo actual) como imagen. */
 export async function shareMemberStatus(header: MemberHeaderInfo, balance: MemberBalanceInfo, t: Translate): Promise<ShareResult> {
-  const html = renderMemberHeader(header) + renderBalanceRows(balance, t, undefined, header.isActive);
-  return captureAndShare(
-    html,
-    `estado-${header.matricula || header.fullName}.png`,
+  return shareImages(
+    [{ html: buildStatusHtml(header, balance, t), fileName: `estado-${header.matricula || header.fullName}.png` }],
     'Estado del socio',
     `Estado de ${header.fullName}`,
   );
 }
 
 /**
- * Comparte el comprobante de un pago: encabezado institucional, detalle del pago
- * y el saldo del hermano a la fecha de ese pago.
+ * HTML del comprobante de un pago (solo el pago): encabezado institucional,
+ * detalle del pago y la firma del tesorero. El balance va en una imagen aparte
+ * (el estado del hermano).
  */
-export async function shareMemberReceipt(
-  header: MemberHeaderInfo,
-  payment: ReceiptPaymentInfo,
-  balance: MemberBalanceInfo,
-  institution: InstitutionInfo,
-  t: Translate,
-): Promise<ShareResult> {
+export function buildReceiptHtml(header: MemberHeaderInfo, payment: ReceiptPaymentInfo, institution: InstitutionInfo): string {
   const institutionalHeader =
     `<div style="text-align:center;padding-bottom:16px;border-bottom:2px solid #c8a24b;">` +
       `<div style="font-family:Georgia,'Times New Roman',serif;font-size:17px;font-weight:700;color:#1c1c22;">${institution.lodge}</div>` +
@@ -243,9 +276,7 @@ export async function shareMemberReceipt(
       `<span style="font-size:14px;color:#6b7280;">${label}</span>` +
       `<span style="font-size:${strong ? 20 : 15}px;${strong ? 'font-weight:700;font-family:' + MONO + ';color:#1c1c22;' : 'color:#1c1c22;text-align:right;'}">${value}</span>` +
     `</div>`;
-  const noteLine = payment.note
-    ? line('Nota', payment.note)
-    : '';
+  const noteLine = payment.note ? line('Nota', payment.note) : '';
   const paymentBlock =
     `<div style="border-top:1px solid #eae7e1;margin-top:14px;padding-top:12px;">` +
       line('Fecha', payment.dateText) +
@@ -253,20 +284,11 @@ export async function shareMemberReceipt(
       noteLine +
       line('Monto', payment.amountText, true) +
     `</div>`;
-  // Seccion aparte "Balance con el tesoro" (header propio, sin pills ni colores),
-  // separada visualmente del comprobante del pago. Cobros se rotula "Otros cobros".
-  const footer = renderBalanceRows(balance, t, 'Balance con el tesoro', false, false, 'Otros cobros', `al ${payment.dateText}`);
-  // Firma del tesorero al pie, con la abreviatura Tes.
+  // Firma del tesorero al pie, centrada, con la abreviatura Tes.
   const sign = institution.tesorero
     ? `<div style="margin-top:28px;display:flex;justify-content:center;">`
       + `<div style="min-width:220px;text-align:center;border-top:1px solid #d6d3d1;padding-top:6px;font-size:14px;color:#44403c;">Tes∴ ${institution.tesorero}</div>`
       + `</div>`
     : '';
-  const html = institutionalHeader + title + member + paymentBlock + footer + sign;
-  return captureAndShare(
-    html,
-    `comprobante-${header.matricula || header.fullName}.png`,
-    'Comprobante de pago',
-    `Comprobante de ${header.fullName}`,
-  );
+  return institutionalHeader + title + member + paymentBlock + sign;
 }

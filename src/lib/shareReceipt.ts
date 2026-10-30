@@ -6,19 +6,23 @@
  *   Transacciones (menu de la fila) y los formularios que crean ingresos de un
  *   hermano (Registrar movimiento y Registrar cobro).
  *
- *   El saldo "a la fecha del pago" sale de la funcion SQL get_member_balance_asof
- *   (no esta en los generated types; se llama con cast). El concepto se resuelve
- *   segun el origen: capita, nombre del evento o concepto del cobro.
+ *   Al compartir se mandan DOS imagenes: el comprobante del pago (solo el pago) y
+ *   el estado actual del hermano (su saldo, como la tarjeta de Miembros). El
+ *   concepto se resuelve segun el origen: capita, nombre del evento o cobro.
  */
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { getCurrencyForAccount, parseLocalDate } from '@/lib/utils';
-import { CATEGORY_LABELS, type AccountType, type FeeType, type TransactionCategory } from '@/lib/types';
-import { CHARGE_CATEGORY_LABELS, type ChargeCategory } from '@/lib/cobros-types';
 import {
-  shareMemberReceipt, LODGE_NAME, moneyText,
+  CATEGORY_LABELS,
+  type AccountType, type FeeType, type TransactionCategory, type MemberBalance, type PaymentStatus,
+} from '@/lib/types';
+import { CHARGE_CATEGORY_LABELS, type ChargeCategory } from '@/lib/cobros-types';
+import { getMemberCapitaStatus, type FeeRates, type MemberEventTotals } from '@/lib/attention';
+import {
+  buildReceiptHtml, buildStatusHtml, shareImages, LODGE_NAME, moneyText,
   type MemberHeaderInfo, type MemberBalanceInfo, type ReceiptPaymentInfo,
 } from '@/lib/memberImage';
 
@@ -63,72 +67,104 @@ export function canShareReceipt(tx: ReceiptSource): boolean {
   return !!tx.member_id && (tx.transaction_type === undefined || tx.transaction_type === 'income');
 }
 
-/** Arma el comprobante de la transaccion y abre el menu de compartir. */
+/**
+ * Estado ACTUAL del hermano (como la tarjeta de Miembros): encabezado + saldos
+ * netos por concepto + el estado de capita de 4 estados. Se calcula igual que
+ * Miembros: member_balances (vista) menos la parte de eventos, mas los cobros
+ * abiertos, y el estado via getMemberCapitaStatus con la cuota del mes.
+ */
+async function fetchMemberEstado(memberId: string): Promise<{ header: MemberHeaderInfo; balance: MemberBalanceInfo } | null> {
+  const { data: mbRow } = await supabase
+    .from('member_balances')
+    .select('member_id, full_name, phone_number, fee_type, is_active, total_fees_owed, total_paid')
+    .eq('member_id', memberId).maybeSingle();
+  if (!mbRow) return null;
+  const mb = mbRow as {
+    member_id: string; full_name: string; phone_number: string | null; fee_type: FeeType;
+    is_active: boolean; total_fees_owed: number; total_paid: number;
+  };
+  const { data: mFull } = await supabase.from('members').select('masonic_grade').eq('id', memberId).maybeSingle();
+  const grade = (mFull as { masonic_grade?: string | null } | null)?.masonic_grade ?? null;
+
+  const { data: evRows } = await supabase
+    .from('event_member_payments').select('amount_owed, amount_paid').eq('member_id', memberId);
+  const evList = (evRows as { amount_owed: number; amount_paid: number }[] | null) ?? [];
+  const eventOwed = evList.reduce((s, r) => s + Number(r.amount_owed), 0);
+  const eventPaid = evList.reduce((s, r) => s + Number(r.amount_paid), 0);
+
+  const { data: chRows } = await (supabase as unknown as {
+    from: (t: string) => { select: (c: string) => { eq: (c: string, v: string) => Promise<{ data: unknown }> } };
+  }).from('member_charges').select('amount, amount_paid, currency, status').eq('member_id', memberId);
+  let cobrosArs = 0;
+  let cobrosUsd = 0;
+  for (const c of ((chRows as { amount: number; amount_paid: number; currency: string; status: string }[] | null) ?? [])) {
+    if (c.status === 'paid' || c.status === 'cancelled') continue;
+    const bal = Number(c.amount) - Number(c.amount_paid);
+    if (bal <= 0.5) continue;
+    if (c.currency === 'USD') cobrosUsd += bal; else cobrosArs += bal;
+  }
+
+  // Cuota de capita del mes actual, para clasificar el estado como en Miembros.
+  const ym = `${new Date().toISOString().slice(0, 7)}-01`;
+  const { data: feeRow } = await supabase
+    .from('monthly_fees').select('amount').eq('year_month', ym).eq('fee_type', mb.fee_type).maybeSingle();
+  const monthlyFee = feeRow ? Number((feeRow as { amount: number }).amount) : 0;
+
+  const totalOwed = Number(mb.total_fees_owed);
+  const totalPaid = Number(mb.total_paid);
+  const capitaBal = (totalPaid - eventPaid) - (totalOwed - eventOwed);
+  const eventoBal = eventPaid - eventOwed;
+  const totalBal = capitaBal + eventoBal - cobrosArs;
+
+  const ev: MemberEventTotals = { owed: { [memberId]: eventOwed }, paid: { [memberId]: eventPaid } };
+  const fakeMB = {
+    member_id: memberId, fee_type: mb.fee_type, total_fees_owed: totalOwed, total_paid: totalPaid,
+  } as unknown as MemberBalance;
+  const fees = { [mb.fee_type]: monthlyFee } as unknown as FeeRates;
+  const capitaStatus: PaymentStatus = mb.is_active ? getMemberCapitaStatus(fakeMB, fees, undefined, ev) : 'al_dia';
+
+  return {
+    header: { matricula: mb.phone_number, fullName: mb.full_name, feeType: mb.fee_type, grade, isActive: mb.is_active },
+    balance: { capitaBal, capitaStatus, eventoBal, eventoOk: eventoBal >= 0, cobrosArs, cobrosUsd, totalBal },
+  };
+}
+
+/**
+ * Arma y comparte DOS imagenes: el comprobante del pago (solo el pago) y el
+ * estado actual del hermano. Si el compartir fue exitoso, marca la transaccion.
+ */
 export async function buildAndShareReceipt(tx: ReceiptSource, onShared?: () => void): Promise<void> {
   if (!tx.member_id) {
     toast.error('Este movimiento no tiene un hermano asociado.');
     return;
   }
-  const { data: member } = await supabase
-    .from('members')
-    .select('full_name, phone_number, fee_type, masonic_grade, is_active')
-    .eq('id', tx.member_id).maybeSingle();
-  if (!member) {
+  const estado = await fetchMemberEstado(tx.member_id);
+  if (!estado) {
     toast.error('No se pudo identificar al hermano del pago.');
     return;
   }
-  const m = member as {
-    full_name: string; phone_number: string | null; fee_type: FeeType;
-    masonic_grade: string | null; is_active: boolean;
-  };
   const { data: tes } = await supabase
     .from('members').select('full_name').eq('lodge_office', 'tesorero').limit(1).maybeSingle();
   const tesorero = (tes as { full_name?: string } | null)?.full_name ?? null;
 
-  let balance: MemberBalanceInfo;
-  try {
-    const { data, error } = await (supabase as unknown as {
-      rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }>;
-    }).rpc('get_member_balance_asof', { _member_id: tx.member_id, _as_of: tx.transaction_date });
-    if (error) throw error;
-    const row = (Array.isArray(data) ? data[0] : data) as {
-      capita_balance?: number; event_balance?: number; cobros_ars?: number; cobros_usd?: number;
-    } | undefined;
-    const capitaBal = Number(row?.capita_balance ?? 0);
-    const eventoBal = Number(row?.event_balance ?? 0);
-    const cobrosArs = Math.max(0, Number(row?.cobros_ars ?? 0));
-    balance = {
-      capitaBal,
-      capitaStatus: capitaBal >= 0 ? 'al_dia' : 'impago',
-      eventoBal,
-      eventoOk: eventoBal >= 0,
-      cobrosArs,
-      cobrosUsd: Math.max(0, Number(row?.cobros_usd ?? 0)),
-      totalBal: capitaBal + eventoBal - cobrosArs,
-    };
-  } catch {
-    toast.error('No se pudo calcular el saldo a la fecha del pago.');
-    return;
-  }
-
   const { concept, note } = await resolveConcept(tx);
-  const header: MemberHeaderInfo = {
-    matricula: m.phone_number,
-    fullName: m.full_name,
-    feeType: m.fee_type,
-    grade: m.masonic_grade,
-    isActive: m.is_active,
-  };
   const payment: ReceiptPaymentInfo = {
     dateText: format(parseLocalDate(tx.transaction_date), 'd MMM yyyy', { locale: es }),
     concept,
     note,
     amountText: `+${moneyText(tx.amount, getCurrencyForAccount(tx.account))}`,
   };
-  const result = await shareMemberReceipt(header, payment, balance, { lodge: LODGE_NAME, tesorero }, noI18n);
+  const key = estado.header.matricula || estado.header.fullName;
+  const result = await shareImages(
+    [
+      { html: buildReceiptHtml(estado.header, payment, { lodge: LODGE_NAME, tesorero }), fileName: `comprobante-${key}.png` },
+      { html: buildStatusHtml(estado.header, estado.balance, noI18n), fileName: `estado-${key}.png` },
+    ],
+    'Comprobante y estado',
+    `Comprobante de ${estado.header.fullName}`,
+  );
   if (result === 'shared') {
-    // Marca la transaccion como "comprobante compartido". No bloquea el compartir
-    // si falla (p. ej. la funcion SQL aun no esta en la base).
+    // Marca la transaccion como "comprobante compartido". No bloquea si falla.
     try {
       const { error: markErr } = await (supabase as unknown as {
         rpc: (fn: string, args: Record<string, unknown>) => Promise<{ error: unknown }>;
