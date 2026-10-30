@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import type { MemberCharge, ChargeCategory, ChargeCurrency } from '@/lib/cobros-types';
 import { CHARGE_CATEGORY_LABELS } from '@/lib/cobros-types';
 import type { AccountType } from '@/lib/types';
+import { promptShareReceipt, type ReceiptSource } from '@/lib/shareReceipt';
 
 // member_charges / member_charge_payments are not in the generated types yet.
 const db = supabase as unknown as {
@@ -94,11 +95,24 @@ export function useMemberCharges() {
         transaction_id: tx.id,
       });
       if (payError) throw payError;
+
+      // Datos minimos del ingreso recien creado, para ofrecer el comprobante.
+      return {
+        id: tx.id,
+        member_id: charge.member_id,
+        transaction_date: payment_date,
+        amount,
+        account,
+        category: 'other_income',
+        notes,
+        transaction_type: 'income',
+      } as ReceiptSource;
     },
-    onSuccess: () => {
+    onSuccess: (src) => {
       queryClient.invalidateQueries({ queryKey: ['member-charges'] });
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       toast.success('Cobro registrado');
+      promptShareReceipt(src);
     },
     onError: () => toast.error('No se pudo registrar el cobro'),
   });

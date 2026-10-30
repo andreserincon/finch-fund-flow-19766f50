@@ -17,6 +17,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Transaction, TransactionType, TransactionCategory, AccountType } from '@/lib/types';
 import { toast } from 'sonner';
+import { promptShareReceipt, type ReceiptSource } from '@/lib/shareReceipt';
 
 /**
  * Recompute amount_paid for a single event_member_payment row by
@@ -108,9 +109,11 @@ export function useTransactions() {
       await recomputeAmountPaid(transaction.event_member_payment_id);
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       invalidateRelated();
       toast.success('Transacción registrada correctamente');
+      // Ofrecer el comprobante si el movimiento es un ingreso de un hermano.
+      promptShareReceipt(data as ReceiptSource);
     },
     onError: (error: Error) => {
       toast.error(`Error al registrar transacción: ${error.message}`);

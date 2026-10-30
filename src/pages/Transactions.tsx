@@ -42,14 +42,7 @@ import { useTranslation } from 'react-i18next';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TableSkeleton } from '@/components/ui/loading';
 import { AddTransactionForm } from '@/components/forms/AddTransactionForm';
-import { toast } from 'sonner';
-import { useMembers } from '@/hooks/useMembers';
-import { supabase } from '@/integrations/supabase/client';
-import {
-  shareMemberReceipt, LODGE_NAME,
-  type MemberHeaderInfo, type MemberBalanceInfo, type ReceiptPaymentInfo,
-} from '@/lib/memberImage';
-import { CHARGE_CATEGORY_LABELS, type ChargeCategory } from '@/lib/cobros-types';
+import { buildAndShareReceipt } from '@/lib/shareReceipt';
 
 /**
  * One line of the movements list. A transfer between accounts is shown as two
@@ -70,7 +63,6 @@ export default function Transactions() {
   const { isAdmin } = useIsAdmin();
   const { canManageUsers } = useCanManageUsers();
   const { currentGestion } = useGestiones();
-  const { members, memberBalances } = useMembers();
   // Periodo cerrado: una fecha anterior al inicio de la gestion abierta solo la
   // pueden ajustar Admin o Venerable (canManageUsers). Para el Tesorero, editar
   // y borrar esas filas queda deshabilitado aca (la RLS lo garantiza igual en
@@ -191,77 +183,8 @@ export default function Transactions() {
   const canShareReceipt = (row: MovementRow) =>
     row.kind === 'transaction' && row.transaction.transaction_type === 'income' && !!row.transaction.member_id;
 
-  // Concepto especifico segun el origen del ingreso: capita, nombre del evento o
-  // el concepto del cobro (medalla/ritual/derecho); si no, la categoria + nota.
-  const resolveConcept = async (tx: Transaction): Promise<{ concept: string; note: string | null }> => {
-    if (tx.category === 'monthly_fee') return { concept: 'Cápita', note: tx.notes };
-    if (tx.category === 'event_payment' && tx.event_id) {
-      const { data } = await supabase
-        .from('extraordinary_expenses').select('name').eq('id', tx.event_id).maybeSingle();
-      return { concept: (data as { name?: string } | null)?.name ?? CATEGORY_LABELS[tx.category], note: tx.notes };
-    }
-    // Pago de un cobro: el ingreso queda enlazado por member_charge_payments.transaction_id.
-    const { data: link } = await (supabase as unknown as {
-      from: (t: string) => {
-        select: (c: string) => { eq: (c: string, v: string) => { maybeSingle: () => Promise<{ data: unknown }> } };
-      };
-    }).from('member_charge_payments').select('member_charges(category, note)').eq('transaction_id', tx.id).maybeSingle();
-    const charge = (link as { member_charges?: { category: ChargeCategory; note: string | null } } | null)?.member_charges;
-    if (charge) return { concept: CHARGE_CATEGORY_LABELS[charge.category], note: charge.note ?? tx.notes };
-    return { concept: CATEGORY_LABELS[tx.category], note: tx.notes ?? tx.expense_summary };
-  };
-
-  // Arma y comparte el comprobante de un pago: encabezado institucional, detalle
-  // del pago y el saldo del hermano reconstruido a la fecha de ese pago (via la
-  // funcion SQL get_member_balance_asof).
-  const handleShareReceipt = async (tx: Transaction) => {
-    const mFull = members.find((m) => m.id === tx.member_id);
-    const mb = memberBalances.find((b) => b.member_id === tx.member_id);
-    if (!tx.member_id || (!mFull && !mb)) {
-      toast.error('No se pudo identificar al hermano del pago.');
-      return;
-    }
-    const header: MemberHeaderInfo = {
-      matricula: mb?.phone_number ?? mFull?.phone_number ?? null,
-      fullName: tx.member?.full_name ?? mb?.full_name ?? mFull?.full_name ?? 'Hermano',
-      feeType: mb?.fee_type ?? mFull!.fee_type,
-      grade: mFull?.masonic_grade ?? null,
-      isActive: mb?.is_active ?? mFull?.is_active ?? true,
-    };
-    let balance: MemberBalanceInfo;
-    try {
-      const { data, error } = await (supabase as unknown as {
-        rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }>;
-      }).rpc('get_member_balance_asof', { _member_id: tx.member_id, _as_of: tx.transaction_date });
-      if (error) throw error;
-      const row = (Array.isArray(data) ? data[0] : data) as {
-        capita_balance?: number; event_balance?: number; cobros_ars?: number; cobros_usd?: number;
-      } | undefined;
-      const capitaBal = Number(row?.capita_balance ?? 0);
-      const eventoBal = Number(row?.event_balance ?? 0);
-      balance = {
-        capitaBal,
-        capitaStatus: capitaBal >= 0 ? 'al_dia' : 'impago',
-        eventoBal,
-        eventoOk: eventoBal >= 0,
-        cobrosArs: Math.max(0, Number(row?.cobros_ars ?? 0)),
-        cobrosUsd: Math.max(0, Number(row?.cobros_usd ?? 0)),
-        totalBal: capitaBal + eventoBal - Math.max(0, Number(row?.cobros_ars ?? 0)),
-      };
-    } catch {
-      toast.error('No se pudo calcular el saldo a la fecha del pago.');
-      return;
-    }
-    const { concept, note } = await resolveConcept(tx);
-    const payment: ReceiptPaymentInfo = {
-      dateText: format(parseLocalDate(tx.transaction_date), 'd MMM yyyy', { locale: es }),
-      concept,
-      note,
-      amountText: `+${formatCurrency(tx.amount, getCurrencyForAccount(tx.account))}`,
-    };
-    const tesorero = memberBalances.find((b) => b.lodge_office === 'tesorero')?.full_name ?? null;
-    await shareMemberReceipt(header, payment, balance, { lodge: LODGE_NAME, tesorero }, t);
-  };
+  // El armado del comprobante vive en el util compartido (lo reusan los formularios).
+  const handleShareReceipt = (tx: Transaction) => { void buildAndShareReceipt(tx); };
 
   const badgeClass = (row: MovementRow) =>
     row.kind === 'transfer'
