@@ -85,9 +85,13 @@ const tag = (text: string, filled: boolean) =>
   `<span style="display:inline-block;font-size:13px;line-height:1;padding:6px 12px;border-radius:999px;`
   + `${filled ? 'background:#ece9e1;color:#1c1c22;' : 'border:1px solid #d6d3d1;color:#1c1c22;'}">${text}</span>`;
 
-const amt = (value: number, bold: boolean) =>
+/** Monto con la moneda explicita: pesos "$ 1.234,56", dolares "US$ 1.234,56". */
+export const moneyText = (value: number, currency: 'ARS' | 'USD' = 'ARS') =>
+  currency === 'USD' ? formatCurrency(value, 'USD').replace('$', 'US$ ') : formatCurrency(value, 'ARS');
+
+const amt = (value: number, bold: boolean, colored = true) =>
   `<span style="font-family:${MONO};font-size:18px;`
-  + `font-weight:${bold ? 700 : 600};color:${value < 0 ? '#dc2626' : '#059669'};">${formatCurrency(value)}</span>`;
+  + `font-weight:${bold ? 700 : 600};color:${colored ? (value < 0 ? '#dc2626' : '#059669') : '#1c1c22'};">${formatCurrency(value)}</span>`;
 
 const rowStart = (topBorder: boolean) =>
   `<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;`
@@ -118,11 +122,13 @@ function renderMemberHeader(h: MemberHeaderInfo, showTags = true): string {
  * la tarjeta de la vista movil de Miembros. `heading`, si viene, se muestra
  * arriba (por ejemplo "Saldo al 5 ene 2026").
  */
-function renderBalanceRows(b: MemberBalanceInfo, t: Translate, heading?: string, showPills = true): string {
+function renderBalanceRows(b: MemberBalanceInfo, t: Translate, heading?: string, showPills = true, colored = true): string {
+  // Cobros pendientes: se muestran en pesos Y en dolares si hay de los dos.
+  const cobrosColor = colored ? '#dc2626' : '#1c1c22';
   const cobrosVal = (b.cobrosArs > 0 || b.cobrosUsd > 0)
-    ? `<span style="font-family:${MONO};font-size:18px;font-weight:600;color:#dc2626;">`
-      + (b.cobrosArs > 0 ? formatCurrency(-b.cobrosArs) : '')
-      + (b.cobrosUsd > 0 ? `<span style="display:block;font-size:13px;">-${formatCurrency(b.cobrosUsd, 'USD')}</span>` : '')
+    ? `<span style="font-family:${MONO};font-size:18px;font-weight:600;color:${cobrosColor};text-align:right;">`
+      + (b.cobrosArs > 0 ? `<span style="display:block;">-${moneyText(b.cobrosArs, 'ARS')}</span>` : '')
+      + (b.cobrosUsd > 0 ? `<span style="display:block;">-${moneyText(b.cobrosUsd, 'USD')}</span>` : '')
       + `</span>`
     : `<span style="font-family:${MONO};font-size:18px;color:#6b7280;">${formatCurrency(0)}</span>`;
   return (
@@ -133,14 +139,14 @@ function renderBalanceRows(b: MemberBalanceInfo, t: Translate, heading?: string,
           `<span style="font-size:15px;color:#6b7280;">Cápita</span>` +
           (showPills ? statusPill(t(STATUS_I18N_KEY[b.capitaStatus]), b.capitaStatus, true) : '') +
         `</span>` +
-        amt(b.capitaBal, false) +
+        amt(b.capitaBal, false, colored) +
       `</div>` +
       rowStart(false) +
         `<span style="display:flex;align-items:center;gap:8px;min-width:0;">` +
           `<span style="font-size:15px;color:#6b7280;">Evento</span>` +
           (showPills ? statusPill(b.eventoOk ? 'Al día' : 'Pendiente', b.eventoOk ? 'al_dia' : 'impago', false) : '') +
         `</span>` +
-        amt(b.eventoBal, false) +
+        amt(b.eventoBal, false, colored) +
       `</div>` +
       rowStart(false) +
         `<span style="font-size:15px;color:#6b7280;">Cobros</span>` +
@@ -148,7 +154,7 @@ function renderBalanceRows(b: MemberBalanceInfo, t: Translate, heading?: string,
       `</div>` +
       rowStart(true) +
         `<span style="font-size:15px;font-weight:700;">Total (pesos)</span>` +
-        `<span style="font-family:${MONO};font-size:18px;font-weight:700;color:${b.totalBal < 0 ? '#dc2626' : '#059669'};">${formatCurrency(b.totalBal)}</span>` +
+        `<span style="font-family:${MONO};font-size:18px;font-weight:700;color:${colored ? (b.totalBal < 0 ? '#dc2626' : '#059669') : '#1c1c22'};">${formatCurrency(b.totalBal)}</span>` +
       `</div>` +
     `</div>`
   );
@@ -225,7 +231,7 @@ export async function shareMemberReceipt(
   const line = (label: string, value: string, strong?: boolean) =>
     `<div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-top:8px;">` +
       `<span style="font-size:14px;color:#6b7280;">${label}</span>` +
-      `<span style="font-size:${strong ? 20 : 15}px;${strong ? 'font-weight:700;font-family:' + MONO + ';color:#059669;' : 'color:#1c1c22;text-align:right;'}">${value}</span>` +
+      `<span style="font-size:${strong ? 20 : 15}px;${strong ? 'font-weight:700;font-family:' + MONO + ';color:#1c1c22;' : 'color:#1c1c22;text-align:right;'}">${value}</span>` +
     `</div>`;
   const noteLine = payment.note
     ? line('Nota', payment.note)
@@ -237,12 +243,12 @@ export async function shareMemberReceipt(
       noteLine +
       line('Monto', payment.amountText, true) +
     `</div>`;
-  // Sin pills de estado en el comprobante: solo los montos del saldo a la fecha.
-  const footer = renderBalanceRows(balance, t, `Saldo al ${payment.dateText}`, false);
+  // Sin pills ni colores en el comprobante: solo los montos del saldo a la fecha.
+  const footer = renderBalanceRows(balance, t, `Saldo al ${payment.dateText}`, false, false);
   // Firma del tesorero al pie, con la abreviatura Tes.
   const sign = institution.tesorero
-    ? `<div style="margin-top:26px;display:flex;justify-content:flex-end;">`
-      + `<div style="min-width:200px;text-align:center;border-top:1px solid #d6d3d1;padding-top:6px;font-size:14px;color:#44403c;">Tes∴ ${institution.tesorero}</div>`
+    ? `<div style="margin-top:28px;display:flex;justify-content:center;">`
+      + `<div style="min-width:220px;text-align:center;border-top:1px solid #d6d3d1;padding-top:6px;font-size:14px;color:#44403c;">Tes∴ ${institution.tesorero}</div>`
       + `</div>`
     : '';
   const html = institutionalHeader + title + member + paymentBlock + footer + sign;

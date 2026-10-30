@@ -14,11 +14,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { formatCurrency, getCurrencyForAccount, parseLocalDate } from '@/lib/utils';
+import { getCurrencyForAccount, parseLocalDate } from '@/lib/utils';
 import { CATEGORY_LABELS, type AccountType, type FeeType, type TransactionCategory } from '@/lib/types';
 import { CHARGE_CATEGORY_LABELS, type ChargeCategory } from '@/lib/cobros-types';
 import {
-  shareMemberReceipt, LODGE_NAME,
+  shareMemberReceipt, LODGE_NAME, moneyText,
   type MemberHeaderInfo, type MemberBalanceInfo, type ReceiptPaymentInfo,
 } from '@/lib/memberImage';
 
@@ -123,7 +123,7 @@ export async function buildAndShareReceipt(tx: ReceiptSource): Promise<void> {
     dateText: format(parseLocalDate(tx.transaction_date), 'd MMM yyyy', { locale: es }),
     concept,
     note,
-    amountText: `+${formatCurrency(tx.amount, getCurrencyForAccount(tx.account))}`,
+    amountText: `+${moneyText(tx.amount, getCurrencyForAccount(tx.account))}`,
   };
   await shareMemberReceipt(header, payment, balance, { lodge: LODGE_NAME, tesorero }, noI18n);
 }
