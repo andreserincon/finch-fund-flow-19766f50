@@ -155,14 +155,12 @@ export async function buildAndShareReceipt(tx: ReceiptSource, onShared?: () => v
     amountText: `+${moneyText(tx.amount, getCurrencyForAccount(tx.account))}`,
   };
   const key = estado.header.matricula || estado.header.fullName;
-  const result = await shareImages(
-    [
-      { html: buildReceiptHtml(estado.header, payment, { lodge: LODGE_NAME, tesorero }), fileName: `comprobante-${key}.png` },
-      { html: buildStatusHtml(estado.header, estado.balance, noI18n, false, false), fileName: `estado-${key}.png` },
-    ],
-    'Comprobante y estado',
-    `Comprobante de ${estado.header.fullName}`,
-  );
+  // Sin mensaje de texto: se mandan solo las imagenes (el comprobante y el
+  // estado), para que no parezca que las dos imagenes son el comprobante.
+  const result = await shareImages([
+    { html: buildReceiptHtml(estado.header, payment, { lodge: LODGE_NAME, tesorero }), fileName: `comprobante-${key}.png` },
+    { html: buildStatusHtml(estado.header, estado.balance, noI18n, false, false), fileName: `estado-${key}.png` },
+  ]);
   if (result === 'shared') {
     // Marca la transaccion como "comprobante compartido". No bloquea si falla.
     try {

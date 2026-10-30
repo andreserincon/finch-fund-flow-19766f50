@@ -198,11 +198,15 @@ async function htmlToPngFile(html: string, fileName: string): Promise<File | nul
   }
 }
 
-/** Comparte uno o varios archivos juntos, con respaldo a descarga. */
-async function shareFiles(files: File[], title: string, text: string): Promise<ShareResult> {
+/** Comparte uno o varios archivos juntos, con respaldo a descarga. title/text
+ *  son opcionales: si no se pasan, el menu de compartir no lleva mensaje. */
+async function shareFiles(files: File[], title?: string, text?: string): Promise<ShareResult> {
   try {
     if (navigator.canShare?.({ files })) {
-      await navigator.share({ files, title, text });
+      const payload: ShareData = { files };
+      if (title) payload.title = title;
+      if (text) payload.text = text;
+      await navigator.share(payload);
       return 'shared';
     }
     // Respaldo (p. ej. escritorio): descargar cada imagen.
@@ -228,8 +232,8 @@ async function shareFiles(files: File[], title: string, text: string): Promise<S
 /** Captura cada item (html + nombre de archivo) y comparte todos juntos. */
 export async function shareImages(
   items: { html: string; fileName: string }[],
-  title: string,
-  text: string,
+  title?: string,
+  text?: string,
 ): Promise<ShareResult> {
   const files: File[] = [];
   for (const it of items) {
