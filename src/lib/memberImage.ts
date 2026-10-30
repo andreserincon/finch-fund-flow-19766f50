@@ -214,13 +214,10 @@ export async function shareMemberReceipt(
   institution: InstitutionInfo,
   t: Translate,
 ): Promise<void> {
-  const tesoreroLine = institution.tesorero
-    ? ` · <span style="color:#44403c;">${institution.tesorero}</span>`
-    : '';
   const institutionalHeader =
     `<div style="text-align:center;padding-bottom:16px;border-bottom:2px solid #c8a24b;">` +
       `<div style="font-family:Georgia,'Times New Roman',serif;font-size:17px;font-weight:700;color:#1c1c22;">${institution.lodge}</div>` +
-      `<div style="font-size:13px;color:#6b7280;margin-top:3px;">Tesorería${tesoreroLine}</div>` +
+      `<div style="font-size:13px;color:#6b7280;margin-top:3px;">Tesorería</div>` +
     `</div>`;
   const title =
     `<div style="font-size:19px;font-weight:700;margin:16px 0 12px;">Comprobante de pago</div>`;
@@ -242,7 +239,13 @@ export async function shareMemberReceipt(
     `</div>`;
   // Sin pills de estado en el comprobante: solo los montos del saldo a la fecha.
   const footer = renderBalanceRows(balance, t, `Saldo al ${payment.dateText}`, false);
-  const html = institutionalHeader + title + member + paymentBlock + footer;
+  // Firma del tesorero al pie, con la abreviatura Tes.
+  const sign = institution.tesorero
+    ? `<div style="margin-top:26px;display:flex;justify-content:flex-end;">`
+      + `<div style="min-width:200px;text-align:center;border-top:1px solid #d6d3d1;padding-top:6px;font-size:14px;color:#44403c;">Tes∴ ${institution.tesorero}</div>`
+      + `</div>`
+    : '';
+  const html = institutionalHeader + title + member + paymentBlock + footer + sign;
   await captureAndShare(
     html,
     `comprobante-${header.matricula || header.fullName}.png`,
