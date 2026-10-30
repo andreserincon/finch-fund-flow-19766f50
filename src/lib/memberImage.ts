@@ -321,10 +321,11 @@ export function buildStatementHtml(
   colored = false,
 ): string {
   const dateLine = dateText ? `<div style="font-size:13px;color:#6b7280;margin:-6px 0 6px;">al ${dateText}</div>` : '';
+  // Sin tags (tipo de capita ni grado): solo matricula y nombre.
   return institutionalHeaderHtml(institution)
     + docTitleHtml('Estado de cuenta')
     + dateLine
-    + renderMemberHeader(header)
+    + renderMemberHeader(header, false)
     + renderBalanceRows(balance, (k) => k, undefined, showPills && header.isActive, colored)
     + signHtml(institution.tesorero);
 }
