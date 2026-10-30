@@ -93,16 +93,22 @@ const rowStart = (topBorder: boolean) =>
   `<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;`
   + `${topBorder ? 'border-top:1px solid #eae7e1;margin-top:12px;padding-top:12px;' : 'margin-top:10px;'}">`;
 
-/** Encabezado del hermano: matricula, nombre, tipo de capita y grado. */
-function renderMemberHeader(h: MemberHeaderInfo): string {
-  const gradeTag = h.grade ? tag(MASONIC_GRADE_LABELS[h.grade as keyof typeof MASONIC_GRADE_LABELS], false) : '';
+/**
+ * Encabezado del hermano: matricula y nombre. Con showTags (estado del
+ * hermano) suma el tipo de capita, el grado y, si corresponde, "Inactivo". El
+ * comprobante lo arma sin tags, mas limpio.
+ */
+function renderMemberHeader(h: MemberHeaderInfo, showTags = true): string {
+  const tags = showTags
+    ? tag(FEE_TYPE_LABELS[h.feeType], true)
+      + (h.grade ? tag(MASONIC_GRADE_LABELS[h.grade as keyof typeof MASONIC_GRADE_LABELS], false) : '')
+      + (h.isActive ? '' : tag('Inactivo', false))
+    : '';
   return (
     `<div style="font-size:14px;color:#6b7280;">Mat. ${h.matricula || '-'}</div>` +
     `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:4px;">` +
       `<span style="font-size:22px;font-weight:700;">${h.fullName}</span>` +
-      tag(FEE_TYPE_LABELS[h.feeType], true) +
-      gradeTag +
-      (h.isActive ? '' : tag('Inactivo', false)) +
+      tags +
     `</div>`
   );
 }
@@ -218,7 +224,7 @@ export async function shareMemberReceipt(
     `</div>`;
   const title =
     `<div style="font-size:19px;font-weight:700;margin:16px 0 12px;">Comprobante de pago</div>`;
-  const member = renderMemberHeader(header);
+  const member = renderMemberHeader(header, false);
   const line = (label: string, value: string, strong?: boolean) =>
     `<div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-top:8px;">` +
       `<span style="font-size:14px;color:#6b7280;">${label}</span>` +
@@ -234,7 +240,8 @@ export async function shareMemberReceipt(
       noteLine +
       line('Monto', payment.amountText, true) +
     `</div>`;
-  const footer = renderBalanceRows(balance, t, `Saldo al ${payment.dateText}`, header.isActive);
+  // Sin pills de estado en el comprobante: solo los montos del saldo a la fecha.
+  const footer = renderBalanceRows(balance, t, `Saldo al ${payment.dateText}`, false);
   const html = institutionalHeader + title + member + paymentBlock + footer;
   await captureAndShare(
     html,
