@@ -22,7 +22,7 @@ import {
 import { CHARGE_CATEGORY_LABELS, type ChargeCategory } from '@/lib/cobros-types';
 import { getMemberCapitaStatus, type FeeRates, type MemberEventTotals } from '@/lib/attention';
 import {
-  buildReceiptHtml, buildStatusHtml, shareImages, LODGE_NAME, moneyText,
+  buildReceiptHtml, buildStatementHtml, shareImages, LODGE_NAME, moneyText,
   type MemberHeaderInfo, type MemberBalanceInfo, type ReceiptPaymentInfo,
 } from '@/lib/memberImage';
 
@@ -39,9 +39,6 @@ export interface ReceiptSource {
   expense_summary?: string | null;
   transaction_type?: string;
 }
-
-// El comprobante no usa pills, asi que el traductor de estados no hace falta.
-const noI18n = (k: string) => k;
 
 // Concepto especifico segun el origen del ingreso: capita, nombre del evento o
 // el concepto del cobro (medalla/ritual/derecho); si no, la categoria + nota.
@@ -155,11 +152,12 @@ export async function buildAndShareReceipt(tx: ReceiptSource, onShared?: () => v
     amountText: `+${moneyText(tx.amount, getCurrencyForAccount(tx.account))}`,
   };
   const key = estado.header.matricula || estado.header.fullName;
+  const today = format(new Date(), 'd MMM yyyy', { locale: es });
   // Sin mensaje de texto: se mandan solo las imagenes (el comprobante y el
-  // estado), para que no parezca que las dos imagenes son el comprobante.
+  // estado de cuenta), para que no parezca que las dos imagenes son el comprobante.
   const result = await shareImages([
     { html: buildReceiptHtml(estado.header, payment, { lodge: LODGE_NAME, tesorero }), fileName: `comprobante-${key}.png` },
-    { html: buildStatusHtml(estado.header, estado.balance, noI18n, false, false), fileName: `estado-${key}.png` },
+    { html: buildStatementHtml(estado.header, estado.balance, { lodge: LODGE_NAME, tesorero }, today), fileName: `estado-${key}.png` },
   ]);
   if (result === 'shared') {
     // Marca la transaccion como "comprobante compartido". No bloquea si falla.

@@ -262,19 +262,34 @@ export async function shareMemberStatus(header: MemberHeaderInfo, balance: Membe
   );
 }
 
+/** Encabezado institucional: logia + Tesorería + regla dorada. */
+function institutionalHeaderHtml(institution: InstitutionInfo): string {
+  return `<div style="text-align:center;padding-bottom:16px;border-bottom:2px solid #c8a24b;">`
+    + `<div style="font-family:Georgia,'Times New Roman',serif;font-size:17px;font-weight:700;color:#1c1c22;">${institution.lodge}</div>`
+    + `<div style="font-size:13px;color:#6b7280;margin-top:3px;">Tesorería</div>`
+    + `</div>`;
+}
+
+/** Titulo del documento (p. ej. "Comprobante de pago" / "Estado de cuenta"). */
+function docTitleHtml(title: string): string {
+  return `<div style="font-size:19px;font-weight:700;margin:16px 0 12px;">${title}</div>`;
+}
+
+/** Firma del tesorero al pie, centrada, con la abreviatura Tes. */
+function signHtml(tesorero?: string | null): string {
+  return tesorero
+    ? `<div style="margin-top:28px;display:flex;justify-content:center;">`
+      + `<div style="min-width:220px;text-align:center;border-top:1px solid #d6d3d1;padding-top:6px;font-size:14px;color:#44403c;">Tes∴ ${tesorero}</div>`
+      + `</div>`
+    : '';
+}
+
 /**
  * HTML del comprobante de un pago (solo el pago): encabezado institucional,
- * detalle del pago y la firma del tesorero. El balance va en una imagen aparte
- * (el estado del hermano).
+ * titulo, detalle del pago y la firma del tesorero. El balance va en una imagen
+ * aparte (el estado de cuenta).
  */
 export function buildReceiptHtml(header: MemberHeaderInfo, payment: ReceiptPaymentInfo, institution: InstitutionInfo): string {
-  const institutionalHeader =
-    `<div style="text-align:center;padding-bottom:16px;border-bottom:2px solid #c8a24b;">` +
-      `<div style="font-family:Georgia,'Times New Roman',serif;font-size:17px;font-weight:700;color:#1c1c22;">${institution.lodge}</div>` +
-      `<div style="font-size:13px;color:#6b7280;margin-top:3px;">Tesorería</div>` +
-    `</div>`;
-  const title =
-    `<div style="font-size:19px;font-weight:700;margin:16px 0 12px;">Comprobante de pago</div>`;
   const member = renderMemberHeader(header, false);
   const line = (label: string, value: string, strong?: boolean) =>
     `<div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-top:8px;">` +
@@ -289,11 +304,27 @@ export function buildReceiptHtml(header: MemberHeaderInfo, payment: ReceiptPayme
       noteLine +
       line('Monto', payment.amountText, true) +
     `</div>`;
-  // Firma del tesorero al pie, centrada, con la abreviatura Tes.
-  const sign = institution.tesorero
-    ? `<div style="margin-top:28px;display:flex;justify-content:center;">`
-      + `<div style="min-width:220px;text-align:center;border-top:1px solid #d6d3d1;padding-top:6px;font-size:14px;color:#44403c;">Tes∴ ${institution.tesorero}</div>`
-      + `</div>`
-    : '';
-  return institutionalHeader + title + member + paymentBlock + sign;
+  return institutionalHeaderHtml(institution) + docTitleHtml('Comprobante de pago') + member + paymentBlock + signHtml(institution.tesorero);
+}
+
+/**
+ * HTML del estado de cuenta del hermano con el tesoro: mismo encabezado
+ * institucional y firma que el comprobante, con su titulo y el saldo actual del
+ * hermano. dateText = fecha del estado (hoy).
+ */
+export function buildStatementHtml(
+  header: MemberHeaderInfo,
+  balance: MemberBalanceInfo,
+  institution: InstitutionInfo,
+  dateText?: string,
+  showPills = false,
+  colored = false,
+): string {
+  const dateLine = dateText ? `<div style="font-size:13px;color:#6b7280;margin:-6px 0 6px;">al ${dateText}</div>` : '';
+  return institutionalHeaderHtml(institution)
+    + docTitleHtml('Estado de cuenta')
+    + dateLine
+    + renderMemberHeader(header)
+    + renderBalanceRows(balance, (k) => k, undefined, showPills && header.isActive, colored)
+    + signHtml(institution.tesorero);
 }
