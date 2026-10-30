@@ -37,7 +37,9 @@ export function DigitalBookDetailDrawer({ book, open, onClose }: DigitalBookDeta
       const blobUrl = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = blobUrl;
-      a.download = `${book.title}.pdf`;
+      // Keep the stored file's real extension (pdf, docx, xlsx, pptx...).
+      const ext = book.file_path.split('.').pop()?.toLowerCase() || 'pdf';
+      a.download = `${book.title}.${ext}`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);

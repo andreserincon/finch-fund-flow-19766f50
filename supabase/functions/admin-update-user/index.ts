@@ -52,8 +52,8 @@ serve(async (req: Request) => {
       .select("role")
       .eq("user_id", callingUser.id);
 
-    const roles = (callerRoles ?? []).map((r: { role: string }) => r.role);
-    if (!roles.includes("admin") && !roles.includes("vm")) {
+    const callerRoleList = (callerRoles ?? []).map((r: { role: string }) => r.role);
+    if (!callerRoleList.includes("admin") && !callerRoleList.includes("vm")) {
       throw new Error("No autorizado: solo el Administrador o el Venerable pueden editar accesos.");
     }
 

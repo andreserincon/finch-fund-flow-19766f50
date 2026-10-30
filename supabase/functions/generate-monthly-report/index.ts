@@ -122,14 +122,15 @@ Deno.serve(async (req) => {
       userId = user.id;
 
       // Check if user is treasurer or admin
-      const { data: roleData } = await supabase
+      // A user may hold several roles, so fetch rows instead of maybeSingle().
+      const { data: roleRows } = await supabase
         .from('user_roles')
         .select('role')
         .eq('user_id', userId)
         .in('role', ['treasurer', 'admin'])
-        .maybeSingle();
+        .limit(1);
 
-      if (!roleData) {
+      if (!roleRows || roleRows.length === 0) {
         return new Response(JSON.stringify({ error: 'Only treasurers can generate reports' }), {
           status: 403,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
