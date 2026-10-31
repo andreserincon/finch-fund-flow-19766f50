@@ -26,7 +26,8 @@ import {
   Home,
   MessageSquare,
   CalendarClock,
-  ScrollText
+  ScrollText,
+  UtensilsCrossed
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -129,6 +130,7 @@ export function AppSidebar() {
       { title: t('nav.loans'), url: '/loans', icon: HandCoins },
       { title: 'Cobros pendientes', url: '/cobros', icon: Coins },
       { title: 'Inventario de medallas', url: '/medallas', icon: Medal },
+      { title: 'Ágapes', url: '/agapes', icon: UtensilsCrossed },
       { title: t('nav.reports'), url: '/reports', icon: FileText },
       // Presupuesto: acceso oculto temporalmente.
       // { title: t('nav.budget'), url: '/budget', icon: PieChart },

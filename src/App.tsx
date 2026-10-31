@@ -49,6 +49,7 @@ import Transactions from "./pages/Transactions";
 import Loans from "./pages/Loans";
 import MemberCharges from "./pages/MemberCharges";
 import MedalInventory from "./pages/MedalInventory";
+import Agapes from "./pages/Agapes";
 import LogPayment from "./pages/LogPayment";
 import LogExpense from "./pages/LogExpense";
 import MonthlyFees from "./pages/MonthlyFees";
@@ -372,6 +373,7 @@ const App = () => (
         <Route path="/loans" element={<TreasuryRoute><Loans /></TreasuryRoute>} />
         <Route path="/cobros" element={<TreasuryRoute><MemberCharges /></TreasuryRoute>} />
         <Route path="/medallas" element={<TreasuryRoute><MedalInventory /></TreasuryRoute>} />
+        <Route path="/agapes" element={<TreasuryStaffRoute><Agapes /></TreasuryStaffRoute>} />
         <Route path="/monthly-fees" element={<TreasuryStaffRoute><MonthlyFees /></TreasuryStaffRoute>} />
         <Route path="/expense-categories" element={<TreasuryStaffRoute><ExtraordinaryExpenses /></TreasuryStaffRoute>} />
         {/* /eventos is the noun-matching alias for the events list page. */}
