@@ -12,7 +12,7 @@ import { useAgapes, type NewParticipant } from '@/hooks/useAgapes';
 import { useMembers } from '@/hooks/useMembers';
 import {
   agapeTotals, computePayment, participantName, PAYMENT_METHOD_LABELS,
-  type AgapeParticipant, type AgapePaymentMethod,
+  type Agape, type AgapeParticipant, type AgapePaymentMethod,
 } from '@/lib/agape-types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,7 +31,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { UtensilsCrossed, Plus, Check, RotateCcw, Banknote, CreditCard, CircleCheck, Scale, X } from 'lucide-react';
+import { UtensilsCrossed, Plus, Check, RotateCcw, Banknote, CreditCard, CircleCheck, Scale, X, Pencil } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { formatCurrencyCompact, parseLocalDate, cn } from '@/lib/utils';
@@ -219,11 +219,99 @@ function EditShareDialog({ target, onClose }: { target: AgapeParticipant | null;
   );
 }
 
+/* ── Editar los datos del agape (total, propina, descuento, lugar, fecha) ───── */
+function EditAgapeDialog({ agape, open, onOpenChange }: { agape: Agape; open: boolean; onOpenChange: (o: boolean) => void }) {
+  const { updateAgape } = useAgapes();
+  const [title, setTitle] = useState(agape.title);
+  const [date, setDate] = useState(agape.agape_date);
+  const [total, setTotal] = useState(String(agape.total_amount));
+  const [tip, setTip] = useState(String(agape.tip_amount));
+  const [discount, setDiscount] = useState(String(agape.cash_discount_pct));
+
+  // Al reabrir el dialogo, volver a tomar los valores actuales del agape.
+  const sync = () => {
+    setTitle(agape.title); setDate(agape.agape_date);
+    setTotal(String(agape.total_amount)); setTip(String(agape.tip_amount));
+    setDiscount(String(agape.cash_discount_pct));
+  };
+
+  const objetivo = (Number(total) || 0) + (Number(tip) || 0);
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => { if (o) sync(); onOpenChange(o); }}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Editar ágape</DialogTitle>
+          <DialogDescription>
+            Cambiá el gasto, la propina o el descuento. Si las partes dejan de cuadrar, usá "Partes iguales" para repartir de nuevo.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-3">
+          <div>
+            <Label className="input-label">Lugar o motivo</Label>
+            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Parrilla La Rural" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="input-label">Fecha</Label>
+              <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+            </div>
+            <div>
+              <Label className="input-label">Descuento efectivo (%)</Label>
+              <Input type="number" inputMode="decimal" min={0} max={100} value={discount}
+                onChange={(e) => setDiscount(e.target.value)} placeholder="0" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="input-label">Total gastado</Label>
+              <Input type="number" inputMode="decimal" min={0} value={total}
+                onChange={(e) => setTotal(e.target.value)} placeholder="0" />
+            </div>
+            <div>
+              <Label className="input-label">Propina</Label>
+              <Input type="number" inputMode="decimal" min={0} value={tip}
+                onChange={(e) => setTip(e.target.value)} placeholder="0" />
+            </div>
+          </div>
+
+          <div className="rounded-lg bg-muted/60 px-3 py-2 text-sm flex items-center justify-between">
+            <span className="text-muted-foreground">Objetivo a recaudar</span>
+            <span className="font-semibold tabular-nums">{fmt(objetivo)}</span>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button
+            onClick={() => {
+              updateAgape.mutate(
+                {
+                  id: agape.id,
+                  title,
+                  agape_date: date,
+                  total_amount: Number(total) || 0,
+                  tip_amount: Number(tip) || 0,
+                  cash_discount_pct: Number(discount) || 0,
+                },
+                { onSuccess: () => onOpenChange(false) },
+              );
+            }}
+            disabled={(Number(total) || 0) <= 0 || updateAgape.isPending}
+          >Guardar</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 /* ── Pagina ───────────────────────────────────────────────────────────────── */
 export default function Agapes() {
   const { agape, participants, isLoading, markPaid, undoPaid, redistributeEqual, closeAgape } = useAgapes();
   const [newOpen, setNewOpen] = useState(false);
   const [editShare, setEditShare] = useState<AgapeParticipant | null>(null);
+  const [editAgape, setEditAgape] = useState(false);
   const [confirmClose, setConfirmClose] = useState(false);
 
   const totals = useMemo(() => (agape ? agapeTotals(agape, participants) : null), [agape, participants]);
@@ -268,9 +356,15 @@ export default function Agapes() {
                   {format(parseLocalDate(agape.agape_date), "d 'de' MMM yyyy", { locale: es })}
                 </p>
               </div>
-              <span className="text-[0.65rem] font-semibold px-2 py-1 rounded-full bg-white/10">
-                {totals.pagados} de {totals.total} pagaron
-              </span>
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="text-[0.65rem] font-semibold px-2 py-1 rounded-full bg-white/10">
+                  {totals.pagados} de {totals.total} pagaron
+                </span>
+                <button type="button" onClick={() => setEditAgape(true)} aria-label="Editar ágape"
+                  className="h-7 w-7 grid place-items-center rounded-full bg-white/10 hover:bg-white/20 transition-colors">
+                  <Pencil className="h-3.5 w-3.5" />
+                </button>
+              </div>
             </div>
             <p className="text-[0.7rem] uppercase tracking-wider text-[hsl(42_40%_62%)] font-semibold mt-4">Falta recaudar</p>
             <p className="text-4xl font-semibold tabular-nums leading-none mt-1" style={{ color: 'hsl(42 58% 66%)' }}>
@@ -344,6 +438,7 @@ export default function Agapes() {
 
       <NewAgapeDialog open={newOpen} onOpenChange={setNewOpen} />
       <EditShareDialog target={editShare} onClose={() => setEditShare(null)} />
+      {agape && <EditAgapeDialog agape={agape} open={editAgape} onOpenChange={setEditAgape} />}
 
       <AlertDialog open={confirmClose} onOpenChange={setConfirmClose}>
         <AlertDialogContent>

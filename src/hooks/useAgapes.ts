@@ -170,6 +170,34 @@ export function useAgapes() {
     onError: () => toast.error('No se pudo repartir'),
   });
 
+  // Editar los datos del agape en si (total gastado, propina, descuento, lugar,
+  // fecha). No toca las partes: si dejan de cuadrar con el objetivo, la pantalla
+  // muestra el aviso y el boton "Partes iguales" para repartir de nuevo.
+  const updateAgape = useMutation({
+    mutationFn: async (input: {
+      id: string;
+      title: string;
+      agape_date: string;
+      total_amount: number;
+      tip_amount: number;
+      cash_discount_pct: number;
+    }) => {
+      const { error } = await db
+        .from('agapes')
+        .update({
+          title: input.title.trim() || 'Ágape',
+          agape_date: input.agape_date,
+          total_amount: input.total_amount,
+          tip_amount: input.tip_amount,
+          cash_discount_pct: input.cash_discount_pct,
+        })
+        .eq('id', input.id);
+      if (error) throw error;
+    },
+    onSuccess: () => { invalidate(); toast.success('Ágape actualizado'); },
+    onError: () => toast.error('No se pudo actualizar el ágape'),
+  });
+
   const closeAgape = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await db.from('agapes').update({ status: 'closed' }).eq('id', id);
@@ -187,6 +215,7 @@ export function useAgapes() {
     markPaid,
     undoPaid,
     updateShare,
+    updateAgape,
     redistributeEqual,
     closeAgape,
   };
