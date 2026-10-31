@@ -50,6 +50,121 @@ export type Database = {
         }
         Relationships: []
       }
+      agape_participants: {
+        Row: {
+          agape_id: string
+          amount_paid: number
+          created_at: string
+          discount_applied: number
+          guest_name: string | null
+          id: string
+          member_id: string | null
+          paid: boolean
+          paid_at: string | null
+          payment_method:
+            | Database["public"]["Enums"]["agape_payment_method"]
+            | null
+          share_amount: number
+        }
+        Insert: {
+          agape_id: string
+          amount_paid?: number
+          created_at?: string
+          discount_applied?: number
+          guest_name?: string | null
+          id?: string
+          member_id?: string | null
+          paid?: boolean
+          paid_at?: string | null
+          payment_method?:
+            | Database["public"]["Enums"]["agape_payment_method"]
+            | null
+          share_amount?: number
+        }
+        Update: {
+          agape_id?: string
+          amount_paid?: number
+          created_at?: string
+          discount_applied?: number
+          guest_name?: string | null
+          id?: string
+          member_id?: string | null
+          paid?: boolean
+          paid_at?: string | null
+          payment_method?:
+            | Database["public"]["Enums"]["agape_payment_method"]
+            | null
+          share_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agape_participants_agape_id_fkey"
+            columns: ["agape_id"]
+            isOneToOne: false
+            referencedRelation: "agapes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agape_participants_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "member_balances"
+            referencedColumns: ["member_id"]
+          },
+          {
+            foreignKeyName: "agape_participants_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agapes: {
+        Row: {
+          agape_date: string
+          cash_discount_pct: number
+          created_at: string
+          created_by: string | null
+          id: string
+          notes: string | null
+          split_mode: Database["public"]["Enums"]["agape_split_mode"]
+          status: Database["public"]["Enums"]["agape_status"]
+          tip_amount: number
+          title: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          agape_date?: string
+          cash_discount_pct?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          split_mode?: Database["public"]["Enums"]["agape_split_mode"]
+          status?: Database["public"]["Enums"]["agape_status"]
+          tip_amount?: number
+          title: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          agape_date?: string
+          cash_discount_pct?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          split_mode?: Database["public"]["Enums"]["agape_split_mode"]
+          status?: Database["public"]["Enums"]["agape_status"]
+          tip_amount?: number
+          title?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       asistente_usage: {
         Row: {
           count: number
@@ -1599,6 +1714,9 @@ export type Database = {
     }
     Enums: {
       account_type: "bank" | "great_lodge" | "savings"
+      agape_payment_method: "efectivo" | "tarjeta" | "ya_pago"
+      agape_split_mode: "equal" | "custom"
+      agape_status: "open" | "closed"
       app_role: "treasurer" | "vm" | "member" | "bibliotecario" | "admin"
       book_status: "available" | "on_loan"
       charge_category:
@@ -1765,6 +1883,9 @@ export const Constants = {
   public: {
     Enums: {
       account_type: ["bank", "great_lodge", "savings"],
+      agape_payment_method: ["efectivo", "tarjeta", "ya_pago"],
+      agape_split_mode: ["equal", "custom"],
+      agape_status: ["open", "closed"],
       app_role: ["treasurer", "vm", "member", "bibliotecario", "admin"],
       book_status: ["available", "on_loan"],
       charge_category: [
